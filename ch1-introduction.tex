@@ -1,0 +1,1571 @@
+% This is ch1-introduction.tex of the OpenMP specifigation
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+\chapter{Introduction}
+\index{introduction}
+\label{chap:introduction}
+The collection of compiler directives, library routines, and environment variables 
+described in this document collectively define the specification of the OpenMP 
+Application Program Interface (OpenMP API) for shared-memory parallelism in C, C++ 
+and Fortran programs.
+
+This specification provides a model for parallel programming that is portable across 
+shared memory architectures from different vendors. Compilers from numerous vendors 
+support the OpenMP API. More information about the OpenMP API can be found at the 
+following web site
+
+\code{http://www.openmp.org}
+
+The directives, library routines, and environment variables defined in this document 
+allow users to create and manage parallel programs while permitting portability. The 
+directives extend the C, C++ and Fortran base languages with single program multiple 
+data (SPMD) constructs, tasking constructs, device constructs, worksharing constructs, 
+and synchronization constructs, and they provide support for sharing and privatizing 
+data. The functionality to control the runtime environment is provided by library 
+routines and environment variables. Compilers that support the OpenMP API often 
+include a command line option to the compiler that activates and allows interpretation of 
+all OpenMP directives
+
+
+
+
+
+
+
+\section{Scope}
+\label{sec:Scope}
+The OpenMP API covers only user-directed parallelization, wherein the programmer 
+explicitly specifies the actions to be taken by the compiler and runtime system in order 
+to execute the program in parallel. OpenMP-compliant implementations are not required 
+to check for data dependencies, data conflicts, race conditions, or deadlocks, any of 
+which may occur in conforming programs. In addition, compliant implementations are 
+not required to check for code sequences that cause a program to be classified as non-
+conforming. Application developers are responsible for correctly using the OpenMP API 
+to produce a conforming program. The OpenMP API does not cover compiler-generated 
+automatic parallelization and directives to the compiler to assist such parallelization.
+
+
+
+
+
+
+
+\section{Glossary}
+\label{sec:Glossary}
+\index{glossary}
+\subsection{Threading Concepts}
+\label{subsec:Threading Concepts}
+\glossaryterm{thread}
+\glossarydefstart
+An execution entity with a stack and associated static memory, called 
+\emph{threadprivate memory}.
+\glossarydefend
+
+\glossaryterm{OpenMP thread}
+\glossarydefstart
+A \emph{thread} that is managed by the OpenMP runtime system.
+\glossarydefend
+
+\glossaryterm{thread-safe routine}
+\glossarydefstart
+A routine that performs the intended function even when executed concurrently 
+(by more than one \emph{thread}).
+\glossarydefend
+
+\glossaryterm{processor}
+\glossarydefstart
+Implementation defined hardware unit on which one or more \emph{OpenMP threads} can 
+execute.
+\glossarydefend
+
+\glossaryterm{device}
+\glossarydefstart
+An implementation defined logical execution engine.
+
+\begin{quote}
+COMMENT: A \emph{device} could have one or more \emph{processors}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{host device}
+\glossarydefstart
+The \emph{device} on which the \emph{OpenMP program} begins execution
+\glossarydefend
+
+\glossaryterm{target device}
+\glossarydefstart
+A device onto which code and data may be offloaded from the \emph{host device}.
+\glossarydefend
+
+
+
+
+
+\subsection{OpenMP Language Terminology}
+\label{subsec:OpenMP Language Terminology}
+\glossaryterm{base language}
+\glossarydefstart
+A programming language that serves as the foundation of the OpenMP 
+specification.
+
+\begin{quote}
+COMMENT: See \specref{sec:normative references}
+for a listing of current \emph{base languages} for the OpenMP API.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{base program}
+\glossarydefstart
+A program written in a \emph{base language}.
+\glossarydefend
+
+\glossaryterm{structured block}
+\glossarydefstart
+For C/C++, an executable statement, possibly compound, with a single entry at the 
+top and a single exit at the bottom, or an OpenMP \emph{construct}.
+
+For Fortran, a block of executable statements with a single entry at the top and a 
+single exit at the bottom, or an OpenMP \emph{construct}.
+
+\begin{quote}
+COMMENTS:
+
+For all \emph{base languages},
+
+\begin{itemize}
+\item Access to the \emph{structured block} must not be the result of a branch.
+
+\item The point of exit cannot be a branch out of the \emph{structured block}.
+\end{itemize}
+
+For C/C++:
+
+\begin{itemize}
+\item The point of entry must not be a call to \code{setjmp()}.
+
+\item \code{longjmp()} and \code{throw()} must not violate the entry/exit criteria.
+
+\item Calls to \code{exit()} are allowed in a \emph{structured block}.
+
+\item An expression statement, iteration statement, selection statement, 
+or try block is considered to be a \emph{structured block} if the 
+corresponding compound statement obtained by enclosing it in \code{\{} 
+and \code{\}} would be a \emph{structured block}.
+\end{itemize}
+
+For Fortran:
+
+\begin{itemize}
+\item \code{STOP} statements are allowed in a \emph{structured block}.
+\end{itemize}
+\end{quote}
+\glossarydefend
+
+
+\glossaryterm{enclosing context}
+\glossarydefstart
+In C/C++, the innermost scope enclosing an OpenMP \emph{directive}.
+
+In Fortran, the innermost scoping unit enclosing an OpenMP \emph{directive}.
+\glossarydefend
+
+\glossaryterm{directive}
+\glossarydefstart
+In C/C++, a \code{\#pragma}, and in Fortran, a comment, that specifies \emph{OpenMP
+program} behavior.
+
+\begin{quote}
+COMMENT: See \specref{sec:Directive Format} for a description of OpenMP \emph{directive} syntax.
+\end{quote}
+\glossarydefend
+
+
+\glossaryterm{white space}
+\glossarydefstart
+A non-empty sequence of space and/or horizontal tab characters
+\glossarydefend
+
+\glossaryterm{OpenMP program}
+\glossarydefstart
+A program that consists of a \emph{base program}, annotated with OpenMP \emph{directives} and 
+runtime library routines.
+\glossarydefend
+
+\glossaryterm{conforming program}
+\glossarydefstart
+An \emph{OpenMP program} that follows all the rules and restrictions of the OpenMP 
+specification.
+\glossarydefend
+
+\glossaryterm{declarative directive}
+\glossarydefstart
+An OpenMP \emph{directive} that may only be placed in a declarative context. A 
+\emph{declarative directive} results in one or more declarations only; it is not associated 
+with the immediate execution of any user code.
+\glossarydefend
+
+\glossaryterm{executable directive}
+\glossarydefstart
+An OpenMP \emph{directive} that is not declarative. That is, it may be placed in an 
+executable context.
+\glossarydefend
+
+\glossaryterm{stand-alone directive}
+\glossarydefstart
+An OpenMP \emph{executable directive} that has no associated executable user code.
+\glossarydefend
+
+\glossaryterm{loop directive}
+\glossarydefstart
+An OpenMP \emph{executable directive} whose associated user code must be a loop nest 
+that is a \emph{structured block}.
+\glossarydefend
+
+\glossaryterm{associated loop(s)}
+\glossarydefstart
+The loop(s) controlled by a \emph{loop directive}.
+
+\begin{quote}
+COMMENT: If the \emph{loop directive} contains a \code{collapse} clause then there may be 
+more than one \emph{associated loop}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{construct}
+\glossarydefstart
+An OpenMP \emph{executable directive} (and for Fortran, the paired \code{end} \emph{directive}, if 
+any) and the associated statement, loop or \emph{structured block}, if any, not including 
+the code in any called routines. That is, in the lexical extent of an \emph{executable 
+directive}.
+\glossarydefend
+
+\glossaryterm{region}
+\glossarydefstart
+All code encountered during a specific instance of the execution of a given 
+\emph{construct} or of an OpenMP library routine. A \emph{region} includes any code in called 
+routines as well as any implicit code introduced by the OpenMP implementation. 
+The generation of a \emph{task} at the point where a \code{task} \emph{directive} is encountered is a 
+part of the \emph{region} of the \emph{encountering thread}, but the \emph{explicit task region}
+associated with the \code{task} \emph{directive} is not. The point where a \code{target} or \code{teams}
+directive is encountered is a part of the \emph{region} of the \emph{encountering thread}, but the 
+\emph{region} associated with the \code{target} or \code{teams} directive is not.
+
+\begin{quote}
+COMMENTS:
+
+A \emph{region} may also be thought of as the dynamic or runtime extent of a 
+\emph{construct} or of an OpenMP library routine.
+
+During the execution of an \emph{OpenMP program}, a \emph{construct} may give 
+rise to many \emph{regions}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{active parallel region}
+\glossarydefstart
+A \code{parallel} \emph{region} that is executed by a \emph{team} consisting of more than one 
+\emph{thread}.
+\glossarydefend
+
+\smallskip
+\glossaryterm{inactive parallel region}
+\glossarydefstart
+A \code{parallel} \emph{region} that is executed by a \emph{team} of only one \emph{thread}.
+\glossarydefend
+
+\glossaryterm{sequential part}
+\glossarydefstart
+All code encountered during the execution of an \emph{initial task region} that is not part 
+of a \code{parallel} \emph{region} corresponding to a \code{parallel} \emph{construct} or a \code{task}
+\emph{region} corresponding to a \code{task} \emph{construct}.
+
+\begin{quote}
+COMMENTS: 
+
+A \emph{sequential part} is enclosed by an \emph{implicit parallel region}.
+
+Executable statements in called routines may be in both a \emph{sequential 
+part} and any number of explicit \code{parallel} \emph{regions} at different points 
+in the program execution.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{master thread}
+\glossarydefstart
+The \emph{thread} that encounters a \code{parallel} \emph{construct}, creates a \emph{team}, generates a set 
+of \emph{implicit tasks}, then executes one of those \emph{tasks} as \emph{thread} number 0.
+\glossarydefend
+
+\glossaryterm{parent thread}
+\glossarydefstart
+The \emph{thread} that encountered the \code{parallel} \emph{construct} and generated a 
+\code{parallel} \emph{region} is the \emph{parent thread} of each of the 
+\emph{threads} in the \emph{team} of that 
+\code{parallel} \emph{region}. The \emph{master thread} 
+of a \code{parallel} \emph{region} is the same \emph{thread} 
+as its \emph{parent thread} with respect to any resources associated with an \emph{OpenMP thread}.
+\glossarydefend
+
+\glossaryterm{child thread}
+\glossarydefstart
+When a thread encounters a \code{parallel} construct, each of the threads in the 
+generated \code{parallel} region's team are \emph{child threads} of the encountering \emph{thread}. 
+The \code{target} or \code{teams} region's \emph{initial thread} is not a \emph{child thread} of the thread 
+that encountered the \code{target} or \code{teams} construct. 
+\glossarydefend
+
+\glossaryterm{ancestor thread}
+\glossarydefstart
+For a given \emph{thread}, its \emph{parent thread} or one of its \emph{parent thread’s ancestor threads}.
+\glossarydefend
+
+\glossaryterm{descendent thread}
+\glossarydefstart
+For a given \emph{thread}, one of its \emph{child threads} or one of 
+its \emph{child threads’ descendent threads}.
+\glossarydefend
+
+\glossaryterm{team}
+\glossarydefstart
+A set of one or more \emph{threads} participating in the execution of a \code{parallel}
+\emph{region}.
+
+\begin{quote}
+COMMENTS:
+
+For an \emph{active parallel region}, the team comprises the \emph{master thread} 
+and at least one additional \emph{thread}.
+
+For an \emph{inactive parallel region}, the \emph{team} comprises only the \emph{master thread}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{league}
+\glossarydefstart
+The set of \emph{thread teams} created by a \code{target} construct or a \code{teams} construct.
+\glossarydefend
+
+\glossaryterm{contention group}
+\glossarydefstart
+An initial \emph{thread} and its \emph{descendent threads}.
+\glossarydefend
+
+\glossaryterm{implicit parallel region}
+\glossarydefstart
+An \emph{inactive parallel region} that generates an \emph{initial task region}. \emph{Implicit parallel
+regions} surround the whole OpenMP program, all \code{target} regions, and all 
+\code{teams} regions
+\glossarydefend
+
+\glossaryterm{initial thread}
+\glossarydefstart
+A \emph{thread} that executes an \emph{implicit parallel region}.
+\glossarydefend
+
+\glossaryterm{nested construct}
+\glossarydefstart
+A \emph{construct} (lexically) enclosed by another \emph{construct}.
+\glossarydefend
+
+\glossaryterm{closely nested construct}
+\glossarydefstart
+A \emph{construct} nested inside another \emph{construct} with no other \emph{construct} nested 
+between them.
+\glossarydefend
+
+\glossaryterm{nested region}
+\glossarydefstart
+A \emph{region} (dynamically) enclosed by another \emph{region}. That is, a \emph{region} encountered 
+during the execution of another \emph{region}.
+
+\begin{quote}
+COMMENT: Some nestings are \emph{conforming} and some are not. 
+See \specref{sec:Nesting of Regions} for the restrictions on nesting.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{closely nested region}
+\glossarydefstart
+A \emph{region nested} inside another \emph{region} with no \code{parallel} \emph{region nested} between 
+them. 
+\glossarydefend
+
+\glossaryterm{all threads}
+\glossarydefstart
+All OpenMP \emph{threads} participating in the \emph{OpenMP program}.
+\glossarydefend
+
+\glossaryterm{current team}
+\glossarydefstart
+All \emph{threads} in the \emph{team} executing the innermost enclosing \code{parallel} \emph{region}.
+\glossarydefend
+
+\glossaryterm{encountering thread}
+\glossarydefstart
+For a given \emph{region}, the \emph{thread} that encounters the 
+corresponding \emph{construct}.
+\glossarydefend
+
+\glossaryterm{all tasks}
+\glossarydefstart
+All \emph{tasks} participating in the \emph{OpenMP program}. 
+\glossarydefend
+
+\glossaryterm{current team tasks}
+\glossarydefstart
+All \emph{tasks} encountered by the corresponding \emph{team}. Note that the \emph{implicit tasks}
+constituting the \code{parallel} \emph{region} and any \emph{descendent tasks} encountered during 
+the execution of these \emph{implicit tasks} are included in this set of tasks. 
+\glossarydefend
+
+\glossaryterm{generating task}
+\glossarydefstart
+For a given \emph{region}, the task whose execution by a \emph{thread} generated the \emph{region}.
+\glossarydefend
+
+\glossaryterm{binding thread set}
+\glossarydefstart
+The set of \emph{threads} that are affected by, or provide the context for, the execution of 
+a \emph{region}. 
+
+The \emph{binding thread} set for a given \emph{region} can be \emph{all threads} on a \emph{device}, \emph{all 
+threads} in a \emph{contention group}, the \emph{current team}, or the \emph{encountering thread}.
+
+\begin{quote}
+COMMENT: The \emph{binding thread set} for a particular \emph{region} is described in its 
+corresponding subsection of this specification.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{binding task set}
+\glossarydefstart
+The set of \emph{tasks} that are affected by, or provide the context for, the execution of a 
+\emph{region}. 
+
+The \emph{binding task} set for a given \emph{region} can be \emph{all tasks}, 
+the \emph{current team tasks}, or the \emph{generating task}. 
+
+\begin{quote}
+COMMENT: The \emph{binding task} set for a particular \emph{region} (if applicable) is 
+described in its corresponding subsection of this specification.
+\end{quote}
+\glossarydefend
+
+\pagebreak
+\glossaryterm{binding region}
+\glossarydefstart
+The enclosing \emph{region} that determines the execution context and limits the scope of 
+the effects of the bound \emph{region} is called the \emph{binding region}.
+
+\emph{Binding region} is not defined for \emph{regions} whose \emph{binding thread} set is \emph{all threads}
+or the \emph{encountering thread}, nor is it defined for \emph{regions} whose \emph{binding task set} is 
+\emph{all tasks}.
+
+\begin{quote}
+COMMENTS: 
+
+The \emph{binding region} for an \code{ordered} \emph{region} is the innermost enclosing 
+\emph{loop region}.
+
+The \emph{binding region} for a \code{taskwait} \emph{region} is the innermost enclosing 
+\emph{task region}.
+
+For all other \emph{regions} for which the \emph{binding thread set} is the \emph{current
+team} or the \emph{binding task set} is the \emph{current team tasks}, the \emph{binding 
+region} is the innermost enclosing \code{parallel} \emph{region}.
+
+For \emph{regions} for which the \emph{binding task set} is the \emph{generating task}, the 
+\emph{binding region} is the \emph{region} of the \emph{generating task}.
+
+A \code{parallel} \emph{region} need not be \emph{active} nor explicit to be a \emph{binding region}.
+
+A \emph{task region} need not be explicit to be a \emph{binding region}.
+
+A \emph{region} never binds to any \emph{region} outside of the innermost enclosing 
+\code{parallel} \emph{region}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{orphaned construct}
+\glossarydefstart
+A \emph{construct} that gives rise to a \emph{region} whose \emph{binding thread set} is the \emph{current 
+team}, but is not nested within another \emph{construct} giving rise to the \emph{binding region}.
+\glossarydefend
+
+\glossaryterm{worksharing construct}
+\glossarydefstart
+A \emph{construct} that defines units of work, each of which is executed exactly once by 
+one of the \emph{threads} in the \emph{team} executing the \emph{construct}.
+
+For C/C++, \emph{worksharing constructs} are \code{for}, \code{sections}, and \code{single}.
+
+For Fortran, \emph{worksharing constructs} are \code{do}, \code{sections}, \code{single} and 
+\code{workshare}.
+\glossarydefend
+
+\glossaryterm{sequential loop}
+\glossarydefstart
+A loop that is not associated with any OpenMP \emph{loop directive}.
+\glossarydefend
+
+\glossaryterm{place}
+\glossarydefstart
+Unordered set of \emph{processors} that is treated by the execution environment as a 
+location unit when dealing with OpenMP thread affinity.
+\glossarydefend
+
+\glossaryterm{place list}
+\glossarydefstart
+The ordered list that describes all OpenMP \emph{places} available to the execution 
+environment.
+\glossarydefend
+
+\glossaryterm{place partition}
+\glossarydefstart
+An ordered list that corresponds to a contiguous interval in the OpenMP \emph{place list}. 
+It describes the \emph{places} currently available to the execution environment for a given 
+parallel region.
+\glossarydefend
+
+\glossaryterm{SIMD instruction}
+\glossarydefstart
+A single machine instruction that can can operate on multiple data elements.
+\glossarydefend
+
+\glossaryterm{SIMD lane}
+\glossarydefstart
+A software or hardware mechanism capable of processing one data element from a 
+\emph{SIMD instruction}.
+\glossarydefend
+
+\glossaryterm{SIMD chunk}
+\glossarydefstart
+A set of iterations executed concurrently, each by a \emph{SIMD lane}, by a single \emph{thread}
+by means of \emph{SIMD instructions}.
+\glossarydefend
+
+\glossaryterm{SIMD loop}
+\glossarydefstart
+A loop that includes at least one \emph{SIMD chunk}.
+\glossarydefend
+
+
+
+
+
+
+
+
+\subsection{Synchronization Terminology}
+\index{synchronization terminology}
+\glossaryterm{barrier}
+\glossarydefstart
+A point in the execution of a program encountered by a \emph{team} of \emph{threads}, beyond 
+which no \emph{thread} in the team may execute until all \emph{threads} in the \emph{team} have 
+reached the barrier and all \emph{explicit tasks} generated by the \emph{team} have executed to 
+completion. If \emph{cancellation} has been requested, threads may proceed to the end of 
+the canceled \emph{region} even if some threads in the team have not reached the \emph{barrier}.
+\glossarydefend
+
+\glossaryterm{cancellation}
+\glossarydefstart
+An action that cancels (that is, aborts) an OpenMP \emph{region} and causes executing 
+\emph{implicit} or \emph{explicit} tasks to proceed to the end of the canceled \emph{region}. 
+\glossarydefend
+
+\glossaryterm{cancellation point}
+\glossarydefstart
+A point at which implicit and explicit tasks check if cancellation has been 
+requested. If cancellation has been observed, they perform the \emph{cancellation}. 
+
+\begin{quote}
+COMMENT: For a list of cancellation points, see \specref{subsec:cancel Construct}
+\end{quote}
+\glossarydefend
+\bigskip
+
+
+
+
+
+
+
+\subsection{Tasking Terminology}
+\index{tasking terminology}
+\label{subsec:Tasking Terminology}
+\glossaryterm{task}
+\glossarydefstart
+A specific instance of executable code and its \emph{data environment}, generated when a 
+\emph{thread} encounters a \code{task} \emph{construct} or a \code{parallel} \emph{construct}. 
+\glossarydefend
+
+\glossaryterm{task region}
+\glossarydefstart
+A \emph{region} consisting of all code encountered during the execution of a \emph{task}. 
+
+\begin{quote}
+COMMENT: A \code{parallel} \emph{region} consists of one or more implicit \emph{task regions}. 
+\end{quote}
+\glossarydefend
+
+\glossaryterm{explicit task}
+\glossarydefstart
+A \emph{task} generated when a \code{task} \emph{construct} is encountered during execution.
+\glossarydefend
+
+\glossaryterm{implicit task}
+\glossarydefstart
+A \emph{task} generated by an \emph{implicit parallel region} or generated when a \code{parallel}
+\emph{construct} is encountered during execution.
+\glossarydefend
+
+\glossaryterm{initial task}
+\glossarydefstart
+An \emph{implicit task} associated with an \emph{implicit parallel region}.
+\glossarydefend
+
+\glossaryterm{current task}
+\glossarydefstart
+For a given \emph{thread}, the \emph{task} corresponding to the \emph{task region} in which it is 
+executing.
+\glossarydefend
+
+\glossaryterm{child task}
+\glossarydefstart
+A \emph{task} is a \emph{child task} of its generating \emph{task region}. 
+A \emph{child task region} is not part of its generating \emph{task region}.
+\glossarydefend
+
+\glossaryterm{sibling tasks}
+\glossarydefstart
+\emph{Tasks} that are \emph{child tasks} of the same \emph{task region}.
+\glossarydefend
+
+\glossaryterm{descendent task}
+\glossarydefstart
+A \emph{task} that is the \emph{child task} of a \emph{task region} or of one of its 
+\emph{descendent task regions}.
+\glossarydefend
+
+\glossaryterm{task completion}
+\glossarydefstart
+\emph{Task completion} occurs when the end of the \emph{structured block} associated with the 
+\emph{construct} that generated the \emph{task} is reached.
+
+\begin{quote}
+COMMENT: Completion of the \emph{initial task} occurs at program exit.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{task scheduling point}
+\glossarydefstart
+A point during the execution of the current \emph{task region} at which it can be 
+suspended to be resumed later; or the point of \emph{task completion}, after which the 
+executing thread may switch to a different \emph{task region}. 
+
+\begin{quote}
+COMMENT: For a list of task scheduling points, see \specref{subsec:Task Scheduling}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{task switching}
+\glossarydefstart
+The act of a \emph{thread} switching from the execution of one \emph{task} to another \emph{task}.
+\glossarydefend
+
+\glossaryterm{tied task}
+\glossarydefstart
+A \emph{task} that, when its \emph{task region} is suspended, can be resumed only by the same 
+\emph{thread} that suspended it. That is, the \emph{task} is tied to that \emph{thread}. 
+\glossarydefend
+
+\glossaryterm{untied task}
+\glossarydefstart
+A \emph{task} that, when its \emph{task region} is suspended, can be resumed by any \emph{thread} in 
+the team. That is, the \emph{task} is not tied to any \emph{thread}. 
+\glossarydefend
+
+\glossaryterm{undeferred task}
+\glossarydefstart
+A \emph{task} for which execution is not deferred with respect to its generating \emph{task} 
+\emph{region}. That is, its generating \emph{task region} is suspended until execution of the 
+\emph{undeferred task} is completed.
+\glossarydefend
+
+\glossaryterm{included task}
+\glossarydefstart
+A \emph{task} for which execution is sequentially included in the generating \emph{task region}. 
+That is, an \emph{included task} is \emph{undeferred} and executed immediately by the 
+\emph{encountering thread}.
+\glossarydefend
+
+\glossaryterm{merged task}
+\glossarydefstart
+A \emph{task} whose \emph{data environment}, inclusive of ICVs, is the same as that of its 
+generating \emph{task region}.
+\glossarydefend
+
+\glossaryterm{final task}
+\glossarydefstart
+A \emph{task} that forces all of its \emph{child tasks} to become \emph{final} and \emph{included tasks}.
+\glossarydefend
+
+\glossaryterm{task dependence}
+\glossarydefstart
+An ordering relation between two \emph{sibling tasks}: the \emph{dependent task} and a 
+previously generated \emph{predecessor task}. The \emph{task dependence} is fulfilled when the 
+\emph{predecessor task} has completed.
+\glossarydefend
+
+\begin{samepage}
+\glossaryterm{dependent task}
+\glossarydefstart
+A \emph{task} that because of a \emph{task dependence} cannot be executed until its \emph{predecessor 
+tasks} have completed.
+\glossarydefend
+\end{samepage}
+
+\glossaryterm{predecessor task}
+\glossarydefstart
+A \emph{task} that must complete before its \emph{dependent tasks} can be executed.
+\glossarydefend
+
+\glossaryterm{task synchronization construct}
+\glossarydefstart
+A \code{taskwait}, \code{taskgroup}, or a \code{barrier} \emph{construct}.
+\glossarydefend
+\bigskip
+
+
+
+
+
+
+
+\subsection{Data Terminology}
+\index{data terminology}
+\glossaryterm{variable}
+\glossarydefstart
+A named data storage block, whose value can be defined and redefined during the 
+execution of a program.
+
+\begin{adjustwidth}{-0.75in}{0in}
+\notestart
+\noteheader – An array or structure element is a variable that is part of another variable.
+\noteend
+\end{adjustwidth}
+\glossarydefend
+
+\glossaryterm{array section}
+\glossarydefstart
+A designated subset of the elements of an array. 
+\glossarydefend
+
+\glossaryterm{array item}
+\glossarydefstart
+An array, an array section or an array element.
+\glossarydefend
+
+\glossaryterm{private variable}
+\glossarydefstart
+With respect to a given set of \emph{task regions} or \emph{SIMD lanes} that bind to the same
+\code{parallel} \emph{region}, a \emph{variable} whose name provides access to a different block of 
+storage for each \emph{task region} or \emph{SIMD lane}.
+
+A \emph{variable} that is part of another variable (as an array or structure element) cannot 
+be made private independently of other components.
+\glossarydefend
+
+\glossaryterm{shared variable}
+\glossarydefstart
+With respect to a given set of \emph{task regions} that bind to the same \code{parallel} 
+\emph{region}, a \emph{variable} whose name provides access to the same block of storage for 
+each \emph{task region}.
+
+A \emph{variable} that is part of another variable (as an array or structure element) cannot 
+be \emph{shared} independently of the other components, except for static data members 
+of C++ classes.
+\glossarydefend
+
+\glossaryterm{threadprivate variable}
+\glossarydefstart
+A \emph{variable} that is replicated, one instance per \emph{thread}, by the OpenMP 
+implementation. Its name then provides access to a different block of storage for 
+each \emph{thread}.
+
+A \emph{variable} that is part of another variable (as an array or structure element) cannot 
+be made \emph{threadprivate} independently of the other components, except for static 
+data members of C++ classes. 
+\glossarydefend
+
+\glossaryterm{threadprivate memory}
+\glossarydefstart
+The set of \emph{threadprivate variables} associated with each \emph{thread}.
+\glossarydefend
+
+\glossaryterm{data environment}
+\glossarydefstart
+The \emph{variables} associated with the execution of a given \emph{region}. 
+\glossarydefend
+
+\glossaryterm{device data environment}
+\glossarydefstart
+A \emph{data environment} defined by a \code{target}~\code{data} or \code{target} construct.
+\glossarydefend
+\bigskip
+
+\glossaryterm{mapped variable}
+\glossarydefstart
+An original \emph{variable} in a \emph{data environment} with a corresponding \emph{variable} in a 
+device \emph{data environment}.
+
+\begin{quote}
+COMMENT: The original and corresponding \emph{variables} may share storage.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{mappable type}
+\glossarydefstart
+A type that is valid for a \emph{mapped variable}. If a type is composed from other types 
+(such as the type of an array or structure element) and any of the other types are 
+not mappable then the type is not mappable.
+
+\begin{quote}
+COMMENT: Pointer types are \emph{mappable} but the memory block to which the pointer refers is not \emph{mapped}.
+\end{quote}
+
+For C: 
+\nopagebreak
+The type must be a complete type.
+
+For C++: 
+\nopagebreak
+The type must be a complete type.
+
+In addition, for class types:
+\begin{itemize}
+\item All member functions accessed in any \code{target} region must appear in a 
+\code{declare}~\code{target} directive.
+
+\item All data members must be non-static.
+
+\item A \emph{mappable type} cannot contain virtual members. 
+\end{itemize}
+
+For Fortran: 
+\nopagebreak
+The type must be definable.
+\glossarydefend
+
+\glossaryterm{defined}
+\glossarydefstart
+For \emph{variables}, the property of having a valid value.
+
+For C:
+\nopagebreak
+For the contents of \emph{variables}, the property of having a valid value.
+
+For C++: 
+\nopagebreak
+For the contents of \emph{variables} of POD (plain old data) type, the property of having 
+a valid value.
+
+For \emph{variables} of non-POD class type, the property of having been constructed but 
+not subsequently destructed.
+
+For Fortran: 
+\nopagebreak
+For the contents of \emph{variables}, the property of having a valid value. For the 
+allocation or association status of \emph{variables}, the property of having a valid status.
+
+\begin{quote}
+COMMENT: Programs that rely upon \emph{variables} that are not \emph{defined} are \emph{non-conforming programs}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{class type}
+\glossarydefstart
+For C++: \emph{Variables} declared with one of the \code{class}, \code{struct}, or \code{union} keywords
+\glossarydefend
+
+\glossaryterm{sequentially consistent atomic construct}
+\glossarydefstart
+An \code{atomic} construct for which the \code{seq\_cst} clause is specified.
+\glossarydefend
+\bigskip
+
+\glossaryterm{non-sequentially consistent atomic construct}
+\glossarydefstart
+An \code{atomic} construct for which the \code{seq\_cst} clause is not specified
+\glossarydefend
+\bigskip
+\bigskip
+\bigskip
+
+
+
+
+
+\subsection{Implementation Terminology}
+\index{implementation terminology}
+\label{subsec:Implementation Terminology}
+\glossaryterm{supporting \emph{n} levels of parallelism}
+\glossarydefstart
+Implies allowing an \emph{active parallel region} to be enclosed by \emph{n-1} \emph{active parallel 
+regions}.
+\glossarydefend
+
+\glossaryterm{supporting the OpenMP API}
+\glossarydefstart
+Supporting at least one level of parallelism.
+\glossarydefend
+\bigskip
+
+\glossaryterm{supporting nested parallelism}
+\glossarydefstart
+Supporting more than one level of parallelism.  
+\glossarydefend
+\bigskip
+
+\glossaryterm{internal control variable}
+\glossarydefstart
+A conceptual variable that specifies runtime behavior of a set of \emph{threads} or \emph{tasks} 
+in an \emph{OpenMP program}.
+
+\begin{quote}
+COMMENT: The acronym ICV is used interchangeably with the term \emph{internal 
+control variable} in the remainder of this specification.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{compliant implementation}
+\glossarydefstart
+An implementation of the OpenMP specification that compiles and executes any 
+\emph{conforming program} as defined by the specification.
+
+\begin{quote}
+COMMENT: A \emph{compliant implementation} may exhibit \emph{unspecified behavior} when 
+compiling or executing a \emph{non-conforming program}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{unspecified behavior}
+\glossarydefstart
+A behavior or result that is not specified by the OpenMP specification or not 
+known prior to the compilation or execution of an \emph{OpenMP program}.
+
+Such \emph{unspecified behavior} may result from:
+
+\begin{itemize}
+\item Issues documented by the OpenMP specification as having \emph{unspecified 
+behavior}.
+
+\item A \emph{non-conforming program}.
+
+\item A \emph{conforming program} exhibiting an \emph{implementation defined} behavior.
+\end{itemize}
+\glossarydefend
+
+\glossaryterm{implementation defined}
+\glossarydefstart
+Behavior that must be documented by the implementation, and is allowed to vary 
+among different \emph{compliant implementations}. An implementation is allowed to 
+define this behavior as \emph{unspecified}.
+
+\begin{quote}
+COMMENT: All features that have \emph{implementation defined} behavior 
+are documented in Appendix~\ref{chap:OpenMP Implementation-Defined Behaviors}.
+\end{quote}
+\glossarydefend
+
+
+
+
+
+\pagebreak
+
+
+
+
+
+\section{Execution Model}
+\label{sec:Execution Model}
+\index{execution model}
+The OpenMP API uses the fork-join model of parallel execution. Multiple threads of
+execution perform tasks defined implicitly or explicitly by OpenMP directives. The
+OpenMP API is intended to support programs that will execute correctly both as parallel
+programs (multiple threads of execution and a full OpenMP support library) and as
+sequential programs (directives ignored and a simple OpenMP stubs library). However,
+it is possible and permitted to develop a program that executes correctly as a parallel
+program but not as a sequential program, or that produces different results when 
+executed as a parallel program compared to when it is executed as a sequential program. 
+Furthermore, using different numbers of threads may result in different numeric results 
+because of changes in the association of numeric operations. For example, a serial 
+addition reduction may have a different pattern of addition associations than a parallel 
+reduction. These different associations may change the results of floating-point addition.
+
+An OpenMP program begins as a single thread of execution, called an initial thread. An 
+initial thread executes sequentially, as if enclosed in an implicit task region, called an 
+initial task region, that is defined by the implicit parallel region surrounding the whole 
+program.
+
+The thread that executes the implicit parallel region that surrounds the whole program 
+executes on the \emph{host device}. An implementation may support 
+other \emph{target devices}. If
+supported, one or more devices are available to the host device for offloading code and 
+data. Each device has its own threads that are distinct from threads that execute on 
+another device. Threads cannot migrate from one device to another device. The 
+execution model is host-centric such that the host device offloads \code{target} regions to
+target devices.
+
+The initial thread that executes the implicit parallel region that surrounds the \code{target}
+region may execute on a \emph{target device}. An initial thread executes sequentially, as if
+enclosed in an implicit task region, called an initial task region, that is defined by an 
+implicit inactive \code{parallel} region that surrounds the entire \code{target} region.
+
+When a \code{target} construct is encountered, the \code{target} region is executed by the
+implicit device task. The task that encounters the \code{target} construct waits at the end of
+the construct until execution of the region completes. If a target device does not exist, or 
+the target device is not supported by the implementation, or the target device cannot 
+execute the \code{target} construct then the \code{target} region is executed by the host device.
+
+The \code{teams} construct creates a \emph{league of thread teams} 
+where the master thread of each
+team executes the region. Each of these master threads is an initial thread, and executes
+sequentially, as if enclosed in an implicit task region that is defined by an implicit
+parallel region that surrounds the entire \code{teams} region.
+
+If a construct creates a data environment, the data environment is created at the time the
+construct is encountered. Whether a construct creates a data environment is defined in 
+the description of the construct.
+
+When any thread encounters a \code{parallel} construct, the thread creates a team of itself
+and zero or more additional threads and becomes the master of the new team. A set of 
+implicit tasks, one per thread, is generated. The code for each task is defined by the code 
+inside the \code{parallel} construct. Each task is assigned to a different thread in the team
+and becomes tied; that is, it is always executed by the thread to which it is initially 
+assigned. The task region of the task being executed by the encountering thread is 
+suspended, and each member of the new team executes its implicit task. There is an 
+implicit barrier at the end of the \code{parallel} construct. Only the master thread resumes
+execution beyond the end of the \code{parallel} construct, resuming the task region that
+was suspended upon encountering the \code{parallel} construct. Any number of
+\code{parallel} constructs can be specified in a single program.
+
+\code{parallel} regions may be arbitrarily nested inside each other. If nested parallelism is
+disabled, or is not supported by the OpenMP implementation, then the new team that is 
+created by a thread encountering a \code{parallel} construct inside a \code{parallel} region
+will consist only of the encountering thread. However, if nested parallelism is supported 
+and enabled, then the new team can consist of more than one thread. A \code{parallel}
+construct may include a \code{proc\_bind} clause to specify the places to use for the threads
+in the team within the \code{parallel} region.
+
+When any team encounters a worksharing construct, the work inside the construct is 
+divided among the members of the team, and executed cooperatively instead of being 
+executed by every thread. There is a default barrier at the end of each worksharing 
+construct unless the \code{nowait} clause is present. Redundant execution of code by every
+thread in the team resumes after the end of the worksharing construct.
+
+When any thread encounters a \code{task} construct, a new explicit task is generated.
+Execution of explicitly generated tasks is assigned to one of the threads in the current 
+team, subject to the thread's availability to execute work. Thus, execution of the new 
+task could be immediate, or deferred until later according to task scheduling constraints 
+and thread availability. Threads are allowed to suspend the current task region at a task 
+scheduling point in order to execute a different task. If the suspended task region is for
+a tied task, the initially assigned thread later resumes execution of the suspended task
+region. If the suspended task region is for an untied task, then any thread may resume its
+execution. Completion of all explicit tasks bound to a given parallel region is guaranteed
+before the master thread leaves the implicit barrier at the end of the region. Completion
+of a subset of all explicit tasks bound to a given parallel region may be specified through
+the use of task synchronization constructs. Completion of all explicit tasks bound to the
+implicit parallel region is guaranteed by the time the program exits.
+
+When any thread encounters a \code{simd} construct, the iterations of the loop associated with
+the construct may be executed concurrently using the SIMD lanes that are available to
+the thread.
+
+The \code{cancel} construct can alter the previously described flow of execution in an
+OpenMP region. The effect of the \code{cancel} construct depends on its 
+\plc{construct-type-clause}. If a task encounters a \code{cancel} 
+construct with a \code{taskgroup} 
+\plc{construct-type-clause}, then the task activates cancellation 
+and continues execution at the end of its
+\code{task} region, which implies completion of that task. 
+Any other task in that \code{taskgroup}
+that has begun executing completes execution unless it encounters a \code{cancellation}
+\code{point} construct, in which case it continues execution at the end of its \code{task} region,
+which implies its completion. Other tasks in that \code{taskgroup} region that have not
+begun execution are aborted, which implies their completion.
+
+For all other \plc{construct-type-clause} values, if a 
+thread encounters a \code{cancel} construct, it
+activates cancellation of the innermost enclosing region of the type specified and the 
+thread continues execution at the end of that region. Threads check if cancellation has 
+been activated for their region at cancellation points and, if so, also resume execution at 
+the end of the canceled region.
+
+If cancellation has been activated regardless of \plc{construct-type-clause}, 
+threads that are
+waiting inside a barrier other than an implicit barrier at the end of the canceled region 
+exit the barrier and resume execution at the end of the canceled region. This action can 
+occur before the other threads reach that barrier.
+
+Synchronization constructs and library routines are available in the OpenMP API to 
+coordinate tasks and data access in \code{parallel} regions. In addition, library routines and
+environment variables are available to control or to query the runtime environment of 
+OpenMP programs.
+
+The OpenMP specification makes no guarantee that input or output to the same file is 
+synchronous when executed in parallel. In this case, the programmer is responsible for 
+synchronizing input and output statements (or routines) using the provided 
+synchronization constructs or library routines. For the case where each thread accesses a 
+different file, no synchronization by the programmer is necessary.
+
+
+
+
+
+
+
+\clearpage
+\section{Memory Model}
+\label{sec:Memory Model}
+\index{memory model}
+\subsection{Structure of the OpenMP Memory Model}
+\label{subsec:Structure of the OpenMP Memory Model}
+The OpenMP API provides a relaxed-consistency, shared-memory model. All OpenMP
+threads have access to a place to store and to retrieve variables, 
+called the \emph{memory}. In
+addition, each thread is allowed to have its own \emph{temporary view} of the memory. The
+temporary view of memory for each thread is not a required part of the OpenMP
+memory model, but can represent any kind of intervening structure, such as machine
+registers, cache, or other local storage, between the thread and the memory. The
+temporary view of memory allows the thread to cache variables and thereby to avoid
+going to memory for every reference to a variable. Each thread also has access to
+another type of memory that must not be accessed by other threads, 
+called \emph{threadprivate memory}.
+
+A directive that accepts data-sharing attribute clauses determines two kinds of access to
+variables used in the directive’s associated structured block: shared and private. Each
+variable referenced in the structured block has an original variable, which is the variable  
+by the same name that exists in the program immediately outside the construct. Each
+reference to a shared variable in the structured block becomes a reference to the original 
+variable. For each private variable referenced in the structured block, a new version of
+the original variable (of the same type and size) is created in memory for each task or
+SIMD lane that contains code associated with the directive. Creation of the new version
+does not alter the value of the original variable. However, the impact of attempts to
+access the original variable during the region associated with the directive is
+unspecified; see \specref{subsubsec:private clause} for additional details. References to a
+private variable in the structured block refer to the private version of the original
+variable for the current task or SIMD lane. The relationship between the value of the
+original variable and the initial or final value of the private version depends on the exact
+clause that specifies it. Details of this issue, as well as other issues with privatization,
+are provided in \specref{sec:Data Environment}.
+
+The minimum size at which a memory update may also read and write back adjacent 
+variables that are part of another variable (as array or structure elements) is
+implementation defined but is no larger than required by the base language. 
+
+A single access to a variable may be implemented with multiple load or store
+instructions, and hence is not guaranteed to be atomic with respect to other accesses to
+the same variable. Accesses to variables smaller than the implementation defined
+minimum size or to C or C++ bit-fields may be implemented by reading, modifying, and 
+rewriting a larger unit of memory, and may thus interfere with updates of variables or
+fields in the same unit of memory.
+
+If multiple threads write without synchronization to the same memory unit, including
+cases due to atomicity considerations as described above, then a data race occurs.
+Similarly, if at least one thread reads from a memory unit and at least one thread writes
+without synchronization to that same memory unit, including cases due to atomicity
+considerations as described above, then a data race occurs. If a data race occurs then the
+result of the program is unspecified.
+
+A private variable in a task region that eventually generates an inner nested \code{parallel}
+region is permitted to be made shared by implicit tasks in the inner \code{parallel} region.
+A private variable in a task region can be shared by an explicit \code{task} region generated
+during its execution. However, it is the programmer’s responsibility to ensure through
+synchronization that the lifetime of the variable does not end before completion of the
+explicit \code{task} region sharing it. Any other access by one task to the 
+private variables of another task results in unspecified behavior.
+
+
+
+
+\subsection{Device Data Environments}
+\label{subsec:Device Data Environments}
+\index{device data environments}
+When an OpenMP program begins, each device has an initial device data environment.
+The initial device data environment for the host device is the data environment
+associated with the initial task region. Directives that accept data-mapping attribute
+clauses determine how an original variable is mapped to a corresponding variable in a
+device data environment. The original variable is the variable with the same name that 
+exists in the data environment of the task that encounters the directive.
+
+If a corresponding variable is present in the enclosing device data environment, the new
+device data environment inherits the corresponding variable from the enclosing device
+data environment. If a corresponding variable is not present in the enclosing device data
+environment, a new corresponding variable (of the same type and size) is created in the
+new device data environment. In the latter case, the initial value of the new
+corresponding variable is determined from the clauses and the data environment of the
+encountering thread.
+
+The corresponding variable in the device data environment may share storage with the
+original variable. Writes to the corresponding variable may alter the value of the original
+variable. The impact of this on memory consistency is discussed in 
+\specref{subsec:OpenMP Memory Consistency}. 
+When a task executes in the context of a device data environment, references to  
+the original variable refer to the corresponding variable in the device data environment.
+
+The relationship between the value of the original variable and the initial or final value
+of the corresponding variable depends on the \plc{map-type}. Details of this issue, as well as
+other issues with mapping a variable, are provided in \specref{subsec:map Clause}.
+
+The original variable in a data environment and the corresponding variable(s) in one or
+more device data environments may share storage. Without intervening synchronization  
+data races can occur.
+
+
+
+
+\subsection{The Flush Operation}
+\label{subsec:The Flush Operation}
+\index{flush operation}
+The memory model has relaxed-consistency because a thread’s temporary view of
+memory is not required to be consistent with memory at all times. A value written to a
+variable can remain in the thread’s temporary view until it is forced to memory at a later
+time. Likewise, a read from a variable may retrieve the value from the thread’s
+temporary view, unless it is forced to read from memory. The OpenMP flush operation
+enforces consistency between the temporary view and memory.
+
+The flush operation is applied to a set of variables called the \emph{flush-set}. The flush
+operation restricts reordering of memory operations that an implementation might
+otherwise do. Implementations must not reorder the code for a memory operation for a
+given variable, or the code for a flush operation for the variable, with respect to a flush
+operation that refers to the same variable. 
+
+If a thread has performed a write to its temporary view of a shared variable since its last
+flush of that variable, then when it executes another flush of the variable, the flush does
+not complete until the value of the variable has been written to the variable in memory.
+If a thread performs multiple writes to the same variable between two flushes of that
+variable, the flush ensures that the value of the last write is written to the variable in
+memory. A flush of a variable executed by a thread also causes its temporary view of the
+variable to be discarded, so that if its next memory operation for that variable is a read,
+then the thread will read from memory when it may again capture the value in the 
+temporary view. When a thread executes a flush, no later memory operation by that
+thread for a variable involved in that flush is allowed to start until the flush completes.
+The completion of a flush of a set of variables executed by a thread is defined as the
+point at which all writes to those variables performed by the thread before the flush are 
+visible in memory to all other threads and that thread’s temporary view of all variables
+involved is discarded.
+
+The flush operation provides a guarantee of consistency between a thread’s temporary
+view and memory. Therefore, the flush operation can be used to guarantee that a value 
+written to a variable by one thread may be read by a second thread. To accomplish this,
+the programmer must ensure that the second thread has not written to the variable since
+its last flush of the variable, and that the following sequence of events happens in the
+specified order: 
+
+\begin{enumerate}
+\item The value is written to the variable by the first thread.   
+
+\item The variable is flushed by the first thread.    
+
+\item The variable is flushed by the second thread.   
+
+\item The value is read from the variable by the second thread.
+\end{enumerate}
+
+\notestart
+\noteheader – OpenMP synchronization operations, described in 
+\specref{sec:Master and Synchronization Constructs} and in \specref{sec:Lock Routines}, 
+are recommended for enforcing this order. Synchronization 
+through variables is possible but is not recommended because the proper timing of 
+flushes is difficult.
+\noteend
+
+
+
+
+
+
+
+\subsection{OpenMP Memory Consistency}
+\label{subsec:OpenMP Memory Consistency}
+The restrictions in \specref{subsec:The Flush Operation} on reordering with respect to flush 
+operations guarantee the following: 
+
+\begin{itemize}
+\item If the intersection of the flush-sets of two flushes performed by two different threads 
+is non-empty, then the two flushes must be completed as if in some sequential order, 
+seen by all threads. 
+
+\item If two operations performed by the same thread either access, modify, or flush the 
+same variable, then they must be completed as if in that thread's program order, as 
+seen by all threads. 
+
+\item If the intersection of the flush-sets of two flushes is empty, the threads can observe 
+these flushes in any order.
+\end{itemize}
+
+The flush operation can be specified using the \code{flush} directive, and is also implied at 
+various locations in an OpenMP program: see \specref{subsec:flush Construct} for details.
+
+\notestart
+\noteheader – Since flush operations by themselves cannot prevent data races, explicit flush 
+operations are only useful in combination with non-sequentially consistent atomic 
+directives.
+\noteend
+
+OpenMP programs that:
+
+\begin{itemize}[rightmargin=11ex]
+\item do not use non-sequentially consistent atomic directives,
+
+\item do not rely on the accuracy of a \plc{false} result from 
+\code{omp\_test\_lock} and \code{omp\_test\_nest\_lock}, and
+
+\item correctly avoid data races as required in \specref{subsec:Structure of the OpenMP Memory Model} 
+\end{itemize}
+
+behave as though operations on shared variables were simply interleaved in an order 
+consistent with the order in which they are performed by each thread. The relaxed 
+consistency model is invisible for such programs, and any explicit flush operations in 
+such programs are redundant.
+
+Implementations are allowed to relax the ordering imposed by implicit flush operations 
+when the result is only visible to programs using non-sequentially consistent atomic 
+directives.
+
+
+
+
+
+
+
+
+\section{OpenMP Compliance}
+\label{sec:OpenMP Compliance}
+\index{OpenMP compliance}
+\index{compliance}
+An implementation of the OpenMP API is compliant if and only if it compiles and 
+executes all conforming programs according to the syntax and semantics laid out in 
+Chapters 1, 2, 3 and 4. Appendices A, B, C, D, E and F and sections designated as Notes 
+(see \specref{sec:Organization of this document}) 
+are for information purposes only and are not part of the 
+specification.
+
+The OpenMP API defines constructs that operate in the context of the base language that 
+is supported by an implementation. If the base language does not support a language 
+construct that appears in this document, a compliant OpenMP implementation is not 
+required to support it, with the exception that for Fortran, the implementation must 
+allow case insensitivity for directive and API routines names, and must allow identifiers 
+of more than six characters
+
+All library, intrinsic and built-in routines provided by the base language must be
+thread-safe in a compliant implementation. In addition, the implementation of the base 
+language must also be thread-safe. For example, \code{ALLOCATE} and \code{DEALLOCATE} 
+statements must be thread-safe in Fortran. Unsynchronized concurrent use of such 
+routines by different threads must produce correct results (although not necessarily the 
+same as serial execution results, as in the case of random number generation routines).
+
+Starting with Fortran 90, variables with explicit initialization have the \code{SAVE} attribute 
+implicitly. This is not the case in Fortran 77. However, a compliant OpenMP Fortran 
+implementation must give such a variable the \code{SAVE} attribute, regardless of the 
+underlying base language version.
+
+Appendix~\ref{chap:OpenMP Implementation-Defined Behaviors} 
+lists certain aspects of the OpenMP API that are implementation defined. A 
+compliant implementation is required to define and document its behavior for each of 
+the items in Appendix~\ref{chap:OpenMP Implementation-Defined Behaviors}.
+
+
+
+
+
+
+\section{Normative References}
+\index{normative references}
+\label{sec:normative references}
+\begin{itemize}
+\item ISO/IEC 9899:1990, \textsl{Information Technology - Programming Languages - C}.
+
+This OpenMP API specification refers to ISO/IEC 9899:1990 as C90.
+
+\item ISO/IEC 9899:1999, \textsl{Information Technology - Programming Languages - C}. 
+
+This OpenMP API specification refers to ISO/IEC 9899:1999 as C99.
+
+\item ISO/IEC 14882:1998, \textsl{Information Technology - Programming Languages - C++}. 
+
+This OpenMP API specification refers to ISO/IEC 14882:1998 as C++.
+
+\item ISO/IEC 1539:1980, \textsl{Information Technology - Programming Languages - Fortran}.
+
+This OpenMP API specification refers to ISO/IEC 1539:1980 as Fortran 77.
+
+\item ISO/IEC 1539:1991, \textsl{Information Technology - Programming Languages - Fortran}.
+
+This OpenMP API specification refers to ISO/IEC 1539:1991 as Fortran 90.
+
+\item ISO/IEC 1539-1:1997, \textsl{Information Technology - Programming Languages - Fortran}.
+
+This OpenMP API specification refers to ISO/IEC 1539-1:1997 as Fortran 95.
+
+\item ISO/IEC 1539-1:2004, \textsl{Information Technology - Programming Languages - Fortran}.
+
+
+This OpenMP API specification refers to ISO/IEC 1539-1:2004 as Fortran 2003. The 
+following features are not supported:
+
+\begin{itemize}
+\item IEEE Arithmetic issues covered in Fortran 2003 Section 14
+
+\item Allocatable enhancement
+
+\item Parameterized derived types
+
+\item Finalization
+
+\item Procedures bound by name to a type
+
+\item The \code{PASS} attribute
+
+\item Procedures bound to a type as operators
+
+\item Type extension
+
+\item Overriding a type-bound procedure
+
+\item Polymorphic entities
+
+\item \code{SELECT}~\code{TYPE} construct
+
+\item Deferred bindings and abstract types
+
+\item Controlling IEEE underflow
+
+\item Another IEEE class value 
+\end{itemize}
+\end{itemize}
+
+Where this OpenMP API specification refers to C, C++ or Fortran, reference is made to 
+the base language supported by the implementation.
+
+
+
+
+
+
+
+
+\pagebreak
+\section{Organization of this document}
+\label{sec:Organization of this document}
+The remainder of this document is structured as follows: 
+
+\begin{itemize}
+\item Chapter \ref{chap:Directives} ``Directives''
+
+\item Chapter \ref{chap:Runtime Library Routines} ``Runtime Library Routines''
+
+\item Chapter \ref{chap:Environment Variables} ``Environment Variables''
+
+\item Appendix \ref{chap:Appendix A} ``Stubs for Runtime Library Routines''
+
+\item Appendix \ref{chap:OpenMP C and C++ Grammar} ``OpenMP C and C++ Grammar''
+
+\item Appendix \ref{chap:Interface Declarations} ``Interface Declarations'' 
+
+\item Appendix \ref{chap:OpenMP Implementation-Defined Behaviors} ``OpenMP Implementation-Defined Behaviors''
+
+\item Appendix \ref{chap:Features History} ``Features History''
+\end{itemize}
+
+Some sections of this document only apply to programs written in a certain base 
+language. Text that applies only to programs whose base language is C or C++ is shown 
+as follows: 
+
+\ccppspecificstart
+C/C++ specific text...
+\ccppspecificend
+
+Text that applies only to programs whose base language is C only is shown as follows:
+
+\cspecificstart
+C specific text...
+\cspecificend
+
+Text that applies only to programs whose base language is C90 only is shown as 
+follows:
+
+\cNinetyspecificstart
+C90 specific text...
+\cNinetyspecificend
+
+Text that applies only to programs whose base language is C99 only is shown as 
+follows:
+
+\cNinetyNinespecificstart
+C99 specific text...
+\cNinetyNinespecificend
+
+Text that applies only to programs whose base language is C++ only is shown as 
+follows:
+
+\cppspecificstart
+C++ specific text...
+\cppspecificend
+
+Text that applies only to programs whose base language is Fortran is shown as follows: 
+
+\fortranspecificstart
+Fortran specific text......
+\fortranspecificend
+
+Where an entire page consists of, for example, Fortran specific text, a marker is shown 
+at the top of the page like this:
+
+\bigskip
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{10em}
+\bigskip
+
+Some text is for information only, and is not part of the normative specification. Such 
+text is designated as a note, like this: 
+
+\needspace{6\baselineskip}\notestart
+\noteheader – Non-normative text....
+\noteend
+
+
+% This is the end of ch1-introduction.tex of the OpenMP specification.
+

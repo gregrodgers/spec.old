@@ -1,0 +1,541 @@
+% This is appendix-C-InterfaceDeclarations.tex of the OpenMP specification.
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+
+% Blank page
+
+\clearpage
+\thispagestyle{empty}
+\phantom{a}
+\emph{This page intentionally left blank}
+\vfill
+
+
+
+
+\chapter{Interface Declarations}
+\index{interface declarations}
+\index{header files}
+\index{include files}
+\label{chap:Interface Declarations}
+This appendix gives examples of the C/C++ header file, the Fortran \code{include} file and 
+Fortran \code{module} that shall be provided by implementations as specified in Chapter 3. It 
+also includes an example of a Fortran 90 generic interface for a library routine. This is a 
+non-normative section, implementation files may differ.
+
+
+
+
+\pagebreak
+\section{Example of the \code{omp.h} Header File}
+\label{sec:Example of the omp.h Header File}
+{\small \begin{codepar}
+\#ifndef \_OMP\_H\_DEF
+\#define \_OMP\_H\_DEF
+
+/*
+ * define the lock data types
+ */
+typedef void *omp\_lock\_t;
+
+typedef void *omp\_nest\_lock\_t;
+
+/*
+ * define the schedule kinds
+ */
+typedef enum omp\_sched\_t
+{
+ omp\_sched\_static = 1,
+ omp\_sched\_dynamic = 2,
+ omp\_sched\_guided = 3,
+ omp\_sched\_auto = 4
+/* , Add vendor specific schedule constants here */
+} omp\_sched\_t;
+
+/*
+* define the proc bind values 
+*/ 
+typedef enum omp\_proc\_bind\_t
+{
+ omp\_proc\_bind\_false = 0,
+ omp\_proc\_bind\_true = 1,
+ omp\_proc\_bind\_master = 2,
+ omp\_proc\_bind\_close = 3,
+ omp\_proc\_bind\_spread = 4
+} omp\_proc\_bind\_t; 
+
+/*
+ * exported OpenMP functions
+ */
+\#ifdef _\_cplusplus
+extern "C"
+{
+\#endif
+
+extern void omp\_set\_num\_threads(int num\_threads);
+extern int omp\_get\_num\_threads(void);
+extern int omp\_get\_max\_threads(void);
+extern int omp\_get\_thread\_num(void);
+extern int omp\_get\_num\_procs(void);
+extern int omp\_in\_parallel(void);
+extern void omp\_set\_dynamic(int dynamic\_threads);
+extern int omp\_get\_dynamic(void);
+extern void omp\_set\_nested(int nested);
+extern int omp\_get\_cancellation(void);
+extern int omp\_get\_nested(void);
+extern void omp\_set\_schedule(omp\_sched\_t kind, int modifier);
+extern void omp\_get\_schedule(omp\_sched\_t *kind, int *modifier);
+extern int omp\_get\_thread\_limit(void);
+extern void omp\_set\_max\_active\_levels(int max\_active\_levels);
+extern int omp\_get\_max\_active\_levels(void);
+extern int omp\_get\_level(void);
+extern int omp\_get\_ancestor\_thread\_num(int level);
+extern int omp\_get\_team\_size(int level);
+extern int omp\_get\_active\_level(void);
+extern int omp\_in\_final(void);
+extern omp\_proc\_bind\_t omp\_get\_proc\_bind(void);
+extern void omp\_set\_default\_device(int device\_num);
+extern int omp\_get\_default\_device(void);
+extern int omp\_get\_num\_devices(void);
+extern int omp\_get\_num\_teams(void);
+extern int omp\_get\_team\_num(void);
+extern int omp\_is\_initial\_device(void);
+
+extern void omp\_init\_lock(omp\_lock\_t *lock);
+extern void omp\_destroy\_lock(omp\_lock\_t *lock);
+extern void omp\_set\_lock(omp\_lock\_t *lock);
+extern void omp\_unset\_lock(omp\_lock\_t *lock);
+extern int omp\_test\_lock(omp\_lock\_t *lock);
+
+extern void omp\_init\_nest\_lock(omp\_nest\_lock\_t *lock);
+extern void omp\_destroy\_nest\_lock(omp\_nest\_lock\_t *lock);
+extern void omp\_set\_nest\_lock(omp\_nest\_lock\_t *lock);
+extern void omp\_unset\_nest\_lock(omp\_nest\_lock\_t *lock);
+extern int omp\_test\_nest\_lock(omp\_nest\_lock\_t *lock);
+
+extern double omp\_get\_wtime(void);
+extern double omp\_get\_wtick(void);
+
+\#ifdef _\_cplusplus
+}
+\#endif
+
+\#endif
+\end{codepar}} % end of \small block
+
+
+
+
+
+\pagebreak
+{\hyphenpenalty=10000\section{Example of an Interface Declaration \code{include} File}}
+\label{sec:Example of an Interface Declaration include File}
+\emph{omp\_lib\_kinds.h:}
+{\small \begin{codepar}
+     integer omp\_lock\_kind
+     integer omp\_nest\_lock\_kind
+! this selects an integer that is large enough to hold a 64 bit integer
+     parameter ( omp\_lock\_kind = selected\_int\_kind( 10 ) )
+     parameter ( omp\_nest\_lock\_kind = selected\_int\_kind( 10 ) )
+     integer omp\_sched\_kind
+! this selects an integer that is large enough to hold a 32 bit integer
+     parameter ( omp\_sched\_kind = selected\_int\_kind( 8 ) )
+     integer ( omp\_sched\_kind ) omp\_sched\_static
+     parameter ( omp\_sched\_static = 1 )
+     integer ( omp\_sched\_kind ) omp\_sched\_dynamic
+     parameter ( omp\_sched\_dynamic = 2 )
+     integer ( omp\_sched\_kind ) omp\_sched\_guided
+     parameter ( omp\_sched\_guided = 3 )
+     integer ( omp\_sched\_kind ) omp\_sched\_auto
+     parameter ( omp\_sched\_auto = 4 )
+     integer omp\_proc\_bind\_kind
+     parameter ( omp\_proc\_bind\_kind = selected\_int\_kind( 8 ) )
+     integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_false
+     parameter ( omp\_proc\_bind\_false = 0 )
+     integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_true
+     parameter ( omp\_proc\_bind\_true = 1 )
+     integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_master
+     parameter ( omp\_proc\_bind\_master = 2 )
+     integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_close
+     parameter ( omp\_proc\_bind\_close = 3 )
+     integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_spread
+     parameter ( omp\_proc\_bind\_spread = 4 )
+\end{codepar}}
+
+\emph{omp\_lib.h:}
+
+{\small \begin{codepar}
+! default integer type assumed below
+! default logical type assumed below
+! OpenMP API v4.0
+
+     include 'omp\_lib\_kinds.h'
+     integer openmp\_version
+     parameter ( openmp\_version = 201307 )
+
+     external omp\_set\_num\_threads
+     external omp\_get\_num\_threads
+     integer omp\_get\_num\_threads
+     external omp\_get\_max\_threads
+     integer omp\_get\_max\_threads
+     external omp\_get\_thread\_num
+     integer omp\_get\_thread\_num
+     external omp\_get\_num\_procs
+     integer omp\_get\_num\_procs
+     external omp\_in\_parallel
+     logical omp\_in\_parallel
+     external omp\_set\_dynamic
+     external omp\_get\_dynamic
+     logical omp\_get\_dynamic
+     external omp\_get\_cancellation
+     integer omp\_get\_cancellation
+     external omp\_set\_nested
+     external omp\_get\_nested
+     logical omp\_get\_nested
+     external omp\_set\_schedule
+     external omp\_get\_schedule
+     external omp\_get\_thread\_limit
+     integer omp\_get\_thread\_limit
+     external omp\_set\_max\_active\_levels
+     external omp\_get\_max\_active\_levels
+     integer omp\_get\_max\_active\_levels
+     external omp\_get\_level
+     integer omp\_get\_level
+     external omp\_get\_ancestor\_thread\_num
+     integer omp\_get\_ancestor\_thread\_num
+     external omp\_get\_team\_size
+     integer omp\_get\_team\_size
+     external omp\_get\_active\_level
+     integer omp\_get\_active\_level
+     external omp\_set\_default\_device
+     external omp\_get\_default\_device
+     integer omp\_get\_default\_device
+     external omp\_get\_num\_devices
+     integer omp\_get\_num\_devices
+     external omp\_get\_num\_teams
+     integer omp\_get\_num\_teams
+     external omp\_get\_team\_num
+     integer omp\_get\_team\_num
+     external omp\_is\_initial\_device
+     logical omp\_is\_initial\_device
+
+     external omp\_in\_final
+     logical omp\_in\_final
+
+     integer ( omp\_proc\_bind\_kind ) omp\_get\_proc\_bind
+     external omp\_get\_proc\_bind
+
+     external omp\_init\_lock
+     external omp\_destroy\_lock
+     external omp\_set\_lock
+     external omp\_unset\_lock
+     external omp\_test\_lock
+     logical omp\_test\_lock
+
+     external omp\_init\_nest\_lock
+     external omp\_destroy\_nest\_lock
+     external omp\_set\_nest\_lock
+     external omp\_unset\_nest\_lock
+     external omp\_test\_nest\_lock
+     integer omp\_test\_nest\_lock
+
+     external omp\_get\_wtick
+     double precision omp\_get\_wtick
+     external omp\_get\_wtime
+     double precision omp\_get\_wtime
+\end{codepar}}
+
+
+
+
+
+\pagebreak
+\section{Example of a Fortran Interface Declaration \code{module}}
+\label{sec:Example of a Fortran Interface Declaration module}
+{\small \begin{codepar}
+!      the "!" of this comment starts in column 1
+!23456
+
+        module omp\_lib\_kinds
+        integer, parameter :: omp\_lock\_kind = selected\_int\_kind( 10 )
+        integer, parameter :: omp\_nest\_lock\_kind = selected\_int\_kind( 10 )
+        integer, parameter :: omp\_sched\_kind = selected\_int\_kind( 8 ) 
+        integer(kind=omp\_sched\_kind), parameter ::
+      \&   omp\_sched\_static = 1
+        integer(kind=omp\_sched\_kind), parameter ::
+      \&   omp\_sched\_dynamic = 2
+        integer(kind=omp\_sched\_kind), parameter ::
+      \&   omp\_sched\_guided = 3
+        integer(kind=omp\_sched\_kind), parameter ::
+      \&   omp\_sched\_auto = 4
+        integer, parameter :: omp\_proc\_bind\_kind = selected\_int\_kind( 8 )
+        integer (kind=omp\_proc\_bind\_kind), parameter ::
+      \&   omp\_proc\_bind\_false = 0
+        integer (kind=omp\_proc\_bind\_kind), parameter ::
+      \&   omp\_proc\_bind\_true = 1
+        integer (kind=omp\_proc\_bind\_kind), parameter ::
+      \&   omp\_proc\_bind\_master = 2
+        integer (kind=omp\_proc\_bind\_kind), parameter ::
+      \&   omp\_proc\_bind\_close = 3
+        integer (kind=omp\_proc\_bind\_kind), parameter ::
+      \&   omp\_proc\_bind\_spread = 4
+         end module omp\_lib\_kinds
+
+        module omp\_lib
+
+          use omp\_lib\_kinds
+
+!                                     OpenMP API v4.0
+          integer, parameter :: openmp\_version = 201307
+
+         interface
+
+          subroutine omp\_set\_num\_threads (number\_of\_threads\_expr)
+           integer, intent(in) :: number\_of\_threads\_expr
+          end subroutine omp\_set\_num\_threads
+
+          function omp\_get\_num\_threads ()
+           integer :: omp\_get\_num\_threads
+          end function omp\_get\_num\_threads
+
+          function omp\_get\_max\_threads ()
+           integer :: omp\_get\_max\_threads
+          end function omp\_get\_max\_threads
+
+          function omp\_get\_thread\_num ()
+           integer :: omp\_get\_thread\_num
+          end function omp\_get\_thread\_num
+
+          function omp\_get\_num\_procs ()
+           integer :: omp\_get\_num\_procs
+          end function omp\_get\_num\_procs
+
+          function omp\_in\_parallel ()
+           logical :: omp\_in\_parallel
+          end function omp\_in\_parallel
+
+          subroutine omp\_set\_dynamic (enable\_expr)
+           logical, intent(in) ::enable\_expr
+          end subroutine omp\_set\_dynamic
+
+          function omp\_get\_dynamic ()
+           logical :: omp\_get\_dynamic
+          end function omp\_get\_dynamic
+
+          function omp\_get\_cancellation ()
+           integer :: omp\_get\_cancellation
+          end function omp\_get\_cancellation
+
+          subroutine omp\_set\_nested (enable\_expr)
+           logical, intent(in) :: enable\_expr
+          end subroutine omp\_set\_nested
+
+          function omp\_get\_nested ()
+           logical :: omp\_get\_nested
+          end function omp\_get\_nested
+
+          subroutine omp\_set\_schedule (kind, modifier)
+           use omp\_lib\_kinds
+           integer(kind=omp\_sched\_kind), intent(in) :: kind
+           integer, intent(in) :: modifier
+          end subroutine omp\_set\_schedule
+
+          subroutine omp\_get\_schedule (kind, modifier)
+           use omp\_lib\_kinds
+           integer(kind=omp\_sched\_kind), intent(out) :: kind
+           integer, intent(out)::modifier
+          end subroutine omp\_get\_schedule
+
+          function omp\_get\_thread\_limit()
+           integer :: omp\_get\_thread\_limit
+          end function omp\_get\_thread\_limit
+
+          subroutine omp\_set\_max\_active\_levels(var)
+           integer, intent(in) :: var
+          end subroutine omp\_set\_max\_active\_levels
+
+          function omp\_get\_max\_active\_levels()
+           integer :: omp\_get\_max\_active\_levels
+          end function omp\_get\_max\_active\_levels
+
+          function omp\_get\_level()
+           integer :: omp\_get\_level
+          end function omp\_get\_level
+
+          function omp\_get\_ancestor\_thread\_num(level)
+           integer, intent(in) :: level
+           integer :: omp\_get\_ancestor\_thread\_num
+          end function omp\_get\_ancestor\_thread\_num
+
+          function omp\_get\_team\_size(level)
+           integer, intent(in) :: level
+           integer :: omp\_get\_team\_size
+          end function omp\_get\_team\_size
+
+          function omp\_get\_active\_level()
+           integer :: omp\_get\_active\_level
+          end function omp\_get\_active\_level
+
+          function omp\_in\_final()
+           logical omp\_in\_final
+          end function omp\_in\_final
+
+          function omp\_get\_proc\_bind( )
+           include 'omp\_lib\_kinds.h'
+           integer (kind=omp\_proc\_bind\_kind) omp\_get\_proc\_bind
+           omp\_get\_proc\_bind = omp\_proc\_bind\_false
+          end function omp\_get\_proc\_bind
+
+          subroutine omp\_set\_default\_device (device\_num)
+           integer :: device\_num
+          end subroutine omp\_set\_default\_device
+
+          function omp\_get\_default\_device ()
+           integer :: omp\_get\_default\_device
+          end function omp\_get\_default\_device
+
+          function omp\_get\_num\_devices ()
+           integer :: omp\_get\_num\_devices
+          end function omp\_get\_num\_devices
+
+          function omp\_get\_num\_teams ()
+           integer :: omp\_get\_num\_teams
+          end function omp\_get\_num\_teams
+
+          function omp\_get\_team\_num ()
+           integer :: omp\_get\_team\_num
+          end function omp\_get\_team\_num
+
+          function omp\_is\_initial\_device ()
+           logical :: omp\_is\_initial\_device
+          end function omp\_is\_initial\_device
+
+          subroutine omp\_init\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_lock\_kind), intent(out) :: var
+          end subroutine omp\_init\_lock
+
+          subroutine omp\_destroy\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_lock\_kind), intent(inout) :: var
+          end subroutine omp\_destroy\_lock
+
+          subroutine omp\_set\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_lock\_kind), intent(inout) :: var
+          end subroutine omp\_set\_lock
+
+          subroutine omp\_unset\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_lock\_kind), intent(inout) :: var
+          end subroutine omp\_unset\_lock
+
+          function omp\_test\_lock (var)
+           use omp\_lib\_kinds
+           logical :: omp\_test\_lock
+           integer (kind=omp\_lock\_kind), intent(inout) :: var
+          end function omp\_test\_lock
+
+          subroutine omp\_init\_nest\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_nest\_lock\_kind), intent(out) :: var
+          end subroutine omp\_init\_nest\_lock
+
+          subroutine omp\_destroy\_nest\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+          end subroutine omp\_destroy\_nest\_lock
+
+          subroutine omp\_set\_nest\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+          end subroutine omp\_set\_nest\_lock
+
+          subroutine omp\_unset\_nest\_lock (var)
+           use omp\_lib\_kinds
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+          end subroutine omp\_unset\_nest\_lock
+
+          function omp\_test\_nest\_lock (var)
+           use omp\_lib\_kinds
+           integer :: omp\_test\_nest\_lock
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+          end function omp\_test\_nest\_lock
+
+          function omp\_get\_wtick ()
+           double precision :: omp\_get\_wtick
+          end function omp\_get\_wtick
+
+          function omp\_get\_wtime ()
+           double precision :: omp\_get\_wtime
+          end function omp\_get\_wtime
+
+          end interface
+
+        end module omp\_lib
+\end{codepar}} % end of \small block
+
+
+
+
+
+
+\pagebreak
+\section{Example of a Generic Interface for a Library Routine}
+\label{sec:Example of a Generic Interface for a Library Routine}
+Any of the OpenMP runtime library routines that take an argument may be extended 
+with a generic interface so arguments of different \code{KIND} type can be accommodated.
+
+The \code{OMP\_SET\_NUM\_THREADS} interface could be specified in the \code{omp\_lib} module 
+as follows:
+
+\begin{boxedcode}
+interface omp\_set\_num\_threads
+
+    subroutine omp\_set\_num\_threads_4(number\_of\_threads\_expr)
+      use omp\_lib\_kinds
+      integer(4), intent(in) :: number\_of\_threads\_expr
+    end subroutine omp\_set\_num\_threads_4
+
+    subroutine omp\_set\_num\_threads_8(number\_of\_threads\_expr)
+      use omp\_lib\_kinds
+      integer(8), intent(in) :: number\_of\_threads\_expr
+    end subroutine omp\_set\_num\_threads_8
+
+end interface omp\_set\_num\_threads
+\end{boxedcode}
+
+
+% This is the end of appendix-C-InterfaceDeclarations.tex
+

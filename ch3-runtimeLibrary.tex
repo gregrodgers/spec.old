@@ -1,0 +1,2142 @@
+% This is ch3-runtimeLibrary.tex of the OpenMP specification.
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+\chapter{Runtime Library Routines}
+\index{runtime library routines}
+\label{chap:Runtime Library Routines}
+This chapter describes the OpenMP API runtime library routines and is divided into the 
+following sections:
+
+\begin{itemize}
+\item Runtime library definitions 
+(\specref{sec:runtime library definitions}).
+
+\item Execution environment routines that can be used to control and to query the parallel 
+execution environment 
+(\specref{sec:Execution Environment Routines}).
+
+\item Lock routines that can be used to synchronize access to data 
+(\specref{sec:Lock Routines}). 
+
+\item Portable timer routines 
+(\specref{sec:Timing Routines}).
+\end{itemize}
+
+Throughout this chapter, \plc{true} and \plc{false} are used as generic terms to simplify the 
+description of the routines. 
+
+\begin{samepage}
+\ccppspecificstart
+\plc{true} means a nonzero integer value and \plc{false} means an integer value of zero. 
+\ccppspecificend
+\end{samepage}
+\bigskip
+
+\begin{samepage}
+\fortranspecificstart
+\plc{true} means a logical value of \code{.TRUE.} and \plc{false} means a logical value of \code{.FALSE.}.
+\fortranspecificend
+\end{samepage}
+\bigskip
+
+\begin{samepage}
+\vspace{1\baselineskip}
+\fortranspecificstart
+\vspace{-1\baselineskip}
+\restrictions
+
+The following restriction applies to all OpenMP runtime library routines:
+
+\begin{itemize}
+\item OpenMP runtime library routines may not be called from \code{PURE} or \code{ELEMENTAL} 
+procedures. 
+\end{itemize}
+\fortranspecificend
+\end{samepage}
+
+
+
+
+
+
+
+
+
+
+
+\section{Runtime Library Definitions}
+\index{runtime library definitions}
+\index{header files}
+\index{include files}
+\label{sec:runtime library definitions}
+For each base language, a compliant implementation must supply a set of definitions for 
+the OpenMP API runtime library routines and the special data types of their parameters. 
+The set of definitions must contain a declaration for each OpenMP API runtime library 
+routine and a declaration for the \emph{simple lock}, \emph{nestable lock}, \emph{schedule}, and \emph{thread affinity
+policy} data types. In addition, each set of definitions may specify other implementation 
+specific values.
+
+\ccppspecificstart
+The library routines are external functions with ``C'' linkage.
+
+Prototypes for the C/C++ runtime library routines described in this chapter shall be 
+provided in a header file named \code{omp.h}. This file defines the following: 
+
+\begin{itemize}
+\item The prototypes of all the routines in the chapter. 
+
+\item The type \code{omp\_lock\_t}. 
+
+\item The type \code{omp\_nest\_lock\_t}.
+
+\item The type \code{omp\_sched\_t}.
+
+\item The type \code{omp\_proc\_bind\_t}.
+\end{itemize}
+
+% was: C.1 on page 288 
+See Section \specref{sec:Example of the omp.h Header File} for an example of this file.
+\ccppspecificend
+
+\fortranspecificstart
+The OpenMP Fortran API runtime library routines are external procedures. The return 
+values of these routines are of default kind, unless otherwise specified.
+
+Interface declarations for the OpenMP Fortran runtime library routines described in this 
+chapter shall be provided in the form of a Fortran \code{include} file named \code{omp\_lib.h} or 
+a Fortran~90 \code{module} named \code{omp\_lib}. It is implementation defined whether the 
+\code{include} file or the \code{module} file (or both) is provided.
+
+These files define the following:
+
+\begin{itemize}
+\item The interfaces of all of the routines in this chapter.
+
+\item The \code{integer} \code{parameter} \code{omp\_lock\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_nest\_lock\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_sched\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_proc\_bind\_kind}.
+
+\item The \code{integer} \code{parameter} \code{openmp\_version} with a value \plc{yyyymm} where \plc{yyyy} 
+and \plc{mm} are the year and month designations of the version of the OpenMP Fortran 
+API that the implementation supports. This value matches that of the C preprocessor 
+macro \code{\_OPENMP}, when a macro preprocessor is supported (see 
+\specref{sec:Conditional Compilation}).
+\end{itemize}
+
+See \specref{sec:Example of an Interface Declaration include File} 
+and \specref{sec:Example of a Fortran Interface Declaration module} 
+for examples of these files.
+
+It is implementation defined whether any of the OpenMP runtime library routines that 
+take an argument are extended with a generic interface so arguments of different \code{KIND} 
+type can be accommodated. See Appendix~\ref{sec:Example of a Generic Interface for a Library Routine}
+for an example of such an extension. 
+\fortranspecificend
+
+
+
+
+
+
+
+
+
+\section{Execution Environment Routines}
+\index{execution environment routines}
+\label{sec:Execution Environment Routines}
+This section describes routines that affect and monitor threads, processors, and the 
+parallel environment. 
+
+
+
+
+
+
+\subsection{\code{omp\_set\_num\_threads}}
+\index{omp\_set\_num\_threads@{\code{omp\_set\_num\_threads}}}
+\label{subsec:omp_set_num_threads}
+\summary
+The \code{omp\_set\_num\_threads} routine affects the number of threads to be used for 
+subsequent parallel regions that do not specify a \code{num\_threads} clause, by setting the 
+value of the first element of the \plc{nthreads-var} ICV of the current task.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_num\_threads(int \plc{num\_threads});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_num\_threads(\plc{num\_threads})
+integer \plc{num\_threads}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+The value of the argument passed to this routine must evaluate to a positive integer, or 
+else the behavior of this routine is implementation defined.
+
+\binding
+The binding task set for an \code{omp\_set\_num\_threads} region is the generating task.
+
+\effect
+The effect of this routine is to set the value of the first element of the \plc{nthreads-var} ICV 
+of the current task to the value specified in the argument. 
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a \code{parallel} region. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{nthreads-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{OMP\_NUM\_THREADS} environment variable, see 
+\specref{sec:OMP_NUM_THREADS}.
+
+\item \code{omp\_get\_max\_threads} routine, see 
+\specref{subsec:omp_get_max_threads}.
+
+\item \code{parallel} construct, see 
+\specref{sec:parallel Construct}.
+
+\item \code{num\_threads} clause, see 
+\specref{sec:parallel Construct}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_num\_threads}}
+\index{omp\_get\_num\_threads@{\code{omp\_get\_num\_threads}}}
+\label{subsec:omp_get_num_threads}
+\summary
+The \code{omp\_get\_num\_threads} routine returns the number of threads in the current 
+team.
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_num\_threads(void); 
+\end{boxedcode}
+\ccppspecificend
+
+\pagebreak
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_num\_threads()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding region for an \code{omp\_get\_num\_threads} region is the innermost enclosing 
+\code{parallel} region.
+
+\effect
+The \code{omp\_get\_num\_threads} routine returns the number of threads in the team 
+executing the \code{parallel} region to which the routine region binds. If called from the 
+sequential part of a program, this routine returns 1. 
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a \code{parallel} region. 
+
+\crossreferences
+\begin{itemize}
+\item \code{parallel} construct, see 
+\specref{sec:parallel Construct}.
+
+\item \code{omp\_set\_num\_threads} routine, see 
+\specref{subsec:omp_set_num_threads}.
+
+\item \code{OMP\_NUM\_THREADS} environment variable, see 
+\specref{sec:OMP_NUM_THREADS}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_max\_threads}}
+\index{omp\_get\_max\_threads@{\code{omp\_get\_max\_threads}}}
+\label{subsec:omp_get_max_threads}
+\summary
+The \code{omp\_get\_max\_threads} routine returns an upper bound on the number of 
+threads that could be used to form a new team if a \code{parallel} construct without a 
+\code{num\_threads} clause were encountered after execution returns from this routine.
+
+\pagebreak
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_max\_threads(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_max\_threads()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_max\_threads} region is the generating task. 
+
+\effect
+The value returned by \code{omp\_get\_max\_threads} is the value of the first element of 
+the \plc{nthreads-var} ICV of the current task. This value is also an upper bound on the 
+number of threads that could be used to form a new team if a parallel region without a 
+\code{num\_threads} clause were encountered after execution returns from this routine.
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a\linebreak \code{parallel} region. 
+
+\notestart
+\noteheader – The return value of the \code{omp\_get\_max\_threads} routine can be used to 
+dynamically allocate sufficient storage for all threads in the team formed at the 
+subsequent active \code{parallel} region.
+\noteend
+
+\crossreferences
+\begin{itemize}
+\item \plc{nthreads-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{parallel} construct, see 
+\specref{sec:parallel Construct}.
+
+\item \code{num\_threads} clause, see 
+\specref{sec:parallel Construct}.
+
+\item \code{omp\_set\_num\_threads} routine, see 
+\specref{subsec:omp_set_num_threads}.
+
+\item \code{OMP\_NUM\_THREADS} environment variable, see 
+\specref{sec:OMP_NUM_THREADS}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_thread\_num}}
+\index{omp\_get\_thread\_num@{\code{omp\_get\_thread\_num}}}
+\label{subsec:omp_get_thread_num}
+\summary
+The \code{omp\_get\_thread\_num} routine returns the thread number, within the current 
+team, of the calling thread.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_thread\_num(void); 
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_thread\_num() 
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_thread\_num} region is the current team. The 
+binding region for an \code{omp\_get\_thread\_num} region is the innermost enclosing 
+\code{parallel} region. 
+
+\effect
+The \code{omp\_get\_thread\_num} routine returns the thread number of the calling thread, 
+within the team executing the \code{parallel} region to which the routine region binds. The 
+thread number is an integer between 0 and one less than the value returned by 
+\code{omp\_get\_num\_threads}, inclusive. The thread number of the master thread of the 
+team is 0. The routine returns 0 if it is called from the sequential part of a program.
+
+\notestart
+\noteheader – The thread number may change during the execution of an untied task. The 
+value returned by \code{omp\_get\_thread\_num} is not generally useful during the execution 
+of such a task region.
+\noteend
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_get\_num\_threads} routine, see 
+\specref{subsec:omp_get_num_threads}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_num\_procs}}
+\index{omp\_get\_num\_procs@{\code{omp\_get\_num\_procs}}}
+\label{subsec:omp_get_num_procs}
+\summary
+The \code{omp\_get\_num\_procs} routine returns the number of processors available to the 
+device.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_num\_procs(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_num\_procs()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_num\_procs} region is all threads on a device. 
+The effect of executing this routine is not related to any specific region corresponding to 
+any construct or API routine.
+
+\effect
+The \code{omp\_get\_num\_procs} routine returns the number of processors that are available 
+to the device at the time the routine is called. Note that this value may change between 
+the time that it is determined by the \code{omp\_get\_num\_procs} routine and the time that it 
+is read in the calling context due to system actions outside the control of the OpenMP 
+implementation.
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_in\_parallel}}
+\index{omp\_in\_parallel@{\code{omp\_in\_parallel}}}
+\label{subsec:omp_in_parallel}
+\summary
+The \code{omp\_in\_parallel} routine returns \plc{true} if the \plc{active-levels-var} ICV is greater 
+than zero; otherwise, it returns \plc{false}.
+
+\pagebreak
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_in\_parallel(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_in\_parallel()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_in\_parallel} region is the generating task.
+
+\effect
+The effect of the \code{omp\_in\_parallel} routine is to return \plc{true} if the current task is 
+enclosed by an active \code{parallel} region, and the \code{parallel} region is enclosed by the 
+outermost initial task region on the device; otherwise it returns \plc{false}.
+
+\crossreferences
+\begin{itemize}
+\item \plc{active-levels-var}, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_active\_level} routine, see 
+\specref{subsec:omp_get_active_level}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\bigskip
+\subsection{\code{omp\_set\_dynamic}}
+\index{omp\_set\_dynamic@{\code{omp\_set\_dynamic}}}
+\label{subsec:omp_set_dynamic}
+\summary
+The \code{omp\_set\_dynamic} routine enables or disables dynamic adjustment of the 
+number of threads available for the execution of subsequent \code{parallel} regions by 
+setting the value of the \plc{dyn-var} ICV
+
+
+\pagebreak
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_dynamic(int \plc{dynamic\_threads});
+\end{boxedcode}
+\ccppspecificend
+\bigskip
+
+\begin{samepage}
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_dynamic(\plc{dynamic\_threads})
+logical \plc{dynamic\_threads
+}\end{boxedcode}
+\fortranspecificend
+\end{samepage}
+
+\binding
+The binding task set for an \code{omp\_set\_dynamic} region is the generating task. 
+
+\effect
+For implementations that support dynamic adjustment of the number of threads, if the 
+argument to \code{omp\_set\_dynamic} evaluates to \plc{true}, dynamic adjustment is enabled for 
+the current task; otherwise, dynamic adjustment is disabled for the current task. For 
+implementations that do not support dynamic adjustment of the number of threads this 
+routine has no effect: the value of \plc{dyn-var} remains \plc{false}.
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a\linebreak \code{parallel} region. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{dyn-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_num\_threads} routine, see 
+\specref{subsec:omp_get_num_threads}.
+
+\item \code{omp\_get\_dynamic} routine, see 
+\specref{subsec:omp_get_dynamic}.
+
+\item \code{OMP\_DYNAMIC} environment variable, see 
+\specref{sec:OMP_DYNAMIC}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_dynamic}}
+\index{omp\_get\_dynamic@{\code{omp\_get\_dynamic}}}
+\label{subsec:omp_get_dynamic}
+\summary
+The \code{omp\_get\_dynamic} routine returns the value of the \plc{dyn-var} ICV, which 
+determines whether dynamic adjustment of the number of threads is enabled or disabled.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_dynamic(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_get\_dynamic()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_dynamic} region is the generating task. 
+
+\effect
+This routine returns \plc{true} if dynamic adjustment of the number of threads is enabled for 
+the current task; it returns \plc{false}, otherwise. If an implementation does not support 
+dynamic adjustment of the number of threads, then this routine always returns \plc{false}.
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a \code{parallel} region. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{dyn-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_set\_dynamic} routine, see 
+\specref{subsec:omp_set_dynamic}.
+
+\item \code{OMP\_DYNAMIC} environment variable, see 
+\specref{sec:OMP_DYNAMIC}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_cancellation}}
+\index{omp\_get\_cancellation@{\code{omp\_get\_cancellation}}}
+\label{subsec:omp_get_cancellation}
+\summary
+The \code{omp\_get\_cancellation} routine returns the value of the \plc{cancel-var} ICV, which 
+controls the behavior of the \code{cancel} construct and cancellation points.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_cancellation(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_get\_cancellation()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_cancellation} region is the whole program.
+
+\effect
+This routine returns \plc{true} if cancellation is activated. It returns \plc{false} otherwise.
+
+\crossreferences
+\begin{itemize}
+\item \plc{cancel-var} ICV, see 
+\specref{subsec:ICV Descriptions}.
+
+\item \code{OMP\_CANCELLATION} environment variable, see 
+\specref{sec:OMP_CANCELLATION}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_set\_nested}}
+\index{omp\_set\_nested@{\code{omp\_set\_nested}}}
+\label{subsec:omp_set_nested}
+\summary
+The \code{omp\_set\_nested} routine enables or disables nested parallelism, by setting the 
+\plc{nest-var} ICV. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_nested(int \plc{nested});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_nested(\plc{nested})
+logical \plc{nested}
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_set\_nested} region is the generating task. 
+
+\effect
+For implementations that support nested parallelism, if the argument to 
+\code{omp\_set\_nested} evaluates to \plc{true}, nested parallelism is enabled for the current task; 
+otherwise, nested parallelism is disabled for the current task. For implementations that 
+do not support nested parallelism, this routine has no effect: the value of \plc{nest-var} 
+remains \plc{false}.
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a \code{parallel} region. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{nest-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_set\_max\_active\_levels} routine, see 
+\specref{subsec:omp_set_max_active_levels}.
+
+\item \code{omp\_get\_max\_active\_levels} routine, see 
+\specref{subsec:omp_get_max_active_levels}.
+
+\item \code{omp\_get\_nested} routine, see 
+\specref{subsec:omp_get_nested}.
+
+\item \code{OMP\_NESTED} environment variable, see 
+\specref{sec:OMP_NESTED}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_nested}}
+\index{omp\_get\_nested@{\code{omp\_get\_nested}}}
+\label{subsec:omp_get_nested}
+\summary
+The \code{omp\_get\_nested} routine returns the value of the \plc{nest-var} ICV, which 
+determines if nested parallelism is enabled or disabled.
+
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_nested(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_get\_nested()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_nested} region is the generating task. 
+
+\effect
+This routine returns \plc{true} if nested parallelism is enabled for the current task; it returns 
+\plc{false}, otherwise. If an implementation does not support nested parallelism, this routine 
+always returns \plc{false}.
+
+See \specref{subsec:Determining the Number of Threads for a parallel Region} 
+for the rules governing the number of threads used to 
+execute a\linebreak \code{parallel} region. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{nest-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_set\_nested} routine, see 
+\specref{subsec:omp_set_nested}.
+
+\item \code{OMP\_NESTED} environment variable, see 
+\specref{sec:OMP_NESTED}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_set\_schedule}}
+\index{omp\_set\_schedule@{\code{omp\_set\_schedule}}}
+\label{subsec:omp_set_schedule}
+\summary
+The \code{omp\_set\_schedule} routine affects the schedule that is applied when \code{runtime} 
+is used as schedule kind, by setting the value of the \plc{run-sched-var} ICV. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_schedule(omp\_sched\_t kind, int modifier);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_schedule(kind, modifier) 
+integer (kind=omp\_sched\_kind) kind
+integer modifier
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+The first argument passed to this routine can be one of the valid OpenMP schedule kinds 
+(except for \code{runtime}) or any implementation specific schedule. The C/C++ header file 
+(\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 module file 
+(\code{omp\_lib}) define the valid constants. The valid constants must include the following, 
+which can be extended with implementation specific values:
+
+\pagebreak
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum omp\_sched\_t {
+    omp\_sched\_static = 1,
+    omp\_sched\_dynamic = 2,
+    omp\_sched\_guided = 3,
+    omp\_sched\_auto = 4
+} omp\_sched\_t;
+\end{boxedcode}
+\ccppspecificend
+
+\begin{samepage}
+\fortranspecificstart
+\begin{boxedcode}
+integer(kind=omp\_sched\_kind), parameter :: omp\_sched\_static = 1
+integer(kind=omp\_sched\_kind), parameter :: omp\_sched\_dynamic = 2
+integer(kind=omp\_sched\_kind), parameter :: omp\_sched\_guided = 3
+integer(kind=omp\_sched\_kind), parameter :: omp\_sched\_auto = 4
+\end{boxedcode}
+\fortranspecificend
+\end{samepage}
+
+\binding
+The binding task set for an \code{omp\_set\_schedule} region is the generating task. 
+
+\effect
+The effect of this routine is to set the value of the \plc{run-sched-var} ICV of the current task 
+to the values specified in the two arguments. The schedule is set to the schedule type 
+specified by the first argument \code{kind}. It can be any of the standard schedule types or 
+any other implementation specific one. For the schedule types \code{static}, \code{dynamic}, and 
+\code{guided} the \plc{chunk\_size} is set to the value of the second argument, or to the default 
+\plc{chunk\_size} if the value of the second argument is less than 1; for the schedule type 
+\code{auto} the second argument has no meaning; for implementation specific schedule types, 
+the values and associated meanings of the second argument are implementation defined.
+
+\crossreferences
+\begin{itemize}
+\item \plc{run-sched-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_schedule} routine, see 
+\specref{subsec:omp_get_schedule}.
+
+\item \code{OMP\_SCHEDULE} environment variable, see 
+\specref{sec:OMP_SCHEDULE}.
+
+\item Determining the schedule of a worksharing loop, see 
+\specref{subsubsec:Determining the Schedule of a Worksharing Loop}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_schedule}}
+\index{omp\_get\_schedule@{\code{omp\_get\_schedule}}}
+\label{subsec:omp_get_schedule}
+\summary
+The \code{omp\_get\_schedule} routine returns the schedule that is applied when the 
+runtime schedule is used. 
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_get\_schedule(omp\_sched\_t * kind, int * modifier); 
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_get\_schedule(kind, modifier) 
+integer (kind=omp\_sched\_kind) kind 
+integer modifier
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_schedule} region is the generating task. 
+
+\effect
+This routine returns the \plc{run-sched-var} ICV in the task to which the routine binds. The 
+first argument \code{kind} returns the schedule to be used. It can be any of the standard 
+schedule types as defined in 
+\specref{subsec:omp_set_schedule}, 
+or any implementation specific 
+schedule type. The second argument is interpreted as in the \code{omp\_set\_schedule} call, 
+defined in 
+\specref{subsec:omp_set_schedule}.
+
+\crossreferences
+\begin{itemize}
+\item \plc{run-sched-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_set\_schedule} routine, see 
+\specref{subsec:omp_set_schedule}.
+
+\item \code{OMP\_SCHEDULE} environment variable, see 
+\specref{sec:OMP_SCHEDULE}.
+
+\item Determining the schedule of a worksharing loop, see 
+\specref{subsubsec:Determining the Schedule of a Worksharing Loop}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_thread\_limit}}
+\index{omp\_get\_thread\_limit@{\code{omp\_get\_thread\_limit}}}
+\label{subsec:omp_get_thread_limit}
+\summary
+The \code{omp\_get\_thread\_limit} routine returns the maximum number of OpenMP 
+threads available on the device. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_thread\_limit(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_thread\_limit()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_thread\_limit} region is all threads on the 
+device. The effect of executing this routine is not related to any specific region 
+corresponding to any construct or API routine. 
+
+\effect
+The \code{omp\_get\_thread\_limit} routine returns the maximum number of OpenMP 
+threads available on the device as stored in the ICV \plc{thread-limit-var}.
+
+\crossreferences
+\begin{itemize}
+\item \plc{thread-limit-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{OMP\_THREAD\_LIMIT} environment variable, see 
+\specref{sec:OMP_THREAD_LIMIT}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_set\_max\_active\_levels}}
+\index{omp\_set\_max\_active\_levels@{\code{omp\_set\_max\_active\_levels}}}
+\label{subsec:omp_set_max_active_levels}
+\summary
+The \code{omp\_set\_max\_active\_levels} routine limits the number of nested active 
+parallel regions on the device, by setting the \plc{max-active-levels-var} ICV
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_max\_active\_levels(int max\_levels);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_max\_active\_levels(max\_levels)
+integer max\_levels
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+The value of the argument passed to this routine must evaluate to a non-negative integer, 
+otherwise the behavior of this routine is implementation defined.
+
+\binding
+When called from a sequential part of the program, the binding thread set for an 
+\code{omp\_set\_max\_active\_levels} region is the encountering thread. When called 
+from within any explicit parallel region, the binding thread set (and binding region, if 
+required) for the \code{omp\_set\_max\_active\_levels} region is implementation defined. 
+
+\effect
+The effect of this routine is to set the value of the \plc{max-active-levels-var} ICV to the value 
+specified in the argument. 
+
+If the number of parallel levels requested exceeds the number of levels of parallelism 
+supported by the implementation, the value of the \plc{max-active-levels-var} ICV will be set 
+to the number of parallel levels supported by the implementation.
+
+This routine has the described effect only when called from a sequential part of the 
+program. When called from within an explicit \code{parallel} region, the effect of this 
+routine is implementation defined.
+
+\crossreferences
+\begin{itemize}
+\item \plc{max-active-levels-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_max\_active\_levels} routine, see 
+\specref{subsec:omp_get_max_active_levels}.
+
+\item \code{OMP\_MAX\_ACTIVE\_LEVELS} environment variable, see 
+\specref{sec:OMP_MAX_ACTIVE_LEVELS}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_max\_active\_levels}}
+\index{omp\_get\_max\_active\_levels@{\code{omp\_get\_max\_active\_levels}}}
+\label{subsec:omp_get_max_active_levels}
+\summary
+The \code{omp\_get\_max\_active\_levels} routine returns the value of the 
+\plc{max-active-levels-var} ICV, which determines the maximum number of nested active parallel regions 
+on the device. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_max\_active\_levels(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_max\_active\_levels()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+When called from a sequential part of the program, the binding thread set for an 
+\code{omp\_get\_max\_active\_levels} region is the encountering thread. When called 
+from within any explicit parallel region, the binding thread set (and binding region, if 
+required) for the \code{omp\_get\_max\_active\_levels} region is implementation defined. 
+
+\effect
+The \code{omp\_get\_max\_active\_levels} routine returns the value of the \plc{max-active-levels-var} ICV,
+which determines the maximum number of nested active parallel regions 
+on the device. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{max-active-levels-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_set\_max\_active\_levels} routine, see 
+\specref{subsec:omp_set_max_active_levels}.
+
+\item \code{OMP\_MAX\_ACTIVE\_LEVELS} environment variable, see 
+\specref{sec:OMP_MAX_ACTIVE_LEVELS}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_level}}
+\index{omp\_get\_level@{\code{omp\_get\_level}}}
+\label{subsec:omp_get_level}
+\summary
+The \code{omp\_get\_level} routine returns the value of the \plc{levels-var} ICV. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_level(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_level()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_level} region is the generating task. 
+
+\effect
+The effect of the \code{omp\_get\_level} routine is to return the number of nested 
+\code{parallel} regions (whether active or inactive) enclosing the current task such that all 
+of the \code{parallel} regions are enclosed by the outermost initial task region on the 
+current device.
+
+\crossreferences
+\begin{itemize}
+\item \plc{levels-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_active\_level} routine, see 
+\specref{subsec:omp_get_active_level}.
+
+\item \code{OMP\_MAX\_ACTIVE\_LEVELS} environment variable, see 
+\specref{sec:OMP_MAX_ACTIVE_LEVELS}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_ancestor\_thread\_num}}
+\index{omp\_get\_ancestor\_thread\_num@{\code{omp\_get\_ancestor\_thread\_num}}}
+\label{subsec:omp_get_ancestor_thread_num}
+\summary
+The \code{omp\_get\_ancestor\_thread\_num} routine returns, for a given nested level of 
+the current thread, the thread number of the ancestor of the current thread.
+
+\parbox{\linewidth}{%
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_ancestor\_thread\_num(int level);
+\end{boxedcode}
+\ccppspecificend}
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_ancestor\_thread\_num(level)
+integer level
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_ancestor\_thread\_num} region is the 
+encountering thread. The binding region for an \code{omp\_get\_ancestor\_thread\_num} 
+region is the innermost enclosing \code{parallel} region. 
+
+\effect
+The \code{omp\_get\_ancestor\_thread\_num} routine returns the thread number of the 
+ancestor at a given nest level of the current thread or the thread number of the current 
+thread. If the requested nest level is outside the range of 0 and the nest level of the 
+current thread, as returned by the \code{omp\_get\_level} routine, the routine returns -1.
+
+\notestart
+\noteheader – When the \code{omp\_get\_ancestor\_thread\_num} routine is called with a value 
+of \code{level}=0, the routine always returns 0. If \code{level}=\code{omp\_get\_level()}, the routine 
+has the same effect as the \code{omp\_get\_thread\_num} routine. 
+\noteend
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_get\_level} routine, see 
+\specref{subsec:omp_get_level}.
+
+\item \code{omp\_get\_thread\_num} routine, see 
+\specref{subsec:omp_get_thread_num}.
+
+\item \code{omp\_get\_team\_size} routine, see 
+\specref{subsec:omp_get_team_size}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_team\_size}}
+\index{omp\_get\_team\_size@{\code{omp\_get\_team\_size}}}
+\label{subsec:omp_get_team_size}
+\summary
+The \code{omp\_get\_team\_size} routine returns, for a given nested level of the current 
+thread, the size of the thread team to which the ancestor or the current thread belongs. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_team\_size(int level);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_team\_size(level)
+integer level
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_team\_size} region is the encountering 
+thread. The binding region for an \code{omp\_get\_team\_size} region is the innermost 
+enclosing \code{parallel} region.
+
+\effect
+The \code{omp\_get\_team\_size} routine returns the size of the thread team to which the 
+ancestor or the current thread belongs. If the requested nested level is outside the range 
+of 0 and the nested level of the current thread, as returned by the \code{omp\_get\_level} 
+routine, the routine returns -1. Inactive parallel regions are regarded like active parallel 
+regions executed with one thread. 
+
+\notestart
+\noteheader – When the \code{omp\_get\_team\_size} routine is called with a value of \code{level}=0, 
+the routine always returns 1. If \code{level}=\code{omp\_get\_level()}, the routine has the same 
+effect as the\linebreak \code{omp\_get\_num\_threads} routine. 
+\noteend
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_get\_num\_threads} routine, see 
+\specref{subsec:omp_get_num_threads}.
+
+\item \code{omp\_get\_level} routine, see 
+\specref{subsec:omp_get_level}.
+
+\item \code{omp\_get\_ancestor\_thread\_num} routine, see 
+\specref{subsec:omp_get_ancestor_thread_num}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_active\_level}}
+\index{omp\_get\_active\_level@{\code{omp\_get\_active\_level}}}
+\label{subsec:omp_get_active_level}
+\summary
+The \code{omp\_get\_active\_level} routine returns the value of the \plc{active-level-vars} ICV..
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int \code{omp\_get\_active\_level}(void);
+\end{boxedcode}
+\ccppspecificend
+
+\pagebreak
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_active\_level()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for the an \code{omp\_get\_active\_level} region is the generating 
+task. 
+
+\effect
+The effect of the \code{omp\_get\_active\_level} routine is to return the number of nested, 
+active \code{parallel} regions enclosing the current task such that all of the \code{parallel} 
+regions are enclosed by the outermost initial task region on the current device. 
+
+\crossreferences
+\begin{itemize}
+\item \plc{active-levels-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_level} routine, see 
+\specref{subsec:omp_get_level}. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_in\_final}}
+\index{omp\_in\_final@{\code{omp\_in\_final}}}
+\label{subsec:omp_in_final}
+\summary
+The \code{omp\_in\_final} routine returns \plc{true} if the routine is executed in a final task 
+region; otherwise, it returns \plc{false}.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_in\_final(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_in\_final()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_in\_final} region is the generating task.
+
+\effect
+\code{omp\_in\_final} returns \plc{true} if the enclosing task region is final. Otherwise, it returns 
+\plc{false}.
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_proc\_bind}}
+\index{omp\_get\_proc\_bind@{\code{omp\_get\_proc\_bind}}}
+\label{subsec:omp_get_proc_bind}
+\summary
+The \code{omp\_get\_proc\_bind} routine returns the thread affinity policy to be used for the 
+subsequent nested \code{parallel} regions that do not specify a \code{proc\_bind} clause.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+omp\_proc\_bind\_t omp\_get\_proc\_bind(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer (kind=omp\_proc\_bind\_kind) function omp\_get\_proc\_bind()
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+The value returned by this routine must be one of the valid affinity policy kinds. The C/
+C++ header file (\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 
+module file (\code{omp\_lib}) define the valid constants. The valid constants must include the 
+following:
+
+\ccppspecificstart
+\begin{codepar}
+typedef enum omp\_proc\_bind\_t \{
+  omp\_proc\_bind\_false = 0,
+  omp\_proc\_bind\_true = 1,
+  omp\_proc\_bind\_master = 2,
+  omp\_proc\_bind\_close = 3,
+  omp\_proc\_bind\_spread = 4
+\} omp\_proc\_bind\_t;
+\end{codepar}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{codepar}
+integer (kind=omp\_proc\_bind\_kind), &
+                parameter :: omp\_proc\_bind\_false = 0
+integer (kind=omp\_proc\_bind\_kind), &
+                parameter :: omp\_proc\_bind\_true = 1
+integer (kind=omp\_proc\_bind\_kind), &
+                parameter :: omp\_proc\_bind\_master = 2
+integer (kind=omp\_proc\_bind\_kind), &
+                parameter :: omp\_proc\_bind\_close = 3
+integer (kind=omp\_proc\_bind\_kind), &
+                parameter :: omp\_proc\_bind\_spread = 4
+\end{codepar}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_proc\_bind} region is the generating task
+
+\effect
+The effect of this routine is to return the value of the first element of the \plc{bind-var} ICV 
+of the current task. See \specref{subsec:Controlling OpenMP Thread Affinity} 
+for the rules governing the thread affinity policy.
+
+\crossreferences
+\begin{itemize}
+\item \plc{bind-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{OMP\_PROC\_BIND} environment variable, see 
+\specref{sec:OMP_PROC_BIND}.
+
+\item Controlling OpenMP thread affinity, see 
+\specref{subsec:Controlling OpenMP Thread Affinity}. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_set\_default\_device}}
+\index{omp\_set\_default\_device@{\code{omp\_set\_default\_device}}}
+\label{subsec:omp_set_default_device}
+
+\summary
+
+The \code{omp\_set\_default\_device} routine controls the default target device by 
+assigning the value of the \plc{default-device-var} ICV.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_default\_device(int \plc{device\_num});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_default\_device(\plc{device\_num})
+integer \plc{device\_num}
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_set\_default\_device} region is the generating 
+task.
+
+\effect
+The effect of this routine is to set the value of the \plc{default-device-var} ICV of the current 
+task to the value specified in the argument. When called from within a \code{target} region 
+the effect of this routine is unspecified.
+
+\crossreferences
+\begin{itemize}
+\item \plc{default-device-var}, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_get\_default\_device}, see 
+\specref{subsec:omp_get_default_device}.
+
+\item \code{OMP\_DEFAULT\_DEVICE} environment variable, see 
+\specref{sec:OMP_DEFAULT_DEVICE}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_default\_device}}
+\index{omp\_get\_default\_device@{\code{omp\_get\_default\_device}}}
+\label{subsec:omp_get_default_device}
+\summary
+The \code{omp\_get\_default\_device} routine returns the default target device.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_default\_device(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_default\_device()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_default\_device} region is the generating 
+task. 
+
+\effect
+The \code{omp\_get\_default\_device} routine returns the value of the \plc{default-device-var} 
+ICV of the current task. When called from within a \code{target} region the effect of this 
+routine is unspecified.
+
+\crossreferences
+\begin{itemize}
+\item \plc{default-device-var}, see 
+\specref{sec:Internal Control Variables}.
+
+\item \code{omp\_set\_default\_device}, see 
+\specref{subsec:omp_set_default_device}.
+
+\item \code{OMP\_DEFAULT\_DEVICE} environment variable, see 
+\specref{sec:OMP_DEFAULT_DEVICE}. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_num\_devices}}
+\index{omp\_get\_num\_devices@{\code{omp\_get\_num\_devices}}}
+\label{subsec:omp_get_num_devices}
+\summary
+The \code{omp\_get\_num\_devices} routine returns the number of target devices.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_num\_devices(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_num\_devices()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_num\_devices} region is the generating task.
+
+\effect
+The \code{omp\_get\_num\_devices} routine returns the number of available target devices. 
+When called from within a \code{target} region the effect of this routine is unspecified.
+
+\crossreferences
+None.
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_num\_teams}}
+\index{omp\@{\code{omp\_get\_num\_teams}}}
+\label{subsec:omp_get_num_teams}
+\summary
+The \code{omp\_get\_num\_teams} routine returns the number of teams in the current \code{teams} 
+region.
+
+\pagebreak
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_num\_teams(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_num\_teams()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_num\_teams} region is the generating task
+
+\effect
+The effect of this routine is to return the number of teams in the current \code{teams} region. 
+The routine returns 1 if it is called from outside of a \code{teams} region.
+
+\crossreferences
+\begin{itemize}
+\item \code{teams} construct, see 
+\specref{subsec:teams Construct}. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\pagebreak
+\subsection{\code{omp\_get\_team\_num}}
+\index{omp\_get\_team\_num@{\code{omp\_get\_team\_num}}}
+\label{subsec:omp_get_team_num}
+\summary
+The \code{omp\_get\_team\_num} routine returns the team number of the calling thread.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_team\_num(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_get\_team\_num()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_team\_num} region is the generating task.
+
+\effect
+The \code{omp\_get\_team\_num} routine returns the team number of the calling thread. The 
+team number is an integer between 0 and one less than the value returned by 
+\code{omp\_get\_num\_teams}, inclusive. The routine returns 0 if it is called outside of a 
+\code{teams} region.
+
+\crossreferences
+\begin{itemize}
+\item \code{teams} construct, see 
+\specref{subsec:teams Construct}.
+
+\item \code{omp\_get\_num\_teams} routine, see 
+\specref{subsec:omp_get_num_teams}. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_is\_initial\_device}}
+\index{omp\_is\_initial\_device@{\code{omp\_is\_initial\_device}}}
+\label{subsec:omp_is_initial_device}
+\summary
+The \code{omp\_is\_initial\_device} routine returns \plc{true} if the current task is executing 
+on the host device; otherwise, it returns \plc{false}.
+
+\parbox{\linewidth}{%
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_is\_initial\_device(void);
+\end{boxedcode}
+\ccppspecificend}
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_is\_initial\_device()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_is\_initial\_device} region is the generating task.
+
+\effect
+The effect of this routine is to return \plc{true} if the current task is executing on the host 
+device; otherwise, it returns \plc{false}.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\newpage
+\section{Lock Routines}
+\index{lock routines}
+\label{sec:Lock Routines}
+The OpenMP runtime library includes a set of general-purpose lock routines that can be 
+used for synchronization. These general-purpose lock routines operate on OpenMP locks 
+that are represented by OpenMP lock variables. OpenMP lock variables must be 
+accessed only through the routines described in this section; programs that otherwise 
+access OpenMP lock variables are non-conforming.
+
+An OpenMP lock can be in one of the following states: \emph{uninitialized}, \emph{unlocked}, or 
+\emph{locked}. If a lock is in the unlocked state, a task can \emph{set} the lock, which changes its state 
+to \emph{locked}. The task that sets the lock is then said to \emph{own} the lock. A task that owns a 
+lock can \emph{unset} that lock, returning it to the \emph{unlocked} state. A program in which a task 
+unsets a lock that is owned by another task is non-conforming.
+
+Two types of locks are supported: \emph{simple locks} and \emph{nestable locks}. A \emph{nestable lock} can 
+be set multiple times by the same task before being unset; a \emph{simple lock} cannot be set if 
+it is already owned by the task trying to set it. \emph{Simple lock} variables are associated with 
+\emph{simple locks} and can only be passed to \emph{simple lock} routines. \emph{Nestable lock} variables are 
+associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
+
+Constraints on the state and ownership of the lock accessed by each of the lock routines 
+are described with the routine. If these constraints are not met, the behavior of the 
+routine is unspecified. 
+
+The OpenMP lock routines access a lock variable in such a way that they always read 
+and update the most current value of the lock variable. It is not necessary for an 
+OpenMP program to include explicit \code{flush} directives to ensure that the lock variable’s 
+value is consistent among different tasks. 
+
+\binding
+The binding thread set for all lock routine regions is all threads in the contention group. 
+As a consequence, for each OpenMP lock, the lock routine effects relate to all tasks that 
+call the routines, without regard to which teams the threads in the contention group 
+executing the tasks belong.
+
+\littleheader{Simple Lock Routines}
+\index{Simple Lock Routines}
+\ccppspecificstart
+The type \code{omp\_lock\_t} is a data type capable of representing a simple lock. For the 
+following routines, a simple lock variable must be of \code{omp\_lock\_t} type. All simple 
+lock routines require an argument that is a pointer to a variable of type \code{omp\_lock\_t}.
+\ccppspecificend
+
+\fortranspecificstart
+For the following routines, a simple lock variable must be an integer variable of 
+\code{kind=omp\_lock\_kind}.
+\fortranspecificend
+
+The simple lock routines are as follows:
+
+\begin{itemize}
+\item The \code{omp\_init\_lock} routine initializes a simple lock.
+
+\item The \code{omp\_destroy\_lock} routine uninitializes a simple lock.
+
+\item The \code{omp\_set\_lock} routine waits until a simple lock is available, and then sets it.
+
+\item The \code{omp\_unset\_lock} routine unsets a simple lock.
+
+\item The \code{omp\_test\_lock} routine tests a simple lock, and sets it if it is available.
+\end{itemize}
+
+\littleheader{Nestable Lock Routines}
+\ccppspecificstart
+The type \code{omp\_nest\_lock\_t} is a data type capable of representing a nestable lock. 
+For the following routines, a nested lock variable must be of \code{omp\_nest\_lock\_t} type. 
+All nestable lock routines require an argument that is a pointer to a variable of type 
+\code{omp\_nest\_lock\_t}.
+\ccppspecificend
+
+\fortranspecificstart
+For the following routines, a nested lock variable must be an integer variable of 
+\code{kind=omp\_nest\_lock\_kind}.
+\fortranspecificend
+
+The nestable lock routines are as follows:
+
+\begin{itemize}
+\item The \code{omp\_init\_nest\_lock} routine initializes a nestable lock.
+
+\item The \code{omp\_destroy\_nest\_lock} routine uninitializes a nestable lock.
+
+\item The \code{omp\_set\_nest\_lock} routine waits until a nestable lock is available, and then 
+sets it.
+
+\item The \code{omp\_unset\_nest\_lock} routine unsets a nestable lock.
+
+\item The \code{omp\_test\_nest\_lock} routine tests a nestable lock, and sets it if it is 
+available
+\end{itemize}
+
+\restrictions
+OpenMP lock routines have the following restrictions:
+
+\begin{itemize}
+\item The use of the same OpenMP lock in different contention groups results in 
+unspecified behavior. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_init\_lock} and \code{omp\_init\_nest\_lock}}
+\label{subsec:omp_init_lock and omp_init_nest_lock}
+\index{omp\_init\_lock@{\code{omp\_init\_lock}}}
+\index{omp\_init\_nest\_lock@{\code{omp\_init\_nest\_lock}}}
+\summary
+These routines provide the only means of initializing an OpenMP lock.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_init\_lock(omp\_lock\_t *\plc{lock});
+void omp\_init\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_init\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+
+subroutine omp\_init\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is not in the uninitialized state through either routine 
+is non-conforming.
+
+\effect
+The effect of these routines is to initialize the lock to the unlocked state; that is, no task 
+owns the lock. In addition, the nesting count for a nestable lock is set to zero.
+
+
+
+
+
+
+
+
+
+
+\subsection[\code{omp\_destroy\_lock} and \code{omp\_destroy\_nest\_lock}]{\code{omp\_destroy\_lock} and\\ \code{omp\_destroy\_nest\_lock}}
+\label{subsec:omp_destroy_lock and omp_destroy_nest_lock}
+\index{omp\_destroy\_lock@{\code{omp\_destroy\_lock}}}
+\index{omp\_destroy\_nest\_lock@{\code{omp\_destroy\_nest\_lock}}}
+\summary
+These routines ensure that the OpenMP lock is uninitialized
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_destroy\_lock(omp\_lock\_t *\plc{lock});
+void omp\_destroy\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_destroy\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+
+subroutine omp\_destroy\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is not in the unlocked state through either routine is 
+non-conforming.
+
+\effect
+The effect of these routines is to change the state of the lock to uninitialized.
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_set\_lock} and \code{omp\_set\_nest\_lock}}
+\label{subsec:omp_set_lock and omp_set_nest_lock}
+\index{omp\_set\_lock@{\code{omp\_set\_lock}}}
+\index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
+\summary
+These routines provide a means of setting an OpenMP lock. The calling task region is 
+suspended until the lock is set. 
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_set\_lock(omp\_lock\_t *\plc{lock});
+void omp\_set\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_set\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+
+subroutine omp\_set\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is in the uninitialized state through either routine is 
+non-conforming. A simple lock accessed by \code{omp\_set\_lock} that is in the locked state 
+must not be owned by the task that contains the call or deadlock will result.
+
+\effect
+Each of these routines causes suspension of the task executing the routine until the 
+specified lock is available and then sets the lock. 
+
+A simple lock is available if it is unlocked. Ownership of the lock is granted to the task 
+executing the routine.
+
+A nestable lock is available if it is unlocked or if it is already owned by the task 
+executing the routine. The task executing the routine is granted, or retains, ownership of 
+the lock, and the nesting count for the lock is incremented.
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_unset\_lock} and \code{omp\_unset\_nest\_lock}}
+\label{subsec:omp_unset_lock and omp_unset_nest_lock}
+\index{omp\_unset\_lock@{\code{omp\_unset\_lock}}}
+\index{omp\_unset\_nest\_lock@{\code{omp\_unset\_nest\_lock}}}
+\summary
+These routines provide the means of unsetting an OpenMP lock.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_unset\_lock(omp\_lock\_t *\plc{lock});
+void omp\_unset\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_unset\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+
+subroutine omp\_unset\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is not in the locked state or that is not owned by the 
+task that contains the call through either routine is non-conforming.
+
+\effect
+For a simple lock, the \code{omp\_unset\_lock} routine causes the lock to become unlocked.
+
+For a nestable lock, the \code{omp\_unset\_nest\_lock} routine decrements the nesting 
+count, and causes the lock to become unlocked if the resulting nesting count is zero.
+
+For either routine, if the lock becomes unlocked, and if one or more task regions were 
+suspended because the lock was unavailable, the effect is that one task is chosen and 
+given ownership of the lock.
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_test\_lock} and \code{omp\_test\_nest\_lock}}
+\label{subsec:omp_test_lock and omp_test_nest_lock}
+\index{omp\_test\_lock@{\code{omp\_test\_lock}}}
+\index{omp\_test\_nest\_lock@{\code{omp\_test\_nest\_lock}}}
+\summary
+These routines attempt to set an OpenMP lock but do not suspend execution of the task 
+executing the routine.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_test\_lock(omp\_lock\_t *\plc{lock});
+int omp\_test\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_test\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+integer function omp\_test\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is in the uninitialized state through either routine is 
+non-conforming. The behavior is unspecified if a simple lock accessed by 
+\code{omp\_test\_lock} is in the locked state and is owned by the task that contains the call.
+
+\effect 
+These routines attempt to set a lock in the same manner as \code{omp\_set\_lock} and 
+\code{omp\_set\_nest\_lock}, except that they do not suspend execution of the task 
+executing the routine.
+
+For a simple lock, the \code{omp\_test\_lock} routine returns \plc{true} if the lock is successfully 
+set; otherwise, it returns \plc{false}.
+
+For a nestable lock, the \code{omp\_test\_nest\_lock} routine returns the new nesting count 
+if the lock is successfully set; otherwise, it returns zero.
+
+
+
+
+
+
+
+\section{Timing Routines}
+\index{timing routines}
+\index{timer}
+\index{wall clock timer}
+\label{sec:Timing Routines}
+This section describes routines that support a portable wall clock timer.
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_get\_wtime}}
+\index{omp\_get\_wtime@{\code{omp\_get\_wtime}}}
+\label{subsec:omp_get_wtime}
+\summary
+The \code{omp\_get\_wtime} routine returns elapsed wall clock time in seconds.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+double omp\_get\_wtime(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+double precision function omp\_get\_wtime()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_wtime} region is the encountering thread. The 
+routine’s return value is not guaranteed to be consistent across any set of threads.
+
+\effect
+The \code{omp\_get\_wtime} routine returns a value equal to the elapsed wall clock time in 
+seconds since some ``time in the past''. The actual ``time in the past'' is arbitrary, but it is 
+guaranteed not to change during the execution of the application program. The time 
+returned is a ``per-thread time'', so it is not required to be globally consistent across all 
+the threads participating in an application.
+
+\notestart
+\noteheader – It is anticipated that the routine will be used to measure elapsed times as shown 
+in the following example:
+
+\ccppspecificstart
+\begin{boxedcode}
+double start;
+double end;
+start = omp\_get\_wtime();
+\plc{... work to be timed ...}
+end = omp\_get\_wtime();
+printf("Work took \%f seconds{\textbackslash}n", end - start);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+DOUBLE PRECISION START, END
+START = omp\_get\_wtime()
+\plc{... work to be timed ...}
+END = omp\_get\_wtime()
+PRINT *, "Work took", END - START, "seconds"
+\end{boxedcode}
+\fortranspecificend
+\noteend
+
+
+
+
+
+
+
+
+
+
+\pagebreak
+\subsection{\code{omp\_get\_wtick}}
+\index{omp\_get\_wtick@{\code{omp\_get\_wtick}}}
+\label{subsec:omp_get_wtick}
+\summary
+The \code{omp\_get\_wtick} routine returns the precision of the timer used by 
+\code{omp\_get\_wtime}.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+double omp\_get\_wtick(void);
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+double precision function omp\_get\_wtick()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for an \code{omp\_get\_wtick} region is the encountering thread. The 
+routine’s return value is not guaranteed to be consistent across any set of threads.
+
+\effect
+The \code{omp\_get\_wtick} routine returns a value equal to the number of seconds between 
+successive clock ticks of the timer used by \code{omp\_get\_wtime}.
+
+
+% This is the end of chapter 3 - Runtime Library
+
