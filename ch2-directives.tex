@@ -3228,6 +3228,8 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{integer-expression})
 map(\plc{ [map-type }:\plc{ ] list})
+nowait
+depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
@@ -3250,6 +3252,8 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
 map(\plc{ [map-type }:\plc{ ] list})
+nowait
+depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-logical-expression})
 \end{indentedcodelist}
 \end{samepage}
@@ -3262,12 +3266,19 @@ The binding task for a \code{target} construct is the encountering task. The tar
 binds to the enclosing parallel or task region.
 
 \descr
-The \code{target} construct provides a superset of the functionality and restrictions provided 
-by the \code{target}~\code{data} directive. The functionality added to the \code{target} directive is the 
-inclusion of an executable region to be executed by a device. That is, the \code{target} 
-directive is an executable directive. The encountering task waits for the device to 
-complete the target region. When an \code{if} clause is present and the \code{if} clause expression 
-evaluates to \plc{false}, the target region is executed by the host device.
+The \code{target} construct provides a superset of the functionality and restrictions provided by the \code{target}~\code{data} directive.
+
+The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
+
+The \code{target} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target} construct. The generated task is a \plc{target task}.
+
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated \plc{target task} is complete.
+
+By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
+
+If a \code{depend} clause is present, then it is treated as if it had appeared on the implicit \code{task} construct that encloses the \code{target} construct.
+
+When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the \code{target} region is executed by the host device.
 
 \restrictions
 \begin{itemize}
@@ -3287,6 +3298,8 @@ is implicitly treated as if it had appeared in a \code{map} clause with a \plc{m
 \item A variable referenced in a \code{target} region but not the target construct that is not 
 declared in the target region must appear in a \code{declare}~\code{target} directive. 
 
+\item The restrictions for the \code{task} construct apply.
+
 \cppspecificstart
 \item A throw executed inside a \code{target} region must cause execution to resume within the 
 same \code{target} region, and the same thread that threw the exception must catch it. 
@@ -3297,6 +3310,12 @@ same \code{target} region, and the same thread that threw the exception must cat
 \begin{itemize}
 \item \code{target}~\code{data} construct, see 
 \specref{subsec:target data Construct}.
+
+\item \code{task} construct, see 
+\specref{subsec:task Construct}.
+
+\item \code{task} scheduling constraints, see 
+\specref{subsec:Task Scheduling}
 
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}. 
@@ -3335,6 +3354,8 @@ where \plc{clause} is either \plc{motion-clause} or one of the following:
 \begin{indentedcodelist}
 device(\plc{integer-expression})
 if(\plc{scalar-expression})
+nowait
+depend (\plc{dependence-type} : \plc{list})
 \end{indentedcodelist}
 
 and \plc{motion-clause} is one of the following:
@@ -3357,6 +3378,8 @@ where \plc{clause} is either \plc{motion-clause} or one of the following:
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
 if(\plc{scalar-logical-expression})
+nowait
+depend (\plc{dependence-type} : \plc{list})
 \end{indentedcodelist}
 
 and \plc{motion-clause} is one of the following:
@@ -3384,6 +3407,14 @@ corresponding list item.
 
 The list items that appear in the \code{to} or \code{from} clauses may include array sections.
 
+The \code{target}~\code{update} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target}~\code{update} construct. The generated task is a \plc{target task}.
+
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{update} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated \plc{target task} is complete.
+
+By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
+
+If a \code{depend} clause is present, then it is treated as if it had appeared on the implicit \code{task} construct that encloses the \code{target}~\code{update} construct.
+
 The device is specified in the \code{device} clause. If there is no \code{device} clause, the device 
 is determined by the \plc{default-device-var} ICV. When an \code{if} clause is present and the \code{if} 
 clause expression evaluates to \plc{false} then no assignments occur.
@@ -3409,6 +3440,8 @@ array element or an array section cannot appear as a list item in a clause of a
 must evaluate to a non-negative integer value.
 
 \item At most one \code{if} clause can appear on the directive. 
+
+\item The restrictions for the \code{task} construct apply. 
 \end{itemize}
 
 \crossreferences
@@ -3421,6 +3454,14 @@ must evaluate to a non-negative integer value.
 
 \item Array sections, 
 \specref{sec:Array Sections}
+
+\item \code{task} construct, see 
+\specref{subsec:task Construct}.
+
+\item \code{task} scheduling constraints, see 
+\specref{subsec:Task Scheduling}
+
+
 \end{itemize}
 
 
