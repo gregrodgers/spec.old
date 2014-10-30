@@ -896,12 +896,10 @@ multiple elements, the generated task(s) inherit the value of \plc{nthreads-var}
 obtained by deletion of the first element from the generating task's \plc{nthreads-var} value. 
 The \plc{bind-var} ICV is handled in the same way as the \plc{nthreads-var} ICV.
 
-When a device construct is encountered, the new device data environment inherits the 
-values of the data environment scoped ICVs from the enclosing device data environment 
-of the device that will execute the region. If a \code{teams} construct with a \code{thread\_limit}
-clause is encountered, the \plc{thread-limit-var} ICV of the new device data environment is 
-not inherited but instead is set to a value that is less than or equal to the value specified 
-in the clause. 
+When a \code{target} construct is encountered, the construct's data environment
+uses the values of the data environment scoped ICVs from the device data environment ICV values of the device that will execute the region. 
+If a \code{teams} construct with a \code{thread\_limit} clause is encountered, 
+the \plc{thread-limit-var} ICV of the construct's data environment instead is instead set to a value that is less than or equal to the value specified in the clause.  
 
 When encountering a loop worksharing region with \code{schedule(runtime)}, all 
 implicit task regions that constitute the binding parallel region must have the same value 
@@ -2522,7 +2520,7 @@ notinbranch
 \end{indentedcodelist}
 \ccppspecificend
 
-\begin{samepage}
+
 \fortranspecificstart
 \begin{boxedcode}
 !\$omp declare simd(\plc{proc-name})\plc{ [clause[ [},\plc{] clause] ... ]}
@@ -2538,7 +2536,7 @@ inbranch
 notinbranch
 \end{indentedcodelist}
 \fortranspecificend
-\end{samepage}
+
 
 \descr
 \ccppspecificstart
@@ -3120,8 +3118,7 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 \index{constructs!target data@{\code{target}~\code{data}}}
 \label{subsec:target data Construct}
 \summary
-Create a device data environment for the extent of the region.
-
+ Map variables to a device data environment for the extent of the region.
 \syntax
 \ccppspecificstart
 The syntax of the \code{target}~\code{data} construct is as follows:
@@ -3136,7 +3133,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 device(\plc{integer-expression})
-map(\plc{ [map-type }:\plc{ ] list})
+map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 if(\plc{scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
@@ -3156,7 +3153,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
-map(\plc{ [map-type }:\plc{ ] list})
+map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 if(\plc{scalar-logical-expression})
 \end{indentedcodelist}
 
@@ -3168,13 +3165,7 @@ The binding task region for a \code{target}~\code{data} construct is the encount
 target region binds to the enclosing parallel or task region.
 
 \descr
-When a \code{target}~\code{data} construct is encountered, a new device data environment is 
-created, and the encountering task executes the \code{target}~\code{data} region. If there is no 
-\code{device} clause, the default device is determined by the \plc{default-device-var} ICV. The 
-new device data environment is constructed from the enclosing device data environment, 
-the data environment of the encountering task and any data-mapping clauses on the 
-construct. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, 
-the device is the host.
+When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \plc{if} clause is present and the \plc{if} clause expression evaluates to \plc{false}, the device is the host.
 
 \restrictions
 \begin{itemize}
@@ -3185,6 +3176,8 @@ the device is the host.
 must evaluate to a non-negative integer value.
 
 \item At most one \code{if} clause can appear on the directive. 
+\item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
+\item At least one \code{map} clause must appear on the directive. 
 \end{itemize}
 
 \crossreferences
@@ -3211,8 +3204,7 @@ must evaluate to a non-negative integer value.
 \index{device constructs!target@{\code{target}}}
 \label{subsec:target Construct}
 \summary
-Create a device data environment and execute the construct on the same device.
-
+Map variables to a device data environment and execute the construct on that device.
 \syntax
 \ccppspecificstart
 The syntax of the \code{target} construct is as follows:
@@ -3226,7 +3218,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 device(\plc{integer-expression})
-map(\plc{ [map-type }:\plc{ ] list})
+map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 nowait
 depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-expression})
@@ -3250,7 +3242,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
-map(\plc{ [map-type }:\plc{ ] list})
+map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 nowait
 depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-logical-expression})
@@ -3281,8 +3273,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 \restrictions
 \begin{itemize}
-\item If a \code{target}, \code{target}~\code{update}, or \code{target}~\code{data} construct appears within a target 
-region then the behavior is unspecified.
+\item If a \code{target}, \code{target}~\code{update}, \code{target}~\code{data}, \code{target}~\code{enter}~\code{data}, or \code{target}~\code{exit}~\code{data} construct appears within a \code{target} region the behavior is unspecified.
 
 \item The result of an \code{omp\_set\_default\_device}, \code{omp\_get\_default\_device}, 
 or \code{omp\_get\_num\_devices} routine called within a target region is unspecified.
@@ -3298,6 +3289,8 @@ is implicitly treated as if it had appeared in a \code{map} clause with a \plc{m
 declared in the target region must appear in a \code{declare}~\code{target} directive. 
 
 \item The restrictions for the \code{task} construct apply.
+\item At least one \code{map} clause must appear on the directive. 
+
 
 \cppspecificstart
 \item A throw executed inside a \code{target} region must cause execution to resume within the 
@@ -3530,10 +3523,7 @@ interface body to which it applies.
 If a list item is a function (C, C++, Fortran) or subroutine (Fortran) then a 
 device-specific version of the routine is created that can be called from a target region.
 
-If a list item is a variable then the original variable is mapped to a corresponding 
-variable in the initial device data environment for all devices. If the original variable is 
-initialized, the corresponding variable in the device data environment is initialized with 
-the same value.
+If a list item is a variable then the original variable is mapped to a corresponding variable in the device data environment of all devices as if it had appeared in a \code{map} clause with a \plc{map-type} to on the implicit \code{target}~\code{data} construct for each device. The list item is never removed from those device data environments as if its reference count is initialized to positive infinity.
 
 \restrictions
 \begin{itemize}
@@ -4062,14 +4052,160 @@ The effect of any clause that applies to both constructs is as if it were applie
 \end{itemize}
 
 
+\subsection{\code{target}~\code{enter}~\code{data} Construct}
+\label{subsec:target enter data Construct}
+\index{constructs!target enter data@{\code{target}~\code{enter}~\code{data}}}
+\index{device data environments}
+\summary
+The \code{target}~\code{enter}~\code{data} directive specifies that variables are mapped to a device data environment. The \code{target}~\code{enter}~\code{data} directive is a stand-alone directive.
+\syntax
+\ccppspecificstart
+The syntax of the \code{target}~\code{enter}~\code{data} construct is as follows:
+\begin{boxedcode}
+\#pragma omp target enter data \plc{[clause[[,] clause],...] new-line}
+\end{boxedcode}
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+device(\plc{integer-expression})
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+if( scalar-expression )
+depend(\plc{dependence-type} : \plc{list})
+nowait
+\end{indentedcodelist}
+\ccppspecificend
+\fortranspecificstart
+The syntax of the \code{target}~\code{enter}~\code{data} is as follows:
+\begin{boxedcode}
+!\$omp target enter data \plc{[clause[[,] clause],...]}
+\end{boxedcode}
+where clause is one of the following:
+\begin{indentedcodelist}
+device(\plc{integer-expression})
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+if( scalar-expression )
+depend(\plc{dependence-type} : \plc{list})
+nowait
+\end{indentedcodelist}
+\fortranspecificend
+
+\binding
+The binding task for a \code{target}~\code{enter}~\code{data} construct is the encountering task. 
+
+\descr
+When a \code{target}~\code{enter}~\code{data} construct is encountered, the list items are mapped to the device data environment according to the \code{map} clause semantics.
+
+The \code{target}~\code{enter}~\code{data} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target}~\code{enter}~\code{data} construct. The generated task is a \plc{target task}.
+
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated target task is complete.
+
+By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
+
+If a \code{depend} clause is present, then it is treated as if it had appeared on the implicit \code{task} construct that encloses the \code{target}~\code{enter}~\code{data} construct.
+
+If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
+
+When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
+
+\restrictions
+\begin{itemize}
+\item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{enter}~\code{data} directive, or on any side effects of the evaluations of the clauses.
+\item At least one \code{map} clause must appear on the directive.
+\item At most one \code{device} clause can appear on the directive. The device expression must evaluate to a non-negative integer value.
+\item At most one \code{if} clause can appear on the directive.
+\item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{to} or \code{alloc}.
+\item The restrictions for the \code{task} construct apply. 
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
+\item \code{target}~\code{exit}~\code{data}, see \specref{subsec:target exit data Construct}.
+\item \code{map} clause, see \specref{subsec:map Clause}.
+\item \plc{default-device-var}, see \specref{subsec:ICV Descriptions}.
+\item \code{task}, see \specref{subsec:task Construct}.
+\item \code{task}~\code{scheduling}~\code{constraints}, see \specref{subsec:Task Scheduling}. 
+\end{itemize}
+
+%
+%  TARGET EXIT DATA 
+%
+\subsection{\code{target}~\code{exit}~\code{data} Construct}
+\label{subsec:target exit data Construct}
+\index{constructs!target exit data@{\code{target}~\code{exit}~\code{data}}}
+\index{device data environments}
+\summary
+The \code{target}~\code{exit}~\code{data} directive specifies that list items are unmapped from a device data environment. The \code{target}~\code{exit}~\code{data} directive is a stand-alone directive.
+\syntax
+\ccppspecificstart
+The syntax of the \code{target}~\code{exit}~\code{data} construct is as follows:
+\begin{boxedcode}
+\#pragma omp target exit data \plc{[clause[[,] clause],...] new-line}
+\end{boxedcode}
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+device(\plc{integer-expression})
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+if( scalar-expression )
+depend(\plc{dependence-type} : \plc{list})
+nowait
+\end{indentedcodelist}
+\ccppspecificend
+\fortranspecificstart
+The syntax of the \code{target}~\code{exit}~\code{data} is as follows:
+\begin{boxedcode}
+!\$omp target enter data \plc{[clause[[,] clause],...]}
+\end{boxedcode}
+where clause is one of the following:
+\begin{indentedcodelist}
+device(\plc{integer-expression})
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+if( scalar-expression )
+depend(\plc{dependence-type} : \plc{list})
+nowait
+\end{indentedcodelist}
+\fortranspecificend
+\binding
+The binding task for a \code{target}~\code{exit}~\code{data} construct is the encountering task. 
+
+\descr
+When a \code{target}~\code{exit}~\code{data} construct is encountered, the list items are unmapped frm the device data environment according to the \code{map} clause semantics.
+
+The \code{target}~\code{exit}~\code{data} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target}~\code{exit}~\code{data} construct. The generated task is a \plc{target task}.
+
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{exit}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated \plc{target task} is complete.
+
+By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
+
+If a \code{depend} clause is present, then it is treated as if it had appeared on the implicit \code{task} construct that encloses the \code{target}~\code{exit}~\code{data} construct.
+
+If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
+
+When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
+\restrictions
+\begin{itemize}
+\item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{enter}~\code{data} directive, or on any side effects of the evaluations of the clauses.
+\item At least one \code{map} clause must appear on the directive.
+\item At most one \code{device} clause can appear on the directive. The device expression must evaluate to a non-negative integer value.
+\item At most one \code{if} clause can appear on the directive.
+\item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{from}, \code{release}, or \code{delete}.
+\item The restrictions for the \code{task} construct apply. 
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
+\item \code{target}~\code{enter}~\code{data}, see \specref{subsec:target enter data Construct}.
+\item \code{map} clause, see \specref{subsec:map Clause}.
+\item \plc{default-device-var}, see \specref{subsec:ICV Descriptions}.
+\item \code{task}, see \specref{subsec:task Construct}.
+\item \code{task}~\code{scheduling}~\code{constraints}, see \specref{subsec:Task Scheduling}. 
+\end{itemize}
 
 
 
-
-
-
-
-
+%
+% COMBINED CONSTRUCTS
+%
 \section{Combined Constructs}
 \label{sec:Combined Constructs}
 \index{combined constructs}
