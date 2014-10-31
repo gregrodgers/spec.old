@@ -8062,76 +8062,78 @@ clause.
 \index{map@{\code{map}}}
 \index{clauses!map@{\code{map}}}
 \summary
-The \code{map} clause maps a variable from the current task's data environment to the device
-data environment associated with the construct.
+The \code{map} clause specifies how an original list item is mapped from the current task's data environment to a corresponding list item in the device data environment of the device identified by the construct.
 
 \syntax
 The syntax of the map clause is as follows:
 
 \begin{boxedcode}
-map(\plc{[map-type }:\plc{ ] list})
-\end{boxedcode}
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})\end{boxedcode}
 
 \descr
 The list items that appear in a \code{map} clause may include array sections.
 
-For list items that appear in a \code{map} clause, corresponding new list items are created in
-the device data environment associated with the construct.
+The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
 The original and corresponding list items may share storage such that writes to either
 item by one task followed by a read or write of the other item by another task without
 intervening synchronization can result in data races.
 
-If a corresponding list item of the original list item is in the enclosing device data
-environment, the new device data environment uses the corresponding list item from the
-enclosing device data environment. No additional storage is allocated in the new device
-data environment and neither initialization nor assignment is performed, regardless of
-the \plc{map-type} that is specified.
+If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs:
+\begin{enumerate}
+\item If a corresponding list item of the original list item is not present in the device data environment, then:
+\begin{enumerate}
+\item A new list item with language-specific attributes is derived from the original list item and created in the device data environment.
+\item The new list item becomes the corresponding list item to the original list item in the device data environment.
+\item The corresponding list item has a reference count that is initialized to zero. 
+\end{enumerate}
+\item The corresponding list item's reference count is incremented by one.
+\item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
+\begin{enumerate}
+\item If the \plc{map-type} is \code{to} or \plc{tofrom} the corresponding list item is assigned the value of the original list item. 
+\end{enumerate}
+\item If the corresponding list item's reference count is one, then:
+\begin{enumerate}
+\item If the \plc{map-type} is \code{from} or \code{alloc} the value of the corresponding list item is undefined. 
+\end{enumerate}
+\end{enumerate}
 
-If a corresponding list item is not in the enclosing device data environment, a new list
-item with language-specific attributes is derived from the original list item and created
-in the new device data environment. This new list item becomes the corresponding list
-item to the original list item in the new device data environment. Initialization and
-assignment are performed if specified by the \plc{map-type}.
+If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs:
+\begin{enumerate}
+\item If a corresponding list item of the original list item is not present in the device data environment the list item is ignored.
+\item If a corresponding list item of the original list item is present in the device data environment, then:
+\begin{enumerate}
+\item If the corresponding list item's reference count is greater than zero, then:
+\begin{enumerate}
+\item if the \plc{map-type} is \code{to}, \code{from}, \code{tofrom}, or \code{release}, the corresponding list item's reference count is decremented by one.
+\item If the \plc{map-type} is \code{delete} the corresponding list item's reference count is set to zero. 
+\end{enumerate}
+\item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
+\begin{enumerate}
+\item If the \plc{map-type} is \code{from} or \code{tofrom}, the original list item is assigned the value of the corresponding list item. 
+\end{enumerate}
+\item If the corresponding list item's reference count is zero, then:
+\begin{enumerate}
+\item The corresponding list item is removed from the device data environment 
+\end{enumerate}
+\end{enumerate}
+\end{enumerate}
 
 \ccppspecificstart
 If a new list item is created then a new list item of the same type, with automatic storage
-duration, is allocated for the construct. The storage and thus lifetime of this list item
-lasts until the block in which it is created exits. The size and alignment of the new list
+duration, is allocated for the construct. The size and alignment of the new list
 item are determined by the type of the variable. This allocation occurs if the region
 references the list item in any statement.
 
-If the type of the variable appearing in an array section is pointer, reference to array, or
-reference to pointer then the variable is implicitly treated as if it had appeared in a \code{map}
-clause with a \plc{map-type} of \code{alloc}. The corresponding variable is assigned the address of
-the storage location of the corresponding array section in the new device data
-environment. If the variable appears in a \code{to} or \code{from} clause in a \code{target}~\code{update}
-region enclosed by the new device data environment but not as part of the specification
-of an array section, the behavior is unspecified.
+If a new list item is created for an array section and the type of the variable appearing in that array section is pointer, reference to array, or reference to pointer then the variable is implicitly treated as if it had appeared in a map clause with a \plc{map-type} of \code{alloc}. The corresponding variable is assigned the address of the storage location of the corresponding array section in the device data environment. If the variable appears in a \code{to} or \code{from} clause in a \code{target}~\code{update} region during the lifetime of the new list item but not as part of the specification of an array section, the behavior is unspecified. 
 \ccppspecificend
-\bigskip
 
-\needspace{11\baselineskip}\begin{samepage}
 \fortranspecificstart
 If a new list item is created then a new list item of the same type, type parameter, and
 rank is allocated.
 \fortranspecificend
-\end{samepage}
 
 The \plc{map-type} determines how the new list item is initialized.
-
-The \code{alloc} \plc{map-type} declares that on entry to the region each new corresponding list
-item has an undefined initial value.
-
-The \code{to} \plc{map-type} declares that on entry to the region each new corresponding list item
-is initialized with the original list item's value.
-
-The \code{from} \plc{map-type} declares that on exit from the region the corresponding list item's
-value is assigned to each original list item.
-
-The \code{tofrom} \plc{map-type} declares that on entry to the region each new corresponding list
-item is initialized with the original list item's value and that on exit from the region the
-corresponding list item's value is assigned to each original list item.
 
 If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofrom}.
 
@@ -8144,9 +8146,7 @@ clauses of the same construct.
 
 \item List items of \code{map} clauses in the same construct must not share original storage.
 
-\item If any part of the original storage of a list item has corresponding storage in the 
-enclosing device data environment, all of the original storage must have 
-corresponding storage in the enclosing device data environment.
+\item If any part of the original storage of a list item has corresponding storage in the device data environment, all of the original storage must have corresponding storage in the device data environment. 
 
 \item A variable that is part of another variable (such as a field of a structure) but is not an 
 array element or an array section cannot appear in a \code{map} clause. 
@@ -8166,13 +8166,8 @@ array element or an array section cannot appear in a \code{map} clause.
 an array section derived from that variable must not appear as list items of \code{map}
 clauses of the same construct. 
 
-\item A variable for which the type is pointer, reference to array, or reference to pointer 
-must not appear as a list item if the enclosing device data environment already 
-contains an array section derived from that variable. 
-
-\item An array section derived from a variable for which the type is pointer, reference to 
-array, or reference to pointer must not appear as a list item if the enclosing device 
-C/C++ data environment already contains that variable.
+\item A variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains an array section derived from that variable.
+\item An array section derived from a variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains that variable. 
 \end{itemize}
 \ccppspecificend
 
