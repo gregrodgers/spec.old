@@ -293,6 +293,7 @@ end target teams distribute parallel do simd
 end target teams distribute simd
 end task
 end task group
+end task loop
 end teams
 end teams distribute
 end teams distribute parallel do
@@ -310,6 +311,7 @@ target teams distribute parallel do
 target teams distribute parallel do simd
 target teams distribute simd
 target update
+task loop
 teams distribute
 teams distribute parallel do
 teams distribute parallel do simd
@@ -2317,11 +2319,11 @@ intrinsic assignments.
 \filbreak
 \section{SIMD Constructs}
 \label{sec:SIMD Constructs}
-\index{SIMD constructs}
-\subsection{\code{simd} construct}
+\index{SIMD Constructs}
+\subsection{\code{simd} Construct}
 \index{simd@{\code{simd}}}
 \index{constructs!simd@{\code{simd}}}
-\label{subsec:simd construct}
+\label{subsec:simd Construct}
 \summary
 The \code{simd} construct can be applied to a loop to indicate that the loop can be transformed 
 into a SIMD loop (that is, multiple iterations of the loop can be executed concurrently 
@@ -2486,10 +2488,10 @@ pointer, or the list item must have the \code{POINTER} or \code{ALLOCATABLE} att
 
 
 
-\subsection{\code{declare}~\code{simd} construct}
+\subsection{\code{declare}~\code{simd} Construct}
 \index{declare simd@{\code{declare}~\code{simd}}}
 \index{constructs!declare simd@{\code{declare}~\code{simd}}}
-\label{subsec:declare simd construct}
+\label{subsec:declare simd Construct}
 \summary
 The \code{declare}~\code{simd} construct can be applied to a function (C, C++ and Fortran) or a 
 subroutine (Fortran) to enable the creation of one or more versions that can process 
@@ -2548,7 +2550,6 @@ The expressions appearing in the clauses of this directive are evaluated in the 
 the arguments of the function declaration or definition
 \ccppspecificend
 
-\pagebreak
 \begin{samepage}
 \fortranspecificstart
 The use of a \code{declare}~\code{simd} construct enables the creation of SIMD versions of the 
@@ -2675,9 +2676,9 @@ pointer, or the list item must have the \code{POINTER} or \code{ALLOCATABLE} att
 
 
 \begin{samepage}
-\subsection{Loop SIMD construct}
-\label{subsec:Loop SIMD construct}
-\index{loop SIMD construct}
+\subsection{Loop SIMD Construct}
+\label{subsec:Loop SIMD Construct}
+\index{loop SIMD Construct}
 \index{constructs!Loop SIMD}
 \index{do SIMD@{\code{do}~\code{simd}}}
 \index{for SIMD@{\code{for}~\code{simd}}}
@@ -2955,12 +2956,175 @@ array element or an array section cannot appear in a \code{depend} clause.
 
 
 
+% TASKLOOP 
+\subsection{\code{taskloop} Construct}
+\index{taskloop@{\code{taskloop}}}
+\index{constructs!taskloop@{\code{taskloop}}}
+\label{subsec:taskloop Construct}
+\summary
+The \code{taskloop} construct specifies that the iterations of one or more associated loops will be executed in parallel using OpenMP tasks. The iterations are distributed across tasks created by the construct and scheduled to be executed.
+\syntax
+The syntax of the \code{taskloop} construct is as follows:
+\ccppspecificstart
+\begin{boxedcode}
+\#pragma omp taskloop \plc{[clause[[,] clause] ...] new-line}
+    \plc{for-loops}
+\end{boxedcode}
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+shared(\plc{list})
+private(\plc{list})
+firstprivate(\plc{list})
+lastprivate(\plc{list})
+default(shared | none)
+grainsize(\plc{grain-size})
+num_tasks(\plc{num-tasks})
+collapse(\plc{n})
+if(\plc{scalar-expr})
+final(\plc{scalar-expr})
+untied
+mergeable
+nogroup
+\end{indentedcodelist}
+
+The \code{taskloop} directive places restrictions on the structure of all associated \plc{for-loops}. Specifically, all associated \plc{for-loops} must have canonical loop form (see \specref{subsec:Canonical Loop Form}).
+\ccppspecificend
+\fortranspecificstart
+\begin{boxedcode}
+!\$omp taskloop \plc{[clause[[,] clause] ...]}
+    \plc{do-loops}
+plc{[}!\$omp end taskloop \plc{[}nogroup\plc{]}] 
+\end{boxedcode}
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+shared(\plc{list})
+private(\plc{list})
+firstprivate(\plc{list})
+lastprivate(\plc{list})
+default(privat | firstprivat | shared | none)
+grainsize(\plc{grain-size})
+num_tasks(\plc{num-tasks})
+collapse(\plc{n})
+if(\plc{scalar-expr})
+final(\plc{scalar-expr})
+untied
+mergeable
+\end{indentedcodelist}
+
+If \code{end}~\code{taskloop} directive is not specified, an \code{end}~\code{taskloop} directive is assumed at the end of the \plc{do-loops}.
+
+All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an \code{end}~\code{do} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} termination statement, then the directive can only be specified for the outermost of these \code{DO} statements.
+
+If any of the loop iteration variables would otherwise be shared, they are implicitly made private for the loop-iteration tasks created by the \code{taskloop} construct. Unless the loop iteration variables are specified in a \code{lastprivate} clause on the loop construct, their values after the loop are unspecified.
+\fortranspecificend
+
+\binding
+The binding thread set of the taskloop construct is the current team. A taskloop region binds to the innermost enclosing parallel region.
+
+\descr
+When a thread encounters a \code{taskloop} construct, the construct partitions the associated loops into tasks for parallel execution of the loops' iterations. The data environment of the created tasks is created according to the data-sharing attribute clauses on the \code{taskloop} construct, per-data environment ICVs, and any defaults that apply. The order of the creation of the loop tasks is unspecified.
+
+If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each created task is larger or equal to the value of the \plc{grain-size} expression, but less than two times the value of the \plc{grain-size} expression and less than or equal to the number of logical loop iterations. If \code{num\_tasks} is specified, the \code{taskloop} construct creates as many tasks as the minimum of the \plc{num-tasks} expression and the number of logical loop iterations. If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks created and the number of logical loop iterations assigned to these tasks is implementation defined.
+
+The \code{collapse} clause may be used to specify how many loops are associated with the \code{taskloop} construct. The parameter of the \code{collapse} clause must be a constant positive integer expression. If no \code{collapse} clause is present, the only loop that is associated with the loop construct is the one that immediately follows the loop directive.
+
+If more than one loop is associated with the \code{taskloop} construct, then the iterations of all associated loops are collapsed into one larger iteration space that is then divided according to the \code{grainsize} and \code{num\_tasks} clauses. The sequential execution of the iterations in all associated loops determines the order of the iterations in the collapsed iteration space.
+
+The iteration count for each associated loop is computed before entry to the outermost loop. If execution of any associated loop changes any of the values used to compute any of the iteration counts, then the behavior is unspecified. The integer type (or kind, for Fortran) used to compute the iteration count for the collapsed loop is implementation defined.
+
+When an \code{if} clause is present on a \code{taskloop} construct, and if the \code{if} clause expression evaluates to \plc{false}, undeferred tasks are generated. The use of a variable in an \code{if} clause expression of a \code{taskloop} construct causes an implicit reference to the variable in all enclosing constructs.
+
+When a \code{final} clause is present on a \code{taskloop} construct and the \code{final} clause expression evaluates to \plc{true}, the generated tasks will be final tasks. The use of a variable in a \code{final} clause expression of a \code{taskloop} construct causes an implicit reference to the variable in all enclosing constructs.
+
+If the \code{untied} clause is specified, all tasks created by the \code{taskloop} construct are untied tasks.
+
+When a \code{mergeable} clause is present on a \code{taskloop} construct, and the generated tasks are undeferred or included tasks, the implementation may generate merged tasks instead.
+
+By default, the \code{taskloop} construct executes as if it was enclosed in a \code{taskgroup} construct with no statements or directives outside of the \code{taskloop} construct. Thus, the \code{taskloop} construct creates an implicit \code{taskgroup} region. If the \code{nogroup} clause is present, no implicit \code{taskgroup} region is created.
+
+\notestart
+\noteheader – When storage is shared by a \code{taskloop} region, the programmer must ensure, by adding proper synchronization, that the storage does not reach the end of its lifetime before the \code{taskloop} region and its descendant tasks complete their execution.
+\noteend
+
+\restrictions
+The restrictions of the \code{taskloop} construct are as follows:
+\begin{itemize}
+\item A program that branches into or out of a \code{taskloop} region is non-conforming.
+\item All loops associated with the \code{taskloop} construct must be perfectly nested; that is, there must be no intervening code nor any OpenMP directive between any two loops.
+\item At most one \code{grainsize} clause can appear on a \code{taskloop} directive.
+\item At most one \code{num\_tasks} clause can appear on a \code{taskloop} directive.
+\item The \code{grainsize} clause and \code{num\_tasks} clause are mutually exclusive and may not appear on the same taskloop directive.
+\item At most one \code{collapse} clause can appear on a \code{taskloop} directive.
+\item At most one \code{if} clause can appear on the directive.
+\item At most one \code{final} clause can appear on the directive. 
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{task} construct, \specref{subsec:task Construct}.
+\item \code{taskgroup} construct, \specref{subsec:taskgroup Construct}.
+\item Data-Sharing Attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}. 
+\end{itemize}
 
 
 
 
 
 
+%
+%TASKLOOP SIMD
+%
+\subsection{\code{taskloop}~\code{simd} Construct}
+\index{taskloop simd@{\code{taskloop}~\code{simd}}}
+\index{constructs!taskloop simd@{\code{taskloop}~\code{simd}}}
+\label{subsec:taskloop simd Construct}
+\summary
+The \code{taskloop}~\code{simd} construct specifies a loop that can be executed concurrently using SIMD instructions and that those iterations will also be executed in parallel using OpenMP tasks.
+\syntax
+The syntax of the \code{taskloop}~\code{simd} construct is as follows:
+\ccppspecificstart
+\begin{boxedcode}
+\#pragma omp taskloop simd \plc{[clause[[,] clause] ...] new-line}
+    \plc{for-loops}
+\end{boxedcode}
+where \plc{clause} can be any of the clauses accepted by the \code{taskloop} or \code{simd} directives with identical meanings and restrictions.
+\ccppspecificend
+\fortranspecificstart
+\begin{boxedcode}
+!\$omp taskloop simd \plc{[clause[[,] clause] ...]}
+    \plc{do-loops}
+\plc{[}!\$omp end taskloop simd \plc{[}nogroup\plc{]}] 
+\end{boxedcode}
+where \plc{clause} can be any of the clauses accepted by the \code{taskloop} or \code{simd} directives with identical meanings and restrictions.
+
+If \code{end}~\code{taskloop}~\code{simd} directive is not specified, an \code{end}~\code{taskloop}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
+\fortranspecificend
+
+\binding
+The binding thread set of the \code{taskloop}~\code{simd} construct is the current team. A \code{taskloop}~\code{simd} region binds to the innermost enclosing parallel region.
+
+\descr
+The \code{taskloop}~\code{simd} construct will first distribute the iterations of the associated loop(s) across tasks in a manner consistent with any clauses that apply to the \code{taskloop} construct. The resulting tasks will then be converted to a SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately.
+
+\restrictions
+\begin{itemize}
+\item The restrictions for the \code{taskloop} and \code{simd} constructs apply.
+\item No \code{reduction} clause can be specified. 
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
+\item \code{simd} construct, see \specref{subsec:simd Construct}.
+\item Data-Sharing Attribute clauses, see \specref{subsec:Data-Sharing Attribute Clauses}. 
+\end{itemize}
+
+
+
+
+%
+%   TASKYIELD CONSTRUCT
+%
 \subsection{\code{taskyield} Construct}
 \index{taskyield@{\code{taskyield}}}
 \index{constructs!taskyield@{\code{taskyield}}}
