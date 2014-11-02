@@ -1625,7 +1625,7 @@ linear(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
-ordered
+ordered(\plc{n})
 nowait
 \end{indentedcodelist}
 
@@ -1653,7 +1653,7 @@ linear(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
-ordered
+ordered(\plc{n})
 \end{indentedcodelist}
 
 If an \code{end}~\code{do} directive is not specified, an \code{end}~\code{do} directive is assumed at the end of the 
@@ -1684,15 +1684,18 @@ There is an implicit barrier at the end of a loop construct unless a \code{nowai
 specified.
 
 \index{clauses!collapse@{\code{collapse}}}
-The \code{collapse} clause may be used to specify how many loops are associated with the 
-loop construct. The parameter of the \code{collapse} clause must be a constant positive 
-integer expression. If no \code{collapse} clause is present, the only loop that is associated 
-with the loop construct is the one that immediately follows the loop directive.
+The \code{collapse} \code{clause} or the ordered clause with the parameter may be used to specify how many loops are associated with the loop construct. An \code{clause} clause without a parameter is equivalent to the \code{clause} clause with a parameter value of one specified. The number of loops associated is determined by the parameters of the \code{collapse} clause and the \code{clause} clause, which must be constant positive integer expressions.
+
+If neither the \code{collapse} nor the \code{clause} clause is present, the only loop that is associated with the loop construct is the one that immediately follows the loop directive. If the value of the parameter in the \code{collapse} or \code{clause} clause is larger than the number of nested loops following the construct, the behavior is unspecified.
+
+If both the \code{collapse} clause and the \code{clause} clause with a parameter are specified, the \code{collapse} clause applies to the loops that immediately follow the directive. The \code{clause} clause with the parameter then applies to the resulting loop nest (that is, the collapsed loop and the remaining loops). If the value of the parameter in the \code{clause} clause is larger than the number of the loops in the resulting loop nest, the behavior is unspecified.
 
 \index{clauses!schedule@{\code{schedule}}}
-If more than one loop is associated with the loop construct, then the iterations of all 
-associated loops are collapsed into one larger iteration space that is then divided 
-according to the \code{schedule} clause. The sequential execution of the iterations in all 
+If more than one loop is associated with the loop construct and a \code{collapse} clause is specified, then the iterations of all associated loops are collapsed into one larger iteration space that is then divided according to the schedule clause.
+
+If an \code{ordered} clause with the parameter is specified for the loop construct, then the associated loops form a \emph{doacross loop nest}. 
+
+The sequential execution of the iterations in all 
 associated loops determines the order of the iterations in the collapsed iteration space.
 
 The iteration count for each associated loop is computed before entry to the outermost 
@@ -1891,6 +1894,9 @@ out of the loops.
 
 \item \code{ordered} construct, see 
 \specref{subsec:ordered Construct}.
+
+\item \code{depend} Clause, see
+\specref{subsec:depend Clause}.
 \end{itemize}
 
 
@@ -2886,73 +2892,19 @@ unspecified behavior
 \fortranspecificend
 \end{itemize}
 
-
-
-
-
-
-
-
-
-\subsubsection{\code{depend} Clause}
-\index{depend@{\code{depend}}}
-\index{clauses!depend@{\code{depend}}}
-\label{subsubsec:depend Clause}
-\summary
-The \code{depend} clause enforces additional constraints on the scheduling of tasks. These 
-constraints establish dependences only between sibling tasks. The clause consists of a 
-\plc{dependence-type} with one or more list items.
-
-\pagebreak
-\syntax
-The syntax of the \code{depend} clause is as follows:
-
-\begin{boxedcode}
-depend(\plc{dependence-type }:\plc{ list})
-\end{boxedcode}
-
-\descr
-Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list 
-items, where \plc{dependence-type} is one of the following:
-
-The \code{in} \plc{dependence-type}. The generated task will be a dependent task of all previously 
-generated sibling tasks that reference at least one of the list items in an \code{out} or \code{inout} 
-\plc{dependence-type} list.
-
-The \code{out} and \code{inout} \plc{dependence-types}. The generated task will be a dependent task of 
-all previously generated sibling tasks that reference at least one of the list items in an 
-\code{in}, \code{out}, or \code{inout} \plc{dependence-type} list.
-
-The list items that appear in the \code{depend} clause may include array sections.
-
-\notestart
-\noteheader – The enforced task dependence establishes a synchronization of memory 
-accesses performed by a dependent task with respect to accesses performed by the 
-predecessor tasks. However, it is the responsibility of the programmer to synchronize 
-properly with respect to other concurrent accesses that occur outside of those tasks.
-\noteend
-
-\restrictions
-Restrictions to the \code{depend} clause are as follows:
-
-\begin{itemize}
-\item List items used in \code{depend} clauses of the same task or sibling tasks must indicate 
-identical storage or disjoint storage. 
-
-\item List items used in \code{depend} clauses cannot be zero-length array sections. 
-
-\item A variable that is part of another variable (such as a field of a structure) but is not an 
-array element or an array section cannot appear in a \code{depend} clause. 
-\end{itemize}
-
 \crossreferences
 \begin{itemize}
-\item Array sections, 
-\specref{sec:Array Sections}.
-
-\item Task scheduling constraints, 
-\specref{subsec:Task Scheduling}. 
+\item Task scheduling constraints, see \specref{subsec:Task Scheduling}. 
+\item \code{depend} Clause, see \specref{subsec:depend Clause}.
 \end{itemize}
+
+
+
+
+
+
+
+
 
 
 
@@ -5298,9 +5250,9 @@ The restrictions for the \code{target} and teams distribute parallel loop SIMD c
 
 
 
-\section{Master and Synchronization Constructs}
-\label{sec:Master and Synchronization Constructs}
-\index{master and synchronization constructs}
+\section{Master and Synchronization Constructs and Clauses}
+\label{sec:Master and Synchronization Constructs and Clauses}
+\index{master and synchronization constructs and clauses}
 \index{synchronization constructs}
 OpenMP provides the following synchronization constructs:
 \begin{itemize}
@@ -6189,13 +6141,18 @@ within an \code{ordered} region while allowing code outside the region to run in
 The syntax of the \code{ordered} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp ordered \plc{[clause[ [},\plc{] clause] ... ]} \plc{new-line}
+\#pragma omp ordered \plc{new-line}
    \plc{structured-block}
 \end{boxedcode}
-where \plc{clause} is one of the following:
+
+or
+
+\begin{boxedcode}
+\#pragma omp ordered \plc{[clause[ [},\plc{] clause] ... ]} \plc{new-line}
+\end{boxedcode}
+where \plc{clause} is:
 \begin{itemize}
-\item \code{threads}
-\item \code{simd}
+\item \code{depend(\plc{dependence-type} : \plc{vec}}\code)}
 \end{itemize}
 
 \ccppspecificend
@@ -6205,52 +6162,56 @@ where \plc{clause} is one of the following:
 The syntax of the \code{ordered} construct is as follows:
 
 \begin{boxedcode}
-!\$omp ordered \plc{[clause[ [},\plc{] clause] ... ]}
+!\$omp ordered 
     \plc{structured-block}
 !\$omp end ordered
 \end{boxedcode}
-where \plc{clause} is one of the following:
+
+or
+
+\begin{boxedcode}
+!\$omp ordered plc{[clause[ [},\plc{] clause] ... ]}
+\end{boxedcode}
+
+where \plc{clause} is:
 \begin{itemize}
-\item \code{threads}
-\item \code{simd}
+\item \code{depend(\plc{dependence-type} : \plc{vec}}\code{)}
 \end{itemize}
 \fortranspecificend
 
+If the \code{depend} clause is specified, the \code{ordered} construct is a stand-alone directive.
+ 
 \binding
 The binding thread set for an \code{ordered} region is the current team. An \code{ordered} region 
 binds to the innermost enclosing loop region. \code{ordered} regions that bind to different 
 loop regions execute independently of each other.
 
 \descr
-If no clause is specified, the ordered construct behaves as if the threads clause had been specified. If the \code{threads} clause is specified, the threads in the team executing the loop region execute \code{ordered} regions sequentially in the order of the loop iterations. When the thread executing the first 
-iteration of the loop encounters an \code{ordered} construct, it can enter the \code{ordered} 
-region without waiting. When a thread executing any subsequent iteration encounters an 
-\code{ordered} region, it waits at the beginning of that \code{ordered} region until execution of 
-the \code{ordered} regions belonging to all previous iterations have completed. If the \code{simd} clause is specified, the \code{ordered} regions encountered by any thread will use only a single SIMD lane to execute the \code{ordered} regions in the order of the loop iterations.
+The threads in the team executing the loop region execute \code{ordered} regions sequentially in the order of the loop iterations or the constraints governed by the \code{depend} clauses if specified. When the thread executing the first iteration of the loop encounters an \code{ordered} construct, it can enter the \code{ordered} region without waiting. When a thread executing any subsequent iteration encounters an \code{ordered} region, it waits at the beginning of that ordered region until execution of all \code{ordered} regions belonging to all previous iterations or iterations specified by the \code{depend} clauses have completed.
 
 \restrictions
 Restrictions to the \code{ordered} construct are as follows:
 
 \begin{itemize}
-\item The loop region to which an \code{ordered} region with a \code{threads} clause binds must have an \code{ordered} clause specified on the corresponding loop (or parallel loop) construct.
-\item During execution of an iteration of a loop or a loop nest within a loop region, a thread must not execute more than one \code{ordered} region with the \code{threads} clause that binds to the same loop region.
-\end{itemize}
+\item The loop region to which an \code{ordered} region without any clause binds must have an \code{ordered} clause without the parameter specified on the corresponding loop (or parallel loop) construct. 
 
+\item The loop region to which an \code{ordered} region with the \code{depend} clauses binds must have an \code{ordered} clause with the parameter specified on the corresponding loop (or parallel loop) construct. 
+
+\item An \code{ordered} construct with the \code{depend} clause specified must be closely nested inside a loop (or parallel loop) construct. 
+
+\item An \code{ordered} construct with the \code{depend} clause specified must not be closely nested in a simd construct 
+
+\item During execution of an iteration of a loop or a loop nest within a loop region, a thread must not execute more than one ordered region that arises from an \code{ordered} clause with no parameter and binds to the same loop region. 
+\end{itemize}
 \cppspecificstart
 \begin{itemize}
 \item A throw executed inside a \code{ordered} region must cause execution to resume within 
 the same \code{ordered} region, and the same thread that threw the exception must catch 
 it.
-\item An \code{ordered} region with the \code{simd} clause must be closely nested to a \code{simd} or \code{declare}~\code{simd} construct.
-
 \end{itemize}
 \cppspecificend
 
-\fortranspecificstart
-\begin{itemize}
-\item An \code{ordered} region with the \code{simd} clause must be closely nested to a \code{simd} construct or to a function or subroutine that is the target of a \code{declare}~\code{simd} construct.
-\end{itemize}
-\fortranspecificend
+
 
 \crossreferences
 \begin{itemize}
@@ -6259,9 +6220,98 @@ it.
 
 \item parallel loop construct, see 
 \specref{subsec:Parallel Loop Construct}.
+
+\item \code{depend} Clause, see
+\specref{subsec:depend Clause}
 \end{itemize}
 
 
+\subsection{\code{depend} Clause}
+\index{depend@{\code{depend}}}
+\index{clauses!depend@{\code{depend}}}
+\label{subsec:depend Clause}
+\summary
+The \code{depend} clause enforces additional constraints on the scheduling of tasks or loop iterations.  These 
+constraints establish dependences only between sibling tasks. The clause consists of a 
+\plc{dependence-type} with one or more list items.
+
+\pagebreak
+\syntax
+The syntax of the \code{depend} clause is as follows:
+
+\begin{boxedcode}
+depend(\plc{dependence-type }:\plc{ list})
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+depend(\plc{dependence-type }:\plc{ vec})
+\end{boxedcode}
+
+where \plc{vec} is the iteration vector.
+
+\descr
+Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list 
+items, where \plc{dependence-type} is one of the following:
+
+The \code{in} \plc{dependence-type}. The generated task will be a dependent task of all previously 
+generated sibling tasks that reference at least one of the list items in an \code{out} or \code{inout} 
+\plc{dependence-type} list.
+
+The \code{out} and \code{inout} \plc{dependence-types}. The generated task will be a dependent task of 
+all previously generated sibling tasks that reference at least one of the list items in an 
+\code{in}, \code{out}, or \code{inout} \plc{dependence-type} list.
+
+The list items that appear in the \code{depend} clause may include array sections.
+
+\notestart
+\noteheader – The enforced task dependence establishes a synchronization of memory 
+accesses performed by a dependent task with respect to accesses performed by the 
+predecessor tasks. However, it is the responsibility of the programmer to synchronize 
+properly with respect to other concurrent accesses that occur outside of those tasks.
+\noteend
+
+Loop dependences are derived from the \plc{dependence-type} of a \code{depend} clause and the iteration vector \plc{vec}.
+
+The \code{source} \plc{dependence-type} specifies the completion of cross-iteration dependences arise from the current iteration.
+
+The \code{sink} \plc{dependence-type} specifies sink of cross-iteration dependences. The current iteration is blocked until all the source iterations specified complete execution.
+
+The iteration vector vec must have the form of 
+(x$_{1}$ $\pm $ d$_{1}$, x$_{2}$ $\pm $ d$_{2}$ , ... , x$_{n}$ $\pm $ d$_{n}$), 
+where \plc{n} is the value specified by the \code{ordered} clause in the loop construct, 
+x$_{\plc{i}}$ denotes the loop iteration variable of \plc{i}-th nested loop associated with the loop construct, and 
+d$_{\plc{i}}$ is a constant non-negative integer. 
+If the iteration vector \plc{vec} indicates a lexicographically later iteration, it can cause a deadlock. If the iteration vector \plc{vec} indicates an invalid iteration, the \code{ordered} constructs with the \code{depend} clause is ignored.
+
+
+\restrictions
+Restrictions to the \code{depend} clause are as follows:
+
+\begin{itemize}
+\item List items used in \code{depend} clauses of the same task or sibling tasks must indicate 
+identical storage or disjoint storage. 
+
+\item List items used in \code{depend} clauses cannot be zero-length array sections. 
+
+\item A variable that is part of another variable (such as a field of a structure) but is not an 
+array element or an array section cannot appear in a \code{depend} clause.
+
+\item If the \plc{dependence-type} is \code{source}, the iteration vector \plc{vec} must not be specified.  
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item Array sections, see
+\specref{sec:Array Sections}.
+
+\item \code{task} Construct, see 
+\specref{subsec:task Construct}.
+
+\item Task scheduling constraints, see
+\specref{subsec:Task Scheduling}. 
+\end{itemize}
 
 
 
