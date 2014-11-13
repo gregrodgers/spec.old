@@ -1,7 +1,9 @@
-# Makefile for the OpenMP specifications document in LaTex format. 
-# For more information, see the master document, openmp-4.1.tex.
+# Makefile for the OpenMP specifications document in LaTex format.
+# For more information, see the master document, openmp.tex.
 
-default: openmp-4.1.pdf
+all: openmp.pdf
+
+.PHONY:clean quick all
 
 CHAPTERS=titlepage.tex \
 	ch1-introduction.tex \
@@ -14,17 +16,15 @@ CHAPTERS=titlepage.tex \
 	appendix-D-ImplementationDefined.tex \
 	appendix-E-FeaturesHistory.tex
 
-openmp-4.1.pdf: $(CHAPTERS) openmp.sty openmp-4.1.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png
-	rm -f openmp-4.1.pdf openmp-4.1.toc openmp-4.1.idx openmp-4.1.aux openmp-4.1.ilg openmp-4.1.ind openmp-4.1.out openmp-4.1.log
-	pdflatex  -interaction=batchmode -file-line-error openmp-4.1.tex
-	makeindex -s openmp-index.ist openmp-4.1.idx
-	pdflatex  -interaction=batchmode -file-line-error openmp-4.1.tex
-	pdflatex  -interaction=batchmode -file-line-error openmp-4.1.tex
+openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png
+	pdflatex -interaction=batchmode -file-line-error openmp.tex
+	makeindex -s openmp-index.ist openmp.idx
+	pdflatex -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -interaction=batchmode -file-line-error openmp.tex
 
 quick:
-	rm -f openmp-4.1.pdf openmp-4.1.toc openmp-4.1.idx openmp-4.1.aux openmp-4.1.ilg openmp-4.1.ind openmp-4.1.out openmp-4.1.log
-	pdflatex  -interaction=batchmode -file-line-error ./openmp-4.1.tex
+	pdflatex -interaction=batchmode -file-line-error openmp.tex
 
 clean:
-	rm -f openmp-4.1.pdf openmp-4.1.toc openmp-4.1.idx openmp-4.1.aux openmp-4.1.ilg openmp-4.1.ind openmp-4.1.out openmp-4.1.log
+	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log
 
