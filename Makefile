@@ -17,7 +17,7 @@ CHAPTERS=titlepage.tex \
 	appendix-E-FeaturesHistory.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png Makefile
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex && false
+	-pdflatex -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -interaction=batchmode -file-line-error openmp.tex
 	-pdflatex -interaction=batchmode -file-line-error openmp.tex
