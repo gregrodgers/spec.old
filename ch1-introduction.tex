@@ -55,7 +55,7 @@ and synchronization constructs, and they provide support for sharing and privati
 data. The functionality to control the runtime environment is provided by library 
 routines and environment variables. Compilers that support the OpenMP API often 
 include a command line option to the compiler that activates and allows interpretation of 
-all OpenMP directives
+all OpenMP directives.
 
 
 
@@ -246,21 +246,6 @@ executable context.
 An OpenMP \emph{executable directive} that has no associated executable user code.
 \glossarydefend
 
-\glossaryterm{loop directive}
-\glossarydefstart
-An OpenMP \emph{executable directive} whose associated user code must be a loop nest 
-that is a \emph{structured block}.
-\glossarydefend
-
-\glossaryterm{associated loop(s)}
-\glossarydefstart
-The loop(s) controlled by a \emph{loop directive}.
-
-\begin{quote}
-COMMENT: If the \emph{loop directive} contains a \code{collapse} clause then there may be 
-more than one \emph{associated loop}.
-\end{quote}
-\glossarydefend
 
 \glossaryterm{construct}
 \glossarydefstart
@@ -269,6 +254,17 @@ any) and the associated statement, loop or \emph{structured block}, if any, not 
 the code in any called routines. That is, in the lexical extent of an \emph{executable 
 directive}.
 \glossarydefend
+
+\glossaryterm{combined construct}
+\glossarydefstart
+A construct that is a shortcut for specifying one construct immediately nested inside another construct. A combined construct is semantically identical to that of explicitly specifying the first construct containing one instance of the second construct and no other statements.
+\glossarydefend
+
+\glossaryterm{composite construct} 
+\glossarydefstart 
+A construct that is composed of two constructs but does not have identical semantics to specifying one of the constructs immediately nested inside the other. A composite construct either adds semantics not included in the constructs from which it is composed or the nesting of the one construct inside the other is not conforming.
+\glossarydefend
+
 
 \glossaryterm{region}
 \glossarydefstart
@@ -534,10 +530,6 @@ For Fortran, \emph{worksharing constructs} are \code{do}, \code{sections}, \code
 \code{workshare}.
 \glossarydefend
 
-\glossaryterm{sequential loop}
-\glossarydefstart
-A loop that is not associated with any OpenMP \emph{loop directive}.
-\glossarydefend
 
 \glossaryterm{place}
 \glossarydefstart
@@ -560,7 +552,7 @@ parallel region.
 
 \glossaryterm{SIMD instruction}
 \glossarydefstart
-A single machine instruction that can can operate on multiple data elements.
+A single machine instruction that can operate on multiple data elements.
 \glossarydefend
 
 \glossaryterm{SIMD lane}
@@ -575,18 +567,46 @@ A set of iterations executed concurrently, each by a \emph{SIMD lane}, by a sing
 by means of \emph{SIMD instructions}.
 \glossarydefend
 
+
+%
+% Loop Terminology
+%
+\subsection{Loop Terminology}
+\index{loop terminology}
+\glossaryterm{loop directive}
+\glossarydefstart
+An OpenMP \emph{executable} directive whose associated user code must be a loop nest that is a \emph{structured block}.
+\glossarydefend
+
+\glossaryterm{associated loop(s)}
+\glossarydefstart
+The loop(s) controlled by a \emph{loop directive}.
+\begin{quote}
+COMMENT: If the \emph{loop directive} contains a \code{collapse} or an \code{ordered(}\plc{n}\code{)} clause then there may be more than one \emph{associated loop}.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{sequential loop}
+\glossarydefstart
+A loop that is not associated with any OpenMP \emph{loop directive}.
+\glossarydefend
+
 \glossaryterm{SIMD loop}
 \glossarydefstart
 A loop that includes at least one \emph{SIMD chunk}.
 \glossarydefend
 
+\glossaryterm{doacross loop nest}
+\glossarydefstart
+A loop nest that has cross-iteration dependence. An iteration is dependent on one or more lexicographically earlier iterations.
+\begin{quote}
+COMMENT: The loop directive with an \code{ordered} clause with the parameter identifies the loop(s) associated for the \emph{doacross loop nest}.
+\end{quote}
+\glossarydefend
 
-
-
-
-
-
-
+%
+% Synchronization Terminology
+%
 \subsection{Synchronization Terminology}
 \index{synchronization terminology}
 \glossaryterm{barrier}
@@ -767,6 +787,12 @@ A \code{taskwait}, \code{taskgroup}, or a \code{barrier} \emph{construct}.
 \glossarydefend
 \bigskip
 
+\glossaryterm{target task}
+\glossarydefstart
+A \emph{merged task} that is executed immediately.
+\glossarydefend
+
+
 
 
 
@@ -841,7 +867,7 @@ The \emph{variables} associated with the execution of a given \emph{region}.
 
 \glossaryterm{device data environment}
 \glossarydefstart
-A \emph{data environment} defined by a \code{target}~\code{data} or \code{target} construct.
+The initial \emph{data environment} associated with a device.
 \glossarydefend
 \bigskip
 
@@ -886,6 +912,12 @@ In addition, for class types:
 For Fortran: 
 \nopagebreak
 The type must be definable.
+
+In addition, for derived types:
+
+\begin{itemize}
+\item All type-bound procedures accessed in any target region must appear in a declare target directive.
+\end{itemize}
 \glossarydefend
 
 \glossaryterm{defined}
@@ -1009,11 +1041,13 @@ are documented in Appendix~\ref{chap:OpenMP Implementation-Defined Behaviors}.
 \end{quote}
 \glossarydefend
 
+\glossaryterm{deprecated} 
+\glossarydefstart
+Implies a construct, clause or other feature is normative in the current specification but is considered obsolescent and will be removed in the future.
+\glossarydefend
 
 
 
-
-\pagebreak
 
 
 
@@ -1056,9 +1090,9 @@ implicit inactive \code{parallel} region that surrounds the entire \code{target}
 
 When a \code{target} construct is encountered, the \code{target} region is executed by the
 implicit device task. The task that encounters the \code{target} construct waits at the end of
-the construct until execution of the region completes. If a target device does not exist, or 
-the target device is not supported by the implementation, or the target device cannot 
-execute the \code{target} construct then the \code{target} region is executed by the host device.
+the construct until execution of the region completes.  If the target device does not exist or the implementation does not support the target device, all \code{target} regions associated with that device are executed by the host device.
+
+The implementation must ensure that the \code{target} region executes as if it were executed in the data environment of the target device unless an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}.
 
 The \code{teams} construct creates a \emph{league of thread teams} 
 where the master thread of each
@@ -1224,20 +1258,9 @@ private variables of another task results in unspecified behavior.
 \subsection{Device Data Environments}
 \label{subsec:Device Data Environments}
 \index{device data environments}
-When an OpenMP program begins, each device has an initial device data environment.
-The initial device data environment for the host device is the data environment
-associated with the initial task region. Directives that accept data-mapping attribute
-clauses determine how an original variable is mapped to a corresponding variable in a
-device data environment. The original variable is the variable with the same name that 
-exists in the data environment of the task that encounters the directive.
+When an OpenMP program begins, an implicit \code{target}~\code{data} region for each device surrounds the whole program. Each device has a device data environment that is defined by its implicit \code{target}~\code{data} region. Any \code{declare}~\code{target} directives and the directives that accept data-mapping attribute clauses determine how an original variable in a data environment is mapped to a corresponding variable in a device data environment.
 
-If a corresponding variable is present in the enclosing device data environment, the new
-device data environment inherits the corresponding variable from the enclosing device
-data environment. If a corresponding variable is not present in the enclosing device data
-environment, a new corresponding variable (of the same type and size) is created in the
-new device data environment. In the latter case, the initial value of the new
-corresponding variable is determined from the clauses and the data environment of the
-encountering thread.
+When an original variable is mapped to a device data environment and the associated corresponding variable is not present in the device data environment, a new corresponding variable (of the same type and size as the original variable) is created in the device data environment. The initial value of the new corresponding variable is determined from the clauses and the data environment of the encountering thread.
 
 The corresponding variable in the device data environment may share storage with the
 original variable. Writes to the corresponding variable may alter the value of the original
@@ -1307,7 +1330,7 @@ specified order:
 
 \notestart
 \noteheader – OpenMP synchronization operations, described in 
-\specref{sec:Master and Synchronization Constructs} and in \specref{sec:Lock Routines}, 
+\specref{sec:Master and Synchronization Constructs and Clauses} and in \specref{sec:Lock Routines}, 
 are recommended for enforcing this order. Synchronization 
 through variables is possible but is not recommended because the proper timing of 
 flushes is difficult.
@@ -1450,19 +1473,11 @@ following features are not supported:
 \begin{itemize}
 \item IEEE Arithmetic issues covered in Fortran 2003 Section 14
 
-\item Allocatable enhancement
-
 \item Parameterized derived types
-
-\item Finalization
-
-\item Procedures bound by name to a type
 
 \item The \code{PASS} attribute
 
 \item Procedures bound to a type as operators
-
-\item Type extension
 
 \item Overriding a type-bound procedure
 
