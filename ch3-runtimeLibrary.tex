@@ -120,6 +120,8 @@ provided in a header file named \code{omp.h}. This file defines the following:
 
 \item The type \code{omp\_nest\_lock\_t}.
 
+\item The type \code{omp\_lock\_hint\_t}. 
+
 \item The type \code{omp\_sched\_t}.
 
 \item The type \code{omp\_proc\_bind\_t}.
@@ -146,6 +148,8 @@ These files define the following:
 \item The \code{integer} \code{parameter} \code{omp\_lock\_kind}.
 
 \item The \code{integer} \code{parameter} \code{omp\_nest\_lock\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_lock\_hint\_kind}.
 
 \item The \code{integer} \code{parameter} \code{omp\_sched\_kind}.
 
@@ -1713,6 +1717,11 @@ it is already owned by the task trying to set it. \emph{Simple lock} variables a
 \emph{simple locks} and can only be passed to \emph{simple lock} routines. \emph{Nestable lock} variables are 
 associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
 
+Each type of lock can also have a \emph{lock hint} that contains information about the indented usage 
+of the lock by the application code.  The OpenMP implementation can use this hint to select a proper 
+usage-specific lock if supported by the implementation.  A conforming implementation can safely ignore 
+the lock hint and map use non-hinted locks instead.
+
 Constraints on the state and ownership of the lock accessed by each of the lock routines 
 are described with the routine. If these constraints are not met, the behavior of the 
 routine is unspecified. 
@@ -1746,6 +1755,8 @@ The simple lock routines are as follows:
 \begin{itemize}
 \item The \code{omp\_init\_lock} routine initializes a simple lock.
 
+\item The \code{omp\_init\_lock\_hinted} routine initializes a simple lock and attaches a hint to it.
+
 \item The \code{omp\_destroy\_lock} routine uninitializes a simple lock.
 
 \item The \code{omp\_set\_lock} routine waits until a simple lock is available, and then sets it.
@@ -1772,6 +1783,8 @@ The nestable lock routines are as follows:
 
 \begin{itemize}
 \item The \code{omp\_init\_nest\_lock} routine initializes a nestable lock.
+
+\item The \code{omp\_init\_nest\_lock\_hinted} routine initializes a nestable lock and attaches a hint to it.
 
 \item The \code{omp\_destroy\_nest\_lock} routine uninitializes a nestable lock.
 
@@ -1806,7 +1819,7 @@ unspecified behavior.
 \index{omp\_init\_lock@{\code{omp\_init\_lock}}}
 \index{omp\_init\_nest\_lock@{\code{omp\_init\_nest\_lock}}}
 \summary
-These routines provide the only means of initializing an OpenMP lock.
+These routines initialize an OpenMP lock with no hint.
 
 \format
 \ccppspecificstart
@@ -1838,6 +1851,85 @@ owns the lock. In addition, the nesting count for a nestable lock is set to zero
 
 
 
+
+
+
+
+
+
+\subsection[\code{omp\_init\_lock\_hinted} and \code{omp\_init\_nest\_lock\_hinted}]{\code{omp\_init\_lock\_hinted} and \\\code{omp\_init\_nest\_lock\_hinted}}
+\label{subsec:omp_init_lock_hinted and omp_init_nest_lock_hinted}
+\index{omp\_init\_lock@{\code{omp\_init\_lock}}}
+\index{omp\_init\_nest\_lock@{\code{omp\_init\_nest\_lock}}}
+\summary
+These routines initialize an OpenMP lock with hint.  The effect of the hint is implementation-defined and can also be safely ignored by the OpenMP implementation.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_init\_lock(omp\_lock\_t *\plc{lock}, 
+                   omp\_lock\_hint\_t *\plc{hint});
+void omp\_init\_nest\_lock(omp\_nest\_lock\_t *\plc{lock}, 
+                        omp\_lock\_hint\_t *\plc{hint});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_init\_lock(\plc{svar}, \plc{hint})
+integer (kind=omp\_lock\_kind) \plc{svar}
+integer (kind=omp\_lock\_hint\_kind) \plc{hint}
+
+subroutine omp\_init\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+integer (kind=omp\_lock\_hint\_kind) \plc{hint}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is not in the uninitialized state through either routine 
+is non-conforming.
+
+The second argument passed to this routine (\plc{hint}) can be one of the valid OpenMP lock hints below
+or any implementation specific hint. The C/C++ header file 
+(\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 module file 
+(\code{omp\_lib}) define the valid constants for the hints.  The valid constants must include the following, 
+which can be extended with implementation specific values:
+
+\ccppspecificstart
+\begin{codepar}
+typedef enum omp\_lock\_hint\_t \{
+  omp\_lock\_hint\_none = 0,
+  omp\_lock\_hint\_uncontended,
+  omp\_lock\_hint\_contended,
+  omp\_lock\_hint\_nonspeculative,
+  omp\_lock\_hint\_speculative,
+  omp\_lock\_hint\_adaptive
+\} omp\_lock\_hint\_t;
+\end{codepar}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{codepar}
+integer (kind=omp\_lock\_hint\_kind), &
+                parameter :: omp\_lock\_hint\_none = 0
+integer (kind=omp\_lock\_hint\_kind), &
+                parameter :: omp\_lock\_hint\_uncontended = 1
+integer (kind=omp\_lock\_hint\_kind), &
+                parameter :: omp\_lock\_hint\_contended = 2
+integer (kind=omp\_lock\_hint\_kind), &
+                parameter :: omp\_lock\_hint\_nonspeculative = 3 
+integer (kind=omp\_lock\_hint\_kind), &
+                parameter :: omp\_lock\_hint\_speculative = 4
+integer (kind=omp\_lock\_hint\_kind), &
+                parameter :: omp\_lock\_hint\_adaptive = 5
+\end{codepar}
+\fortranspecificend
+
+
+\effect
+The effect of these routines is to initialize the lock to the unlocked state and attach the hint to it; 
+that is, no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
 
 
