@@ -5619,18 +5619,34 @@ threads that may result in indeterminate values
 
 \syntax
 \ccppspecificstart
-The syntax of the \code{atomic} construct takes either of the following forms:
+The syntax of the \code{atomic} construct takes one of the following forms:
 
 \begin{boxedcode}
-\#pragma omp atomic \plc{[}read \textnormal{|} write \textnormal{|} update \textnormal{|} 
- capture\plc{] [}seq\_cst\plc{]} \plc{new-line}
+\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
    \plc{expression-stmt}
 \end{boxedcode}
+
+where \plc{atomic-clause} is one of the following:
+
+\begin{indentedcodelist}
+read
+write
+update
+capture
+\end{indentedcodelist}
 
 or
 
 \begin{boxedcode}
-\#pragma omp atomic capture \plc{[}seq\_cst\plc{]} \plc{new-line}
+\#pragma omp atomic \plc{[}seq\_cst\plc{]} \plc{new-line} 
+   \plc{expression-stmt}
+\end{boxedcode}
+
+
+or
+
+\begin{boxedcode}
+\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
     \plc{structured-block}
 \end{boxedcode}
 
@@ -5638,13 +5654,13 @@ or
 where \plc{expression-stmt} is an expression statement with one of the following forms:
 
 \begin{itemize}
-\item If clause is \code{read}:\\
+\item If \plc{atomic-clause} is \code{read}:\\
 \code{\plc{v} = \plc{x};}
 
-\item If clause is \code{write}:\\
+\item If \plc{atomic-clause} is \code{write}:\\
 \code{\plc{x} = \plc{expr};}
 
-\item If clause is \code{update} or not present:\\
+\item If \plc{atomic-clause} is \code{update} or not present:\\
 \code{\plc{x}++;}\\
 \code{\plc{x}\--\--;}\\
 \code{++\plc{x};}\\
@@ -5653,7 +5669,7 @@ where \plc{expression-stmt} is an expression statement with one of the following
 \code{\plc{x} = \plc{x} \plc{binop} \plc{expr};}\\
 \code{\plc{x} = \plc{expr} \plc{binop} \plc{x};}
 
-\item If clause is \code{capture}:\\
+\item If \plc{atomic-clause} is \code{capture}:\\
 \code{\plc{v} = \plc{x}++;}\\
 \code{\plc{v} = \plc{x}\--\--;}\\
 \code{\plc{v} = ++\plc{x};}\\
@@ -5726,7 +5742,7 @@ evaluated is unspecified.
 The syntax of the \code{atomic} construct takes any of the following forms: 
 
 \begin{boxedcode}
-!\$omp atomic read \plc{[}seq\_cst\plc{]}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} read \plc{[[},\plc{]}seq\_cst\plc{]}
     \plc{capture-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -5735,7 +5751,7 @@ The syntax of the \code{atomic} construct takes any of the following forms:
 or
 
 \begin{boxedcode}
-!\$omp atomic write \plc{[}seq\_cst\plc{]}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} write \plc{[[},\plc{]}seq\_cst\plc{]}
     \plc{write-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -5743,7 +5759,7 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}update\plc{] [}seq\_cst\plc{]}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} update \plc{[[},\plc{]}seq\_cst\plc{]}
     \plc{update-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -5751,7 +5767,15 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic capture \plc{[}seq\_cst\plc{]}
+!\$omp atomic \plc{[}seq\_cst\plc{]} 
+    \plc{update-statement }
+\plc{[}!\$omp end atomic\plc{]}
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
     \plc{update-statement }
     \plc{capture-statement}
 !\$omp end atomic
@@ -5760,7 +5784,7 @@ or
 or
 
 \begin{boxedcode}
-!$omp atomic capture \plc{[}seq_cst\plc{]}
+!$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}}seq_cst\plc{]}
     \plc{capture-statement}
     \plc{update-statement}
 !$omp end atomic
@@ -5769,19 +5793,19 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic capture \plc{[}seq\_cst\plc{]}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
     \plc{capture-statement}
     \plc{write-statement}
 !\$omp end atomic
 \end{boxedcode}
 
-where \plc{write-statement} has the following form (if clause is \code{write}):
+where \plc{write-statement} has the following form (if \plc{atomic-clause} is \code{write}):
 
 \begin{quote}
 \code{\plc{x} = \plc{expr}}
 \end{quote}
 
-where \plc{capture-statement} has the following form (if clause is \code{capture} or \code{read}):
+where \plc{capture-statement} has the following form (if \plc{atomic-clause} is \code{capture} or \code{read}):
 
 \begin{quote}
 \code{\plc{v} = \plc{x}}
@@ -5791,7 +5815,7 @@ where \plc{capture-statement} has the following form (if clause is \code{capture
 \begin{figure}[t!]
 \linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
 \end{figure}
-and where \plc{update-statement} has one of the following forms (if clause is \code{update}, 
+and where \plc{update-statement} has one of the following forms (if \plc{atomic-clause} is \code{update}, 
 \code{capture}, or not present):
 
 \begin{quote}
@@ -5849,9 +5873,9 @@ program entities.
 evaluated is unspecified.
 \fortranspecificend
 
-\item In all \code{atomic} construct forms, the \code{seq\_cst} clause and the clause that denotes the 
-type of the atomic construct can appear in any order. In addition, an optional comma 
-may be used to separate the clauses
+%% \item In all \code{atomic} construct forms, the \code{seq\_cst} clause and the clause that denotes the 
+%% type of the atomic construct can appear in any order. In addition, an optional comma 
+%% may be used to separate the clauses
 \end{itemize}
 
 \binding
