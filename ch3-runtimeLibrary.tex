@@ -1755,7 +1755,7 @@ The simple lock routines are as follows:
 \begin{itemize}
 \item The \code{omp\_init\_lock} routine initializes a simple lock.
 
-\item The \code{omp\_init\_lock\_hinted} routine initializes a simple lock and attaches a hint to it.
+\item The \code{omp\_init\_lock\_with\_hint} routine initializes a simple lock and attaches a hint to it.
 
 \item The \code{omp\_destroy\_lock} routine uninitializes a simple lock.
 
@@ -1784,7 +1784,7 @@ The nestable lock routines are as follows:
 \begin{itemize}
 \item The \code{omp\_init\_nest\_lock} routine initializes a nestable lock.
 
-\item The \code{omp\_init\_nest\_lock\_hinted} routine initializes a nestable lock and attaches a hint to it.
+\item The \code{omp\_init\_nest\_lock\_with\_hint} routine initializes a nestable lock and attaches a hint to it.
 
 \item The \code{omp\_destroy\_nest\_lock} routine uninitializes a nestable lock.
 
@@ -1857,20 +1857,20 @@ owns the lock. In addition, the nesting count for a nestable lock is set to zero
 
 
 
-\subsection[\code{omp\_init\_lock\_hinted} and \code{omp\_init\_nest\_lock\_hinted}]{\code{omp\_init\_lock\_hinted} and \\\code{omp\_init\_nest\_lock\_hinted}}
-\label{subsec:omp_init_lock_hinted and omp_init_nest_lock_hinted}
+\subsection[\code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint}]{\code{omp\_init\_lock\_with\_hint} and \\\code{omp\_init\_nest\_lock\_with\_hint}}
+\label{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}
 \index{omp\_init\_lock@{\code{omp\_init\_lock}}}
 \index{omp\_init\_nest\_lock@{\code{omp\_init\_nest\_lock}}}
 \summary
-These routines initialize an OpenMP lock with hint.  The effect of the hint is implementation-defined and can also be safely ignored by the OpenMP implementation.
+These routines initialize an OpenMP lock with hint.  The effect of the hint is implementation-defined and can be safely ignored by the OpenMP implementation.
 
 \format
 \ccppspecificstart
 \begin{boxedcode}
-void omp\_init\_lock(omp\_lock\_t *\plc{lock}, 
-                   omp\_lock\_hint\_t *\plc{hint});
-void omp\_init\_nest\_lock(omp\_nest\_lock\_t *\plc{lock}, 
-                        omp\_lock\_hint\_t *\plc{hint});
+void omp\_init\_lock\_with\_hint(omp\_lock\_t *\plc{lock}, 
+                             omp\_lock\_hint\_t *\plc{hint});
+void omp\_init\_nest\_lock\_with\_hint(omp\_nest\_lock\_t *\plc{lock}, 
+                                  omp\_lock\_hint\_t *\plc{hint});
 \end{boxedcode}
 \ccppspecificend
 
@@ -1891,7 +1891,7 @@ A program that accesses a lock that is not in the uninitialized state through ei
 is non-conforming.
 
 The second argument passed to this routine (\plc{hint}) can be one of the valid OpenMP lock hints below
-or any implementation specific hint. The C/C++ header file 
+or any implementation-specific hint. The C/C++ header file 
 (\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 module file 
 (\code{omp\_lib}) define the valid constants for the hints.  The valid constants must include the following, 
 which can be extended with implementation specific values:
@@ -1928,9 +1928,8 @@ integer (kind=omp\_lock\_hint\_kind), &
 
 
 \effect
-The effect of these routines is to initialize the lock to the unlocked state and attach the hint to it; 
-that is, no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
-
+The effect of these routines is to initialize the lock to the unlocked state and store the hint with it. 
+After initialization no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
 
 
@@ -1982,7 +1981,7 @@ The effect of these routines is to change the state of the lock to uninitialized
 \index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
 \summary
 These routines provide a means of setting an OpenMP lock. The calling task region is 
-suspended until the lock is set. 
+suspended until the lock is set or the task region speculatively continues to execute.
 
 \format
 \ccppspecificstart
@@ -2008,19 +2007,17 @@ non-conforming. A simple lock accessed by \code{omp\_set\_lock} that is in the l
 must not be owned by the task that contains the call or deadlock will result.
 
 \effect
-Each of these routines causes suspension of the task executing the routine until the 
-specified lock is available and then sets the lock. 
+If the specified lock contains a hint, the effects on the lock by calling these routines are implementation-defined.
 
-A simple lock is available if it is unlocked. Ownership of the lock is granted to the task 
+Each of these routines may cause suspension of the task executing the routine until the 
+specified lock is available and then sets the lock, or continues to speculatively execute the task region. 
+
+A simple lock with no hint is available if it is unlocked. Ownership of the lock is granted to the task 
 executing the routine.
 
-A nestable lock is available if it is unlocked or if it is already owned by the task 
+A nestable lock without hint is available if it is unlocked or if it is already owned by the task 
 executing the routine. The task executing the routine is granted, or retains, ownership of 
 the lock, and the nesting count for the lock is incremented.
-
-
-
-
 
 
 
@@ -2055,12 +2052,14 @@ A program that accesses a lock that is not in the locked state or that is not ow
 task that contains the call through either routine is non-conforming.
 
 \effect
-For a simple lock, the \code{omp\_unset\_lock} routine causes the lock to become unlocked.
+If the specified lock contains a hint, the effects on the lock by calling these routines are implementation-defined.
 
-For a nestable lock, the \code{omp\_unset\_nest\_lock} routine decrements the nesting 
+For a simple lock without hint, the \code{omp\_unset\_lock} routine causes the lock to become unlocked.
+
+For a nestable lock without hint, the \code{omp\_unset\_nest\_lock} routine decrements the nesting 
 count, and causes the lock to become unlocked if the resulting nesting count is zero.
 
-For either routine, if the lock becomes unlocked, and if one or more task regions were 
+For either routine, if the lock without hint becomes unlocked, and if one or more task regions were 
 suspended because the lock was unavailable, the effect is that one task is chosen and 
 given ownership of the lock.
 
