@@ -1927,7 +1927,7 @@ integer (kind=omp\_lock\_hint\_kind), &
 \end{codepar}
 \fortranspecificend
 
-The hints can be combined by using the \code{+} or \code{|} operator in C/C++ or the \code{+} operator in Fortran.  
+The hints can be combined by using the \code{+} or \code{|} operators in C/C++ or the \code{+} operator in Fortran.  
 The effect of the combined hint is implementation defined and can be ignored by the implementation.
 Combining \code{omp\_lock\_hint\_none} with any other hint is equivalent to specifying the other hint.
 The following restrictions apply to combined hints; violating these make the program a non-conforming program:
@@ -2002,8 +2002,9 @@ The effect of these routines is to change the state of the lock to uninitialized
 \index{omp\_set\_lock@{\code{omp\_set\_lock}}}
 \index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
 \summary
-These routines provide a means of setting an OpenMP lock. The calling task region is 
-suspended until the lock is set or the task region speculatively continues to execute.
+These routines provide a means of setting an OpenMP lock. The calling
+task region behaves as if it were suspended until the lock can be set
+by this thread.
 
 \format
 \ccppspecificstart
@@ -2030,10 +2031,22 @@ must not be owned by the task that contains the call or deadlock will result.
 
 \effect
 Each of these routines has an effect equivalent to suspension of the task
-executing the routine until the specified lock is available. However, the
-task region may continue to execute speculatively, provided that the 
-implementation ensures that execution is as if the lock were owned
-exclusively by one thread. 
+executing the routine until the specified lock is available. 
+
+% However, the
+% task region may continue to execute speculatively, provided that the 
+% implementation ensures that execution is as if the lock were owned
+% exclusively by one thread. 
+
+% A note because it's only explanatory. The as-ifness already allows
+% this via the ``equivalent to''
+\notestart \noteheader – The semantics of these routines is specified
+\emph{as if} they serialize execution of the region guarded by the
+lock. However, implementations may implement them in other ways
+provided that the isolation properties are respected so that the
+actual execution delivers a result that could arise from some
+serialization. 
+\noteend
 
 A simple lock is available if it is unlocked. Ownership of the lock is 
 granted to the task executing the routine.
@@ -2074,14 +2087,13 @@ integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
 \constraints
 A program that accesses a lock that is not in the locked state or that is 
 not owned by the task that contains the call through either routine is 
-non-conforming unless that task is speculatively executing beyond a set 
-lock routine.
+non-conforming.
+
+% Jim Cownie: I don't believe we need anything more about speculation
+% here. It has to behave ``as-if'' it held the lock, and released it
+% here, and that's what we say happens.
 
 \effect
-If the task that contains the call is speculatively executing beyond a
-set lock routine then execution of the task is suspended until the task 
-owns the lock.
-
 For a simple lock, the \code{omp\_unset\_lock} routine causes the lock to become unlocked.
 
 For a nestable lock, the \code{omp\_unset\_nest\_lock} routine decrements the nesting 
