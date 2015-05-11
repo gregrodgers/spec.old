@@ -3279,6 +3279,7 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 \index{device constructs}
 \index{constructs!device constructs}
 \index{device constructs!device constructs}
+
 \subsection{\code{target}~\code{data} Construct}
 \index{target data@{\code{target}~\code{data}}}
 \index{constructs!target data@{\code{target}~\code{data}}}
@@ -3300,6 +3301,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+use\_device(\plc{list})
 if(\plc{scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
@@ -3320,6 +3322,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+use\_device(\plc{list})
 if(\plc{scalar-logical-expression})
 \end{indentedcodelist}
 
@@ -3333,17 +3336,27 @@ target region binds to the enclosing parallel or task region.
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
+All references to a list-items in a \code{use\_device} clause will refer to an
+implementation-defined reference to the data in the device data environment
+for the duration of the \code{target}~\code{data} region.
+
 \restrictions
 \begin{itemize}
-\item A program must not depend on any ordering of the evaluations of the clauses of the 
-\code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
+  \item A program must not depend on any ordering of the evaluations of the clauses of the
+    \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression 
-must evaluate to a non-negative integer value.
+  \item At most one \code{device} clause can appear on the directive. The \code{device} expression
+    must evaluate to a non-negative integer value.
 
-\item At most one \code{if} clause can appear on the directive. 
-\item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-\item At least one \code{map} clause must appear on the directive. 
+  \item At most one \code{if} clause can appear on the directive.
+  \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
+  \item At least one \code{map} clause must appear on the directive.
+
+  \item The list-items that appear in a \code{device\_ptr} must be pointers or
+    references mapped into the device data environment, returned from
+    \code{omp\_device\_alloc} or \code{omp\_register\_ptr}, or that return
+    success from \code{omp\_is\_device\_ptr()}. Anything else will
+    result in unspecified behavior.
 \end{itemize}
 
 \crossreferences
@@ -3385,6 +3398,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+device\_ptr(\plc{list})
 nowait
 depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-expression})
@@ -3409,6 +3423,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+device\_ptr(\plc{list})
 nowait
 depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-logical-expression})
@@ -3437,6 +3452,10 @@ If a \code{depend} clause is present, then it is treated as if it had appeared o
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the \code{target} region is executed by the host device in the host data environment.
 
+All references to a list-item in a \code{device\_ptr} clause will refer to the device
+pointer specified by the list-item.
+
+
 \restrictions
 \begin{itemize}
 \item If a \code{target}, \code{target}~\code{update}, \code{target}~\code{data}, \code{target}~\code{enter}~\code{data}, or \code{target}~\code{exit}~\code{data} construct appears within a \code{target} region the behavior is unspecified.
@@ -3462,8 +3481,8 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 \item If an array section is derived from a variable for which the 
 type is pointer, reference to array or reference to pointer then the
 behavior is unspecified  if that variable is modified in the region.
-\ccppspecificend
-
+\item The list-items that appear in a \code{get\_device\_ptr} must have a
+  corresponding list item in the device data environment..
 \cppspecificstart
 \item A throw executed inside a \code{target} region must cause execution to resume within the 
 same \code{target} region, and the same thread that threw the exception must catch it. 
@@ -8635,81 +8654,6 @@ initialization and assignment.
 
 
 
-
-\subsection{Device Pointer Clauses}
-\label{subsec:device_ptr}
-\index{device_ptr@{\code{device\_ptr}}}
-\index{use_device@{\code{use\_device}}}
-\index{clauses!device_ptr@{\code{device\_ptr}}}
-\index{clauses!use_device@{\code{use\_device}}}
-
-\summary
-This section describes clauses used to specify the translation of pointers
-in the data environment, specifically the \code{use\_device} clause and the
-\code{device\_ptr} clause.
-
-These clauses are used to access a target device address on the host device
-and to pass a registered device pointer to the target without translation.
-The clauses accept a comma-separated list of list items.
-
-\subsubsection{\code{use\_device} Clause}
-
-\summary
-The \code{use\_device} clause declares that in the construct all references to
-the list items from the encountering thread will refer to the corresponding
-list items on the device.
-
-\syntax
-The syntax of the \code{use\_device} clause is as follows:
-\begin{boxedcode}
-use\_device(\plc{list})
-\end{boxedcode}
-
-\descr All references to a list-item inside a region will refer to an
-implementation-defined reference to the data in the device data environment.
-The \code{use\_device} clause can only appear on the target data construct.
-
-\restrictions
-\begin{itemize}
-
-  \item The list-items that appear in a \code{device\_ptr} must be pointers or
-    references mapped into the device data environment or returned from
-    \code{omp\_device\_alloc} or \code{omp\_register\_ptr}, anything else will
-    result in unspecified behavior.
-
-  \item List items must not appear in any other data environment clause on the
-    same construct.
-
-\end{itemize}
-
-\subsubsection{\code{device\_ptr} Clause}
-
-\summary
-The \code{device\_ptr} clause declares that each list-item is already a valid
-OpenMP device pointer, and should be used without translation.
-
-\syntax
-The syntax of the \code{device\_ptr} clause is as follows:
-\begin{boxedcode}
-device\_ptr(\plc{list})
-\end{boxedcode}
-
-\descr All references to a list-item within a region will refer to the device
-pointer specified by the list-item.  The \code{device\_ptr} clause
-can appear on the target data, target enter data, target exit data and target
-constructs.
-
-\restrictions
-\begin{itemize}
-
-  \item The list-items that appear in a \code{use\_device} must have been returned from
-    \code{omp\_device\_alloc} or \code{omp\_register\_ptr}, anything else will
-    result in unspecified behavior.
-
-  \item List items must not appear in any other data environment clause on the
-    same construct.
-
-\end{itemize}
 
 \section{\code{declare}~\code{reduction} Directive}
 \index{declare reduction@{\code{declare}~\code{reduction}}}
