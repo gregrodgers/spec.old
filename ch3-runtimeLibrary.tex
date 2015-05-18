@@ -2313,5 +2313,322 @@ The \code{omp\_get\_wtick} routine returns a value equal to the number of second
 successive clock ticks of the timer used by \code{omp\_get\_wtime}.
 
 
+
+
+
+
+
+
+\section{Target Device Memory Routines}
+\index{target device memory routines}
+\index{target memory}
+\label{sec:device_memory}
+This section describes routines that support allocation and management of
+pointers in the data environments of target devices.
+
+
+
+\subsection{\code{omp\_target\_alloc}}
+\index{omp\_target\_alloc@{\code{omp\_target\_alloc}}}
+\label{subsec:omp_target_alloc}
+\summary
+The \code{omp\_target\_alloc} routine allocates memory in the data environment
+of the specified target device and returns an opaque host pointer to that
+memory.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void* omp\_target\_alloc(size\_t size, int device\_num);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The \code{omp\_target\_alloc} routine returns a host handle to a
+target buffer of size \code{size} on device \code{device\_num} if successful,
+on failure NULL is returned.
+
+\restrictions
+
+\begin{itemize}
+  \item Pointer arithmetic on the host value of the void* returned by
+    \code{omp\_target\_alloc()} results in unspecified behavior.
+  \item The pointer returned by omp\_target\_alloc can be used with the
+    \code{device\_ptr} clause, \specref{subsec:target Construct}.
+\end{itemize}
+
+\subsection{\code{omp\_target\_free}}
+\index{omp\_target\_free@{\code{omp\_target\_free}}}
+\label{subsec:omp_target_free}
+\summary
+The \code{omp\_target\_free} routine frees the memory referred to by the
+specified host handle.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_target\_free(void * device\_ptr);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The \code{omp\_target\_free} routine frees the memory in the device data
+environment associated with \code{device\_ptr}.  If \code{device\_ptr} is
+\code{NULL}, the operation is ignored.
+
+\restrictions
+
+\begin{itemize}
+  \item Calling \code{omp\_target\_free} with any value other than one
+    returned from \code{omp\_target\_alloc} or \code{NULL} results in
+    unspecified behavior.
+  \item All asynchronous operations involving \code{device\_ptr} must be
+    synchronized before a call to \code{omp\_target\_free}, no synchronization
+    is implied.
+\end{itemize}
+
+\subsection{\code{omp\_target\_device\_ptr}}
+\index{omp\_target\_device\_ptr@{\code{omp\_target\_device\_ptr}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_device\_ptr} routine returns the underlying
+implementation's representation of the specified device pointer.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void* omp\_target\_device\_ptr(void * device\_ptr);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The \code{omp\_target\_device\_ptr} routine converts an OpenMP device pointer
+to a pointer representation usable by the underlying model.  This operation is
+an unscoped equivalent of the \code{use\_device} clause.
+
+\subsection{\code{omp\_target\_register\_ptr}}
+\index{omp\_target\_register\_ptr@{\code{omp\_target\_register\_ptr}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_register\_ptr} routine registers an
+implementation-specific device pointer with the OpenMP runtime, and returns a
+handle equivalent to those returned by \code{omp\_target\_alloc}.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void* omp\_target\_register\_ptr(void * impl\_device\_ptr, size\_t size, int device\_num);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The \code{omp\_target\_register\_ptr} routine converts a pointer to memory
+allocated by an underlying runtime, and returns an OpenMP compatible device
+pointer handle.  The resulting handle can be used with the \code{impl\_device\_ptr}
+clause, \code{omp\_target\_associate}, or any of the target memcpy routines.
+
+\restrictions
+
+\begin{itemize}
+  \item The \code{device\_ptr} value must be a valid pointer to device memory for the
+    device numbered \code{device\_num}.
+  \item Pointer arithmetic on the host handle returned by
+    \code{omp\_target\_register\_ptr()} results in unspecified behavior.
+\end{itemize}
+
+\subsection{\code{omp\_target\_deregister\_ptr}}
+\index{omp\_target\_deregister\_ptr@{\code{omp\_target\_deregister\_ptr}}}
+\label{subsec:omp_target_deregister_ptr}
+\summary
+
+The \code{omp\_target\_deregister\_ptr} routine deregisters a device handle
+that was previously registered.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void* omp\_target\_deregister\_ptr(void * device\_ptr);
+\end{boxedcode}
+\ccppspecificend
+
+\effect \code{omp\_target\_deregister\_ptr} frees any host memory associated
+with \code{device\_ptr}.  The device buffer referenced by the handle is
+\emph{not} freed.
+
+\restrictions
+
+\begin{itemize}
+  \item The \code{device\_ptr} value must have been returned from a previous
+    call to \code{omp\_target\_register\_ptr} or be NULL.
+\end{itemize}
+
+
+\subsection{\code{omp\_target\_is\_device\_ptr}}
+\index{omp\_target\_is\_device\_ptr@{\code{omp\_target\_is\_device\_ptr}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_is\_device\_ptr} routine validates whether the pointer
+it is passed is a valid OpenMP device pointer or not.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_target\_is\_device\_ptr(void * device\_ptr);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The effect of this routine is to return \plc{true} if the specified pointer is
+a valid OpenMP device pointer; otherwise, it returns \plc{false}.
+
+\subsection{\code{omp\_target\_is\_present}}
+\index{omp\_target\_is\_present@{\code{omp\_target\_is\_present}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_is\_present} routine validates whether a host pointer
+has an associated device buffer on a given device.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_target\_is\_present(void * ptr, size\_t offset, int device\_num);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The effect of this routine is to return \plc{true} if the specified pointer
+and offset would be found present on device \code{device\_num}; otherwise, it
+returns \plc{false}.
+
+\subsection{\code{omp\_target\_memcpy}}
+\index{omp\_target\_memcpy@{\code{omp\_target\_memcpy}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_memcpy} routine performs a copy between any combination
+of host and device pointers.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_target\_memcpy(void * dst, void * src, size\_t size);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+\code{size} bytes of memory in \code{src} are copied to the first \code{size}
+bytes of \code{dst}.  Each pointer is checked for type by a mechanism
+equivalent to \code{omp\_target\_is\_device\_ptr()}, and if the result is
+false the pointer is treated as a pointer to host memory.
+
+\subsection{\code{omp\_target\_memcpy\_offset}}
+\index{omp\_target\_memcpy\_offset@{\code{omp\_target\_memcpy\_offset}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_memcpy\_offset} routine performs a copy between any combination
+of host and device pointers, with the option of explicitly specifying offsets
+and direction.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+  typedef enum omp\_copy\_direction\_t {
+    OMP\_COPY\_DIRECTION\_AUTO,
+    OMP\_COPY\_DIRECTION\_HOST\_TO\_DEVICE,
+    OMP\_COPY\_DIRECTION\_DEVICE\_TO\_HOST,
+    OMP\_COPY\_DIRECTION\_DEVICE\_TO\_DEVICE,
+    OMP\_COPY\_DIRECTION\_HOST\_TO\_HOST
+  } omp\_copy\_direction\_t;
+
+int omp\_target\_memcpy\_offset(void * dst, void * src, size\_t size,
+                        size\_t dst\_offset, size\_t src\_offset,
+                        omp\_copy\_direction direction);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+\code{size} bytes of memory in \code{src} are copied \code{dst} starting at
+their respective offsets. The direction can be any value of
+\code{omp\_copy\_direction\_t}.  If the value of direction is \code{AUTO},
+then each pointer is checked for type by a mechanism
+equivalent to \code{omp\_target\_is\_device\_ptr()}, and if the result is
+false the pointer is treated as a pointer to host memory. For any other value
+the direction specified is respected, and passing pointers from another type
+of memory results in unspecified behavior.
+
+\subsection{\code{omp\_target\_associate\_ptr}}
+\index{omp\_target\_associate\_ptr@{\code{omp\_target\_associate\_ptr}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_associate\_ptr} routine ties an OpenMP device pointer,
+as returned from either \code{omp\_target\_alloc} or
+\code{omp\_target\_register\_ptr} to a host pointer in the manner of a map
+clause.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_target\_associate\_ptr(void * host\_ptr, void * device\_ptr, size\_t size,
+                                size\_t device\_offset, int device\_num);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The \code{omp\_target\_associate\_ptr} routine associates a device pointer
+with a host pointer such that when the host pointer appears in a subsequent
+\code{map} clause, the associated device pointer is used as the target for
+data motion associated with that host pointer.
+
+\restrictions
+
+\begin{itemize}
+  \item The \code{device\_ptr} value must be a valid pointer to device memory for the
+    device numbered \code{device\_num}.
+    \item Only one device buffer can be associated with a given host pointer
+      value and device number pair.  Attempting to associate a second buffer
+      will return failure.  The \code{omp\_target\_is\_present} function can be used
+      to test whether a buffer has been associated or mapped on a given
+      device.
+\end{itemize}
+
+\subsection{\code{omp\_target\_disassociate\_ptr}}
+\index{omp\_target\_disassociate\_ptr@{\code{omp\_target\_disassociate\_ptr}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_disassociate\_ptr} removes the associated pointer for a
+given device from a host pointer.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_target\_disassociate\_ptr(void * ptr, int device\_num);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+The \code{omp\_target\_disassociate\_ptr} removes the associated device data
+on device \code{device\_num} from the presence table for host pointer
+\code{ptr}.   Calling this function on a pointer that is not NULL and does not
+have associated data on the given device results in unspecified behavior.
+
+
+
 % This is the end of chapter 3 - Runtime Library
 
