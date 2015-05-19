@@ -3301,7 +3301,8 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
-use\_device(\plc{list})
+use\_native\_ptr(\plc{list})
+use\_target\_ptr(\plc{list})
 if(\plc{scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
@@ -3322,7 +3323,8 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
-use\_device(\plc{list})
+use\_native\_ptr(\plc{list})
+use\_target\_ptr(\plc{list})
 if(\plc{scalar-logical-expression})
 \end{indentedcodelist}
 
@@ -3336,9 +3338,12 @@ target region binds to the enclosing parallel or task region.
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
-All references to a list-items in a \code{use\_device} clause will refer to an
-implementation-defined reference to the data in the device data environment
-for the duration of the \code{target}~\code{data} region.
+All references to a list-items in a \code{use\_native\_ptr} clause will be
+privatized and set to the value of a native pointer pointing to the base
+address of the device buffer associated with the list item.  The
+\code{use\_target\_ptr} clause has the same semantics as
+\code{use\_native\_ptr} except that the value will be in the form of an OpenMP
+target pointer.
 
 \restrictions
 \begin{itemize}
@@ -3352,10 +3357,11 @@ for the duration of the \code{target}~\code{data} region.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
   \item At least one \code{map} clause must appear on the directive.
 
-\item The list-items that appear in a \code{use\_device} must either resolve
-  to true when passed to \code{omp\_is\_device\_ptr} or have been returned from
-    \code{omp\_device\_alloc} or \code{omp\_register\_ptr}, anything else will
-    result in unspecified behavior.
+\item The list-items that appear in either a \code{use\_native\_ptr} or a
+  \code{use\_target\_ptr} clause must be present in the device data
+  environment.  If the value is mapped in by another clause on the same
+  construct, the mapping will be considered to happen before the \code{use\_*}
+  clause.
 \end{itemize}
 
 \crossreferences
@@ -3475,19 +3481,15 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 \item The restrictions for the \code{task} construct apply.
 
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item The list-items that appear in a \code{device\_ptr} must be pointers or
-    references mapped into the device data environment, returned from
-    \code{omp\_device\_alloc} or \code{omp\_register\_ptr}, or that return
-    success from \code{omp\_is\_device\_ptr()}. Anything else will
-    result in unspecified behavior.
+
 \ccppspecificstart
 \item If an array section is derived from a variable for which the 
 type is pointer, reference to array or reference to pointer then the
 behavior is unspecified  if that variable is modified in the region.
-\item The list-items that appear in a \code{get\_device\_ptr} must have a
-  corresponding list item in the device data environment..
+  \item The list-items that appear in a \code{device\_ptr} clause must be
+    device pointers
 \cppspecificstart
-\item A throw executed inside a \code{target} region must cause execution to resume within the 
+\item A throw executed inside a \code{target} region must cause execution to resume within the
 same \code{target} region, and the same thread that threw the exception must catch it. 
 \cppspecificend
 \end{itemize}
