@@ -2345,21 +2345,21 @@ void* omp\_target\_alloc(size\_t size, int device\_num);
 
 \effect
 
-The \code{omp\_target\_alloc} routine returns a host handle to a
-target buffer of size \code{size} on device \code{device\_num} if successful,
-on failure NULL is returned.
+The \code{omp\_target\_alloc} routine returns a device pointer pointing to the
+base of a buffer of size \code{size} on device \code{device\_num} if
+successful, on failure NULL is returned.
 
 \restrictions
 
 \begin{itemize}
   \item Pointer arithmetic is not supported on the host value of the void* returned by
     \code{omp\_target\_alloc()}.
-  \item The pointer returned by omp\_target\_alloc can be used with the
-    \code{device\_ptr} clause, \specref{subsec:target Construct}.
+  \item The pointer returned by \vcode$omp_target_alloc$ is guaranteed to be
+    compatible with the \code{device\_ptr} clause, \specref{subsec:target Construct}.
 \end{itemize}
 
 \subsection{\vcode$omp_target_free$}
-\index{omp\_target\_free@{\vcode{omp_target_free}}}
+\index{omp\_target\_free@{\code{omp\_target\_free}}}
 \label{subsec:omp_target_free}
 \summary
 The \vcode$omp_target_free$ routine frees the memory referred to by the
@@ -2368,7 +2368,7 @@ specified host handle.
 \format
 \ccppspecificstart
 \begin{boxedcode}
-void omp\_target\_free(void * target\_device\_ptr);
+void omp\_target\_free(void * device\_ptr, int device\_num);
 \end{boxedcode}
 \ccppspecificend
 
@@ -2381,113 +2381,13 @@ environment associated with \vcode$device_ptr$.  If \vcode$device_ptr$ is
 \restrictions
 
 \begin{itemize}
-  \item \code{omp\_target\_free} may only be called with a pointer
-    returned from \code{omp\_target\_alloc} or \code{NULL}.
+  \item \vcode$omp_target_free$ may only be called with a pointer
+    returned from \vcode$omp_target_alloc$ or \code{NULL}.
   \item All asynchronous operations involving \code{device\_ptr} must be
     synchronized before a call to \code{omp\_target\_free}, no synchronization
     is implied.
 \end{itemize}
 
-\subsection{\code{omp\_get\_native\_ptr}}
-\index{omp\_get\_native\_ptr@{\code{omp\_get\_native\_ptr}}}
-\label{subsec:omp_target_register_ptr}
-\summary
-
-The \code{omp\_get\_native\_ptr} routine returns a native device pointer,
-for use with native routines.
-
-\format
-\ccppspecificstart
-\begin{boxedcode}
-void* omp\_get\_native\_ptr(void * target\_ptr);
-\end{boxedcode}
-\ccppspecificend
-
-\effect
-
-The \code{omp\_get\_native\_ptr} routine converts an OpenMP target pointer
-to a native device pointer. The representation of the native device
-pointer is implementation defined, but guaranteed to be consistent for a given
-device number during a given run.  This operation does for an OpenMP target
-pointer what the \code{use\_device} clause does for mapped buffers.
-
-\subsection{\code{omp\_get\_target\_ptr}}
-\index{omp\_get\_target\_ptr@{\code{omp\_get\_target\_ptr}}}
-\label{subsec:omp_target_register_ptr}
-\summary
-
-The \code{omp\_get\_target\_ptr} routine registers a native device pointer
-with the OpenMP runtime, and returns an OpenMP target pointer handle
-equivalent to those returned by \code{omp\_target\_alloc}.
-
-\format
-\ccppspecificstart
-\begin{boxedcode}
-void* omp\_get\_target\_ptr(void * native\_device\_ptr, size\_t size, int device\_num);
-\end{boxedcode}
-\ccppspecificend
-
-\effect
-
-The \code{omp\_get\_target\_ptr} routine converts a native pointer to device
-memory into an OpenMP target pointer.  The resulting pointer can be used with the
-\code{impl\_device\_ptr} clause, \code{omp\_target\_associate}, or any of the
-target memcpy routines.
-
-\restrictions
-
-\begin{itemize}
-  \item The \code{device\_ptr} value must be a valid native pointer to device memory for the
-    device numbered \code{device\_num}.
-  \item Pointer arithmetic must not be used on the host handle returned by
-    \code{omp\_get\_target\_ptr()}.
-\end{itemize}
-
-\subsection{\code{omp\_release\_target\_ptr}}
-\index{omp\_release\_target\_ptr@{\code{omp\_release\_target\_ptr}}}
-\label{subsec:omp_target_deregister_ptr}
-\summary
-
-The \code{omp\_release\_target\_ptr} routine releases an OpenMP target pointer
-that was previously created by \code{omp\_get\_target\_ptr}.
-
-\format
-\ccppspecificstart
-\begin{boxedcode}
-void* omp\_release\_target\_ptr(void * device\_ptr);
-\end{boxedcode}
-\ccppspecificend
-
-\effect \code{omp\_release\_target\_ptr} frees any host memory associated
-with \code{device\_ptr}.  The device buffer referenced by the handle is
-\emph{not} freed.
-
-\restrictions
-
-\begin{itemize}
-  \item The \code{device\_ptr} value must have been returned from a previous
-    call to \code{omp\_get\_target\_ptr} or be NULL.
-\end{itemize}
-
-% \subsection{\code{omp\_target\_is\_device\_ptr}}
-% \index{omp\_target\_is\_device\_ptr@{\code{omp\_target\_is\_device\_ptr}}}
-% \label{subsec:omp_target_register_ptr}
-% \summary
-%
-% The \code{omp\_target\_is\_device\_ptr} routine validates whether the pointer
-% it is passed is a valid OpenMP device pointer or not.
-%
-% \format
-% \ccppspecificstart
-% \begin{boxedcode}
-% int omp\_target\_is\_device\_ptr(void * device\_ptr);
-% \end{boxedcode}
-% \ccppspecificend
-%
-% \effect
-%
-% The effect of this routine is to return \plc{true} if the specified pointer is
-% a valid OpenMP device pointer; otherwise, it returns \plc{false}.
 
 \subsection{\code{omp\_target\_is\_present}}
 \index{omp\_target\_is\_present@{\code{omp\_target\_is\_present}}}
@@ -2507,8 +2407,8 @@ int omp\_target\_is\_present(void * ptr, size\_t offset, int device\_num);
 \effect
 
 The effect of this routine is to return \plc{true} if the specified pointer
-and offset would be found present on device \code{device\_num}; otherwise, it
-returns \plc{false}.
+and offset would be found present on device \code{device\_num} by a map
+clause; otherwise, it returns \plc{false}.
 
 \subsection{\code{omp\_target\_memcpy}}
 \index{omp\_target\_memcpy@{\code{omp\_target\_memcpy}}}
@@ -2521,63 +2421,112 @@ of host and device pointers.
 \format
 \ccppspecificstart
 \begin{boxedcode}
-int omp\_target\_memcpy(void * dst, void * src, size\_t size);
+int omp\_target\_memcpy(void * dst, void * src, size\_t size,
+                        size\_t dst\_offset, size\_t src\_offset,
+                        int dst\_device, int src\_device);
 \end{boxedcode}
 \ccppspecificend
 
 \effect
 
-\code{size} bytes of memory in \code{src} are copied to the first \code{size}
-bytes of \code{dst}.  Each pointer is checked for type by a mechanism
-equivalent to \code{omp\_target\_is\_device\_ptr()}, and if the result is
-false the pointer is treated as a pointer to host memory.
+\code{size} bytes of memory at offset \vcode|src_offset| from  \code{src} are
+copied to \code{dst} starting at offset \vcode|dst_offset|.  Each device must
+be compatible with the device pointer specified on the same side of the copy.
 
-\subsection{\code{omp\_target\_memcpy\_offset}}
-\index{omp\_target\_memcpy\_offset@{\code{omp\_target\_memcpy\_offset}}}
+\subsection{\code{omp\_target\_memcpy\_async}}
+\index{omp\_target\_memcpy\_async@{\code{omp\_target\_memcpy\_async}}}
 \label{subsec:omp_target_register_ptr}
 \summary
 
-The \code{omp\_target\_memcpy\_offset} routine performs a copy between any combination
-of host and device pointers, with the option of explicitly specifying offsets
-and direction.
+The \code{omp\_target\_memcpy\_async} routine performs a copy between any combination
+of host and device pointers asynchronously.
 
 \format
 \ccppspecificstart
 \begin{boxedcode}
-  typedef enum omp\_copy\_direction\_t {
-    OMP\_COPY\_DIRECTION\_AUTO,
-    OMP\_COPY\_DIRECTION\_HOST\_TO\_DEVICE,
-    OMP\_COPY\_DIRECTION\_DEVICE\_TO\_HOST,
-    OMP\_COPY\_DIRECTION\_DEVICE\_TO\_DEVICE,
-    OMP\_COPY\_DIRECTION\_HOST\_TO\_HOST
-  } omp\_copy\_direction\_t;
-
-int omp\_target\_memcpy\_offset(void * dst, void * src, size\_t size,
+int omp\_target\_memcpy\_async(void * dst, void * src, size\_t size,
                         size\_t dst\_offset, size\_t src\_offset,
-                        omp\_copy\_direction direction);
+                        int dst\_device, int src\_device,
+                        void* depend\_in, void* depend\_out);
 \end{boxedcode}
 \ccppspecificend
 
 \effect
 
-\code{size} bytes of memory in \code{src} are copied \code{dst} starting at
-their respective offsets. The direction can be any value of
-\code{omp\_copy\_direction\_t}.  If the value of direction is \code{AUTO},
-then each pointer is checked for type by a mechanism
-equivalent to \code{omp\_target\_is\_device\_ptr()}, and if the result is
-false the pointer is treated as a pointer to host memory. For any other value
-the direction specified is respected, and passing pointers from another type
-of memory results in unspecified behavior.
+This routine performs an asynchronous memcopy.  Logically the
+\vcode|omp_target_memcpy_async| routine generates a target task.
+Dependencies are specified by passing the address to a variable as used in a
+task \code{depends} clause.  Specifying \code{NULL} for any dependency is
+handled specially and will cause the copy to behave as though it has an input
+dependency on all target tasks on the source device and an output dependency
+on all target tasks on the source and destination devices.
+
+\subsection{\code{omp\_target\_memcpy\_rect\_async}}
+\index{omp\_target\_memcpy\_rect\_async@{\code{omp\_target\_memcpy\_rect\_async}}}
+\label{subsec:omp_target_register_ptr}
+\summary
+
+The \code{omp\_target\_memcpy\_rect\_async} routine performs a copy between any combination
+of host and device pointers asynchronously.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_target\_memcpy\_rect\_async(
+                        void * dst, void * src,
+                        size_t element_size,
+                        int num\_dims,
+                        const size_t* volume,
+                        const size_t* dst\_offsets,
+                        const size_t* src\_offsets,
+                        const size_t* dst\_dimensions,
+                        const size_t* src\_dimensions,
+                        int dst\_device\_num, int src\_device\_num,
+                        void* depend\_in, void* depend\_out);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+Copies a multi-dimensional rectangular subvolume of \vcode|src| to \vcode|dst|
+asynchronously.  The volume is specified in terms of the size of the element,
+number of dimensions, and constant arrays of length \vcode|num_dims|.  The
+volume array specifies the length, in number of elements, to copy in each dimension from \vcode|src|
+to \vcode|dst|.  The \vcode|*_offsets| parameters specify the offset from the
+origin of each of \code{src} and \code{dst} in elements.  Finally the
+\vcode|*_dimensions| arguments specify the complete dimensions of each of
+\code{src} and \code{dst}.  As an example, this routine could be used to copy
+a $3\times3\times3$ cube from the center of a $9\times9\times9$ cube in
+\code{src} to a \code{dst} matrix of size $3\times3\times3$ on the host as
+follows:
+
+\ccppspecificstart
+\begin{boxedcode}
+int src[9][9][9], dst[3][3][3];
+omp\_target\_memcpy\_rect\_async(
+          dst, src,
+          sizeof(int), //elem_size
+          3, //num\_dims
+          \{3, 3, 3\}, //volume
+          \{0, 0, 0\}, //dst\_offset
+          \{3, 3, 3\}, //src\_offset
+          \{3, 3, 3\}, //dst\_dims
+          \{9, 9, 9\}, //src\_dims
+          0, 0,
+          NULL, NULL);
+\end{boxedcode}
+\ccppspecificend
+
+
 
 \subsection{\code{omp\_target\_associate\_ptr}}
 \index{omp\_target\_associate\_ptr@{\code{omp\_target\_associate\_ptr}}}
 \label{subsec:omp_target_register_ptr}
 \summary
 
-The \code{omp\_target\_associate\_ptr} routine ties an OpenMP device pointer,
-as returned from either \code{omp\_target\_alloc} or
-\code{omp\_get\_target\_ptr} to a host pointer in the manner of a map
-clause.
+The \code{omp\_target\_associate\_ptr} routine ties a device pointer, as may
+be returned from \code{omp\_target\_alloc} or implementation defined runtime
+routines, to a host pointer in the manner of a map clause.
 
 \format
 \ccppspecificstart
@@ -2592,12 +2541,14 @@ int omp\_target\_associate\_ptr(void * host\_ptr, void * device\_ptr, size\_t si
 The \code{omp\_target\_associate\_ptr} routine associates a device pointer
 with a host pointer such that when the host pointer appears in a subsequent
 \code{map} clause, the associated device pointer is used as the target for
-data motion associated with that host pointer.
+data motion associated with that host pointer.  The \vcode|device_offset|
+parameter specifies what offset into \vcode|device_ptr| will be used as the
+base address for the device side of the map.
 
 \restrictions
 
 \begin{itemize}
-  \item The \code{device\_ptr} value must be a valid pointer to device memory for the
+  \item The \vcode|device_ptr| value must be a valid pointer to device memory for the
     device numbered \code{device\_num}.
     \item Only one device buffer can be associated with a given host pointer
       value and device number pair.  Attempting to associate a second buffer
