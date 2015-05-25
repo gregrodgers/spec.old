@@ -8686,7 +8686,7 @@ map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
 \end{boxedcode}
 
 \descr
-The list items that appear in a \code{map} clause may include array sections as well as struct members.
+The list items that appear in a \code{map} clause may include array sections and structure elements.
 
 The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
@@ -8757,12 +8757,40 @@ If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofro
 \item At most one list item can be an array item derived from a given variable in \code{map}
 clauses of the same construct.
 
-\item List items of \code{map} clauses in the same construct must not share original storage.
+% removed by 383
+% example 8, 9, 10
+%
+%\item List items of \code{map} clauses in the same construct must not share original storage.
 
 \item If any part of the original storage of a list item has corresponding storage in the device data environment, all of the original storage must have corresponding storage in the device data environment. 
 
-\item A variable that is part of another variable (such as a field of a structure) but is not an 
-array element or an array section cannot appear in a \code{map} clause. 
+% removed by 383 
+% needed to allow structure
+%
+%\item A variable that is part of another variable (such as a field of a structure) but is not an 
+%array element or an array section cannot appear in a \code{map} clause. 
+
+% new for 383
+% use for example struct zzz {int x, y, z, *p} S;
+
+% if a struct is mapped, all fields are mapped (e.g.  map(S) -> S is mapped entirely (incl x, y, z, p)
+% example 1
+\item If a variable is a structure, all fields of the structure are mapped to the device. 
+
+% if map(S.x), then either no fields of S were ever mapped (restriction below does not apply), or one or more fields were already mapped, and then S.x must be already mapped (restriction below, cannot add to already mapped structures)
+% example 1, 2, 11
+\item If a variable is a field of a structure, and some fields of the structure are already mapped to the device prior to encountering this construct, then the variable must already be mapped to the device prior to encountering this construct.
+
+% map(S.p[10:20]),  or map(S[0:20].x), or map(S[10:20].p[10:20])
+% example 4
+\item If a variable is a field of a structure, the variable can only be an array section at the top level, at the bottom level, or both.
+
+\item If two items in the list are fields of a common structure variable, any common array sections must have the same offset and sizes.
+
+% example 7
+\item If a variable is field of a structure, it cannot be declared private or first private, and neither can the structure.
+
+%end new
 
 \item If variables that share storage are mapped, the behavior is unspecified.
 
