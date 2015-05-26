@@ -25,6 +25,9 @@ openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-sched
 quick:
 	pdflatex -interaction=batchmode -file-line-error openmp.tex
 
+debug:
+	pdflatex -file-line-error openmp.tex
+
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 
