@@ -5396,33 +5396,37 @@ single thread at a time.
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp critical \plc{[}(\plc{name})\plc{] new-line}
+\#pragma omp critical \plc{[}(\plc{name})\plc{]} \plc{[}hint(\plc{hint-expression})\plc{] new-line}
    \plc{structured-block}
 \end{boxedcode}
-\ccppspecificend
+
+where \plc{hint-expression} is an integer constant expression which
+evaluates to a valid lock hint (as described 
+in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 
 \fortranspecificstart
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-!\$omp critical \plc{[}(\plc{name})\plc{]}
+!\$omp critical \plc{[}(\plc{name})\plc{]} \plc{[}hint(\plc{hint-expression})\plc{] new-line}
    \plc{structured-block}
 !\$omp end critical \plc{[}(\plc{name})\plc{]}
 \end{boxedcode}
+
+where \plc{hint-expression} is a constant expression that evaluates to
+a scalar value with kind \code{omp\_lock\_hint\_kind} with a value
+which is a valid lock hint (as described 
+in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 \fortranspecificend
 
 \binding
 The binding thread set for a \code{critical} region is all threads in the contention group. 
-Region execution is restricted to a single thread at a time among all threads in the 
-contention group, without regard to the team(s) to which the threads belong.
+The region is executed as if only a single thread at a time among all threads in the 
+contention group is entering the region for execution, without regard to the team(s) to which the threads belong. 
 
 \descr
 An optional \plc{name} may be used to identify the \code{critical} construct. All \code{critical} 
-constructs without a name are considered to have the same unspecified name. A thread 
-waits at the beginning of a \code{critical} region until no thread in the contention group is 
-executing a \code{critical} region with the same name. The \code{critical} construct enforces 
-exclusive access with respect to all \code{critical} constructs with the same name in all 
-threads in the contention group, not just those threads in the current team. 
+constructs without a name are considered to have the same unspecified name. 
 
 \ccppspecificstart
 Identifiers used to identify a \code{critical} construct have external linkage and are in a 
@@ -5435,7 +5439,37 @@ The names of \code{critical} constructs are global entities of the program. If a
 conflicts with any other entity, the behavior of the program is unspecified.
 \fortranspecificend
 
+The threads of a contention group execute the \code{critical} region as if only one thread of the contention group is executing the \code{critical} region at a time.
+The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all 
+threads in the contention group, not just those threads in the current team.
+
+The presence of a \code{hint} clause does not affect the isolation
+guarantees provided by the \code{critical} construct. If no
+\code{hint} clause is specified, the effect is as if \code{hint(omp\_lock\_hint\_none)}
+had been specified.
+
+% Replaced by the above paragraph
+% If the \code{hint} clause is present, the effect of the \code{critical} 
+% construct is implementation defined, but retains the mutual exclusion 
+% semantics. If no
+% \code{hint} clause is specified, the effect is as if \code{hint(none)}
+% has been specified.
+
+
 \restrictions
+\begin{itemize}
+\item If the \code{hint} clause is specified, the \code{critical} 
+      construct must have a \plc{name}.
+\item If the \code{hint} clause is specified, each of the
+  \code{critical} constructs with the same \plc{name} must have a
+  \code{hint} clause for which the \plc{hint-expression} evaluates to the same
+  value.
+
+% \item All \code{critical} constructs with the same \plc{name} must 
+%       have a \code{hint} clause for which the \plc{hint-expression} evaluates 
+%       to the same value if any of them has a \code{hint} clause. 
+\end{itemize}
+
 \cppspecificstart
 \begin{itemize}
 \item A throw executed inside a \code{critical} region must cause execution to resume within 
@@ -5456,7 +5490,10 @@ specified on the \code{end}~\code{critical} directive.
 \end{itemize}
 \fortranspecificend
 
-
+\crossreferences
+\begin{itemize}
+\item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint} routines, see \specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
+\end{itemize}
 
 
 
