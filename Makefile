@@ -28,21 +28,28 @@ quick:
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 
-DIFF_OPTS:=--ignore-latex-errors --main openmp.tex --latexdiff-flatten --math-markup=whole --append-safecmd=ld-safe.txt --append-textcmd=plc,code,glossaryterm --exclude-textcmd=section,subsection,subsubsection
 
 DIFF_FROM:=master
 DIFF_TO:=HEAD
 DIFF_TYPE:=UNDERLINE
 
+COMMON_DIFF_OPTS:=--math-markup=whole  --append-safecmd=ld-safe.txt --append-textcmd=plc,code,glossaryterm  --exclude-textcmd=section,subsection,subsubsection,vcode \
+			--config='PICTUREENV="(?:picture|DIFnomarkup|boxedcode)[\w\d*@]*"'
+GIT_DIFF_OPTS:=${COMMON_DIFF_OPTS} --ignore-latex-errors --main openmp.tex --latexdiff-flatten
+VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} --flatten --pdf --git
+
 git-diff-all: openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 
 openmp-diff.pdf: openmp.pdf
-	git latexdiff --output $@ --type="${DIFF_TYPE}" ${DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
+	git latexdiff --output $@ --type="${DIFF_TYPE}" ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
+
+openmp-diff-minimal.pdf:
+	latexdiff-vc ${VC_DIFF_OPTS} --only-changes --type="${DIFF_TYPE}" --subtype=ZLABEL -r ${DIFF_FROM} -r ${DIFF_TO} openmp.tex
 
 openmp-diff-traditional.pdf: openmp.pdf
-	git latexdiff --output $@ --type=CTRADITIONAL ${DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
+	git latexdiff --output $@ --type=CTRADITIONAL ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
 
 openmp-diff-nodel.pdf: openmp.pdf
-	git latexdiff --output $@ --preamble="$(shell pwd)/omp-latexdiff-preamble.tex" ${DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
+	git latexdiff --output $@ --preamble="$(shell pwd)/omp-latexdiff-preamble.tex" ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
 
 
