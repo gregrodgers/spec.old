@@ -8692,7 +8692,7 @@ map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
 \end{boxedcode}
 
 \descr
-The list items that appear in a \code{map} clause may include array sections and structure fields.
+The list items that appear in a \code{map} clause may include array sections and structure elements.
 
 The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
@@ -8763,29 +8763,32 @@ If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofro
 \item At most one list item can be an array item derived from a given variable in \code{map}
 clauses of the same construct.
 
+% example for 383
+% typedef struct S {int x, y, z[100]} S; 
+% S s, t[100];
+
+% 383: #pragma omp target map(alloc: s) map(to: s.x) map(from: s.y) // allowed
+List items of \code{map} clauses in the same construct must not share original storage, with the exceptions of structures sharing storage with their structure elements.
+
 \item If any part of the original storage of a list item has corresponding storage in the device data environment, all of the original storage must have corresponding storage in the device data environment. 
 
-\item If a variable is a structure, all fields of the structure are mapped to the device. 
+% 383 allow structures: remove  
+%\item A variable that is part of another variable (such as a field of a structure) but is not an array element or an array section cannot appear in a \code{map} clause. 
 
-\item If a variable is a field of a structure, and some fields of the structure are already mapped to the device prior to encountering this construct, then the variable must already be mapped to the device prior to encountering this construct.
-
-\item If a variable is a field of a structure, the variable can only be an array section at the top level, at the bottom level, or both.
-
-\item If two items in the list are fields of a common structure variable, any common array sections must have the same offset and sizes.
-
-\item If a variable is field of a structure, it cannot be declared private or first private, and neither can the structure.
-
+%383 #pragma omp target data map(s.x)
+%       #pragma omp target map(s.y)  // illegal as some elements of s are already mapped prior to encountering this construct
 \item If a variable is an element of a structure, and one or more elements of this structure are already mapped to the device prior to encountering this construct, then the variable must already be mapped to the device prior to encountering this construct.
 
 % 383: map(t.z[10:20]),  or map(t[0:20].x), or map(t[10:20].z[10:20])
 %         but a different structure u.a.b[0:100].c.d is not allowed
-\item If a variable is an element of a structure, only the leftmost symbol of the variable reference, the rightmost symbol of the variable reference, or both can be array sections.
+\item If a variable is an element of a structure, only the leftmost symbol of the variable reference, in the rightmost symbol of the variable reference, or both can be array sections.
 
 % 383: map(t[0:20].x, t[0:20].y) is allowed, but map(t[0:20].x, t[30:20].y) are not
 \item If two items in the list are elements of a common structure variable, any common array sections must have the same offset and sizes.
 
-% 383: map(s.x) firstprivate(s.y) is not allowed: do it once the private/firstprivate is in
-%\item A variable, or the structure of which the variable is a member, cannot be at the in a private or firstprivate clause in the same construct 
+% 383: map(s.x) firstprivate(s.y) is not allowed
+\item A variable, or the structure of which the variable is a member, cannot be in a private or firstprivate clause in the same construct as
+If a variable is a structure or a member of a structure, then this structure or any member of this structure cannot also be declared \code{private} or \code{firstprivate}.
 
 \item If variables that share storage are mapped, the behavior is unspecified, with the exceptions of structures sharing storage with their structure elements.
 
