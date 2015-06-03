@@ -1671,14 +1671,15 @@ ordered\plc{[}(\plc{n})\plc{]}
 If an \code{end}~\code{do} directive is not specified, an \code{end}~\code{do} directive is assumed at the end of the 
 \plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an 
-\code{end}~\code{do} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
-termination statement, then the directive can only be specified for the outermost of these 
-\code{DO} statements. 
+Any associated \plc{do-loop} must be a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If
+an \code{end}~\code{do} directive follows a \plc{do-construct} in
+which several loop statements share a \code{DO} termination statement,
+then the directive can only be specified for the outermost of these
+\code{DO} statements.
 
 If any of the loop iteration variables would otherwise be shared, they are implicitly 
-made private on the loop construct. Unless the loop iteration variables are specified 
-\code{lastprivate} or \code{linear} on the loop construct, their values after the loop are unspecified.
+made private on the loop construct.
 \fortranspecificend
 
 
@@ -2560,7 +2561,7 @@ notinbranch
 
 \fortranspecificstart
 \begin{boxedcode}
-!\$omp declare simd(\plc{proc-name})\plc{ [clause[ [},\plc{] clause] ... ]}
+!\$omp declare simd \plc{[}(\plc{proc-name})\plc{] [clause[ [},\plc{] clause] ... ]}
 \end{boxedcode}
 
 where \plc{clause} is one of the following:
@@ -2670,6 +2671,11 @@ reference to array, or reference to pointer.
 
 \fortranspecificstart
 \item \plc{proc-name} must not be a generic name, procedure pointer or entry name.
+
+\item If \plc{proc-name} is omitted, the \code{declare}~\code{simd}
+  directive must appear in the specification part of a subroutine
+  subprogram or a function subprogram for which creation of the SIMD
+  versions is enabled.
 
 \item Any \code{declare}~\code{simd} directive must appear in the specification part of a subroutine 
 subprogram, function subprogram or interface body to which it applies.
@@ -5233,11 +5239,11 @@ construct containing a teams distribute parallel loop SIMD construct.
 The syntax of the target teams distribute parallel loop SIMD construct is as follows:
 
 \ccppspecificstart
-{\small
-\begin{boxedcode}
+
+\begin{boxedcode}[fontsize=\small]
 \#pragma omp target teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
-\end{boxedcode}}
+\end{boxedcode}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or 
 \code{teams}~\code{distribute}~\code{parallel}~\code{for}~\code{simd}
@@ -5398,33 +5404,37 @@ single thread at a time.
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp critical \plc{[}(\plc{name})\plc{] new-line}
+\#pragma omp critical \plc{[}(\plc{name})\plc{]} \plc{[}hint(\plc{hint-expression})\plc{] new-line}
    \plc{structured-block}
 \end{boxedcode}
-\ccppspecificend
+
+where \plc{hint-expression} is an integer constant expression which
+evaluates to a valid lock hint (as described 
+in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 
 \fortranspecificstart
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-!\$omp critical \plc{[}(\plc{name})\plc{]}
+!\$omp critical \plc{[}(\plc{name})\plc{]} \plc{[}hint(\plc{hint-expression})\plc{] new-line}
    \plc{structured-block}
 !\$omp end critical \plc{[}(\plc{name})\plc{]}
 \end{boxedcode}
+
+where \plc{hint-expression} is a constant expression that evaluates to
+a scalar value with kind \code{omp\_lock\_hint\_kind} with a value
+which is a valid lock hint (as described 
+in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 \fortranspecificend
 
 \binding
 The binding thread set for a \code{critical} region is all threads in the contention group. 
-Region execution is restricted to a single thread at a time among all threads in the 
-contention group, without regard to the team(s) to which the threads belong.
+The region is executed as if only a single thread at a time among all threads in the 
+contention group is entering the region for execution, without regard to the team(s) to which the threads belong. 
 
 \descr
 An optional \plc{name} may be used to identify the \code{critical} construct. All \code{critical} 
-constructs without a name are considered to have the same unspecified name. A thread 
-waits at the beginning of a \code{critical} region until no thread in the contention group is 
-executing a \code{critical} region with the same name. The \code{critical} construct enforces 
-exclusive access with respect to all \code{critical} constructs with the same name in all 
-threads in the contention group, not just those threads in the current team. 
+constructs without a name are considered to have the same unspecified name. 
 
 \ccppspecificstart
 Identifiers used to identify a \code{critical} construct have external linkage and are in a 
@@ -5437,7 +5447,37 @@ The names of \code{critical} constructs are global entities of the program. If a
 conflicts with any other entity, the behavior of the program is unspecified.
 \fortranspecificend
 
+The threads of a contention group execute the \code{critical} region as if only one thread of the contention group is executing the \code{critical} region at a time.
+The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all 
+threads in the contention group, not just those threads in the current team.
+
+The presence of a \code{hint} clause does not affect the isolation
+guarantees provided by the \code{critical} construct. If no
+\code{hint} clause is specified, the effect is as if \code{hint(omp\_lock\_hint\_none)}
+had been specified.
+
+% Replaced by the above paragraph
+% If the \code{hint} clause is present, the effect of the \code{critical} 
+% construct is implementation defined, but retains the mutual exclusion 
+% semantics. If no
+% \code{hint} clause is specified, the effect is as if \code{hint(none)}
+% has been specified.
+
+
 \restrictions
+\begin{itemize}
+\item If the \code{hint} clause is specified, the \code{critical} 
+      construct must have a \plc{name}.
+\item If the \code{hint} clause is specified, each of the
+  \code{critical} constructs with the same \plc{name} must have a
+  \code{hint} clause for which the \plc{hint-expression} evaluates to the same
+  value.
+
+% \item All \code{critical} constructs with the same \plc{name} must 
+%       have a \code{hint} clause for which the \plc{hint-expression} evaluates 
+%       to the same value if any of them has a \code{hint} clause. 
+\end{itemize}
+
 \cppspecificstart
 \begin{itemize}
 \item A throw executed inside a \code{critical} region must cause execution to resume within 
@@ -5458,7 +5498,10 @@ specified on the \code{end}~\code{critical} directive.
 \end{itemize}
 \fortranspecificend
 
-
+\crossreferences
+\begin{itemize}
+\item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint} routines, see \specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
+\end{itemize}
 
 
 
@@ -5632,18 +5675,11 @@ task is suspended at the task scheduling point until all child tasks that it gen
 \summary
 The \code{atomic} construct ensures that a specific storage location is accessed atomically, 
 rather than exposing it to the possibility of multiple, simultaneous reading and writing 
-threads that may result in indeterminate values
+threads that may result in indeterminate values.
 
 \syntax
-\ccppspecificstart
-The syntax of the \code{atomic} construct takes one of the following forms:
-
-\begin{boxedcode}
-\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
-   \plc{expression-stmt}
-\end{boxedcode}
-
-where \plc{atomic-clause} is one of the following:
+In the following syntax, \plc{atomic-clause} is a clause that indicates
+the semantics for which atomicity is enforced and is one of the following:
 
 \begin{indentedcodelist}
 read
@@ -5652,13 +5688,29 @@ update
 capture
 \end{indentedcodelist}
 
+\ccppspecificstart
+The syntax of the \code{atomic} construct takes one of the following forms:
+
+\begin{boxedcode}
+\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
+   \plc{expression-stmt}
+\end{boxedcode}
+
+%% where \plc{atomic-clause} is one of the following:
+%%
+%% \begin{indentedcodelist}
+%% read
+%% write
+%% update
+%% capture
+%% \end{indentedcodelist}
+
 or
 
 \begin{boxedcode}
 \#pragma omp atomic \plc{[}seq\_cst\plc{]} \plc{new-line} 
    \plc{expression-stmt}
 \end{boxedcode}
-
 
 or
 
@@ -5667,7 +5719,7 @@ or
     \plc{structured-block}
 \end{boxedcode}
 
-\needspace{6\baselineskip}
+%% \needspace{6\baselineskip}
 where \plc{expression-stmt} is an expression statement with one of the following forms:
 
 \begin{itemize}
@@ -5816,13 +5868,15 @@ or
 !\$omp end atomic
 \end{boxedcode}
 
-where \plc{write-statement} has the following form (if \plc{atomic-clause} is \code{write}):
+where \plc{write-statement} has the following form (if \plc{atomic-clause} 
+is \code{capture} or \code{write}):
 
 \begin{quote}
 \code{\plc{x} = \plc{expr}}
 \end{quote}
 
-where \plc{capture-statement} has the following form (if \plc{atomic-clause} is \code{capture} or \code{read}):
+where \plc{capture-statement} has the following form (if \plc{atomic-clause} 
+is \code{capture} or \code{read}):
 
 \begin{quote}
 \code{\plc{v} = \plc{x}}
@@ -6548,9 +6602,13 @@ The restrictions to the \code{cancel} construct are as follows:
 \item The behavior for concurrent cancellation of a region and a region nested within it is 
 unspecified.
 
-\item If \plc{construct-type-clause} is \code{taskgroup}, the \code{cancel} construct must be closely 
-nested inside a \code{task} construct. Otherwise, the \code{cancel} construct must be closely 
-nested inside an OpenMP construct that matches the type specified in 
+\item If \plc{construct-type-clause} is \code{taskgroup}, the \code{cancel}
+construct must be closely nested inside a \code{task} construct and the
+\code{cancel} construct must be nested inside a \code{taskgroup} region. If
+\plc{construct-type-clause} is \code{sections}, the \code{cancel} construct
+must be closely nested inside a \code{sections} or \code{section} construct.
+Otherwise, the \code{cancel} construct must be closely
+nested inside an OpenMP construct that matches the type specified in
 \plc{construct-type-clause} of the \code{cancel} construct.
 
 \item If \plc{construct-type-clause} is \code{taskgroup} and the \code{cancel} construct is not nested 
@@ -6647,11 +6705,15 @@ execution at the end of the canceled construct.
 
 \restrictions
 \begin{itemize}
-\item A \code{cancellation}~\code{point} construct for which \plc{construct-type-clause} is 
-\code{taskgroup} must be closely nested inside a \code{task} construct. A 
-\code{cancellation}~\code{point} construct for which \plc{construct-type-clause} 
-is not \code{taskgroup} must be closely 
-nested inside an OpenMP construct that matches the type specified in 
+\item A \code{cancellation}~\code{point} construct for which
+\plc{construct-type-clause} is \code{taskgroup} must be closely nested
+inside a \code{task} construct and the \code{cancellation}~\code{point}
+construct must be nested inside a \code{taskgroup} region. A
+\code{cancellation}~\code{point} construct for which
+\plc{construct-type-clause} is \code{sections} must be closely nested
+inside a \code{sections} or \code{section} construct. Otherwise, a
+\code{cancellation}~\code{point} construct must be closely nested inside
+an OpenMP construct that matches the type specified in
 \plc{construct-type-clause}.
 
 \item An OpenMP program with orphaned \code{cancellation}~\code{point} constructs is 
@@ -8392,7 +8454,8 @@ The \code{map} clause specifies how an original list item is mapped from the cur
 The syntax of the map clause is as follows:
 
 \begin{boxedcode}
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})\end{boxedcode}
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+\end{boxedcode}
 
 \descr
 The list items that appear in a \code{map} clause may include array sections.
@@ -8842,16 +8905,25 @@ that can be closely nested in the \code{teams} region.
 
 \item A \code{distribute} construct must be closely nested in a \code{teams} region. 
 
-\item If \plc{construct-type-clause} is \code{taskgroup}, the \code{cancel} construct must be closely 
-nested inside a \code{task} construct and the \code{cancel} construct must be nested inside a 
-\code{taskgroup} region. Otherwise, the \code{cancel} construct must be closely nested inside 
-an OpenMP construct that matches the type specified in \plc{construct-type-clause} of the 
-\code{cancel} construct. 
+\item If \plc{construct-type-clause} is \code{taskgroup}, the \code{cancel}
+construct must be closely nested inside a \code{task} construct and the
+\code{cancel} construct must be nested inside a \code{taskgroup} region.
+If \plc{construct-type-clause} is \code{sections}, the \code{cancel}
+construct must be closely nested inside a \code{sections} or \code{section}
+construct. Otherwise, the \code{cancel} construct must be closely nested
+inside an OpenMP construct that matches the type specified in
+\plc{construct-type-clause} of the \code{cancel} construct.
 
-\item A \code{cancellation}~\code{point} construct for which \plc{construct-type-clause} is 
-\code{taskgroup} must be nested inside a \code{task} construct. A \code{cancellation}~\code{point} 
-construct for which \plc{construct-type-clause} is not \code{taskgroup} must be closely nested 
-inside an OpenMP construct that matches the type specified in \plc{construct-type-clause}. 
+\item A \code{cancellation}~\code{point} construct for which
+\plc{construct-type-clause} is \code{taskgroup} must be nested inside
+a \code{task} construct and the \code{cancellation}~\code{point} construct
+must be nested inside a \code{taskgroup} region. A
+\code{cancellation}~\code{point} construct for which
+\plc{construct-type-clause} is \code{sections} must be closely nested
+inside a \code{sections} or \code{section} construct. Otherwise, a
+\code{cancellation}~\code{point} construct must be closely nested inside
+an OpenMP construct that matches the type specified in
+\plc{construct-type-clause}.
 \end{itemize}
 
 % This is the end of ch2-directives.tex of the OpenMP specification.

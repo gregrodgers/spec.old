@@ -71,6 +71,15 @@ typedef void *omp\_lock\_t;
 
 typedef void *omp\_nest\_lock\_t;
 
+typedef enum omp\_lock\_hint\_t 
+\{
+ omp\_lock\_hint\_none = 0,
+ omp\_lock\_hint\_uncontended = 1,
+ omp\_lock\_hint\_contended = 2,
+ omp\_lock\_hint\_nonspeculative = 4,
+ omp\_lock\_hint\_speculative = 8,
+\} omp\_lock\_hint\_t;
+
 /*
  * define the schedule kinds
  */
@@ -134,12 +143,16 @@ extern int omp\_is\_initial\_device(void);
 extern int omp\_get\_max\_task\_priority(void);
 
 extern void omp\_init\_lock(omp\_lock\_t *lock);
+extern void omp\_init\_lock\_with\_hint(omp\_lock\_t *lock, 
+                                   omp\_lock\_hint\_t hint);
 extern void omp\_destroy\_lock(omp\_lock\_t *lock);
 extern void omp\_set\_lock(omp\_lock\_t *lock);
 extern void omp\_unset\_lock(omp\_lock\_t *lock);
 extern int omp\_test\_lock(omp\_lock\_t *lock);
 
 extern void omp\_init\_nest\_lock(omp\_nest\_lock\_t *lock);
+extern void omp\_init\_nest\_lock\_with\_hint(omp\_nest\_lock\_t *lock, 
+                                          omp\_lock\_hint\_t hint);
 extern void omp\_destroy\_nest\_lock(omp\_nest\_lock\_t *lock);
 extern void omp\_set\_nest\_lock(omp\_nest\_lock\_t *lock);
 extern void omp\_unset\_nest\_lock(omp\_nest\_lock\_t *lock);
@@ -166,9 +179,12 @@ extern double omp\_get\_wtick(void);
 {\small \begin{codepar}
      integer omp\_lock\_kind
      integer omp\_nest\_lock\_kind
+     integer omp\_lock\_hint\_kind
 ! this selects an integer that is large enough to hold a 64 bit integer
      parameter ( omp\_lock\_kind = selected\_int\_kind( 10 ) )
      parameter ( omp\_nest\_lock\_kind = selected\_int\_kind( 10 ) )
+     parameter ( omp\_lock\_hint\_kind = selected\_int\_kind( 10 ) )
+     
      integer omp\_sched\_kind
 ! this selects an integer that is large enough to hold a 32 bit integer
      parameter ( omp\_sched\_kind = selected\_int\_kind( 8 ) )
@@ -180,6 +196,7 @@ extern double omp\_get\_wtick(void);
      parameter ( omp\_sched\_guided = 3 )
      integer ( omp\_sched\_kind ) omp\_sched\_auto
      parameter ( omp\_sched\_auto = 4 )
+     
      integer omp\_proc\_bind\_kind
      parameter ( omp\_proc\_bind\_kind = selected\_int\_kind( 8 ) )
      integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_false
@@ -192,6 +209,17 @@ extern double omp\_get\_wtick(void);
      parameter ( omp\_proc\_bind\_close = 3 )
      integer ( omp\_proc\_bind\_kind ) omp\_proc\_bind\_spread
      parameter ( omp\_proc\_bind\_spread = 4 )
+
+     integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_none
+     parameter ( omp\_lock\_hint\_none = 0 )
+     integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_uncontended
+     parameter ( omp\_lock\_hint\_uncontended = 1 )
+     integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_contended
+     parameter ( omp\_lock\_hint\_contended = 2 )
+     integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_nonspeculative
+     parameter ( omp\_lock\_hint\_nonspeculative = 4 )
+     integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_speculative
+     parameter ( omp\_lock\_hint\_speculative = 8 )
 \end{codepar}}
 
 \emph{omp\_lib.h:}
@@ -260,6 +288,7 @@ extern double omp\_get\_wtick(void);
      external omp\_get\_proc\_bind
 
      external omp\_init\_lock
+     external omp\_init\_lock\_with\_hint
      external omp\_destroy\_lock
      external omp\_set\_lock
      external omp\_unset\_lock
@@ -267,6 +296,7 @@ extern double omp\_get\_wtick(void);
      logical omp\_test\_lock
 
      external omp\_init\_nest\_lock
+     external omp\_init\_nest\_lock\_with\_hint
      external omp\_destroy\_nest\_lock
      external omp\_set\_nest\_lock
      external omp\_unset\_nest\_lock
@@ -293,6 +323,18 @@ extern double omp\_get\_wtick(void);
         module omp\_lib\_kinds
         integer, parameter :: omp\_lock\_kind = selected\_int\_kind( 10 )
         integer, parameter :: omp\_nest\_lock\_kind = selected\_int\_kind( 10 )
+        integer, parameter :: omp\_lock\_hint\_kind = selected\_int\_kind( 10 )
+        integer (kind=omp\_lock\_hint\_kind), parameter :: 
+      \&   omp\_lock\_hint\_none = 0
+        integer (kind=omp\_lock\_hint\_kind), parameter :: 
+      \&   omp\_lock\_hint\_uncontended = 1
+        integer (kind=omp\_lock\_hint\_kind), parameter :: 
+      \&   omp\_lock\_hint\_contended = 2
+        integer (kind=omp\_lock\_hint\_kind), parameter :: 
+      \&   omp\_lock\_hint\_nonspeculative = 4 
+        integer (kind=omp\_lock\_hint\_kind), parameter :: 
+      \&   omp\_lock\_hint\_speculative = 8
+
         integer, parameter :: omp\_sched\_kind = selected\_int\_kind( 8 ) 
         integer(kind=omp\_sched\_kind), parameter ::
       \&   omp\_sched\_static = 1
@@ -302,6 +344,7 @@ extern double omp\_get\_wtick(void);
       \&   omp\_sched\_guided = 3
         integer(kind=omp\_sched\_kind), parameter ::
       \&   omp\_sched\_auto = 4
+      
         integer, parameter :: omp\_proc\_bind\_kind = selected\_int\_kind( 8 )
         integer (kind=omp\_proc\_bind\_kind), parameter ::
       \&   omp\_proc\_bind\_false = 0
@@ -453,6 +496,12 @@ extern double omp\_get\_wtick(void);
            integer (kind=omp\_lock\_kind), intent(out) :: var
           end subroutine omp\_init\_lock
 
+          subroutine omp\_init\_lock\_with\_hint (var, hint)
+           use omp\_lib\_kinds
+           integer (kind=omp\_lock\_kind), intent(out) :: var
+           integer (kind=omp\_lock\_hint\_kind), intent(in) :: hint
+          end subroutine omp\_init\_lock\_with\_hint
+
           subroutine omp\_destroy\_lock (var)
            use omp\_lib\_kinds
            integer (kind=omp\_lock\_kind), intent(inout) :: var
@@ -478,6 +527,12 @@ extern double omp\_get\_wtick(void);
            use omp\_lib\_kinds
            integer (kind=omp\_nest\_lock\_kind), intent(out) :: var
           end subroutine omp\_init\_nest\_lock
+
+          subroutine omp\_init\_nest\_lock\_with\_hint (var, hint)
+           use omp\_lib\_kinds
+           integer (kind=omp\_nest\_lock\_kind), intent(out) :: var
+           integer (kind=omp\_lock\_hint\_kind), intent(in) :: hint
+          end subroutine omp\_init\_nest\_lock\_with\_hint
 
           subroutine omp\_destroy\_nest\_lock (var)
            use omp\_lib\_kinds

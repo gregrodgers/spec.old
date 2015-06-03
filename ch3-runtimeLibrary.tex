@@ -120,6 +120,8 @@ provided in a header file named \code{omp.h}. This file defines the following:
 
 \item The type \code{omp\_nest\_lock\_t}.
 
+\item The type \code{omp\_lock\_hint\_t}. 
+
 \item The type \code{omp\_sched\_t}.
 
 \item The type \code{omp\_proc\_bind\_t}.
@@ -146,6 +148,8 @@ These files define the following:
 \item The \code{integer} \code{parameter} \code{omp\_lock\_kind}.
 
 \item The \code{integer} \code{parameter} \code{omp\_nest\_lock\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_lock\_hint\_kind}.
 
 \item The \code{integer} \code{parameter} \code{omp\_sched\_kind}.
 
@@ -1140,13 +1144,14 @@ current device.
 The \code{omp\_get\_ancestor\_thread\_num} routine returns, for a given nested level of 
 the current thread, the thread number of the ancestor of the current thread.
 
-\parbox{\linewidth}{%
+\begin{samepage}
 \format
 \ccppspecificstart
 \begin{boxedcode}
 int omp\_get\_ancestor\_thread\_num(int \plc{level});
 \end{boxedcode}
-\ccppspecificend}
+\ccppspecificend
+\end{samepage}
 
 \fortranspecificstart
 \begin{boxedcode}
@@ -1655,13 +1660,14 @@ team number is an integer between 0 and one less than the value returned by
 The \code{omp\_is\_initial\_device} routine returns \plc{true} if the current task is executing 
 on the host device; otherwise, it returns \plc{false}.
 
-\parbox{\linewidth}{%
+\begin{samepage}
 \format
 \ccppspecificstart
 \begin{boxedcode}
 int omp\_is\_initial\_device(void);
 \end{boxedcode}
-\ccppspecificend}
+\ccppspecificend
+\end{samepage}
 
 \fortranspecificstart
 \begin{boxedcode}
@@ -1698,13 +1704,14 @@ device; otherwise, it returns \plc{false}.
 The \code{omp\_get\_max\_task\_priority} routine returns the maximum value that can be
 specified in the \code{priority} clause.
 
-\parbox{\linewidth}{%
+\begin{samepage}
 \format
 \ccppspecificstart
 \begin{boxedcode}
 int omp\_get\_max\_task\_priority(void);
 \end{boxedcode}
-\ccppspecificend}
+\ccppspecificend
+\end{samepage}
 
 \fortranspecificstart
 \begin{boxedcode}
@@ -1754,6 +1761,14 @@ it is already owned by the task trying to set it. \emph{Simple lock} variables a
 \emph{simple locks} and can only be passed to \emph{simple lock} routines. \emph{Nestable lock} variables are 
 associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
 
+Each type of lock can also have a \emph{lock hint} that contains information about the intended usage 
+of the lock by the application code.  The effect of the lock hint is implementation defined, 
+that is, the OpenMP implementation can use this hint to select a proper 
+usage-specific lock if supported by the implementation.  
+Lock hints do not change the mutual exclusion semantics of locks, but allow the 
+user to suggest the use of a specific implementation to the runtime.
+A conforming implementation can safely ignore the lock hint and instead use locks without hints.
+
 Constraints on the state and ownership of the lock accessed by each of the lock routines 
 are described with the routine. If these constraints are not met, the behavior of the 
 routine is unspecified. 
@@ -1787,6 +1802,8 @@ The simple lock routines are as follows:
 \begin{itemize}
 \item The \code{omp\_init\_lock} routine initializes a simple lock.
 
+\item The \code{omp\_init\_lock\_with\_hint} routine initializes a simple lock and attaches a hint to it.
+
 \item The \code{omp\_destroy\_lock} routine uninitializes a simple lock.
 
 \item The \code{omp\_set\_lock} routine waits until a simple lock is available, and then sets it.
@@ -1813,6 +1830,8 @@ The nestable lock routines are as follows:
 
 \begin{itemize}
 \item The \code{omp\_init\_nest\_lock} routine initializes a nestable lock.
+
+\item The \code{omp\_init\_nest\_lock\_with\_hint} routine initializes a nestable lock and attaches a hint to it.
 
 \item The \code{omp\_destroy\_nest\_lock} routine uninitializes a nestable lock.
 
@@ -1847,7 +1866,7 @@ unspecified behavior.
 \index{omp\_init\_lock@{\code{omp\_init\_lock}}}
 \index{omp\_init\_nest\_lock@{\code{omp\_init\_nest\_lock}}}
 \summary
-These routines provide the only means of initializing an OpenMP lock.
+These routines initialize an OpenMP lock without a hint.
 
 \format
 \ccppspecificstart
@@ -1880,6 +1899,104 @@ owns the lock. In addition, the nesting count for a nestable lock is set to zero
 
 
 
+
+
+
+
+
+\subsection[\code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint}]{\code{omp\_init\_lock\_with\_hint} and \\\code{omp\_init\_nest\_lock\_with\_hint}}
+\label{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}
+\index{omp\_init\_lock@{\code{omp\_init\_lock}}}
+\index{omp\_init\_nest\_lock@{\code{omp\_init\_nest\_lock}}}
+\summary
+These routines initialize an OpenMP lock with a hint.  
+The effect of the hint is implementation-defined. The OpenMP implementation
+can ignore the hint without changing program semantics.
+
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void omp\_init\_lock\_with\_hint(omp\_lock\_t *\plc{lock}, 
+                             omp\_lock\_hint\_t \plc{hint});
+void omp\_init\_nest\_lock\_with\_hint(omp\_nest\_lock\_t *\plc{lock}, 
+                                  omp\_lock\_hint\_t \plc{hint});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine omp\_init\_lock\_with\_hint(\plc{svar}, \plc{hint})
+integer (kind=omp\_lock\_kind) \plc{svar}
+integer (kind=omp\_lock\_hint\_kind) \plc{hint}
+
+subroutine omp\_init\_nest\_lock\_with\_hint(\plc{nvar}, \plc{hint})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+integer (kind=omp\_lock\_hint\_kind) \plc{hint}
+\end{boxedcode}
+\fortranspecificend
+
+\constraints
+A program that accesses a lock that is not in the uninitialized state through either routine 
+is non-conforming.
+
+The second argument passed to this routine (\plc{hint}) can be one of the valid OpenMP lock hints below or any implementation-defined hint. 
+The C/C++ header file (\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 module file (\code{omp\_lib}) define the valid lock hint constants.  
+The valid constants must include the following, which can be extended with implementation-defined values:
+
+\ccppspecificstart
+\begin{codepar}
+typedef enum omp\_lock\_hint\_t \{
+  omp\_lock\_hint\_none = 0,
+  omp\_lock\_hint\_uncontended = 1,
+  omp\_lock\_hint\_contended = 2,
+  omp\_lock\_hint\_nonspeculative = 4,
+  omp\_lock\_hint\_speculative = 8,
+\} omp\_lock\_hint\_t;
+\end{codepar}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{codepar}
+integer (kind=omp\_lock\_hint\_kind), &
+        parameter :: omp\_lock\_hint\_none = 0
+integer (kind=omp\_lock\_hint\_kind), &
+        parameter :: omp\_lock\_hint\_uncontended = 1
+integer (kind=omp\_lock\_hint\_kind), &
+        parameter :: omp\_lock\_hint\_contended = 2
+integer (kind=omp\_lock\_hint\_kind), &
+        parameter :: omp\_lock\_hint\_nonspeculative = 4 
+integer (kind=omp\_lock\_hint\_kind), &
+        parameter :: omp\_lock\_hint\_speculative = 8
+\end{codepar}
+\fortranspecificend
+
+The hints can be combined by using the \code{+} or \code{|} operators in C/C++ or the \code{+} operator in Fortran.  
+The effect of the combined hint is implementation defined and can be ignored by the implementation.
+Combining \code{omp\_lock\_hint\_none} with any other hint is equivalent to specifying the other hint.
+The following restrictions apply to combined hints; violating these 
+restrictions results in unspecified behavior:
+\begin{itemize}
+%\item \code{omp\_lock\_hint\_none} cannot be combined with any other hint,
+\item the hints \code{omp\_lock\_hint\_uncontended} and \code{omp\_lock\_hint\_contended} cannot be combined,
+\item the hints \code{omp\_lock\_hint\_nonspeculative} and \code{omp\_lock\_hint\_speculative} cannot be combined.
+\end{itemize}
+
+
+\notestart
+\noteheader – Future OpenMP specifications may add additional hints to the 
+\code{omp\_lock\_hint\_t} type and the \code{omp\_lock\_hint\_kind} kind.  
+Implementers are advised to add implementation-defined hints starting from 
+the most significant bit of the \code{omp\_lock\_hint\_t} type and
+\code{omp\_lock\_hint\_kind} kind and to include the name of the 
+implementation in the name of the added hint to avoid name conflicts 
+with other OpenMP implementations.
+\noteend
+
+
+\effect
+The effect of these routines is to initialize the lock to the unlocked state and, optionally, to choose a specific lock implementation based on the hint. 
+After initialization no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
 
 
@@ -1930,8 +2047,9 @@ The effect of these routines is to change the state of the lock to uninitialized
 \index{omp\_set\_lock@{\code{omp\_set\_lock}}}
 \index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
 \summary
-These routines provide a means of setting an OpenMP lock. The calling task region is 
-suspended until the lock is set. 
+These routines provide a means of setting an OpenMP lock. The calling
+task region behaves as if it were suspended until the lock can be set
+by this thread.
 
 \format
 \ccppspecificstart
@@ -1957,19 +2075,31 @@ non-conforming. A simple lock accessed by \code{omp\_set\_lock} that is in the l
 must not be owned by the task that contains the call or deadlock will result.
 
 \effect
-Each of these routines causes suspension of the task executing the routine until the 
-specified lock is available and then sets the lock. 
+Each of these routines has an effect equivalent to suspension of the task
+executing the routine until the specified lock is available. 
 
-A simple lock is available if it is unlocked. Ownership of the lock is granted to the task 
-executing the routine.
+% However, the
+% task region may continue to execute speculatively, provided that the 
+% implementation ensures that execution is as if the lock were owned
+% exclusively by one thread. 
 
-A nestable lock is available if it is unlocked or if it is already owned by the task 
-executing the routine. The task executing the routine is granted, or retains, ownership of 
-the lock, and the nesting count for the lock is incremented.
+% A note because it's only explanatory. The as-ifness already allows
+% this via the ``equivalent to''
+\notestart \noteheader – The semantics of these routines is specified
+\emph{as if} they serialize execution of the region guarded by the
+lock. However, implementations may implement them in other ways
+provided that the isolation properties are respected so that the
+actual execution delivers a result that could arise from some
+serialization. 
+\noteend
 
+A simple lock is available if it is unlocked. Ownership of the lock is 
+granted to the task executing the routine.
 
-
-
+A nestable lock is available if it is unlocked or if it is already owned by 
+the task executing the routine. The task executing the routine is granted, 
+or retains, ownership of the lock, and the nesting count for the lock is 
+incremented.
 
 
 
@@ -2000,8 +2130,13 @@ integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
 \fortranspecificend
 
 \constraints
-A program that accesses a lock that is not in the locked state or that is not owned by the 
-task that contains the call through either routine is non-conforming.
+A program that accesses a lock that is not in the locked state or that is 
+not owned by the task that contains the call through either routine is 
+non-conforming.
+
+% Jim Cownie: I don't believe we need anything more about speculation
+% here. It has to behave ``as-if'' it held the lock, and released it
+% here, and that's what we say happens.
 
 \effect
 For a simple lock, the \code{omp\_unset\_lock} routine causes the lock to become unlocked.
@@ -2009,9 +2144,9 @@ For a simple lock, the \code{omp\_unset\_lock} routine causes the lock to become
 For a nestable lock, the \code{omp\_unset\_nest\_lock} routine decrements the nesting 
 count, and causes the lock to become unlocked if the resulting nesting count is zero.
 
-For either routine, if the lock becomes unlocked, and if one or more task regions were 
-suspended because the lock was unavailable, the effect is that one task is chosen and 
-given ownership of the lock.
+For either routine, if the lock becomes unlocked, and if one or more task 
+regions were effectively suspended because the lock was unavailable, the 
+effect is that one task is chosen and given ownership of the lock. 
 
 
 
