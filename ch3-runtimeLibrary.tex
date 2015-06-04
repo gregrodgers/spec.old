@@ -2411,6 +2411,13 @@ The effect of this routine is to return \plc{true} if the specified pointer
 and offset would be found present on device \code{device\_num} by a map
 clause; otherwise, it returns \plc{false}.
 
+\restrictions
+
+\begin{itemize}
+  \item The value of \verb|ptr| must be a valid host pointer or NULL
+  \item The device specified by \vcode|device_num| must be valid
+\end{itemize}
+
 \subsection{\code{omp\_target\_memcpy}}
 \index{omp\_target\_memcpy@{\code{omp\_target\_memcpy}}}
 \label{subsec:omp_target_register_ptr}
@@ -2433,47 +2440,28 @@ int omp_target_memcpy(void * dst, void * src, size_t size,
 \code{size} bytes of memory at offset \verb|src_offset| from  \code{src} are
 copied to \code{dst} starting at offset \verb|dst_offset|.  Each device must
 be compatible with the device pointer specified on the same side of the copy.
+Return values are zero on success and non-zero on failure.  This routine
+contains a task scheduling point.
 
-\subsection{\code{omp\_target\_memcpy\_async}}
-\index{omp\_target\_memcpy\_async@{\code{omp\_target\_memcpy\_async}}}
+\restrictions
+
+\begin{itemize}
+  \item This routine is not declared for use in target regions, attempts to
+    use it will result in undefined behavior
+\end{itemize}
+
+\subsection{\code{omp\_target\_memcpy\_rect}}
+\index{omp\_target\_memcpy\_rect@{\code{omp\_target\_memcpy\_rect}}}
 \label{subsec:omp_target_register_ptr}
 \summary
 
-The \code{omp\_target\_memcpy\_async} routine performs a copy between any combination
-of host and device pointers asynchronously.
+The \vcode|omp_target_memcpy_rect| routine copies a rectangular subvolume from
+bone multi-dimensional array to another, potentially across devices.
 
 \format
 \ccppspecificstart
 \begin{boxedcode}
-int omp_target_memcpy_async(void * dst, void * src, size_t size,
-                            size_t dst_offset, size_t src_offset,
-                            int dst_device, int src_device,
-                            void* depend_in, void* depend_out);
-\end{boxedcode}
-\ccppspecificend
-
-\effect
-
-This routine performs an asynchronous memcopy.  Logically the
-\verb|omp_target_memcpy_async| routine generates a target task.
-Dependencies are specified by passing the address to a variable as used in a
-task \code{depends} clause.  Specifying \code{NULL} for any dependency is
-handled specially and will cause the copy to behave as though it has an input
-dependency on all target tasks on the source device and an output dependency
-on all target tasks on the source and destination devices.
-
-\subsection{\code{omp\_target\_memcpy\_rect\_async}}
-\index{omp\_target\_memcpy\_rect\_async@{\code{omp\_target\_memcpy\_rect\_async}}}
-\label{subsec:omp_target_register_ptr}
-\summary
-
-The \code{omp\_target\_memcpy\_rect\_async} routine performs a copy between any combination
-of host and device pointers asynchronously.
-
-\format
-\ccppspecificstart
-\begin{boxedcode}
-int omp_target_memcpy_rect_async(
+int omp_target_memcpy_rect(
                void * dst, void * src,
                size_t element_size,
                int num_dims,
@@ -2482,19 +2470,20 @@ int omp_target_memcpy_rect_async(
                const size_t* src_offsets,
                const size_t* dst_dimensions,
                const size_t* src_dimensions,
-               int dst_device_num, int src_device_num,
-               void* depend_in, void* depend_out);
+               int dst_device_num, int src_device_num);
 \end{boxedcode}
 \ccppspecificend
 
 \effect
 
-Copies a multi-dimensional rectangular subvolume of \verb|src| to \verb|dst|
-asynchronously.  The volume is specified in terms of the size of the element,
-number of dimensions, and constant arrays of length \verb|num_dims|.  The
-volume array specifies the length, in number of elements, to copy in each dimension from \verb|src|
-to \verb|dst|.  The \verb|*_offsets| parameters specify the offset from the
-origin of each of \code{src} and \code{dst} in elements.  Finally the
+Copies a multi-dimensional rectangular subvolume of \verb|src| to \verb|dst|.
+The volume is specified in terms of the size of the element, number of
+dimensions, and constant arrays of length \verb|num_dims|.  The maximum number
+of dimensions supported is at least three, support for higher dimensionality
+is implementation defined.  The volume array
+specifies the length, in number of elements, to copy in each dimension from
+\verb|src| to \verb|dst|.  The \verb|*_offsets| parameters specify the offset
+from the origin of each of \code{src} and \code{dst} in elements.  Finally the
 \verb|*_dimensions| arguments specify the complete dimensions of each of
 \code{src} and \code{dst}.  As an example, this routine could be used to copy
 a $3\times3\times3$ cube from the center of a $9\times9\times9$ cube in
@@ -2504,7 +2493,7 @@ follows:
 \ccppspecificstart
 \begin{boxedcode}
 int src[9][9][9], dst[3][3][3];
-omp_target_memcpy_rect_async(
+omp_target_memcpy_rect(
           dst, src,
           sizeof(int), //elem_size
           3, //num_dims
@@ -2513,11 +2502,21 @@ omp_target_memcpy_rect_async(
           \{3, 3, 3\}, //src_offset
           \{3, 3, 3\}, //dst_dims
           \{9, 9, 9\}, //src_dims
-          0, 0,
-          NULL, NULL);
+          0, 0);
 \end{boxedcode}
 \ccppspecificend
 
+The \vcode|omp_target_memcpy_rect| routine contains a tasks scheduling point.
+Return values are zero on success and non-zero on failure.  Calling the function
+with two NULL pointers causes it to return the number of dimensions supported
+by the implementation for the specified device numbers.
+
+\restrictions
+
+\begin{itemize}
+  \item This routine is not declared for use in target regions, attempts to
+    use it will result in undefined behavior
+\end{itemize}
 
 
 \subsection{\code{omp\_target\_associate\_ptr}}
