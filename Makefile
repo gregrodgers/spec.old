@@ -34,6 +34,7 @@ clean:
 DIFF_OPTS:=--ignore-latex-errors --main openmp.tex --latexdiff-flatten --math-markup=whole --append-safecmd=ld-safe.txt --append-textcmd=plc,code,glossaryterm --exclude-textcmd=section,subsection,subsubsection
 
 DIFF_FROM:=master
+DIFF_FROM:=spec/master
 DIFF_TO:=HEAD
 DIFF_TYPE:=UNDERLINE
 
