@@ -407,6 +407,103 @@ double omp\_get\_wtick(void)
     return 365. * 86400.;
 \}
 
+void * omp\_target\_alloc(size\_t size, int device\_num)
+\{
+    return malloc(size)
+\}
+
+void omp\_target\_free(void * device\_ptr, int device\_num)
+\{
+    free(device\_ptr);
+\}
+
+int omp\_target\_is\_present(void * ptr, size\_t offset,
+                             int device\_num)
+\{
+    return 0;
+\}
+
+int omp\_target\_memcpy(void *dst, void *src, size\_t length,
+                      size\_t dst\_offset, size\_t src\_offset,
+                      int dst\_device, int src\_device)
+\{
+    //only the default device is valid in a stub
+    if(dst\_device != 0 || src\_device != 0
+            || ! dst || ! src )
+        return EINVAL;
+    memcpy((char *)dst + dst\_offset,
+           (char *)src + src\_offset,
+           length);
+    return 0;
+\}
+int omp\_target\_memcpy\_rect(
+    void *dst, void *src,
+    size\_t element\_size,
+    int num\_dims,
+    const size\_t *volume,
+    const size\_t *dst\_offsets,
+    const size\_t *src\_offsets,
+    const size\_t *dst\_dimensions,
+    const size\_t *src\_dimensions,
+    int dst\_device\_num, int src\_device\_num)
+\{
+    int ret=0;
+    // Both null, return number of dimensions supported,
+    // this stub supports an arbitrary number
+    if(dst == NULL && src == NULL) return INT\_MAX;
+
+    if(!volume || !dst\_offsets || !src\_offsets
+            || !dst\_dimensions || !src\_dimensions
+            || num\_dims < 1 ) \{
+        ret = EINVAL;
+        goto done;
+    \}
+    if(num\_dims == 1) \{
+        ret = omp\_target\_memcpy(dst, src,
+                                element\_size * volume[0],
+                                dst\_offsets[0] * element\_size,
+                                src\_offsets[0] * element\_size,
+                                dst\_device\_num, src\_device\_num);
+        if(ret) goto done;
+    \} else \{
+        size\_t dst\_slice\_size = element\_size;
+        size\_t src\_slice\_size = element\_size;
+        for(int i=1; i < num\_dims; i++) \{
+            dst\_slice\_size *= dst\_dimensions[i];
+            src\_slice\_size *= src\_dimensions[i];
+        \}
+        size\_t dst\_off = dst\_offsets[0] * dst\_slice\_size;
+        size\_t src\_off = src\_offsets[0] * src\_slice\_size;
+        for(size\_t i=0; i < volume[0]; i++) \{
+            ret = omp\_target\_memcpy\_rect((char *)dst + dst\_off + dst\_slice\_size*i,
+                                         (char *)src + src\_off + src\_slice\_size*i,
+                                         element\_size,
+                                         num\_dims - 1,
+                                         volume + 1,
+                                         dst\_offsets + 1,
+                                         src\_offsets + 1,
+                                         dst\_dimensions + 1,
+                                         src\_dimensions + 1,
+                                         dst\_device\_num,
+                                         src\_device\_num);
+            if(ret) goto done;
+        \}
+    \}
+done:
+    return ret;
+\}
+
+int omp_target_associate_ptr(void * host_ptr, void * device_ptr,
+                             size_t size, size_t device_offset,
+                             int device_num)
+\{
+    return 0;
+\}
+int omp_target_disassociate_ptr(void * ptr, int device_num)
+\{
+    return 0;
+\}
+
 \end{codepar}} % end \small block
 
 

@@ -2319,9 +2319,9 @@ successive clock ticks of the timer used by \code{omp\_get\_wtime}.
 
 
 \pagebreak
-\section{Target Device Memory Routines}
-\index{target device memory routines}
-\index{target memory}
+\section{Device Memory Routines}
+\index{device memory routines}
+\index{target memory routines}
 \label{sec:device_memory}
 This section describes routines that support allocation and management of
 pointers in the data environments of target devices.
@@ -2362,7 +2362,7 @@ successful, on failure NULL is returned.
 \index{omp\_target\_free@{\code{omp\_target\_free}}}
 \label{subsec:omp_target_free}
 \summary
-The \verb#omp_target_free# routine frees the memory referred to by the
+The \verb#omp_target_free# routine frees the device memory referred to by the
 specified host handle.
 
 \format
@@ -2382,7 +2382,7 @@ environment associated with \verb#device_ptr#.  If \verb#device_ptr# is
 
 \begin{itemize}
   \item \verb#omp_target_free# may only be called with a pointer
-    returned from \verb#omp_target_alloc# or \code{NULL}.
+    returned from \verb#omp_target_alloc#, \specref{subsec:omp_target_alloc},  or \code{NULL}.
   \item All asynchronous operations involving \code{device\_ptr} must be
     synchronized before a call to \code{omp\_target\_free}, no synchronization
     is implied.
@@ -2391,7 +2391,7 @@ environment associated with \verb#device_ptr#.  If \verb#device_ptr# is
 
 \subsection{\code{omp\_target\_is\_present}}
 \index{omp\_target\_is\_present@{\code{omp\_target\_is\_present}}}
-\label{subsec:omp_target_register_ptr}
+\label{subsec:omp_target_is_present}
 \summary
 
 The \code{omp\_target\_is\_present} routine validates whether a host pointer
@@ -2420,7 +2420,7 @@ clause; otherwise, it returns \plc{false}.
 
 \subsection{\code{omp\_target\_memcpy}}
 \index{omp\_target\_memcpy@{\code{omp\_target\_memcpy}}}
-\label{subsec:omp_target_register_ptr}
+\label{subsec:omp_target_memcpy}
 \summary
 
 The \code{omp\_target\_memcpy} routine performs a copy between any combination
@@ -2429,7 +2429,7 @@ of host and device pointers.
 \format
 \ccppspecificstart
 \begin{boxedcode}
-int omp_target_memcpy(void * dst, void * src, size_t size,
+int omp_target_memcpy(void * dst, void * src, size_t length,
                         size_t dst_offset, size_t src_offset,
                         int dst_device, int src_device);
 \end{boxedcode}
@@ -2437,7 +2437,7 @@ int omp_target_memcpy(void * dst, void * src, size_t size,
 
 \effect
 
-\code{size} bytes of memory at offset \verb#src_offset# from  \code{src} are
+\code{length} bytes of memory at offset \verb#src_offset# from  \code{src} are
 copied to \code{dst} starting at offset \verb#dst_offset#.  Each device must
 be compatible with the device pointer specified on the same side of the copy.
 Return values are zero on success and non-zero on failure.  This routine
@@ -2452,7 +2452,7 @@ contains a task scheduling point.
 
 \subsection{\code{omp\_target\_memcpy\_rect}}
 \index{omp\_target\_memcpy\_rect@{\code{omp\_target\_memcpy\_rect}}}
-\label{subsec:omp_target_register_ptr}
+\label{subsec:omp_target_memcpy_rect}
 \summary
 
 The \verb#omp_target_memcpy_rect# routine copies a rectangular subvolume from
@@ -2498,15 +2498,20 @@ follows:
 \ccppspecificstart
 \begin{boxedcode}
 int src[9][9][9], dst[3][3][3];
+size_t volume[]    = \{3, 3, 3\},
+       dst_offset[]= \{0, 0, 0\},
+       src_offset[]= \{3, 3, 3\},
+       dst_dims[]  = \{3, 3, 3\},
+       src_dims[]  = \{9, 9, 9\};
 omp_target_memcpy_rect(
           dst, src,
           sizeof(int), //elem_size
           3, //num_dims
-          \{3, 3, 3\}, //volume
-          \{0, 0, 0\}, //dst_offset
-          \{3, 3, 3\}, //src_offset
-          \{3, 3, 3\}, //dst_dims
-          \{9, 9, 9\}, //src_dims
+          volume,
+          dst_offset,
+          src_offset,
+          dst_dims,
+          src_dims,
           0, 0);
 \end{boxedcode}
 \ccppspecificend
@@ -2514,7 +2519,7 @@ omp_target_memcpy_rect(
 
 The \verb#omp_target_memcpy_rect# routine contains a tasks scheduling point.
 Return values are zero on success and non-zero on failure.  Calling the function
-with two NULL pointers causes it to return the number of dimensions supported
+with both \verb#dst# and \verb#src# as NULL pointers causes it to return the number of dimensions supported
 by the implementation for the specified device numbers.
 
 \restrictions
@@ -2531,12 +2536,13 @@ by the implementation for the specified device numbers.
 
 \subsection{\code{omp\_target\_associate\_ptr}}
 \index{omp\_target\_associate\_ptr@{\code{omp\_target\_associate\_ptr}}}
-\label{subsec:omp_target_register_ptr}
+\label{subsec:omp_target_associate_ptr}
 \summary
 
 The \code{omp\_target\_associate\_ptr} routine ties a device pointer, as may
-be returned from \code{omp\_target\_alloc} or implementation defined runtime
-routines, to a host pointer in the manner of a map clause.
+be returned from \code{omp\_target\_alloc}, \specref{subsec:omp_target_alloc}
+or implementation defined runtime routines, to a host pointer in the manner of
+a map clause.
 
 \format
 \ccppspecificstart
@@ -2563,14 +2569,15 @@ base address for the device side of the map.
     device numbered \code{device\_num}.
     \item Only one device buffer can be associated with a given host pointer
       value and device number pair.  Attempting to associate a second buffer
-      will return failure.  The \code{omp\_target\_is\_present} function can be used
+      will return failure.  The \code{omp\_target\_is\_present},
+      \specref{omp_target_is_present}, function can be used
       to test whether a buffer has been associated or mapped on a given
       device.
 \end{itemize}
 
 \subsection{\code{omp\_target\_disassociate\_ptr}}
 \index{omp\_target\_disassociate\_ptr@{\code{omp\_target\_disassociate\_ptr}}}
-\label{subsec:omp_target_register_ptr}
+\label{subsec:omp_target_disassociate_ptr}
 \summary
 
 The \code{omp\_target\_disassociate\_ptr} removes the associated pointer for a
