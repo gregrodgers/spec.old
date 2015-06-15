@@ -2319,6 +2319,8 @@ successive clock ticks of the timer used by \code{omp\_get\_wtime}.
 
 
 \pagebreak
+\ccppspecificstart
+\vspace{-3\baselineskip}
 \section{Device Memory Routines}
 \index{device memory routines}
 \index{target memory routines}
@@ -2337,26 +2339,21 @@ of the specified target device and returns an opaque host pointer to that
 memory.
 
 \format
-\ccppspecificstart
 \begin{boxedcode}
 void* omp_target_alloc(size_t size, int device_num);
 \end{boxedcode}
-\ccppspecificend
 
 \effect
 
 The \code{omp\_target\_alloc} routine returns a device pointer pointing to the
-base of a buffer of size \code{size} on device \code{device\_num} if
-successful, on failure NULL is returned.
+base of a buffer of size \code{size} on device \code{device\_num} if the 
+allocation is successful. Otherwise the routine returns NULL.
 
-\restrictions
+The pointer returned by \verb#omp_target_alloc# is guaranteed to be compatible
+ with the \code{device\_ptr} clause, \specref{subsec:target Construct}.
 
-\begin{itemize}
-  \item Pointer arithmetic is not supported on the host value of the void* returned by
-    \code{omp\_target\_alloc()}.
-  \item The pointer returned by \verb#omp_target_alloc# is guaranteed to be
-    compatible with the \code{device\_ptr} clause, \specref{subsec:target Construct}.
-\end{itemize}
+The effect of pointer arithmetic on the host value of the void 
+pointer returned by \code{omp\_target\_alloc} is unspecified.
 
 \subsection{\code{omp\_target\_free}}
 \index{omp\_target\_free@{\code{omp\_target\_free}}}
@@ -2365,12 +2362,18 @@ successful, on failure NULL is returned.
 The \verb#omp_target_free# routine frees the device memory referred to by the
 specified host handle.
 
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \format
-\ccppspecificstart
 \begin{boxedcode}
 void omp_target_free(void * device_ptr, int device_num);
 \end{boxedcode}
-\ccppspecificend
+
+\constraints
+
+A program that calls\verb#omp_target_free# with a non-\code{NULL} pointer 
+that does not have a value returned from \verb#omp_target_alloc# is
+non-conforming.
 
 \effect
 
@@ -2378,15 +2381,8 @@ The \verb#omp_target_free# routine frees the memory in the device data
 environment associated with \verb#device_ptr#.  If \verb#device_ptr# is
 \verb#NULL#, the operation is ignored.
 
-\restrictions
-
-\begin{itemize}
-  \item \verb#omp_target_free# may only be called with a pointer
-    returned from \verb#omp_target_alloc#, \specref{subsec:omp_target_alloc},  or \code{NULL}.
-  \item All asynchronous operations involving \code{device\_ptr} must be
-    synchronized before a call to \code{omp\_target\_free}, no synchronization
-    is implied.
-\end{itemize}
+Synchronization must be inserted to ensure that all accesses to 
+\verb#device_ptr# are completed before the call to \code{omp\_target\_free}.
 
 
 \subsection{\code{omp\_target\_is\_present}}
@@ -2398,32 +2394,30 @@ The \code{omp\_target\_is\_present} routine validates whether a host pointer
 has an associated device buffer on a given device.
 
 \format
-\ccppspecificstart
 \begin{boxedcode}
 int omp_target_is_present(void * ptr, size_t offset,
                           int device_num);
 \end{boxedcode}
-\ccppspecificend
 
+\constraints
+
+The value of \verb#ptr# must be a valid host pointer or NULL.
+The device specified by \verb#device_num# must be valid.
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \effect
 
-The effect of this routine is to return \plc{true} if the specified pointer
+This routine returns \plc{true} if the specified pointer
 and offset would be found present on device \code{device\_num} by a map
 clause; otherwise, it returns \plc{false}.
-
-\restrictions
-
-\begin{itemize}
-  \item The value of \verb#ptr# must be a valid host pointer or NULL
-  \item The device specified by \verb#device_num# must be valid
-\end{itemize}
 
 \subsection{\code{omp\_target\_memcpy}}
 \index{omp\_target\_memcpy@{\code{omp\_target\_memcpy}}}
 \label{subsec:omp_target_memcpy}
 \summary
 
-The \code{omp\_target\_memcpy} routine performs a copy between any combination
+The \code{omp\_target\_memcpy} routine copies between any combination
 of host and device pointers.
 
 \format
@@ -2443,24 +2437,22 @@ be compatible with the device pointer specified on the same side of the copy.
 Return values are zero on success and non-zero on failure.  This routine
 contains a task scheduling point.
 
-\restrictions
+Programs that call this routine in target regions are non-conforming.
 
-\begin{itemize}
-  \item This routine is not declared for use in target regions, attempts to
-    use it will result in undefined behavior
-\end{itemize}
-
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\vspace{-1\baselineskip}
 \subsection{\code{omp\_target\_memcpy\_rect}}
 \index{omp\_target\_memcpy\_rect@{\code{omp\_target\_memcpy\_rect}}}
 \label{subsec:omp_target_memcpy_rect}
 \summary
 
 The \verb#omp_target_memcpy_rect# routine copies a rectangular subvolume from
-bone multi-dimensional array to another, potentially across devices.
+a multi-dimensional array to another multi-dimensional array. The copies can
+use any combination of host and device pointers.
 
 \format
 \begin{samepage}
-\ccppspecificstart
 \begin{boxedcode}
 int omp_target_memcpy_rect(
                void * dst, void * src,
@@ -2473,65 +2465,62 @@ int omp_target_memcpy_rect(
                const size_t* src_dimensions,
                int dst_device_num, int src_device_num);
 \end{boxedcode}
-\ccppspecificend
 \end{samepage}
 
+\constraints
+The length of the offset and dimension arrays must be at least the
+value of \verb#num_dims#
+
+The value of \verb#num_dims# must be between 1 and the implementation-defined
+limit, which must be at least three.
+
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \effect
 
-Copies a multi-dimensional rectangular subvolume of \verb#src# to \verb#dst#.
-The volume is specified in terms of the size of the element, number of
-dimensions, and constant arrays of length \verb#num_dims#.  The maximum number
-of dimensions supported is at least three, support for higher dimensionality
-is implementation defined.  The volume array
-specifies the length, in number of elements, to copy in each dimension from
-\verb#src# to \verb#dst#.  The \verb#*_offsets# parameters specify the offset
-from the origin of each of \code{src} and \code{dst} in elements.  Finally the
-\verb#*_dimensions# arguments specify the complete dimensions of each of
-\code{src} and \code{dst}.  As an example, this routine could be used to copy
-a $3\times3\times3$ cube from the center of a $9\times9\times9$ cube in
-\code{src} to a \code{dst} matrix of size $3\times3\times3$ on the host as
-follows:
+This routine copies a multi-dimensional rectangular subvolume of \verb#src# 
+to \verb#dst#. The volume is specified in terms of the size of the element, 
+number of dimensions, and constant arrays of length \verb#num_dims#.  The 
+maximum number of dimensions supported is at least three, support for higher 
+dimensionality is implementation defined. The volume array specifies the 
+length, in number of elements, to copy in each dimension from \verb#src# 
+to \verb#dst#. The \verb#dst_offsets# (\verb#src_offsets#) parameter specifies
+number of elements from the origin of \code{dst} (\code{src}) in elements.  
+The \verb#dst_dimensions# (\verb#dst_dimensions#) parameter specifies the 
+length of each dimension of \code{dst} (\code{src})
 
-%NOTE: pagebreak here because samepage failed to prevent a bad split
-\pagebreak
-\begin{samepage}
-\ccppspecificstart
-\begin{boxedcode}
-int src[9][9][9], dst[3][3][3];
-size_t volume[]    = \{3, 3, 3\},
-       dst_offset[]= \{0, 0, 0\},
-       src_offset[]= \{3, 3, 3\},
-       dst_dims[]  = \{3, 3, 3\},
-       src_dims[]  = \{9, 9, 9\};
-omp_target_memcpy_rect(
-          dst, src,
-          sizeof(int), //elem_size
-          3, //num_dims
-          volume,
-          dst_offset,
-          src_offset,
-          dst_dims,
-          src_dims,
-          0, 0);
-\end{boxedcode}
-\ccppspecificend
-\end{samepage}
+The routine returns zero if successful. If both \verb#dst# and \verb#src# 
+are \code{NULL} pointers, the routine returns the number of dimensions 
+supported by the implementation for the specified device numbers.
+Otherwsie, it returns a non-zero value. The routine contains a tasks 
+scheduling point.
 
-The \verb#omp_target_memcpy_rect# routine contains a tasks scheduling point.
-Return values are zero on success and non-zero on failure.  Calling the function
-with both \verb#dst# and \verb#src# as NULL pointers causes it to return the number of dimensions supported
-by the implementation for the specified device numbers.
+Programs that call this routine in target regions are non-conforming.
 
-\restrictions
-
-\begin{itemize}
-  \item This routine is not declared for use in target regions, attempts to
-    use it will result in undefined behavior
-  \item The offset and dimension arrays must be of a length equal to or
-    greater than \verb#num_dims#
-  \item \verb#num_dims# must fall between 1 and the implementation-defined
-    limit, values between one and three are always available
-\end{itemize}
+%% As an example, this routine could be used to copy a $3\times3\times3$ cube 
+%% from the center of a $9\times9\times9$ cube in \code{src} to a \code{dst} 
+%% matrix of size $3\times3\times3$ on the host as follows:
+%%\begin{samepage}
+%%\begin{boxedcode}
+%%int src[9][9][9], dst[3][3][3];
+%%size_t volume[]    = \{3, 3, 3\},
+%%       dst_offset[]= \{0, 0, 0\},
+%%       src_offset[]= \{3, 3, 3\},
+%%       dst_dims[]  = \{3, 3, 3\},
+%%       src_dims[]  = \{9, 9, 9\};
+%%omp_target_memcpy_rect(
+%%          dst, src,
+%%          sizeof(int), //elem_size
+%%          3, //num_dims
+%%          volume,
+%%          dst_offset,
+%%          src_offset,
+%%          dst_dims,
+%%          src_dims,
+%%          0, 0);
+%%\end{boxedcode}
+%%\end{samepage}
 
 
 \subsection{\code{omp\_target\_associate\_ptr}}
@@ -2539,20 +2528,24 @@ by the implementation for the specified device numbers.
 \label{subsec:omp_target_associate_ptr}
 \summary
 
-The \code{omp\_target\_associate\_ptr} routine ties a device pointer, as may
-be returned from \code{omp\_target\_alloc}, \specref{subsec:omp_target_alloc}
-or implementation defined runtime routines, to a host pointer in the manner of
-a map clause.
+The \code{omp\_target\_associate\_ptr} routine maps a device pointer, which may
+be returned from \code{omp\_target\_alloc} or implementation-defined runtime 
+routines, to a host pointer.
 
 \format
-\ccppspecificstart
 \begin{boxedcode}
 int omp_target_associate_ptr(void * host_ptr, void * device_ptr,
                              size_t size, size_t device_offset,
                              int device_num);
 \end{boxedcode}
-\ccppspecificend
 
+\constraints
+
+The value of \verb#device_ptr# value must be a valid pointer to device 
+memory for the device denoted by the value of\code{device\_num}.
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \effect
 
 The \code{omp\_target\_associate\_ptr} routine associates a device pointer
@@ -2560,20 +2553,16 @@ with a host pointer such that when the host pointer appears in a subsequent
 \code{map} clause, the associated device pointer is used as the target for
 data motion associated with that host pointer.  The \verb#device_offset#
 parameter specifies what offset into \verb#device_ptr# will be used as the
-base address for the device side of the map.
+base address for the device side of the mapping.
 
-\restrictions
+The routine returns zero if successful. Otherwise it returns a non-zero value.
 
-\begin{itemize}
-  \item The \verb#device_ptr# value must be a valid pointer to device memory for the
-    device numbered \code{device\_num}.
-    \item Only one device buffer can be associated with a given host pointer
-      value and device number pair.  Attempting to associate a second buffer
-      will return failure.  The \code{omp\_target\_is\_present},
-      \specref{omp_target_is_present}, function can be used
-      to test whether a buffer has been associated or mapped on a given
-      device.
-\end{itemize}
+Only one device buffer can be associated with a given host pointer
+value and device number pair. Attempting to associate a second buffer
+will return non-zero.  The \code{omp\_target\_is\_present} function 
+can be used to test whether a given host pointer has been associated 
+on a given device.
+
 
 \subsection{\code{omp\_target\_disassociate\_ptr}}
 \index{omp\_target\_disassociate\_ptr@{\code{omp\_target\_disassociate\_ptr}}}
@@ -2584,20 +2573,20 @@ The \code{omp\_target\_disassociate\_ptr} removes the associated pointer for a
 given device from a host pointer.
 
 \format
-\ccppspecificstart
 \begin{boxedcode}
 int omp_target_disassociate_ptr(void * ptr, int device_num);
 \end{boxedcode}
-\ccppspecificend
 
 \effect
 
 The \code{omp\_target\_disassociate\_ptr} removes the associated device data
 on device \code{device\_num} from the presence table for host pointer
-\code{ptr}.   Calling this function on a pointer that is not NULL and does not
-have associated data on the given device results in unspecified behavior.
+\code{ptr}. Programs that call this routine on a pointer that is not 
+\code{NULL} and does not have associated data on the given device are
+non-conforming.
 
 
+\ccppspecificend
 
 % This is the end of chapter 3 - Runtime Library
 
