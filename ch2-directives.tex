@@ -3447,16 +3447,22 @@ or \code{omp\_get\_num\_devices} routine called within a target region is unspec
 \item The effect of an access to a \code{threadprivate} variable in a target region is 
 unspecified.
 
-\item A variable referenced in a \code{target} construct that is not declared in the construct 
-is implicitly treated as if it had appeared in a \code{map} clause with a \plc{map-type} of 
+\item A variable referenced in a \code{target} construct that is not declared in the construct
+is implicitly treated as if it had appeared in a \code{map} clause with a \plc{map-type} of
 \code{tofrom}.
 
-\item A variable referenced in a \code{target} region but not the target construct that is not 
-declared in the target region must appear in a \code{declare}~\code{target} directive. 
+\item A variable referenced in a \code{target} region but not the \code{target} construct that is not 
+declared in the \code{target} region must appear in a \code{declare}~\code{target} directive. 
 
 \item The restrictions for the \code{task} construct apply.
+
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
 
+\ccppspecificstart
+\item If an array section is derived from a variable for which the 
+type is pointer, reference to array or reference to pointer then the
+behavior is unspecified  if that variable is modified in the region.
+\ccppspecificend
 
 \cppspecificstart
 \item A throw executed inside a \code{target} region must cause execution to resume within the 
@@ -5396,8 +5402,8 @@ single thread at a time.
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp critical \plc{[}(\plc{name})\plc{]} \plc{[}hint(\plc{hint-expression})\plc{] new-line}
-   \plc{structured-block}
+\#pragma omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ] new-line}
+    \plc{structured-block}
 \end{boxedcode}
 
 where \plc{hint-expression} is an integer constant expression which
@@ -5408,9 +5414,9 @@ in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-!\$omp critical \plc{[}(\plc{name})\plc{]} \plc{[}hint(\plc{hint-expression})\plc{] new-line}
-   \plc{structured-block}
-!\$omp end critical \plc{[}(\plc{name})\plc{]}
+!\$omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ] new-line}
+    \plc{structured-block}
+!\$omp end critical \plc{[}(\plc{name})\plc{]}  
 \end{boxedcode}
 
 where \plc{hint-expression} is a constant expression that evaluates to
@@ -6396,6 +6402,13 @@ generated sibling tasks that reference at least one of the list items in an \cod
 The \code{out} and \code{inout} \plc{dependence-types}. The generated task will be a dependent task of 
 all previously generated sibling tasks that reference at least one of the list items in an 
 \code{in}, \code{out}, or \code{inout} \plc{dependence-type} list.
+
+\fortranspecificstart
+If a list item has the \code{ALLOCATABLE} attribute and its allocation
+status is "not currently allocated", the behavior is unspecified. If a
+list item has the \code{POINTER} attribute and its association status
+is disassociated or undefined, the behavior is unspecified.
+\fortranspecificend
 
 The list items that appear in the \code{depend} clause may include array sections.
 
@@ -8039,6 +8052,11 @@ which the \code{reduction} clause was specified, the original list item is updat
 combining its original value with the final value of each of the private copies, using the 
 combiner of the specified \plc{reduction-identifier}.
 
+\fortranspecificstart
+If the original list item has the \code{POINTER} attribute, the
+private copy of the list item is associated with a private target.
+\fortranspecificend
+
 The \plc{reduction-identifier} specified in the \code{reduction} clause must match a previously 
 declared \plc{reduction-identifier} of the same name and type for each of the list items. This 
 match is done by means of a name lookup in the base language. 
@@ -8134,17 +8152,20 @@ the team.
 \item A pointer with the \code{INTENT(IN)} attribute may not appear in the \code{reduction} 
 clause. 
 
-\item A pointer must be associated upon entry and exit to the region. 
+\item An original list item with the \code{POINTER} attribute or any
+  pointer component of an original list item that is referenced in
+  \plc{combiner} must be associated at entry to the construct that
+  contains the \code{reduction} clause. Additionally, the list item or
+  the pointer component of the list item must not be deallocated,
+  allocated, or pointer assigned within the region.
 
-\item A pointer must not have its association status changed within the region. 
-
-\item An original list item with the \code{POINTER} attribute must be associated at entry to the 
-construct containing the \code{reduction} clause. Additionally, the list item must not be 
-deallocated, allocated, or pointer assigned within the region.
-
-\item An original list item with the \code{ALLOCATABLE} attribute must be in the allocated state 
-at entry to the construct containing the \code{reduction} clause. Additionally, the list 
-item must not be deallocated and/or allocated within the region. 
+\item An original list item with the \code{ALLOCATABLE} attribute or
+  any allocatable component of an original list item that is
+  referenced in \plc{combiner} must be in the allocated state at entry
+  to the construct that contains the \code{reduction}
+  clause. Additionally, the list item or the allocatable component of
+  the list item must be neither deallocated nor allocated within the
+  region.
 
 \item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction} directive, the 
 \code{declare}~\code{reduction} directive must be in the same subprogram, or accessible by 
@@ -8183,8 +8204,18 @@ have a linear relationship with respect to the iteration space of a loop.
 \cspecificstart
 The syntax of the \code{linear} clause is as follows:
 \begin{boxedcode}
-linear(\plc{list[ }:\plc{ linear-step]})
+linear(\plc{linear-list[ }:\plc{ linear-step]})
 \end{boxedcode}
+where \plc{linear-list} is one of the following
+\begin{indentedcodelist}
+\plc{list}
+\plc{modifier}(\plc{list})
+\end{indentedcodelist}
+where  \plc{modifier} is one of the following:
+\begin{indentedcodelist}
+val
+uval
+\end{indentedcodelist}
 \cspecificend
 
 \cppspecificstart
@@ -8195,12 +8226,13 @@ linear(\plc{linear-list[ }:\plc{ linear-step]})
 where \plc{linear-list} is one of the following
 \begin{indentedcodelist}
 \plc{list}
-\plc{modifer}(\plc{list})
+\plc{modifier}(\plc{list})
 \end{indentedcodelist}
 where  \plc{modifier} is one of the following:
 \begin{indentedcodelist}
 ref
 val
+uval
 \end{indentedcodelist}
 \cppspecificend
 
@@ -8212,12 +8244,13 @@ linear(\plc{linear-list[ }:\plc{ linear-step]})
 where \plc{linear-list} is one of the following
 \begin{indentedcodelist}
 \plc{list}
-\plc{modifer}(\plc{list})
+\plc{modifier}(\plc{list})
 \end{indentedcodelist}
 where  \plc{modifier} is one of the following:
 \begin{indentedcodelist}
 ref
 val
+uval
 \end{indentedcodelist}
 \fortranspecificend
 
@@ -8229,13 +8262,15 @@ clause.
 A list item that appears in a \code{linear} clause is subject to the \code{private} clause semantics 
 described in 
 \specref{subsubsec:private clause} 
-except as noted. In addition, if the \code{val} modifier is used, the value of the 
+except as noted. In addition, if the \code{val} or \code{uval} modifier is used, the value of the 
 new list item on each iteration of the associated loop(s) corresponds to the value of the 
 original list item before entering the construct plus the logical number of the iteration 
 times \plc{linear-step}. If the \code{ref} modifier is used, the value of the new list item on each iteration of the associated loop(s) corresponds to the value of the variable resulting from applying  the \plc{linear-step} times the logical number of the iteration as a subscript to the original list item. If no modifier is specified it is assumed to be \code{val}.
 If \plc{linear-step} is not specified it is assumed to be 1. The value 
 corresponding to the sequentially last iteration of the associated loops is assigned to the 
 original list item.
+
+The \code{uval} modifier declares the address of the original list item to have an invariant value for all iterations of the associated loop(s).
 
 \restrictions
 \begin{itemize}
@@ -8535,13 +8570,14 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \end{enumerate}
 \end{enumerate}
 
+%EJS2
 \ccppspecificstart
 If a new list item is created then a new list item of the same type, with automatic storage
 duration, is allocated for the construct. The size and alignment of the new list
 item are determined by the type of the variable. This allocation occurs if the region
 references the list item in any statement.
 
-If a new list item is created for an array section and the type of the variable appearing in that array section is pointer, reference to array, or reference to pointer then the variable is implicitly treated as if it had appeared in a map clause with a \plc{map-type} of \code{alloc}. The corresponding variable is assigned the address of the storage location of the corresponding array section in the device data environment. If the variable appears in a \code{to} or \code{from} clause in a \code{target}~\code{update} region during the lifetime of the new list item but not as part of the specification of an array section, the behavior is unspecified. 
+If a new list item is created for an array section and the type of the variable appearing in that array section is pointer, reference to array, or reference to pointer then if the variable appears in a \code{to} or \code{from} clause in a \code{target}~\code{update} region during the lifetime of the new list item but not as part of the specification of an array section, the behavior is unspecified. 
 \ccppspecificend
 
 \fortranspecificstart
@@ -8583,6 +8619,7 @@ an array section derived from that variable must not appear as list items of \co
 clauses of the same construct. 
 
 \item A variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains an array section derived from that variable.
+
 \item An array section derived from a variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains that variable. 
 \end{itemize}
 \ccppspecificend
