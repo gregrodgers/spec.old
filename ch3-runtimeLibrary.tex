@@ -2379,7 +2379,7 @@ void* omp_target_alloc(size_t size, int device_num);
 
 The \code{omp\_target\_alloc} routine returns the device address of a storage
 location of \plc{size} bytes. The storage location is dynamically allocated in
-the device data environment of the device specified by \plc{device_num}, which
+the device data environment of the device specified by \plc{device\_num}, which
 must be greater than or equal to zero and less than the result of
 \verb#omp_get_num_devices()#.
 
@@ -2647,15 +2647,19 @@ with a host pointer such that when the host pointer appears in a subsequent
 data motion associated with that host pointer.  The \verb#device_offset#
 parameter specifies what offset into \verb#device_ptr# will be used as the
 base address for the device side of the mapping.  The reference count of the
-resulting mapping will be incremented by one.
+resulting mapping will be infinite.  After being successfully associated, the
+buffer pointed to by the device pointer is invalidated and accessing data
+directly through the device pointer results in undefined behavior.  The
+pointer can be retrieved for other uses by disassociating it.
 
 The routine returns zero if successful. Otherwise it returns a non-zero value.
 
-Only one device buffer can be associated with a given host pointer
-value and device number pair. Attempting to associate a second buffer
-will return non-zero.  The \code{omp\_target\_is\_present} function 
-can be used to test whether a given host pointer has been associated 
-on a given device.
+Only one device buffer can be associated with a given host pointer value and
+device number pair. Attempting to associate a second buffer will return
+non-zero, associating the same pair of pointers on the same device with the
+same offset will be treated as a no-op and return zero.  The
+\code{omp\_target\_is\_present} function can be used to test whether a given
+host pointer has a corresponding variable in the device data environment.
 
 \crossreferences
 \begin{itemize}
@@ -2690,6 +2694,9 @@ on device \code{device\_num} from the presence table for host pointer
 \code{NULL} and does not have associated data on the given device are
 non-conforming.  The reference count of the mapping is reduced to zero,
 regardless of its current value.
+
+After a call to \verb#omp_target_disassociate_ptr#, the contents of the device
+buffer are invalidated.
 
 \crossreferences
 \begin{itemize}
