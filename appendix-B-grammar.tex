@@ -125,11 +125,11 @@ directives.
 
 \I declaration-definition:
 
-\C\I\I {\rmfamily\bfseries\upshape\small /* Any C or C++ declaration or definition statement */}
+\C\I {\rmfamily\bfseries\upshape\small /* Any C or C++ declaration or definition statement */}
 
 \G\I function-statement:
 
-\C\I\I {\rmfamily\bfseries\upshape\small /* C or C++ function definition or declaration */}
+\C\I {\rmfamily\bfseries\upshape\small /* C or C++ function definition or declaration */}
 
 \G declaration-definition-seq:
 
@@ -156,8 +156,6 @@ openmp-construct:
 \I target-data-construct
 
 \I target-construct
-
-\I target-update-construct
 
 \I teams-construct
 
@@ -215,6 +213,16 @@ openmp-directive:
 
 \I flush-directive
 
+\I target-update-directive
+
+\I target-enter-data-directive
+
+\I target-exit-data-directive
+
+\I cancel-directive
+
+\I cancellation-point-directive
+
 structured-block:
 
 \I statement
@@ -231,6 +239,8 @@ parallel-clause:
 
 \I unique-parallel-clause
 
+\I if-clause
+
 \I data-default-clause 
 
 \I data-privatization-clause 
@@ -241,15 +251,21 @@ parallel-clause:
 
 \I data-reduction-clause 
 
-\I collapse-clause
-
 unique-parallel-clause:
-
-\I if-clause
 
 \C\I num\_threads ( \G expression \C )
 
 \C\I copyin ( \G variable-list \C )
+
+\I proc\_bind ( \G proc-bind-policy \C )
+
+\G proc-bind-policy:
+
+\C\I master
+
+\I close
+
+\I spread
 
 \G for-construct:
 
@@ -371,21 +387,31 @@ simd-directive:
 
 \C\I \# pragma omp simd \G simd-clause$_{optseq}$ new-line
 
-simd-clause:
+\G simd-clause:
 
-\I collapse-clause
+\I unique-simd-clause
 
-\G\I aligned-clause
+\I data-privatization-clause
 
-\I linear-clause
-
-\I uniform-clause
+\I data-privatization-out-clause
 
 \I data-reduction-clause
 
-\I inbranch-clause
+\I collapse-clause
 
-inbranch-clause:
+\G unique-simd-clause:
+
+\I safelen-clause
+
+\I linear-clause
+
+\I aligned-clause
+
+\G safelen-clause:
+
+\C\I safelen ( \G expression \C )
+
+\G inbranch-clause:
 
 \C\I inbranch
 
@@ -445,8 +471,6 @@ declare-simd-directive:
 
 \I uniform-clause
 
-\I data-reduction-clause
-
 \I inbranch-clause
 
 for-simd-construct:
@@ -461,7 +485,7 @@ for-simd-clause:
 
 \I for-clause
 
-\I simd-clause
+\I unique-simd-clause
 
 parallel-for-simd-construct:
 
@@ -475,7 +499,7 @@ parallel-for-simd-clause:
 
 \I parallel-for-clause
 
-\I simd-clause
+\I unique-simd-clause
 
 target-data-construct:
 
@@ -485,11 +509,15 @@ target-data-directive:
 
 \C\I \# pragma omp target data \G target-data-clause$_{optseq}$ new-line
 
-target-data-clause:
+unique-target-data-clause:
 
 \I device-clause
 
 \I map-clause
+
+target-data-clause:
+
+\I unique-target-data-clause
 
 \I if-clause
 
@@ -519,6 +547,52 @@ device-clause:
 
 \C\I defaultmap ( tofrom:scalar ) 
 
+\G target-enter-data-directive:
+
+\C\I \# pragma omp target enter data \G target-enter-data-clause$_{optseq}$ new-line
+
+\G target-enter-data-clause:
+
+\G\I if-clause
+
+\I device-clause
+
+\C\I map ( \G enter-map-type variable-array-section-list \C )
+
+\G\I depend-clause
+
+\C\I nowait
+
+\G enter-map-type:
+
+\C\I to:
+
+\I alloc:
+
+\G target-exit-data-directive:
+
+\C\I \# pragma omp target exit data \G target-exit-data-clause$_{optseq}$ new-line
+
+\G target-exit-data-clause:
+
+\G\I if-clause
+
+\I device-clause
+
+\C\I map ( \G exit-map-type variable-array-section-list \C )
+
+\G\I depend-clause
+
+\C\I nowait
+
+\G exit-map-type:
+
+\C\I from:
+
+\I delete:
+
+\I release:
+
 \G target-construct:
 
 \I target-directive structured-block
@@ -527,23 +601,17 @@ target-directive:
 
 \C\I \# pragma omp target \G target-clause$_{optseq}$ new-line
 
-target-clause:
+unique-target-clause:
 
-\I device-clause
-
-\I private-clause
-
-\I firstprivate-clause
-
-\I map-clause
+\I unique-target-data-clause
 
 \I default-map-clause
 
+target-clause:
+
+\I unique-target-clause
+
 \I if-clause
-
-target-update-construct:
-
-\I target-update-directive structured-block
 
 target-update-directive:
 
@@ -583,13 +651,17 @@ teams-directive:
 
 \C\I \# pragma omp teams \G teams-clause$_{optseq}$ new-line
 
-teams-clause:
+unique-teams-clause:
 
 \C\I num\_teams ( \G expression \C )
 
 \C\I thread\_limit ( \G expression \C )
 
-\G\I data-default-clause
+teams-clause:
+
+\G\I unique-teams-clause
+
+\I data-default-clause
 
 \I data-privatization-clause
 
@@ -607,17 +679,21 @@ distribute-directive:
 
 \C\I \# pragma omp distribute \G distribute-clause$_{optseq}$ new-line
 
-distribute-clause:
+unique-distribute-clause:
+
+\C\I dist\_schedule ( static )
+
+\C\I dist\_schedule ( static , \G expression \C )
+
+\G distribute-clause:
+
+\I unique-distribute-clause
 
 \I data-privatization-clause
 
 \I data-privatization-in-clause
 
 \I collapse-clause
-
-\I dist\_schedule ( static )
-
-\I dist\_schedule ( static , \G expression \C )
 
 \G distribute-simd-construct:
 
@@ -629,9 +705,19 @@ distribute-simd-directive:
 
 distribute-simd-clause:
 
-\I distribute-clause
+\I unique-distribute-clause
 
-\I simd-clause
+\I unique-simd-clause
+
+\I data-privatization-clause
+
+\I data-privatization-in-clause
+
+\I data-privatization-out-clause
+
+\I data-reduction-clause
+
+\I collapse-clause
 
 distribute-parallel-for-construct:
 
@@ -641,159 +727,193 @@ distribute-parallel-for-directive:
 
 \C\I \#pragma omp distribute parallel for \G distribute-parallel-for-clause$_{optseq}$ new-line
 
-\I distribute-parallel-for-clause:
+distribute-parallel-for-clause:
 
-\I\I distribute-clause
+\I unique-distribute-clause
 
-\I\I parallel-for-clause
+\I parallel-for-clause
 
-\I distribute-parallel-for-simd-construct:
+distribute-parallel-for-simd-construct:
 
-\I\I distribute-parallel-for-simd-directive iteration-statement
+\I distribute-parallel-for-simd-directive iteration-statement
 
-\I distribute-parallel-for-simd-directive:
+distribute-parallel-for-simd-directive:
 
-\C\I\I \#pragma omp distribute parallel for \G distribute-parallel-for-simd-clause$_{optseq}$ new-line
+\C\I \#pragma omp distribute parallel for simd \G distribute-parallel-for-simd-clause$_{optseq}$ new-line
 
-\I distribute-parallel-for-simd-clause:
+distribute-parallel-for-simd-clause:
 
-\I\I distribute-clause
+\I unique-distribute-clause
 
-\I\I parallel-for-simd-clause
+\I parallel-for-simd-clause
 
-\I target-teams-construct:
+target-teams-construct:
 
-\I\I target-teams-directive iteration-statement
+\I target-teams-directive structured-block
 
-\I target-teams-directive:
+target-teams-directive:
 
-\C\I\I \#pragma omp target teams \G target-teams-clause$_{optseq}$ new-line
+\C\I \#pragma omp target teams \G target-teams-clause$_{optseq}$ new-line
 
-\I target-teams-clause:
+target-teams-clause:
 
-\I\I target-clause
+\I unique-target-clause
 
-\I\I teams-clause
+\I if-clause
 
-\I teams-distribute-construct:
+\I teams-clause
 
-\I\I teams-distribute-directive iteration-statement
+teams-distribute-construct:
 
-\I teams-distribute-directive:
+\I teams-distribute-directive iteration-statement
 
-\C\I\I \#pragma omp teams distribute \G teams-distribute-clause$_{optseq}$ new-line
+teams-distribute-directive:
 
-\I teams-distribute-clause:
+\C\I \#pragma omp teams distribute \G teams-distribute-clause$_{optseq}$ new-line
 
-\I\I teams-clause
+teams-distribute-clause:
 
-\I\I distribute-clause
+\I unique-teams-clause
 
-\I teams-distribute-simd-construct:
+\I unique-distribute-clause
 
-\I\I teams-distribute-simd-directive iteration-statement
+\I data-default-clause
 
-\I teams-distribute-simd-directive:
+\I data-privatization-clause
+
+\I data-privatization-in-clause
+
+\I data-sharing-clause
+
+\I data-reduction-clause
+
+\I collapse-clause
+
+teams-distribute-simd-construct:
+
+\I teams-distribute-simd-directive iteration-statement
+
+teams-distribute-simd-directive:
 
 \C\I \#pragma omp teams distribute simd \G teams-distribute-simd-clause$_{optseq}$ new-line
 
-\I teams-distribute-simd-clause:
+teams-distribute-simd-clause:
 
-\I\I teams-clause
+\I unique-teams-clause
 
-\I\I distribute-simd-clause
+\I unique-distribute-clause
 
-\I target-teams-distribute-construct:
+\I unique-simd-clause
 
-\I\I target-teams-distribute-directive iteration-statement
+\I data-default-clause
 
-\I target-teams-distribute-directive:
+\I data-privatization-clause
 
-\C\I\I \#pragma omp target teams distribute \G target-teams-distribute-clause$_{optseq}$ new-line
+\I data-privatization-in-clause
 
-\I target-teams-distribute-clause:
+\I data-privatization-out-clause
 
-\I\I target-clause
+\I data-sharing-clause
 
-\I\I teams-distribute-clause
+\I data-reduction-claus
 
-\I target-teams-distribute-simd-construct:
+\I collapse-clause
 
-\I\I target-teams-distribute-simd-directive iteration-statement
+target-teams-distribute-construct:
 
-\I target-teams-distribute-simd-directive:
+\I target-teams-distribute-directive iteration-statement
 
-\C \I\I \#pragma omp target teams distribute simd \G target-teams-distribute-simd-clause$_{optseq}$ new-line
+target-teams-distribute-directive:
 
-\I target-teams-distribute-simd-clause:
+\C\I \#pragma omp target teams distribute \G target-teams-distribute-clause$_{optseq}$ new-line
 
-\I\I target-clause
+target-teams-distribute-clause:
 
-\I\I teams-distribute-simd-clause
+\I unique-target-clause
 
-\I teams-distribute-parallel-for-construct:
+\I if-clause
 
-\I\I teams-distribute-parallel-for-directive iteration-statement
+\I teams-distribute-clause
 
-\I teams-distribute-parallel-for-directive:
+target-teams-distribute-simd-construct:
 
-\C\I\I \#pragma omp teams distribute parallel for \G teams-distribute-parallel-for-clause$_{optseq}$ new-line
+\I target-teams-distribute-simd-directive iteration-statement
 
-\I teams-distribute-parallel-for-clause:
+target-teams-distribute-simd-directive:
 
-\I\I teams-clause
+\C \I \#pragma omp target teams distribute simd \G target-teams-distribute-simd-clause$_{optseq}$ new-line
 
-\I\I distribute-parallel-for-clause
+target-teams-distribute-simd-clause:
 
-\I target-teams-distribute-parallel-for-construct:
+\I unique-target-clause
 
-\I\I target-teams-distribute-parallel-for-directive iteration-statement
+\I if-clause
 
-\I target-teams-distribute-parallel-for-directive:
+\I teams-distribute-simd-clause
 
-\C\I\I \#pragma omp teams distribute parallel for \G target-teams-distribute-parallel-for-clause$_{optseq}$ new-line
+teams-distribute-parallel-for-construct:
 
-\I target-teams-distribute-parallel-for-clause:
+\I teams-distribute-parallel-for-directive iteration-statement
 
-\I\I target-clause
+teams-distribute-parallel-for-directive:
 
-\I\I teams-distribute-parallel-for-clause
+\C\I \#pragma omp teams distribute parallel for \G teams-distribute-parallel-for-clause$_{optseq}$ new-line
 
-\I teams-distribute-parallel-for-simd-construct:
+teams-distribute-parallel-for-clause:
 
-\I\I teams-distribute-parallel-for-simd-directive iteration-statement
+\I unique-teams-clause
 
-\I teams-distribute-parallel-for-simd-directive:
+\I distribute-parallel-for-clause
+
+target-teams-distribute-parallel-for-construct:
+
+\I target-teams-distribute-parallel-for-directive iteration-statement
+
+target-teams-distribute-parallel-for-directive:
+
+\C\I \#pragma omp target teams distribute parallel for \G target-teams-distribute-parallel-for-clause$_{optseq}$ new-line
+
+target-teams-distribute-parallel-for-clause:
+
+\I unique-target-clause
+
+\I teams-distribute-parallel-for-clause
+
+teams-distribute-parallel-for-simd-construct:
+
+\I teams-distribute-parallel-for-simd-directive iteration-statement
+
+teams-distribute-parallel-for-simd-directive:
 
 \C\I \#pragma omp teams distribute parallel for simd \G teams-distribute-parallel-for-simd-clause$_{optseq}$ new-line
 
-\I teams-distribute-parallel-for-simd-clause:
+teams-distribute-parallel-for-simd-clause:
 
-\I\I teams-clause
+\I unique-teams-clause
 
-\I\I distribute-parallel-for-simd-clause
+\I distribute-parallel-for-simd-clause
 
-\I target-teams-distribute-parallel-for-simd-construct:
+target-teams-distribute-parallel-for-simd-construct:
 
-\I\I target-teams-distribute-parallel-for-simd-directive iteration-statement
+\I target-teams-distribute-parallel-for-simd-directive iteration-statement
 
-\I target-teams-distribute-parallel-for-simd-directive:
+target-teams-distribute-parallel-for-simd-directive:
 
-\C\I\I \#pragma omp target teams distribute parallel for simd \G target-teams-distribute-parallel-for-simd-clause$_{optseq}$ new-line
+\C\I \#pragma omp target teams distribute parallel for simd \G target-teams-distribute-parallel-for-simd-clause$_{optseq}$ new-line
 
-\I target-teams-distribute-parallel-for-simd-clause:
+target-teams-distribute-parallel-for-simd-clause:
 
-\I\I target-clause
+\I unique-target-clause
 
-\I\I teams-distribute-parallel-for-simd-clause
+\I teams-distribute-parallel-for-simd-clause
 
-\I task-construct:
+task-construct:
 
-\I\I task-directive structured-block
+\I task-directive structured-block
 
-\I task-directive:
+task-directive:
 
-\C\I\I \# pragma omp task \G task-clause$_{optseq}$ new-line
+\C\I \# pragma omp task \G task-clause$_{optseq}$ new-line
 
 task-clause:
 
@@ -819,9 +939,9 @@ unique-task-clause:
 
 \I priority-clause
 
-\C\I depend ( \G dependence-type \C :\G variable-array-section-list \C )
+\I depend-clause
 
-\G final-clause:
+final-clause:
 
 \C\I final ( \G scalar-expression \C )
 
@@ -832,6 +952,10 @@ unique-task-clause:
 \G mergeable-clause:
 
 \C\I mergeable
+
+\G depend-clause:
+
+\C\I depend ( \G dependence-type \C :\G variable-array-section-list \C )
 
 \G dependence-type:
 
@@ -899,7 +1023,7 @@ taskloop-simd-clause:
 
 \I taskloop-clause
 
-\I simd-clause
+\I unique-simd-clause
 
 \G parallel-for-construct:
 
@@ -913,7 +1037,11 @@ parallel-for-clause:
 
 \I unique-parallel-clause
 
+\I if-clause
+
 \I unique-for-clause
+
+\I collapse-clause
 
 \I data-default-clause 
 
@@ -938,6 +1066,8 @@ parallel-sections-construct:
 parallel-sections-clause:
 
 \I unique-parallel-clause
+
+\I if-clause
 
 \I data-default-clause 
 
@@ -971,7 +1101,7 @@ region-phrase:
 
 \C\I ( \G identifier \C )
 
-hint-clause: 
+\G hint-clause: 
 
 \C\I hint ( \G expression \C )
 
@@ -999,13 +1129,29 @@ atomic-construct:
 
 \I atomic-directive expression-statement
 
-\I atomic-directive structured block
+\I atomic-capture-directive structured-block
+
+atomic-capture-directive:
+
+\C\I \# pragma omp atomic \G atomic-capture-clause-seq new-line
+
+atomic-capture-clause-seq:
+
+\C\I capture
+
+\G\I seq-cst-clause \C capture
+
+\G\I seq-cst-clause, \C capture
+
+\I capture \G seq-cst-clause 
+
+\C\I capture\G, seq-cst-clause 
 
 atomic-directive:
 
-\C\I \# pragma omp atomic \G atomic-construct-clause-seq$_{opt}$ new-line
+\C\I \# pragma omp atomic \G atomic-clause-seq$_{opt}$ new-line
 
-atomic-construct-clause-seq:
+atomic-clause-seq:
 
 \I atomic-clause
 
@@ -1073,7 +1219,7 @@ declaration:
 
 \G\I threadprivate-directive
 
-\I declare-simd-directive
+\I declare-simd-construct
 
 \I declare-target-construct
 
