@@ -71,13 +71,18 @@ typedef void *omp\_lock\_t;
 
 typedef void *omp\_nest\_lock\_t;
 
+/*
+ * define the lock hints
+ */
 typedef enum omp\_lock\_hint\_t 
 \{
  omp\_lock\_hint\_none = 0,
  omp\_lock\_hint\_uncontended = 1,
  omp\_lock\_hint\_contended = 2,
  omp\_lock\_hint\_nonspeculative = 4,
- omp\_lock\_hint\_speculative = 8,
+ omp\_lock\_hint\_speculative = 8
+/* , Add vendor specific constants for lock hints here,
+   starting from the most-significant bit. */
 \} omp\_lock\_hint\_t;
 
 /*
@@ -134,6 +139,12 @@ extern int omp\_get\_team\_size(int level);
 extern int omp\_get\_active\_level(void);
 extern int omp\_in\_final(void);
 extern omp\_proc\_bind\_t omp\_get\_proc\_bind(void);
+extern int omp\_get\_num\_places(void);
+extern int omp\_get\_place\_num\_procs(int place\_num);
+extern void omp\_get\_place\_proc\_ids(int place\_num);
+extern int omp\_get\_place\_num(void);
+extern int omp\_get\_partition\_num\_places(void);
+extern void omp\_get\_partition\_place\_nums(int *place\_nums);
 extern void omp\_set\_default\_device(int device\_num);
 extern int omp\_get\_default\_device(void);
 extern int omp\_get\_num\_devices(void);
@@ -286,7 +297,17 @@ extern double omp\_get\_wtick(void);
 
      integer ( omp\_proc\_bind\_kind ) omp\_get\_proc\_bind
      external omp\_get\_proc\_bind
-
+     integer omp\_get\_num\_places
+     external omp\_get\_num\_places
+     integer omp\_get\_place\_num\_procs
+     external omp\_get\_place\_num\_procs
+     external omp\_get\_place\_proc\_ids
+     integer omp\_get\_place\_num
+     external omp\_get\_place\_num
+     integer omp\_get\_partition\_num\_places
+     external omp\_get\_partition\_num\_places
+     external omp\_get\_partition\_place\_nums
+     
      external omp\_init\_lock
      external omp\_init\_lock\_with\_hint
      external omp\_destroy\_lock
@@ -367,8 +388,8 @@ extern double omp\_get\_wtick(void);
 
          interface
 
-          subroutine omp\_set\_num\_threads (number\_of\_threads\_expr)
-           integer, intent(in) :: number\_of\_threads\_expr
+          subroutine omp\_set\_num\_threads (num\_threads)
+           integer, intent(in) :: num\_threads
           end subroutine omp\_set\_num\_threads
 
           function omp\_get\_num\_threads ()
@@ -391,8 +412,8 @@ extern double omp\_get\_wtick(void);
            logical :: omp\_in\_parallel
           end function omp\_in\_parallel
 
-          subroutine omp\_set\_dynamic (enable\_expr)
-           logical, intent(in) ::enable\_expr
+          subroutine omp\_set\_dynamic (dynamic\_threads)
+           logical, intent(in) ::dynamic\_threads
           end subroutine omp\_set\_dynamic
 
           function omp\_get\_dynamic ()
@@ -403,8 +424,8 @@ extern double omp\_get\_wtick(void);
            integer :: omp\_get\_cancellation
           end function omp\_get\_cancellation
 
-          subroutine omp\_set\_nested (enable\_expr)
-           logical, intent(in) :: enable\_expr
+          subroutine omp\_set\_nested (nested)
+           logical, intent(in) :: nested
           end subroutine omp\_set\_nested
 
           function omp\_get\_nested ()
@@ -427,8 +448,8 @@ extern double omp\_get\_wtick(void);
            integer :: omp\_get\_thread\_limit
           end function omp\_get\_thread\_limit
 
-          subroutine omp\_set\_max\_active\_levels(var)
-           integer, intent(in) :: var
+          subroutine omp\_set\_max\_active\_levels(max\_levels)
+           integer, intent(in) :: max\_levels
           end subroutine omp\_set\_max\_active\_levels
 
           function omp\_get\_max\_active\_levels()
@@ -458,10 +479,36 @@ extern double omp\_get\_wtick(void);
           end function omp\_in\_final
 
           function omp\_get\_proc\_bind( )
-           include 'omp\_lib\_kinds.h'
+           use omp\_lib\_kinds
            integer (kind=omp\_proc\_bind\_kind) omp\_get\_proc\_bind
            omp\_get\_proc\_bind = omp\_proc\_bind\_false
           end function omp\_get\_proc\_bind
+
+          function omp\_get\_num\_places()
+          integer :: omp\_get\_num\_places
+          end function omp\_get\_num\_places
+
+          function omp\_get\_place\_num\_procs(place\_num)
+          integer, intent(in) :: place\_num
+          integer :: omp\_get\_place\_num\_procs
+          end function omp\_get\_place\_num\_procs
+
+          subroutine omp\_get\_place\_proc\_ids(place_num, ids)
+          integer, intent(in) :: place\_num
+          integer, intent(inout) :: ids(*)
+          end subroutine omp\_get\_place\_proc\_ids
+
+          function omp\_get\_place\_num()
+          integer :: omp\_get\_place\_num
+          end function omp\_get\_place\_num
+
+          function omp\_get\_partition\_num\_places()
+          integer :: omp\_get\_partition\_num\_places
+          end function omp\_get\_partition\_num\_places
+
+          subroutine omp\_get\_partition\_place\_nums(place\_nums)
+          integer, intent(inout) :: place\_nums(*)
+          end subroutine omp\_get\_partition\_place\_nums
 
           subroutine omp\_set\_default\_device (device\_num)
            integer :: device\_num
@@ -491,68 +538,68 @@ extern double omp\_get\_wtick(void);
            integer :: omp\_get\_max\_task\_priority
           end function omp\_get\_max\_task\_priority
 
-          subroutine omp\_init\_lock (var)
+          subroutine omp\_init\_lock (svar)
            use omp\_lib\_kinds
-           integer (kind=omp\_lock\_kind), intent(out) :: var
+           integer (kind=omp\_lock\_kind), intent(out) :: svar
           end subroutine omp\_init\_lock
 
-          subroutine omp\_init\_lock\_with\_hint (var, hint)
+          subroutine omp\_init\_lock\_with\_hint (svar, hint)
            use omp\_lib\_kinds
-           integer (kind=omp\_lock\_kind), intent(out) :: var
+           integer (kind=omp\_lock\_kind), intent(out) :: svar
            integer (kind=omp\_lock\_hint\_kind), intent(in) :: hint
           end subroutine omp\_init\_lock\_with\_hint
 
-          subroutine omp\_destroy\_lock (var)
+          subroutine omp\_destroy\_lock (svar)
            use omp\_lib\_kinds
-           integer (kind=omp\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_lock\_kind), intent(inout) :: svar
           end subroutine omp\_destroy\_lock
 
-          subroutine omp\_set\_lock (var)
+          subroutine omp\_set\_lock (svar)
            use omp\_lib\_kinds
-           integer (kind=omp\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_lock\_kind), intent(inout) :: svar
           end subroutine omp\_set\_lock
 
-          subroutine omp\_unset\_lock (var)
+          subroutine omp\_unset\_lock (svar)
            use omp\_lib\_kinds
-           integer (kind=omp\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_lock\_kind), intent(inout) :: svar
           end subroutine omp\_unset\_lock
 
-          function omp\_test\_lock (var)
+          function omp\_test\_lock (svar)
            use omp\_lib\_kinds
            logical :: omp\_test\_lock
-           integer (kind=omp\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_lock\_kind), intent(inout) :: svar
           end function omp\_test\_lock
 
-          subroutine omp\_init\_nest\_lock (var)
+          subroutine omp\_init\_nest\_lock (nvar)
            use omp\_lib\_kinds
-           integer (kind=omp\_nest\_lock\_kind), intent(out) :: var
+           integer (kind=omp\_nest\_lock\_kind), intent(out) :: nvar
           end subroutine omp\_init\_nest\_lock
 
-          subroutine omp\_init\_nest\_lock\_with\_hint (var, hint)
+          subroutine omp\_init\_nest\_lock\_with\_hint (nvar, hint)
            use omp\_lib\_kinds
-           integer (kind=omp\_nest\_lock\_kind), intent(out) :: var
+           integer (kind=omp\_nest\_lock\_kind), intent(out) :: nvar
            integer (kind=omp\_lock\_hint\_kind), intent(in) :: hint
           end subroutine omp\_init\_nest\_lock\_with\_hint
 
-          subroutine omp\_destroy\_nest\_lock (var)
+          subroutine omp\_destroy\_nest\_lock (nvar)
            use omp\_lib\_kinds
-           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: nvar
           end subroutine omp\_destroy\_nest\_lock
 
-          subroutine omp\_set\_nest\_lock (var)
+          subroutine omp\_set\_nest\_lock (nvar)
            use omp\_lib\_kinds
-           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: nvar
           end subroutine omp\_set\_nest\_lock
 
-          subroutine omp\_unset\_nest\_lock (var)
+          subroutine omp\_unset\_nest\_lock (nvar)
            use omp\_lib\_kinds
-           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: nvar
           end subroutine omp\_unset\_nest\_lock
 
-          function omp\_test\_nest\_lock (var)
+          function omp\_test\_nest\_lock (nvar)
            use omp\_lib\_kinds
            integer :: omp\_test\_nest\_lock
-           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: var
+           integer (kind=omp\_nest\_lock\_kind), intent(inout) :: nvar
           end function omp\_test\_nest\_lock
 
           function omp\_get\_wtick ()
@@ -585,14 +632,14 @@ as follows:
 \begin{boxedcode}
 interface omp\_set\_num\_threads
 
-    subroutine omp\_set\_num\_threads_4(number\_of\_threads\_expr)
+    subroutine omp\_set\_num\_threads_4(num\_threads)
       use omp\_lib\_kinds
-      integer(4), intent(in) :: number\_of\_threads\_expr
+      integer(4), intent(in) :: num\_threads
     end subroutine omp\_set\_num\_threads_4
 
-    subroutine omp\_set\_num\_threads_8(number\_of\_threads\_expr)
+    subroutine omp\_set\_num\_threads_8(num\_threads)
       use omp\_lib\_kinds
-      integer(8), intent(in) :: number\_of\_threads\_expr
+      integer(8), intent(in) :: num\_threads
     end subroutine omp\_set\_num\_threads_8
 
 end interface omp\_set\_num\_threads
