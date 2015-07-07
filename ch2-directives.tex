@@ -5682,14 +5682,14 @@ The syntax of the \code{taskgroup} construct is as follows:
 \fortranspecificend
 
 \binding
-A \code{taskgroup} region binds to the current task region. The binding thread set of the 
-\code{taskgroup} region is the current team.
+A \code{taskgroup} region binds to the current task region. A \code{taskgroup} region binds to 
+the innermost enclosing \code{parallel} region. 
 
 \descr
-When a thread encounters a \code{taskgroup} construct, it starts executing the region. There 
-is an implicit task scheduling point at the end of the \code{taskgroup} region. The current 
-task is suspended at the task scheduling point until all child tasks that it generated in the 
-\code{taskgroup} region and all of their descendent tasks complete execution.
+When a thread encounters a \code{taskgroup} construct, it starts executing the region. All child tasks generated in the \code{taskgroup} region and all their descendants that bind to the same \code{parallel} region as the \code{taskgroup} region are part of the \plc{taskgroup set} associated with the \code{taskgroup} region.
+
+There is an implicit task scheduling point at the end of the \code{taskgroup} region. The current 
+task is suspended at the task scheduling point until all tasks in the \plc{taskgroup set} complete execution.
 
 \crossreferences
 \begin{itemize}
@@ -6568,32 +6568,38 @@ if (\plc{scalar-logical-expression})
 \fortranspecificend
 
 \binding
-The binding thread set of the \code{cancel} region is the current team. The \code{cancel} region 
-binds to the innermost enclosing construct of the type corresponding to the \plc{type-clause} 
+The binding thread set of the \code{cancel} region is the current team.
+The binding region of the \code{cancel} region 
+is the innermost enclosing region of the type corresponding to the \plc{construct-type-clause} 
 specified in the directive (that is, the innermost \code{parallel}, \code{sections}, loop, or 
-\code{taskgroup} construct).
+\code{taskgroup} region).
 
 \descr
-The \code{cancel} construct activates cancellation of the binding construct only if \plc{cancel-var} 
-is \code{true}, in which case the construct causes the encountering task to continue execution 
-at the end of the canceled construct. If \plc{cancel-var} is \code{false}, the \code{cancel} construct is 
+The \code{cancel} construct activates cancellation of the binding region only if \plc{cancel-var} 
+is \plc{true}, in which case the \code{cancel} construct causes the encountering task to continue execution 
+at the end of the binding region if \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or \code{sections}. 
+If \plc{cancel-var} is \plc{true} and \plc{construct-type-clause} is \code{taskgroup} the encountering task continues execution at the end of the current task region.
+If \plc{cancel-var} is \plc{false}, the \code{cancel} construct is 
 ignored.
 
-Threads check for active cancellation only at cancellation points. Cancellation points are 
+Threads check for active cancellation only at cancellation points that are 
 implied at the following locations:
 
 \begin{itemize}
-\setlength\itemindent{2em}
-\item implicit barriers;
-\item \code{barrier} regions;
 \item \code{cancel} regions; 
 \item \code{cancellation}~\code{point} regions;
+\item \code{barrier} regions;
+\item implicit barriers regions.
 \end{itemize}
 
-When a thread reaches one of the above cancellation points and if \plc{cancel-var} is \plc{true}, 
-the thread immediately checks for active cancellation (that is, if cancellation has been 
-activated by a \code{cancel} construct). If cancellation is active, the encountering thread 
-continues execution at the end of the canceled construct.
+When a thread reaches one of the above cancellation points and if \plc{cancel-var} is \plc{true},  then:
+\begin{itemize}
+\item If the thread is at a \code{cancel} or \code{cancellation point} region and \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or \code{sections}, the thread continues execution at the end of the canceled region if cancellation has been activated for the innermost enclosing region of the type specified.
+
+\item If the thread is at a \code{cancel} or \code{cancellation point} region and \plc{construct-type-clause} is \code{taskgroup}, the encountering task checks for active cancellation of one of the taskgroup sets the encountering task belongs to and continues execution at the end of the current task region if cancellation has been activated.
+
+\item If the encountering task is at a barrier region, the encountering task checks for active cancellation of the innermost enclosing parallel region. If cancellation has been activated, then the encountering task continues execution at the end of the canceled region.
+\end{itemize}
 
 \notestart
 \noteheader – If one thread activates cancellation and another thread encounters a cancellation 
@@ -6602,8 +6608,8 @@ Whether the thread that encounters a cancellation point detects the activated ca
 depends on the underlying hardware and operating system.
 \noteend
 
-When cancellation of tasks is activated through the \code{cancel}~\code{taskgroup} construct, the 
-innermost enclosing \code{taskgroup} will be canceled. The task that encountered the 
+When cancellation of tasks is activated through the \code{cancel}~\code{taskgroup} construct, the tasks that belong to \plc{taskgroup set} of the  
+innermost enclosing \code{taskgroup} region will be canceled. The task that encountered the 
 \code{cancel}~\code{taskgroup} construct continues execution at the end of its \code{task} region, 
 which implies completion of that task. Any task that belongs to the innermost enclosing 
 \code{taskgroup} and has already begun execution must run to completion or until a 
@@ -6647,14 +6653,14 @@ unspecified.
 
 \item If \plc{construct-type-clause} is \code{taskgroup}, the \code{cancel}
 construct must be closely nested inside a \code{task} construct and the
-\code{cancel} construct must be nested inside a \code{taskgroup} region. If
+\code{cancel} region must be strictly closely nested inside a \code{taskgroup} region. If
 \plc{construct-type-clause} is \code{sections}, the \code{cancel} construct
 must be closely nested inside a \code{sections} or \code{section} construct.
 Otherwise, the \code{cancel} construct must be closely
 nested inside an OpenMP construct that matches the type specified in
 \plc{construct-type-clause} of the \code{cancel} construct.
 
-\item If \plc{construct-type-clause} is \code{taskgroup} and the \code{cancel} construct is not nested 
+\item If \plc{construct-type-clause} is \code{taskgroup} and the \code{cancel} region is not strictly closely nested 
 inside a \code{taskgroup} region, then the behavior is unspecified.
 
 \item A worksharing construct that is canceled must not have a \code{nowait} clause.
@@ -6733,7 +6739,11 @@ taskgroup
 \fortranspecificend
 
 \binding
-A \code{cancellation}~\code{point} region binds to the current task region.
+The binding thread set of the \code{cancellation point} construct is the current team.
+The binding task set of the \code{cancellation point} region is the current task region. 
+The binding region of the \code{cancellation point} region is the innermost enclosing region of the type corresponding to the \plc{construct-type-clause} 
+specified in the directive (that is, the innermost \code{parallel}, \code{sections}, loop, or 
+\code{taskgroup} region).
 
 \descr
 This directive introduces a user-defined cancellation point at which an implicit or 
@@ -6742,16 +6752,25 @@ specified in the clause has been requested. This construct does not implement a
 synchronization between threads or tasks.
 
 When an implicit or explicit task reaches a user-defined cancellation point and if 
-\plc{cancel-var} is \code{true} the task immediately checks whether cancellation of the region 
+\plc{cancel-var} is \plc{true}, then:
+\begin{itemize}
+\item If the \plc{construct-type-clause} of the encountered \code{cancellation point} construct is \code{parallel}, \code{for}, \code{do}, or \code{sections}, the thread continues execution at the end of the canceled region if cancellation has been activated for the innermost enclosing region of the type specified.
+
+\item If the \plc{construct-type-clause} of the encountered \code{cancellation point} construct is \code{taskgroup}, the encountering task checks for active cancellation of one of the taskgroup sets the encountering task belongs to and continues execution at the end of the current task region if cancellation has been activated.
+\end{itemize}
+
+
+ the task immediately checks whether cancellation of the region 
 specified in the clause has been activated. If so, the encountering task continues 
-execution at the end of the canceled construct. 
+execution at the end of the binding region if \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or \code{sections}. 
+If \plc{construct-type-clause} is \code{taskgroup} the encountering task continues execution at the end of the current task region.
 
 \restrictions
 \begin{itemize}
 \item A \code{cancellation}~\code{point} construct for which
 \plc{construct-type-clause} is \code{taskgroup} must be closely nested
 inside a \code{task} construct and the \code{cancellation}~\code{point}
-construct must be nested inside a \code{taskgroup} region. A
+region must be strictly closely nested inside a \code{taskgroup} region. A
 \code{cancellation}~\code{point} construct for which
 \plc{construct-type-clause} is \code{sections} must be closely nested
 inside a \code{sections} or \code{section} construct. Otherwise, a
