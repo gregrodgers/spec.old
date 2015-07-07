@@ -1925,6 +1925,45 @@ device; otherwise, it returns \plc{false}.
 
 
 
+\subsection{\code{omp\_get\_initial\_device}}
+\index{omp\_get\_initial\_device@{\code{omp\_get\_initial\_device}}}
+\label{subsec:omp_get_initial_device}
+\summary
+The \code{omp\_get\_initial\_device} routine returns a device num representing
+the initial device.
+
+\begin{samepage}
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_get\_initial\_device(void);
+\end{boxedcode}
+\ccppspecificend
+\end{samepage}
+
+\fortranspecificstart
+\begin{boxedcode}
+logical function omp\_get\_initial\_device()
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding task set for an \code{omp\_get\_initial\_device} region is the generating task.
+
+\effect
+The effect of this routine is to return the device num of the initial device.
+The value of the device num is implementation defined. If it falls between 0 and
+\verb#omp_get_num_devices()-1# then it is valid for use with all device
+constructs and routines, if it is outside that range, then it is only valid
+for use with the target routines and not the \verb#device()# clause.
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\end{itemize}
 
 
 
@@ -2545,6 +2584,402 @@ routine’s return value is not guaranteed to be consistent across any set of th
 The \code{omp\_get\_wtick} routine returns a value equal to the number of seconds between 
 successive clock ticks of the timer used by \code{omp\_get\_wtime}.
 
+
+
+
+
+
+
+\pagebreak
+\ccppspecificstart
+\vspace{-3\baselineskip}
+\section{Device Memory Routines}
+\index{device memory routines}
+\index{target memory routines}
+\label{sec:device_memory}
+This section describes routines that support allocation and management of
+pointers in the data environments of target devices.
+
+
+
+\subsection{\code{omp\_target\_alloc}}
+\index{omp\_target\_alloc@{\code{omp\_target\_alloc}}}
+\label{subsec:omp_target_alloc}
+\summary
+The \code{omp\_target\_alloc} routine allocates memory in a device data
+environment.
+
+\format
+\begin{boxedcode}
+void* omp_target_alloc(size_t size, int device_num);
+\end{boxedcode}
+
+\effect
+
+The \code{omp\_target\_alloc} routine returns the device address of a storage
+location of \plc{size} bytes. The storage location is dynamically allocated in
+the device data environment of the device specified by \plc{device\_num}, which
+must be greater than or equal to zero and less than the result of
+\verb#omp_get_num_devices()# or the result of a call to
+\verb#omp_get_initial_device()#. When called from within a \code{target} region 
+the effect of this routine is unspecified.
+
+The \verb#omp_target_alloc# routine returns NULL if it cannot dynamically
+allocate the memory in the device data environment. 
+
+The device address returned by \verb#omp_target_alloc# can be used in a 
+\code{device\_ptr} clause, \specref{subsec:target Construct}.
+
+Pointer arithmetic is not supported on the device address returned by
+\code{omp\_target\_alloc}.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_free}
+\item \verb#omp_get_initial_device# routine, see 
+\specref{subsec:omp_get_initial_device}
+\end{itemize}
+
+
+
+
+\subsection{\code{omp\_target\_free}}
+\index{omp\_target\_free@{\code{omp\_target\_free}}}
+\label{subsec:omp_target_free}
+\summary
+The \verb#omp_target_free# routine frees the device memory referred to by the
+specified host handle.
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\format
+\begin{boxedcode}
+void omp_target_free(void * device_ptr, int device_num);
+\end{boxedcode}
+
+\constraints
+
+A program that calls\verb#omp_target_free# with a non-\code{NULL} pointer 
+that does not have a value returned from \verb#omp_target_alloc# is
+non-conforming. When called from within a \code{target} region 
+the effect of this routine is unspecified. The \verb#device_num#
+must be greater than or equal to zero and less than the result of
+\verb#omp_get_num_devices()# or the result of a call to
+\verb#omp_get_initial_device()#.
+
+\effect
+
+The \verb#omp_target_free# routine frees the memory in the device data
+environment associated with \verb#device_ptr#.  If \verb#device_ptr# is
+\verb#NULL#, the operation is ignored.
+
+Synchronization must be inserted to ensure that all accesses to 
+\verb#device_ptr# are completed before the call to \code{omp\_target\_free}.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_alloc}
+\end{itemize}
+
+
+
+\subsection{\code{omp\_target\_is\_present}}
+\index{omp\_target\_is\_present@{\code{omp\_target\_is\_present}}}
+\label{subsec:omp_target_is_present}
+\summary
+
+The \code{omp\_target\_is\_present} routine validates whether a host pointer
+has an associated device buffer on a given device.
+
+\format
+\begin{boxedcode}
+int omp_target_is_present(void * ptr, size_t offset,
+                          int device_num);
+\end{boxedcode}
+
+\constraints
+
+The value of \verb#ptr# must be a valid host pointer or NULL.
+The device specified by \verb#device_num# must be valid.
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
+The \verb#device_num#
+must be greater than or equal to zero and less than the result of
+\verb#omp_get_num_devices()# or the result of a call to
+\verb#omp_get_initial_device()#.
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\effect
+
+This routine returns \plc{true} if the specified pointer
+and offset would be found present on device \code{device\_num} by a map
+clause; otherwise, it returns \plc{false}.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{map} clause, see 
+\specref{subsec:map Clause}.
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_alloc}
+\item \verb#omp_get_initial_device# routine, see 
+\specref{subsec:omp_get_initial_device}
+\end{itemize}
+
+
+\subsection{\code{omp\_target\_memcpy}}
+\index{omp\_target\_memcpy@{\code{omp\_target\_memcpy}}}
+\label{subsec:omp_target_memcpy}
+\summary
+
+The \code{omp\_target\_memcpy} routine copies between any combination
+of host and device pointers.
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+int omp_target_memcpy(void * dst, void * src, size_t length,
+                        size_t dst_offset, size_t src_offset,
+                        int dst_device, int src_device);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+\code{length} bytes of memory at offset \verb#src_offset# from  \code{src} are
+copied to \code{dst} starting at offset \verb#dst_offset#.  Each device must
+be compatible with the device pointer specified on the same side of the copy.
+Return values are zero on success and non-zero on failure.  The initial device
+and initial device data environment can be referenced with the device id
+returned by \verb#omp_get_initial_device#.  This routine contains a task
+scheduling point.
+
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_alloc}
+\item \verb#omp_get_initial_device# routine, see 
+\specref{subsec:omp_get_initial_device}
+\end{itemize}
+
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\vspace{-1\baselineskip}
+\subsection{\code{omp\_target\_memcpy\_rect}}
+\index{omp\_target\_memcpy\_rect@{\code{omp\_target\_memcpy\_rect}}}
+\label{subsec:omp_target_memcpy_rect}
+\summary
+
+The \verb#omp_target_memcpy_rect# routine copies a rectangular subvolume from
+a multi-dimensional array to another multi-dimensional array. The copies can
+use any combination of host and device pointers.
+
+\format
+\begin{samepage}
+\begin{boxedcode}
+int omp_target_memcpy_rect(
+               void * dst, void * src,
+               size_t element_size,
+               int num_dims,
+               const size_t* volume,
+               const size_t* dst_offsets,
+               const size_t* src_offsets,
+               const size_t* dst_dimensions,
+               const size_t* src_dimensions,
+               int dst_device_num, int src_device_num);
+\end{boxedcode}
+\end{samepage}
+
+\constraints
+The length of the offset and dimension arrays must be at least the
+value of \verb#num_dims#
+The \verb#dst_device_num# and \verb#src_device_num#
+must be greater than or equal to zero and less than the result of
+\verb#omp_get_num_devices()# or the result of a call to
+\verb#omp_get_initial_device()#.
+
+The value of \verb#num_dims# must be between 1 and the implementation-defined
+limit, which must be at least three.
+
+
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\effect
+
+This routine copies a multi-dimensional rectangular subvolume of \verb#src# 
+to \verb#dst#. The volume is specified in terms of the size of the element, 
+number of dimensions, and constant arrays of length \verb#num_dims#.  The 
+maximum number of dimensions supported is at least three, support for higher 
+dimensionality is implementation defined. The volume array specifies the 
+length, in number of elements, to copy in each dimension from \verb#src# 
+to \verb#dst#. The \verb#dst_offsets# (\verb#src_offsets#) parameter specifies
+number of elements from the origin of \code{dst} (\code{src}) in elements.  
+The \verb#dst_dimensions# (\verb#dst_dimensions#) parameter specifies the 
+length of each dimension of \code{dst} (\code{src})
+
+The routine returns zero if successful. If both \verb#dst# and \verb#src# are
+\code{NULL} pointers, the routine returns the number of dimensions supported
+by the implementation for the specified device numbers. The initial device and
+initial device data environment can be referenced with the device id returned
+by \verb#omp_get_initial_device#.  Otherwise, it returns a non-zero value. The
+routine contains a task scheduling point.
+
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
+
+%% As an example, this routine could be used to copy a $3\times3\times3$ cube 
+%% from the center of a $9\times9\times9$ cube in \code{src} to a \code{dst} 
+%% matrix of size $3\times3\times3$ on the host as follows:
+%%\begin{samepage}
+%%\begin{boxedcode}
+%%int src[9][9][9], dst[3][3][3];
+%%size_t volume[]    = \{3, 3, 3\},
+%%       dst_offset[]= \{0, 0, 0\},
+%%       src_offset[]= \{3, 3, 3\},
+%%       dst_dims[]  = \{3, 3, 3\},
+%%       src_dims[]  = \{9, 9, 9\};
+%%omp_target_memcpy_rect(
+%%          dst, src,
+%%          sizeof(int), //elem_size
+%%          3, //num_dims
+%%          volume,
+%%          dst_offset,
+%%          src_offset,
+%%          dst_dims,
+%%          src_dims,
+%%          0, 0);
+%%\end{boxedcode}
+%%\end{samepage}
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_alloc}
+\item \verb#omp_get_initial_device# routine, see 
+\specref{subsec:omp_get_initial_device}
+\end{itemize}
+
+\subsection{\code{omp\_target\_associate\_ptr}}
+\index{omp\_target\_associate\_ptr@{\code{omp\_target\_associate\_ptr}}}
+\label{subsec:omp_target_associate_ptr}
+\summary
+
+The \code{omp\_target\_associate\_ptr} routine maps a device pointer, which may
+be returned from \code{omp\_target\_alloc} or implementation-defined runtime 
+routines, to a host pointer.
+
+\format
+\begin{boxedcode}
+int omp_target_associate_ptr(void * host_ptr, void * device_ptr,
+                             size_t size, size_t device_offset,
+                             int device_num);
+\end{boxedcode}
+
+\constraints
+
+The value of \verb#device_ptr# value must be a valid pointer to device 
+memory for the device denoted by the value of\code{device\_num}.
+The \verb#device_num# argument
+must be greater than or equal to zero and less than the result of
+\verb#omp_get_num_devices()# or the result of a call to
+\verb#omp_get_initial_device()#.
+
+\effect
+
+The \code{omp\_target\_associate\_ptr} routine associates a device pointer
+with a host pointer such that when the host pointer appears in a subsequent
+\code{map} clause, the associated device pointer is used as the target for
+data motion associated with that host pointer.  The \verb#device_offset#
+parameter specifies what offset into \verb#device_ptr# will be used as the
+base address for the device side of the mapping.  The reference count of the
+resulting mapping will be infinite.  After being successfully associated, the
+buffer pointed to by the device pointer is invalidated and accessing data
+directly through the device pointer results in undefined behavior.  The
+pointer can be retrieved for other uses by disassociating it.
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
+
+The routine returns zero if successful. Otherwise it returns a non-zero value.
+
+Only one device buffer can be associated with a given host pointer value and
+device number pair. Attempting to associate a second buffer will return
+non-zero, associating the same pair of pointers on the same device with the
+same offset will be treated as a no-op and return zero.  The
+\code{omp\_target\_is\_present} function can be used to test whether a given
+host pointer has a corresponding variable in the device data environment.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{omp\_target\_disassociate\_ptr} routine, see 
+\specref{subsec:omp_target_associate_ptr}
+\item \code{map} clause, see 
+\specref{subsec:map Clause}.
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_alloc}
+\end{itemize}
+
+\subsection{\code{omp\_target\_disassociate\_ptr}}
+\index{omp\_target\_disassociate\_ptr@{\code{omp\_target\_disassociate\_ptr}}}
+\label{subsec:omp_target_disassociate_ptr}
+\summary
+
+The \code{omp\_target\_disassociate\_ptr} removes the associated pointer for a
+given device from a host pointer.
+
+\format
+\begin{boxedcode}
+int omp_target_disassociate_ptr(void * ptr, int device_num);
+\end{boxedcode}
+
+\constraints
+
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
+The \verb#device_num#
+must be greater than or equal to zero and less than the result of
+\verb#omp_get_num_devices()# or the result of a call to
+\verb#omp_get_initial_device()#.
+
+\effect
+
+The \code{omp\_target\_disassociate\_ptr} removes the associated device data
+on device \code{device\_num} from the presence table for host pointer
+\code{ptr}. Programs that call this routine on a pointer that is not 
+\code{NULL} and does not have associated data on the given device are
+non-conforming.  The reference count of the mapping is reduced to zero,
+regardless of its current value.
+
+
+After a call to \verb#omp_target_disassociate_ptr#, the contents of the device
+buffer are invalidated.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}
+\item \code{omp\_target\_associate\_ptr} routine, see 
+\specref{subsec:omp_target_associate_ptr}
+\end{itemize}
+
+\ccppspecificend
 
 % This is the end of chapter 3 - Runtime Library
 

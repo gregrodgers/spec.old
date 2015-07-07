@@ -3234,6 +3234,10 @@ current team. Task scheduling points are implied at the following locations:
 \item at the beginning and end of a \code{target}~\code{data} region
 
 \item in a \code{target}~\code{update} region 
+
+\item in either the \verb#omp_target_memcpy# or the
+  \verb#omp_target_memcpy_rect# routine
+
 \end{itemize}
 
 When a thread encounters a task scheduling point it may do one of the following, 
@@ -3309,6 +3313,7 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 \index{device constructs}
 \index{constructs!device constructs}
 \index{device constructs!device constructs}
+
 \subsection{\code{target}~\code{data} Construct}
 \index{target data@{\code{target}~\code{data}}}
 \index{constructs!target data@{\code{target}~\code{data}}}
@@ -3330,6 +3335,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+use\_device\_ptr(\plc{list})
 if(\plc{scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
@@ -3350,6 +3356,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+use\_device\_ptr(\plc{list})
 if(\plc{scalar-logical-expression})
 \end{indentedcodelist}
 
@@ -3363,17 +3370,28 @@ target region binds to the enclosing parallel or task region.
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
+List items that appear in a \verb#use_device_ptr# clause are converted into
+device pointers to the corresponding list item in the device data environment.
+
 \restrictions
 \begin{itemize}
-\item A program must not depend on any ordering of the evaluations of the clauses of the 
-\code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
+  \item A program must not depend on any ordering of the evaluations of the clauses of the
+    \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression 
-must evaluate to a non-negative integer value.
+  \item At most one \code{device} clause can appear on the directive. The \code{device} expression
+    must evaluate to a non-negative integer value strictly less than the value
+    of \verb#omp_get_num_devices()#.
 
-\item At most one \code{if} clause can appear on the directive. 
-\item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-\item At least one \code{map} clause must appear on the directive. 
+  \item At most one \code{if} clause can appear on the directive.
+  \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
+  \item At least one \code{map} clause must appear on the directive.
+
+
+  \item A list item in a \code{use\_device\_ptr} clause must have a
+    corresponding list item in the device data environment.
+
+  \item References in the construct to a list item that appears in a
+    \code{use\_device\_ptr} clause must be to the address of the list item.
 \end{itemize}
 
 \crossreferences
@@ -3416,6 +3434,7 @@ device(\plc{integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+is\_device\_ptr(\plc{list})
 defaultmap(tofrom:scalar)
 nowait
 depend(\plc{dependence-type}: \plc{list})
@@ -3443,6 +3462,7 @@ device(\plc{scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+is\_device\_ptr(\plc{list})
 defaultmap(tofrom:scalar)
 nowait
 depend (\plc{dependence-type} : \plc{list})
@@ -3458,7 +3478,9 @@ The binding task for a \code{target} construct is the encountering task. The tar
 binds to the enclosing parallel or task region.
 
 \descr
-The \code{target} construct provides a superset of the functionality and restrictions provided by the \code{target}~\code{data} directive.
+The \code{target} construct provides a superset of the functionality and
+restrictions provided by the \code{target}~\code{data} directive, excepting
+the \code{use\_device\_ptr} clause.
 
 The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
 
@@ -3471,6 +3493,12 @@ By default the generated task is undeferred. When a \code{nowait} clause is pres
 If a \code{depend} clause is present, then it is treated as if it had appeared on the implicit \code{task} construct that encloses the \code{target} construct.
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the \code{target} region is executed by the host device in the host data environment.
+
+The \verb#use_device_ptr# clause is used to indicate that a list item is a device
+pointer already in the device data environment and that it should be used
+directly.  Support for pointers created outside of OpenMP, specifically
+outside of \verb#omp_target_alloc()# and the \verb#use_device_ptr()# clause,
+is implementation defined.
 
 \ccppspecificstart
 If an array section is a list item in a \code{map} clause, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the data-sharing attribute for that variable in the construct is private.  Prior to the execution of the construct, the private variable is initialized with the address of the storage location of the corresponding array section in the device data environment.
@@ -3498,17 +3526,23 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 \item At most one \code{defaultmap} clause can appear on the directive.
 
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
+  \item The list-items that appear in a \verb#use_device_ptr# must be valid
+    device pointers for the target device.
 
 \ccppspecificstart
 \item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variables's corresponding private variable is modified in the region.
 \ccppspecificend
 
 \cppspecificstart
-\item A throw executed inside a \code{target} region must cause execution to resume within the 
+\item A list item that appears in a \code{is\_device\_ptr} clause must have a type
+  of pointer, array, reference to pointer or reference to array.
+\item A throw executed inside a \code{target} region must cause execution to resume within the
 same \code{target} region, and the same thread that threw the exception must catch it. 
 \cppspecificend
 
 \fortranspecificstart
+\item A list item that appears in a \code{is\_device\_ptr} clause must be a dummy
+  argument.
 \item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable with a \code{POINTER} or \code{ALLOCATABLE} attribute then the behavior is unspecified if the corresponding list item's variable is modified in the region.
 \fortranspecificend
 \end{itemize}
@@ -5281,7 +5315,6 @@ construct containing a teams distribute parallel loop SIMD construct.
 The syntax of the target teams distribute parallel loop SIMD construct is as follows:
 
 \ccppspecificstart
-
 \begin{boxedcode}[fontsize=\small]
 \#pragma omp target teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -8729,11 +8762,6 @@ initialization and assignment.
 \fortranspecificend
 \end{itemize}
 \end{samepage}
-
-
-
-
-
 
 
 
