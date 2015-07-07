@@ -25,12 +25,16 @@ openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-sched
 quick:
 	pdflatex -interaction=batchmode -file-line-error openmp.tex
 
+debug:
+	pdflatex -file-line-error openmp.tex
+
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 
 DIFF_OPTS:=--ignore-latex-errors --main openmp.tex --latexdiff-flatten --math-markup=whole --append-safecmd=ld-safe.txt --append-textcmd=plc,code,glossaryterm --exclude-textcmd=section,subsection,subsubsection
 
 DIFF_FROM:=master
+DIFF_FROM:=spec/master
 DIFF_TO:=HEAD
 DIFF_TYPE:=UNDERLINE
 

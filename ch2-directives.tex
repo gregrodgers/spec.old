@@ -1007,7 +1007,7 @@ first elements of the \plc{bind-var} ICV; otherwise, the \code{proc\_bind} claus
 
 
 
-\filbreak
+%% \filbreak
 \section{Array Sections}
 \label{sec:Array Sections}
 \index{array sections}
@@ -1418,7 +1418,7 @@ The determination of whether the affinity request can be fulfilled is implementa
 \noteend
 
 
-\pagebreak
+%% \pagebreak
 \section{Canonical Loop Form}
 \label{sec:Canonical Loop Form}
 \index{canonical loop form}
@@ -1995,6 +1995,8 @@ structured blocks that are to be distributed among and executed by the threads i
 Each structured block is executed once by one of the threads in the team in the context 
 of its implicit task.
 
+%% BRONIS: Temporary pagination solution
+\pagebreak
 \syntax
 \ccppspecificstart
 The syntax of the \code{sections} construct is as follows:
@@ -2990,7 +2992,7 @@ shared(\plc{list})
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{list})
-default(shared | none)
+default(shared \textnormal{|} none)
 grainsize(\plc{grain-size})
 num_tasks(\plc{num-tasks})
 collapse(\plc{n})
@@ -3017,7 +3019,7 @@ shared(\plc{list})
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{list})
-default(private | firstprivate | shared | none)
+default(private \textnormal{|} firstprivate \textnormal{|} shared \textnormal{|} none)
 grainsize(\plc{grain-size})
 num_tasks(\plc{num-tasks})
 collapse(\plc{n})
@@ -3387,7 +3389,6 @@ must evaluate to a non-negative integer value.
 
 
 
-
 \subsection{\code{target} Construct}
 \index{target@{\code{target}}}
 \index{constructs!target@{\code{target}}}
@@ -3408,9 +3409,12 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 device(\plc{integer-expression})
+private(\plc{list})
+firstprivate(\plc{list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+defaultmap(tofrom:scalar)
 nowait
-depend (\plc{dependence-type} : \plc{list})
+depend(\plc{dependence-type}: \plc{list})
 if(\plc{scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
@@ -3432,7 +3436,10 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 device(\plc{scalar-integer-expression})
+private(\plc{list})
+firstprivate(\plc{list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+defaultmap(tofrom:scalar)
 nowait
 depend (\plc{dependence-type} : \plc{list})
 if(\plc{scalar-logical-expression})
@@ -3461,26 +3468,26 @@ If a \code{depend} clause is present, then it is treated as if it had appeared o
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the \code{target} region is executed by the host device in the host data environment.
 
+\ccppspecificstart
+If an array section is a list item in a \code{map} clause, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the data-sharing attribute for that variable in the construct is private.  Prior to the execution of the construct, the private variable is initialized with the address of the storage location of the corresponding array section in the device data environment.
+\ccppspecificend
+
 \restrictions
 \begin{itemize}
-\item If a \code{target}, \code{target}~\code{update}, \code{target}~\code{data}, \code{target}~\code{enter}~\code{data}, or \code{target}~\code{exit}~\code{data} construct appears within a \code{target} region the behavior is unspecified.
+\item If a \code{target}, \code{target}~\code{update}, 
+\code{target}~\code{data}, \code{target}~\code{enter}~\code{data}, or 
+\code{target}~\code{exit}~\code{data} construct appears within a 
+\code{target} region the behavior is unspecified.
 
-\item The result of an \code{omp\_set\_default\_device}, \code{omp\_get\_default\_device}, 
-or \code{omp\_get\_num\_devices} routine called within a target region is unspecified.
+\item The result of an \code{omp\_set\_default\_device}, 
+\code{omp\_get\_default\_device}, or \code{omp\_get\_num\_devices} 
+routine called within a \code{target} region is unspecified.
 
 \item The effect of an access to a \code{threadprivate} variable in a target region is 
 unspecified.
 
-\item A variable referenced in a \code{target} construct that is not declared in the construct 
-is implicitly treated as if it had appeared in a \code{map} clause with a \plc{map-type} of 
-\code{tofrom}. 
-
-%383
 \item If a variable declared in a \code{target} construct is an element of a structure,
 all references to entries of that structure in the \code{target} construct must be declared in the \code{target} construct.
-
-%\item If one or more elements of a structure appear in the map clauses of a \code{target} construct, 
-%the \code{target} region may not refer to any other entries of that structure.
 
 \item A variable referenced in a \code{target} region but not the \code{target} construct that is not 
 declared in the \code{target} region must appear in a \code{declare}~\code{target} directive. 
@@ -3490,15 +3497,17 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
 
 \ccppspecificstart
-\item If an array section is derived from a variable for which the 
-type is pointer, reference to array or reference to pointer then the
-behavior is unspecified  if that variable is modified in the region.
+\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variables's corresponding private variable is modified in the region.
 \ccppspecificend
 
 \cppspecificstart
 \item A throw executed inside a \code{target} region must cause execution to resume within the 
 same \code{target} region, and the same thread that threw the exception must catch it. 
 \cppspecificend
+
+\fortranspecificstart
+\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable with a \code{POINTER} or \code{ALLOCATABLE} attribute then the behavior is unspecified if the corresponding list item's variable is modified in the region.
+\fortranspecificend
 \end{itemize}
 
 \crossreferences
@@ -3515,8 +3524,12 @@ same \code{target} region, and the same thread that threw the exception must cat
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}. 
 
-\item \code{map} clause, see 
-\specref{subsec:map Clause}.
+\item Data-mapping Attribute Rules and Clauses, see 
+\specref{subsec:Data-mapping Attribute Rules and Clauses}.
+
+\item \code{private} and \code{firstprivate} clauses, see 
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
 \end{itemize}
 
 
@@ -3872,9 +3885,6 @@ Within a \code{teams} region, team numbers uniquely identify each team. Team num
 consecutive whole numbers ranging from zero to one less than the number of teams. A 
 thread may obtain its own team number by a call to the \code{omp\_get\_team\_num} library 
 routine.
-
-The threads other than the master thread do not begin execution until the master thread 
-encounters a \code{parallel} region.
 
 After the teams have completed execution of the \code{teams} region, the encountering thread 
 resumes execution of the enclosing \code{target} region.
@@ -4418,11 +4428,11 @@ inside another construct. The semantics of the combined constructs are identical
 of explicitly specifying the first construct containing one instance of the second 
 construct and no other statements.
 
-Some combined constructs have clauses that are permitted on both constructs that were 
-combined. Where specified, the effect is as if applying the clauses to one or both 
-constructs. If not specified and applying the clause to one construct would result in 
-different program behavior than applying the clause to the other construct then the 
-program’s behavior is unspecified. 
+Some combined constructs have clauses that are permitted on both constructs that were
+combined. Where specified, the effect is as if applying the clauses to one or both
+constructs. If not specified and applying the clause to one construct would result in
+different program behavior than applying the clause to the other construct then the
+program's behavior is unspecified.
 
 
 
@@ -6249,6 +6259,7 @@ performed in a sequentially consistent atomic region.
 \item During \code{omp\_test\_lock}, \code{omp\_set\_nest\_lock}, \code{omp\_unset\_nest\_lock} 
 and \code{omp\_test\_nest\_lock} regions, if the region causes the lock to be set or unset.
 \item Immediately before and immediately after every task scheduling point.
+\item During a \code{cancel} or \code{cancellation point} region, if \plc{cancel-var} is \plc{true} and cancellation has been activated.
 \end{itemize}
 
 A \code{flush} region with a list is implied at the following locations:
@@ -6776,26 +6787,24 @@ non-conforming.
 \label{sec:Data Environment}
 \index{data environment}
 This section presents a directive and several clauses for controlling the data environment 
-during the execution of \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions.
+during the execution of \code{target}, \code{teams}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions.
 
 \begin{itemize}
 \item \specref{subsec:Data-sharing Attribute Rules} 
-describes how the data-sharing attributes of variables 
-referenced in \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined.
+describes how the data-sharing attributes of variables
+referenced in \code{target}, \code{teams}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined.
 
 \item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
 is described in \specref{subsec:threadprivate Directive}.
 
 \item Clauses that may be specified on directives to control the data-sharing attributes of 
-variables referenced in \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, or worksharing constructs are 
-described in \specref{subsec:Data-Sharing Attribute Clauses}
+variables referenced in \code{target}, \code{teams}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
 
 \item Clauses that may be specified on directives to copy data values from private or 
 threadprivate variables on one thread to the corresponding variables on other threads 
 in the team are described in \specref{subsec:Data Copying Clauses}.
 
-\item Clauses that may be specified on directives to map variables to devices are described in 
-\specref{subsec:map Clause}.
+\item Clauses that may be specified on directives to control the data-mapping of variables to a device data environment are described in \specref{subsec:map Clause}.
 \end{itemize}
 
 
@@ -6812,8 +6821,7 @@ in the team are described in \specref{subsec:Data Copying Clauses}.
 \index{data-sharing attribute rules}
 \index{attributes, data-sharing}
 This section describes how the data-sharing attributes of variables referenced in 
-\code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined. The following two 
-cases are described separately:
+\code{target}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined. The following two cases are described separately:
 
 \begin{itemize}
 \item \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct} 
@@ -6870,6 +6878,8 @@ multiple associated \plc{for-loops} are lastprivate.
 
 \item Variables with static storage duration that are declared in a scope inside the construct 
 are shared.
+
+\item If an array section is a list item in a \code{map} clause on the \code{target} construct, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then that variable is private. 
 \end{itemize}
 \ccppspecificend
 
@@ -6906,7 +6916,7 @@ pointers are associated.
 Variables with predetermined data-sharing attributes may not be listed in data-sharing 
 attribute clauses, except for the cases listed below. For these exceptions only, listing a 
 predetermined variable in a data-sharing attribute clause is allowed and overrides the 
-variable’s predetermined data-sharing attributes.
+variable's predetermined data-sharing attributes.
 
 \ccppspecificstart
 \begin{itemize}
@@ -6959,18 +6969,20 @@ listed in a data-sharing attribute clause on the construct.
 Rules for variables with \emph{implicitly determined} data-sharing attributes are as follows:
 
 \begin{itemize}
-\item In a \code{parallel}, \code{task}, or \code{taskloop} construct, the data-sharing attributes of these variables are 
-determined by the \code{default} clause, if present (see 
-\specref{subsubsec:default clause}). 
+\item In a \code{parallel}, \code{task}, or \code{taskloop} construct, the data-sharing attributes of these variables are
+determined by the \code{default} clause, if present (see
+\specref{subsubsec:default clause}).
 
 \item In a \code{parallel} construct, if no \code{default} clause is present, these variables are 
 shared.
 
-\item For constructs other than \code{task} or \code{taskloop}, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
+\item For constructs other than \code{task}, \code{taskloop}, or \code{target}, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
 
 \item In a \code{task} or \code{taskloop} construct, if no \code{default} clause is present, a variable that in the 
 enclosing context is determined to be shared by all implicit tasks bound to the current 
 team is shared.
+
+\item In a \code{target} construct, variables that are not mapped after applying data-mapping attribute rules (see \specref{subsec:Data-mapping Attribute Rules and Clauses}) are firstprivate.
 \end{itemize}
 
 \needspace{9\baselineskip}\begin{samepage}
@@ -7702,7 +7714,7 @@ initialization of the new list item is done once for each task that references t
 in any statement in the construct. The initialization is done prior to the execution of the 
 construct.
 
-For a \code{firstprivate} clause on a \code{parallel}, \code{task}, or \code{teams} construct, the initial 
+For a \code{firstprivate} clause on a \code{target}, \code{parallel}, \code{task}, or \code{teams} construct, the initial 
 value of the new list item is the value of the original list item that exists immediately 
 prior to the construct in the task region where the construct is encountered. For a 
 \code{firstprivate} clause on a worksharing construct, the initial value of the new list 
@@ -8323,7 +8335,7 @@ attribute clause.
 
 \fortranspecificstart
 \item A \plc{list-item} that appears in a \code{linear} clause without the \code{ref} modifier must be of type \code{integer}.
-\item The \code{ref} or \code{uval} modifier can only be used if the \plc{list-item} is a dummy argument passed by reference.
+\item The \code{ref} or \code{uval} modifier can only be used if the \plc{list-item} is a dummy argument without the \code{VALUE} attribute.
 \item Variables that have the \code{POINTER} attribute and Cray pointers may not appear in a linear clause. 
 \item The list item with the \code{ALLOCATABLE} attribute in the sequentially last iteration must have an allocation status of allocated upon exit from that iteration. 
 \fortranspecificend
@@ -8538,7 +8550,43 @@ clause.
 
 %%% map
 
-\subsection{\code{map} Clause}
+\subsection{Data-mapping Attribute Rules and Clauses}
+\label{subsec:Data-mapping Attribute Rules and Clauses}
+\index{data-mapping rules and clauses}
+\index{attributes, data-mapping}
+
+%% Do we need something about
+%% ``explicit \code{declare}~\code{target} directives''?
+This section describes how the data mapping attributes of any variable 
+referenced in a \code{target} region are determined. When specified, 
+explicit \code{map} clauses on \code{target}~\code{data} and \code{target} 
+directives determine these attributes. Otherwise, the following implicit 
+data-mapping rules apply for variables referenced in a \code{target}
+construct that are not declared in the construct or do not appear in 
+data-sharing attribute or \code{map} clauses:
+
+\begin{itemize}
+\ccppspecificstart
+\item A variable with a type of pointer, reference to array, or reference 
+to pointer is treated as if it had appeared in a \code{map} clause as the 
+variable in a zero-length array section.
+\ccppspecificend
+
+\item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
+a scalar variable is not mapped, but instead has an implicit data-sharing 
+attribute of firstprivate (see 
+\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}).
+
+\item If a \code{defaultmap(tofrom:scalar)} clause is present then a scalar 
+variable is treated as if it had appeared in a \code{map} clause with a 
+\plc{map-type} of \code{tofrom}.
+
+\item If a  variable is not a scalar then it is treated as if it had appeared 
+in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+\end{itemize}
+
+
+\subsubsection{\code{map} Clause}
 \label{subsec:map Clause}
 \index{map@{\code{map}}}
 \index{clauses!map@{\code{map}}}
@@ -8676,6 +8724,53 @@ initialization and assignment.
 \fortranspecificend
 \end{itemize}
 \end{samepage}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{defaultmap} Clause}
+\label{subsubsec:defaultmap clause}
+\index{defaultmap@{\code{defaultmap}}}
+\index{clauses!defaultmap@{\code{defaultmap}}}
+\summary
+The \code{defaultmap} clause explicitly determines the data-mapping attributes of variables that 
+are referenced in a \code{target}construct and would otherwise be 
+implicitly determined.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{defaultmap} clause is as follows:
+
+\begin{boxedcode}
+defaultmap(tofrom:scalar)
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{defaultmap} clause is as follows:
+
+\begin{boxedcode}
+defaultmap(tofrom:scalar)
+\end{boxedcode}
+\fortranspecificend
+
+\descr
+The \code{defaultmap(tofrom:scalar)} clause causes all scalar variables referenced in the construct that 
+have implicitly determined data-mapping attributes to be map(tofrom).
+
+\restrictions
+The restrictions to the \code{defaultmap} clause are as follows:
+
+\begin{itemize}
+\item Only a single default clause may be specified on a \code{target} 
+directive. 
+\end{itemize}
 
 
 
