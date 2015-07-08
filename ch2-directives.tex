@@ -3531,6 +3531,19 @@ routine called within a \code{target} region is unspecified.
 \item The effect of an access to a \code{threadprivate} variable in a target region is 
 unspecified.
 
+\item If a variable declared in a \code{target} construct is an element of a structure,
+all references to entries of that structure in the \code{target} construct must be declared in the \code{target} construct.
+
+\item A variable referenced in a \code{target} region but not the \code{target} construct that is not 
+declared in the \code{target} region must appear in a \code{declare}~\code{target} directive. 
+
+%383
+\item If a variable declared in a \code{target} construct is an element of a structure,
+all references to entries of that structure in the \code{target} construct must be declared in the \code{target} construct.
+
+%\item If one or more elements of a structure appear in the map clauses of a \code{target} construct, 
+%the \code{target} region may not refer to any other entries of that structure.
+
 \item A variable referenced in a \code{target} region but not the \code{target} construct that is not 
 declared in the \code{target} region must appear in a \code{declare}~\code{target} directive. 
 
@@ -3686,9 +3699,10 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 \item If a list item is an array section it must specify contiguous storage. 
 
-\item A variable that is part of another variable (such as a field of a structure) but is not an 
-array element or an array section cannot appear as a list item in a clause of a 
-\code{target}~\code{update} construct. 
+% 383: updates with structs?
+%\item A variable that is part of another variable (such as a field of a structure) but is not an 
+%array element or an array section cannot appear as a list item in a clause of a 
+%\code{target}~\code{update} construct. 
 
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
 
@@ -6529,7 +6543,7 @@ identical storage or disjoint storage.
 
 \item List items used in \code{depend} clauses cannot be zero-length array sections. 
 
-\item A variable that is part of another variable (such as a field of a structure) but is not an 
+\item A variable that is part of another variable (such as a element of a structure) but is not an 
 array element or an array section cannot appear in a \code{depend} clause.
 
 \item If the \plc{dependence-type} is \code{source}, the iteration vector \plc{vec} must not be specified.  
@@ -8686,7 +8700,7 @@ map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
 \end{boxedcode}
 
 \descr
-The list items that appear in a \code{map} clause may include array sections as well as struct members.
+The list items that appear in a \code{map} clause may include array sections and structure elements.
 
 The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
@@ -8757,14 +8771,26 @@ If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofro
 \item At most one list item can be an array item derived from a given variable in \code{map}
 clauses of the same construct.
 
+% example for 383
+% typedef struct S {int x, y, z[100]} S; 
+% S s, t[100];
+
 \item List items of \code{map} clauses in the same construct must not share original storage.
 
 \item If any part of the original storage of a list item has corresponding storage in the device data environment, all of the original storage must have corresponding storage in the device data environment. 
 
-\item A variable that is part of another variable (such as a field of a structure) but is not an 
-array element or an array section cannot appear in a \code{map} clause. 
+% 383 allow structures: remove  
+%\item A variable that is part of another variable (such as a field of a structure) but is not an array element or an array section cannot appear in a \code{map} clause. 
 
-\item If variables that share storage are mapped, the behavior is unspecified.
+%383 #pragma omp target data map(s.x)
+%       #pragma omp target map(s.y)  // illegal as some elements of s are already mapped prior to encountering this construct
+\item If the variable of a list item is an element of a structure, and one or more elements of this structure are already mapped to the device prior to encountering this construct, then the variable must already be mapped to the device prior to encountering this construct.
+
+% 383: map(t.z[10:20]),  
+%         but a different structure map(t[0:20].x), or map(t[10:20].z[10:20]) or u.a.b[0:100].c.d is not allowed
+\item If the variable of a list item is an element of a structure, only the rightmost  symbol of the variable reference can be an array section.
+
+\item If variables that share storage are mapped, the behavior is unspecified. %, with the exceptions of a structure sharing storage with its own structure elements.
 
 \item A list item must have a mappable type.
 
@@ -8782,6 +8808,10 @@ clauses of the same construct.
 \item A variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains an array section derived from that variable.
 
 \item An array section derived from a variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains that variable. 
+
+% 383
+\item A list item cannot be a variable that is a member of a structure with a union type.
+
 \end{itemize}
 \ccppspecificend
 
