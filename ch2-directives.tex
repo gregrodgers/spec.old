@@ -270,7 +270,6 @@ end critical
 end distribute 
 end distribute parallel do
 end distribute parallel do simd
-end distribute simd
 \end{indentedcodelist}
 \pagebreak
 % blue line floater at top of this page for "Fortran, cont."
@@ -278,6 +277,7 @@ end distribute simd
 \linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
 \end{figure}
 \begin{indentedcodelist}
+end distribute simd
 end do
 end do simd
 end master
@@ -292,14 +292,25 @@ end simd
 end single
 end target
 end target data
+end target parallel
+end target parallel do
+end target parallel do simd
+end target simd
 end target teams
 end target teams distribute
 end target teams distribute parallel do
 end target teams distribute parallel do simd
 end target teams distribute simd
 end task
-end task group
+end taskgroup
 end taskloop
+\end{indentedcodelist}
+\pagebreak
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
+\end{figure}
+\begin{indentedcodelist}
 end teams
 end teams distribute
 end teams distribute parallel do
@@ -313,13 +324,16 @@ parallel workshare
 target data
 target enter data
 target exit data
+target parallel
+target parallel do
+target parallel do simd
+target simd
 target teams
 target teams distribute
 target teams distribute parallel do
 target teams distribute parallel do simd
 target teams distribute simd
 target update
-taskloop
 teams distribute
 teams distribute parallel do
 teams distribute parallel do simd
@@ -4622,16 +4636,8 @@ assumed at the end of the \plc{do-loops}. \code{nowait} may not be specified on 
 \fortranspecificend
 
 \descr
-\ccppspecificstart
 The semantics are identical to explicitly specifying a \code{parallel} directive immediately 
-followed by a \code{for} directive.
-\ccppspecificend
-
-\fortranspecificstart
-The semantics are identical to explicitly specifying a \code{parallel} directive immediately 
-followed by a \code{do} directive, and an \code{end}~\code{do} directive immediately followed by an 
-\code{end}~\code{parallel} directive. 
-\fortranspecificend
+followed by a loop directive.
 
 \restrictions
 \begin{itemize}
@@ -4655,9 +4661,6 @@ followed by a \code{do} directive, and an \code{end}~\code{do} directive immedia
 
 
 
-
-
-\pagebreak
 
 \subsection{\code{parallel}~\code{sections} Construct}
 \index{parallel sections@{\code{parallel}~\code{sections}}}
@@ -4812,6 +4815,8 @@ containing one loop SIMD construct and no other statement.
 \begin{samepage}
 \syntax
 \ccppspecificstart
+The syntax of the parallel loop SIMD construct is as follows:
+
 \begin{boxedcode}
 \#pragma omp parallel for simd \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
@@ -4824,6 +4829,8 @@ directives, except the \code{nowait} clause, with identical meanings and restric
 
 \begin{samepage}
 \fortranspecificstart
+The syntax of the parallel loop SIMD construct is as follows:
+
 \begin{boxedcode}
 !\$omp parallel do simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -4871,20 +4878,309 @@ The restrictions for the \code{parallel} construct and the loop SIMD construct a
 
 
 
+\subsection{\code{target}~\code{parallel} Construct}
+\label{subsec:target parallel Construct}
+\index{target parallel@{\code{target}~\code{parallel}}}
+\index{constructs!target parallel@{\code{target}~\code{parallel}}}
+\index{combined constructs!target parallel@{\code{target}~\code{parallel}}}
+\summary
+The \code{target} \code{parallel} construct is a shortcut for specifying a \code{target} 
+construct containing a \code{parallel} construct and no other statements.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{target} \code{parallel} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp\plc{ }target\plc{ }parallel \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{structured-block}
+\end{boxedcode}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or
+\code{parallel} directives with identical meanings and restrictions.
+\ccppspecificend
+
+\needspace{6\baselineskip}\begin{samepage}
+\fortranspecificstart
+The syntax of the \code{target} \code{parallel} construct is as follows:
+
+\begin{boxedcode}
+!\$omp target parallel \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{structured-block}
+\plc{[}!\$omp end target parallel\plc{]}
+\end{boxedcode}
+\end{samepage}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or 
+\code{parallel} directives with identical meanings and restrictions.
+\fortranspecificend
+
+\descr
+The semantics are identical to explicitly specifying a \code{target} directive 
+immediately followed by a \code{parallel} directive. 
+
+\restrictions
+
+The restrictions for the \code{target} and \code{parallel} constructs apply.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}.
+
+\item \code{parallel} construct, see 
+\specref{sec:parallel Construct}.
+
+\item Data attribute clauses, see 
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+
+%% \item Multi-if Clause, see \specref{subsec:Multi-if Clause}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+%Similar to Distribute Parallel Loop Construct
+
+\subsection{Target Parallel Loop Construct}
+\label{subsec:Target Parallel Loop Construct}
+\index{target parallel loop construct}
+\index{constructs!target parallel loop}
+\index{constructs!target parallel for@{\code{target}~\code{parallel}~\code{for}}}
+\index{constructs!target parallel do@{\code{target}~\code{parallel}~\code{do}}}
+\index{combined constructs!target parallel loop}
+\summary
+The target parallel loop construct is a shortcut for specifying a \code{target} 
+construct containing a parallel loop construct and no other statements.
+
+\syntax
+\ccppspecificstart
+The syntax of the target parallel loop construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp\plc{ }target\plc{ }parallel\plc{ }for \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{for-loops}
+\end{boxedcode}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or
+\code{parallel}~\code{for} directives with identical meanings and restrictions.
+\ccppspecificend
+
+\needspace{6\baselineskip}\begin{samepage}
+\fortranspecificstart
+The syntax of the target parallel loop construct is as follows:
+
+\begin{boxedcode}
+!\$omp target parallel do \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{do-loops}
+\plc{[}!\$omp end target parallel do\plc{]}
+\end{boxedcode}
+\end{samepage}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or 
+\code{parallel}~\code{do} directives with identical meanings and restrictions.
+
+If an \code{end}~\code{target}~\code{parallel}~\code{do} directive is not specified, an 
+\code{end}~\code{target}~\code{parallel}~\code{do} directive is assumed at the end of 
+the \plc{do-loops}.
+\fortranspecificend
+
+\descr
+The semantics are identical to explicitly specifying a \code{target} directive
+immediately followed by a parallel loop directive.
+
+
+\restrictions
+The restrictions for the \code{target} and parallel loop constructs apply.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see
+\specref{subsec:target Construct}.
+
+\item Parallel loop construct, see
+\specref{subsec:Parallel Loop Construct}.
+
+\item Data attribute clauses, see
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+%% \item Multi-if Clause, see \specref{subsec:Multi-if Clause}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+% Similar to Distribute Parallel Loop SIMD Construct
+
+\subsection{Target Parallel Loop SIMD Construct}
+\label{subsec:Target Parallel Loop SIMD Construct}
+\index{target parallel loop SIMD construct}
+\index{constructs!target parallel loop SIMD}
+\index{constructs!target parallel for simd@{\code{target}~\code{parallel}~\code{for}~\code{simd}}}
+\index{constructs!target parallel do simd@{\code{target}~\code{parallel}~\code{do}~\code{simd}}}
+\index{combined constructs!target parallel loop SIMD}
+\summary
+The target parallel loop SIMD construct is a shortcut for specifying a \code{target} 
+construct containing a parallel loop SIMD construct and no other statements.
+
+\syntax
+\ccppspecificstart
+The syntax of the target parallel loop SIMD construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp\plc{ }target\plc{ }parallel\plc{ }for\plc{ }simd \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{for-loops}
+\end{boxedcode}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or
+\code{parallel}~\code{for}~\code{simd} directives with identical meanings and restrictions.
+\ccppspecificend
+
+\needspace{6\baselineskip}\begin{samepage}
+\fortranspecificstart
+The syntax of the target parallel loop SIMD construct is as follows:
+
+\begin{boxedcode}
+!\$omp target parallel do simd \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{do-loops}
+\plc{[}!\$omp end target parallel do simd\plc{]}
+\end{boxedcode}
+\end{samepage}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or 
+\code{parallel}~\code{do}~\code{simd} directives with identical meanings and restrictions.
+
+If an \code{end}~\code{target}~\code{parallel}~\code{do}~\code{simd} directive is not specified, an 
+\code{end}~\code{target}~\code{parallel}~\code{do}~\code{simd} directive is assumed at the end of 
+the \plc{do-loops}.
+\fortranspecificend
+
+\descr
+The semantics are identical to explicitly specifying a \code{target} directive
+immediately followed by a parallel loop SIMD directive.
+
+
+\restrictions
+The restrictions for the \code{target} and parallel loop SIMD constructs apply.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see
+\specref{subsec:target Construct}.
+
+\item Parallel loop SIMD construct, see
+\specref{subsec:Parallel Loop SIMD Construct}.
+
+\item Data attribute clauses, see
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+%% \item Multi-if Clause, see \specref{subsec:Multi-if Clause}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{target}~\code{simd} Construct}
+\index{target simd@{\code{target}~\code{simd}}}
+\index{constructs!target simd@{\code{target}~\code{simd}}}
+\index{combined constructs!target simd@{\code{target}~\code{simd}}}
+\label{subsec:target simd Construct}
+
+\summary
+The \code{target} \code{simd} construct is a shortcut for specifying a \code{target} 
+construct containing a \code{simd} construct and no other statements.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{target} \code{simd} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp\plc{ }target\plc{ }simd \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{for-loops}
+\end{boxedcode}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or
+\code{simd} directives with identical meanings and restrictions.
+
+\ccppspecificend
+
+\needspace{6\baselineskip}\begin{samepage}
+\fortranspecificstart
+The syntax of the \code{target} \code{simd} construct is as follows:
+
+\begin{boxedcode}
+!\$omp target simd \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{do-loops}
+\plc{[}!\$omp end target simd\plc{]}
+\end{boxedcode}
+\end{samepage}
+
+where \plc{clause} can be any of the clauses accepted by the \code{target} or 
+\code{simd} directives with identical meanings and restrictions.
+
+If an \code{end}~\code{target}~\code{simd} directive is not specified, an 
+\code{end}~\code{target}~\code{simd} directive is assumed at the end of 
+the \plc{do-loops}.
+\fortranspecificend
+
+\descr
+The semantics are identical to explicitly specifying a \code{target} directive 
+immediately followed by a \code{simd} directive. 
+
+\restrictions
+
+The restrictions for the \code{target} and \code{simd} constructs apply.
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see 
+\specref{subsec:target Construct}.
+
+\item \code{simd} construct, see 
+\specref{subsec:simd Construct}.
+
+\item Data attribute clauses, see 
+\specref{subsec:Data-Sharing Attribute Clauses}.
+\end{itemize}
+
+
+
+
+
+
+
+
 
 \subsection{\code{target}~\code{teams} Construct}
+\label{subsec:target teams Construct}
 \index{target teams@{\code{target}~\code{teams}}}
 \index{constructs!target teams@{\code{target}~\code{teams}}}
 \index{combined constructs!target teams@{\code{target}~\code{teams}}}
-\label{subsec:target teams construct}
 \summary
 The \code{target}~\code{teams} construct is a shortcut for specifying a \code{target} construct 
-containing a \code{teams} construct.
+containing a \code{teams} construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the \code{target}~\code{teams} construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp target teams \plc{[clause[ [},\plc{] clause] ... ]}
    \plc{structured-block}
@@ -4895,6 +5191,8 @@ with identical meanings and restrictions.
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the \code{target}~\code{teams} construct is as follows:
+
 \begin{boxedcode}
 !\$omp target teams \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{structured-block}
@@ -4906,16 +5204,9 @@ with identical meanings and restrictions.
 \fortranspecificend
 
 \descr
-\ccppspecificstart
-The semantics are identical to explicitly specifying a \code{target} directive immediately 
-followed by a \code{teams} directive.
-\ccppspecificend
 
-\fortranspecificstart
-The semantics are identical to explicitly specifying a \code{target} directive immediately 
-followed by a \code{teams} directive, and an \code{end}~\code{teams} directive immediately followed by 
-an \code{end}~\code{target} directive.
-\fortranspecificend
+The semantics are identical to explicitly specifying a \code{target} directive 
+immediately followed by a \code{teams} directive. 
 
 \restrictions
 The restrictions for the \code{target} and \code{teams} constructs apply.
@@ -4947,12 +5238,12 @@ The restrictions for the \code{target} and \code{teams} constructs apply.
 \label{subsec:teams distribute Construct}
 \summary
 The \code{teams}~\code{distribute} construct is a shortcut for specifying a \code{teams} construct 
-containing a \code{distribute} construct.
+containing a \code{distribute} construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the \code{teams}~\code{distribute} construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp teams distribute \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -4963,6 +5254,8 @@ directives with identical meanings and restrictions.
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the \code{teams}~\code{distribute} construct is as follows:
+
 \begin{boxedcode}
 !\$omp teams distribute \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -5013,12 +5306,12 @@ The restrictions for the \code{teams} and \code{distribute} constructs apply.
 \label{subsec:teams distribute simd Construct}
 \summary
 The \code{teams}~\code{distribute}~\code{simd} construct is a shortcut for specifying a \code{teams} construct 
-containing a \code{distribute}~\code{simd} construct.
+containing a \code{distribute}~\code{simd} construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the \code{teams}~\code{distribute}~\code{simd} construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp teams distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -5029,6 +5322,8 @@ directives with identical meanings and restrictions.
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the \code{teams}~\code{distribute}~\code{simd} construct is as follows:
+
 \begin{boxedcode}
 !\$omp teams distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -5078,12 +5373,12 @@ The restrictions for the \code{teams} and \code{distribute}~\code{simd} construc
 \label{subsec:target teams distribute construct}
 \summary
 The \code{target}~\code{teams}~\code{distribute} construct is a shortcut for specifying a \code{target} construct 
-containing a \code{teams}~\code{distribute} construct.
+containing a \code{teams}~\code{distribute} construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the \code{target}~\code{teams}~\code{distribute} construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp target teams distribute \plc{[clause[ [},\plc{] clause] ... ]}
    \plc{for-loops}
@@ -5094,6 +5389,8 @@ with identical meanings and restrictions.
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the \code{target}~\code{teams}~\code{distribute} construct is as follows:
+
 \begin{boxedcode}
 !\$omp target teams distribute \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -5142,12 +5439,12 @@ The restrictions for the \code{target} and \code{teams}~\code{distribute} constr
 \label{subsec:target teams distribute simd construct}
 \summary
 The \code{target}~\code{teams}~\code{distribute}~\code{simd} construct is a shortcut for specifying a \code{target} construct 
-containing a \code{teams}~\code{distribute}~\code{simd} construct.
+containing a \code{teams}~\code{distribute}~\code{simd} construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the \code{target}~\code{teams}~\code{distribute}~\code{simd} construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp target teams distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
    \plc{for-loops}
@@ -5158,6 +5455,8 @@ where \plc{clause} can be any of the clauses accepted by the \code{target} or
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the \code{target}~\code{teams}~\code{distribute}~\code{simd} construct is as follows:
+
 \begin{boxedcode}
 !\$omp target teams distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -5207,12 +5506,12 @@ The restrictions for the \code{target} and \code{teams}~\code{distribute}~\code{
 \index{combined constructs!teams distribute parallel loop construct}
 \summary
 The teams distribute parallel loop construct is a shortcut for specifying a \code{teams} 
-construct containing a distribute parallel loop construct.
+construct containing a distribute parallel loop construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the teams distribute parallel loop construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp teams distribute parallel for \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -5223,6 +5522,8 @@ where \plc{clause} can be any of the clauses accepted by the \code{teams} or
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the teams distribute parallel loop construct is as follows:
+
 \begin{boxedcode}
 !\$omp teams distribute parallel do \plc{[clause[ [},\plc{] clause] ... ]}
    \plc{do-loops}
@@ -5271,12 +5572,12 @@ The restrictions for the \code{teams} and distribute parallel loop constructs ap
 \index{combined constructs!target teams distribute parallel loop construct}
 \summary
 The target teams distribute parallel loop construct is a shortcut for specifying a \code{target} 
-construct containing a teams distribute parallel loop construct.
+construct containing a teams distribute parallel loop construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the target teams distribute parallel loop construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp\plc{ }target\plc{ }teams\plc{ }distribute\plc{ }parallel\plc{ }for \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -5289,6 +5590,8 @@ meanings and restrictions.
 
 \needspace{6\baselineskip}\begin{samepage}
 \fortranspecificstart
+The syntax of the target teams distribute parallel loop construct is as follows:
+
 \begin{boxedcode}
 !\$omp target teams distribute parallel do \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -5360,12 +5663,12 @@ loop constructs apply except for the following explicit modifications:
 \index{combined constructs!teams distribute parallel loop SIMD construct}
 \summary
 The teams distribute parallel loop SIMD construct is a shortcut for specifying a \code{teams} 
-construct containing a distribute parallel loop SIMD construct.
+construct containing a distribute parallel loop SIMD construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the teams distribute parallel loop construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -5377,6 +5680,8 @@ directives with identical meanings and restrictions.
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the teams distribute parallel loop construct is as follows:
+
 \begin{boxedcode}
 !\$omp teams distribute parallel do simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
@@ -5428,12 +5733,12 @@ The restrictions for the teams and distribute parallel loop SIMD constructs appl
 \index{combined constructs!target teams distribute parallel loop SIMD construct}
 \summary
 The target teams distribute parallel loop SIMD construct is a shortcut for specifying a \code{target} 
-construct containing a teams distribute parallel loop SIMD construct.
+construct containing a teams distribute parallel loop SIMD construct and no other statements.
 
 \syntax
+\ccppspecificstart
 The syntax of the target teams distribute parallel loop SIMD construct is as follows:
 
-\ccppspecificstart
 \begin{boxedcode}[fontsize=\small]
 \#pragma omp target teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{for-loops}
@@ -5445,6 +5750,8 @@ directives with identical meanings and restrictions.
 \ccppspecificend
 
 \fortranspecificstart
+The syntax of the target teams distribute parallel loop SIMD construct is as follows:
+
 \begin{boxedcode}
 !\$omp target teams distribute parallel do simd \plc{[clause[ [},\plc{] clause] ... ]}
     \plc{do-loops}
