@@ -31,9 +31,15 @@ debug:
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 
-
+#NOTE: set these either as environment variables or on the command line, 
+#      DO NOT change these default values and check them in
+#      Either of these work:
+#
+#      DIFF_FROM=upstream/master make openmp-diff.pdf
+#
+#      make DIFF_FROM=upstream/master make openmp-diff.pdf
+#
 DIFF_FROM:=master
-DIFF_FROM:=spec/master
 DIFF_TO:=HEAD
 DIFF_TYPE:=UNDERLINE
 
