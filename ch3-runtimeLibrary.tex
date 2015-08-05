@@ -2105,13 +2105,13 @@ The simple lock routines are as follows:
 \littleheader{Nestable Lock Routines}
 \ccppspecificstart
 The type \code{omp\_nest\_lock\_t} is a data type capable of representing a nestable lock. 
-For the following routines, a nested lock variable must be of \code{omp\_nest\_lock\_t} type. 
+For the following routines, a nestable lock variable must be of \code{omp\_nest\_lock\_t} type. 
 All nestable lock routines require an argument that is a pointer to a variable of type 
 \code{omp\_nest\_lock\_t}.
 \ccppspecificend
 
 \fortranspecificstart
-For the following routines, a nested lock variable must be an integer variable of 
+For the following routines, a nestable lock variable must be an integer variable of 
 \code{kind=omp\_nest\_lock\_kind}.
 \fortranspecificend
 
@@ -2240,7 +2240,7 @@ typedef enum omp\_lock\_hint\_t \{
   omp\_lock\_hint\_uncontended = 1,
   omp\_lock\_hint\_contended = 2,
   omp\_lock\_hint\_nonspeculative = 4,
-  omp\_lock\_hint\_speculative = 8,
+  omp\_lock\_hint\_speculative = 8
 \} omp\_lock\_hint\_t;
 \end{codepar}
 \ccppspecificend
@@ -2295,7 +2295,7 @@ After initialization no task owns the lock. In addition, the nesting count for a
 \index{omp\_destroy\_lock@{\code{omp\_destroy\_lock}}}
 \index{omp\_destroy\_nest\_lock@{\code{omp\_destroy\_nest\_lock}}}
 \summary
-These routines ensure that the OpenMP lock is uninitialized
+These routines ensure that the OpenMP lock is uninitialized.
 
 \format
 \ccppspecificstart
@@ -2337,8 +2337,8 @@ The effect of these routines is to change the state of the lock to uninitialized
 \index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
 \summary
 These routines provide a means of setting an OpenMP lock. The calling
-task region behaves as if it were suspended until the lock can be set
-by this thread.
+task region behaves as if it was suspended until the lock can be set
+by this task.
 
 \format
 \ccppspecificstart
@@ -2614,8 +2614,8 @@ successive clock ticks of the timer used by \code{omp\_get\_wtime}.
 \index{device memory routines}
 \index{target memory routines}
 \label{sec:device_memory}
-This section describes routines that support allocation and management of
-pointers in the data environments of target devices.
+This section describes routines that support allocation of memory and 
+management of pointers in the data environments of target devices.
 
 
 
@@ -2682,11 +2682,9 @@ void omp\_target\_free(void * \plc{device\_ptr}, int \plc{device\_num});
 
 A program that calls \code{omp\_target\_free} with a non-\code{NULL} pointer 
 that does not have a value returned from \code{omp\_target\_alloc} is
-non-conforming. When called from within a \code{target} region 
-the effect of this routine is unspecified. The \plc{device\_num}
-must be greater than or equal to zero and less than the result of
-\code{omp\_get\_num\_devices()} or the result of a call to
-\code{omp\_get\_initial\_device()}.
+non-conforming.  The \plc{device\_num} must be greater than or equal to 
+zero and less than the result of \code{omp\_get\_num\_devices()} or the
+ result of a call to \code{omp\_get\_initial\_device()}.
 
 \effect
 
@@ -2696,6 +2694,9 @@ environment associated with \plc{device\_ptr}.  If \plc{device\_ptr} is
 
 Synchronization must be inserted to ensure that all accesses to 
 \plc{device\_ptr} are completed before the call to \code{omp\_target\_free}.
+
+When called from within a \code{target} region the effect of this routine
+is unspecified.
 
 \crossreferences
 \begin{itemize}
@@ -2730,9 +2731,6 @@ int omp\_target\_is\_present(void * \plc{ptr}, size\_t \plc{offset},
 \constraints
 
 The value of \plc{ptr} must be a valid host pointer or \code{NULL}.
-The device specified by \plc{device\_num} must be valid.
-When called from within a \code{target} region 
-the effect of this routine is unspecified.
 The \plc{device\_num}
 must be greater than or equal to zero and less than the result of
 \code{omp\_get\_num\_devices()} or the result of a call to
@@ -2743,6 +2741,9 @@ must be greater than or equal to zero and less than the result of
 This routine returns \plc{true} if the specified pointer
 and offset would be found present on device \plc{device\_num} by a \code{map}
 clause; otherwise, it returns \plc{false}.
+
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
 
 \crossreferences
 \begin{itemize}
@@ -2787,8 +2788,8 @@ must be greater than or equal to zero and less than the result of
 \plc{length} bytes of memory at offset \plc{src\_offset} from  \plc{src} are
 copied to \plc{dst} starting at offset \plc{dst\_offset}.  
 The return value is zero on success and non-zero on failure.  The host device
-and host device data environment can be referenced with the device nummber
-returned by \code{omp\_get\_initial\_device}.  This routine contains a task
+and host device data environment can be referenced with the device number
+returned by \code{omp\_get\_initial\_device}. This routine contains a task
 scheduling point.
 
 When called from within a \code{target} region 
@@ -2850,7 +2851,7 @@ limit, which must be at least three.
 \effect
 
 This routine copies a multi-dimensional rectangular subvolume of \plc{src} 
-to \plc{dst}. The volume is specified in terms of the size of the element, 
+to \plc{dst}. The volume is specified in terms of the size of an element, 
 number of dimensions, and constant arrays of length \plc{num\_dims}.  The 
 maximum number of dimensions supported is at least three, support for higher 
 dimensionality is implementation defined. The volume array specifies the 
@@ -2975,6 +2976,8 @@ host pointer has a corresponding variable in the device data environment.
 The \code{omp\_target\_disassociate\_ptr} removes the associated pointer for a
 given device from a host pointer.
 
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \format
 \begin{boxedcode}
 int omp\_target\_disassociate\_ptr(void * \plc{ptr}, int \plc{device\_num});
@@ -2982,8 +2985,7 @@ int omp\_target\_disassociate\_ptr(void * \plc{ptr}, int \plc{device\_num});
 
 \constraints
 
-When called from within a \code{target} region 
-the effect of this routine is unspecified.
+
 The \plc{device\_num}
 must be greater than or equal to zero and less than the result of
 \code{omp\_get\_num\_devices()} or the result of a call to
@@ -2998,6 +3000,8 @@ on device \plc{device\_num} from the presence table for host pointer
 in unspecified behavior.  The reference count of the mapping is reduced to 
 zero, regardless of its current value.
 
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
 
 After a call to \code{omp\_target\_disassociate\_ptr}, the contents of the device
 buffer are invalidated.
