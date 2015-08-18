@@ -3402,7 +3402,7 @@ The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{
 \fortranspecificend
 
 \binding
-The binding task region for a \code{target}~\code{data} construct is the encountering task. The 
+The binding task for a \code{target}~\code{data} construct is the encountering task. The 
 target region binds to the enclosing parallel or task region.
 
 \descr
@@ -3417,7 +3417,7 @@ device pointers to the corresponding list item in the device data environment.
     \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
   \item At most one \code{device} clause can appear on the directive. The \code{device} expression
-    must evaluate to a non-negative integer value strictly less than the value
+    must evaluate to a non-negative integer value less than the value
     of \code{omp\_get\_num\_devices()}.
 
   \item At most one \code{if} clause can appear on the directive.
@@ -3518,8 +3518,8 @@ The binding task for a \code{target} construct is the encountering task. The tar
 binds to the enclosing parallel or task region.
 
 \descr
-The \code{target} construct provides a superset of the functionality and
-restrictions provided by the \code{target}~\code{data} directive, excepting
+The \code{target} construct provides a superset of the functionality
+provided by the \code{target}~\code{data} directive, except for 
 the \code{use\_device\_ptr} clause.
 
 The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
@@ -3536,7 +3536,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 The \code{is\_device\_ptr} clause is used to indicate that a list item is a device
 pointer already in the device data environment and that it should be used
-directly.  Support for pointers created outside of OpenMP, specifically
+directly.  Support for device pointers created outside of OpenMP, specifically
 outside of the \code{omp\_target\_alloc} routine and the \code{use\_device\_ptr} clause,
 is implementation defined.
 
@@ -3574,7 +3574,7 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
     device pointer in the device data environment.
 
 \ccppspecificstart
-\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variables's corresponding private variable is modified in the region.
+\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variable's corresponding private variable is modified in the region.
 \ccppspecificend
 
 \cppspecificstart
@@ -3720,10 +3720,11 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
 
-\item A list item in a \code{to} or \code{from} clause must have a mappable type
+\item A list item in a \code{to} or \code{from} clause must have a mappable type.
 
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression 
-must evaluate to a non-negative integer value.
+\item At most one \code{device} clause can appear on the directive. The \code{device} expression
+      must evaluate to a non-negative integer value less than the value
+      of \code{omp\_get\_num\_devices()}.
 
 \item At most one \code{if} clause can appear on the directive. 
 
@@ -4013,6 +4014,7 @@ the master thread of each thread team executes the \code{teams} region.
 
 The number of teams created is implementation defined, but is less than or equal to the 
 value specified in the \code{num\_teams} clause.
+A thread may obtain the number of teams by a call to the \code{omp\_get\_num\_teams} routine.
 
 The maximum number of threads participating in the contention group that each team 
 initiates is implementation defined, but is less than or equal to the value specified in the 
@@ -4208,7 +4210,7 @@ The syntax of the \code{distribute}~\code{simd} construct is as follows:
 
 \ccppspecificstart
 \begin{boxedcode}
-\#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ] newline}
    \plc{for-loops}
 \end{boxedcode}
 
@@ -4281,7 +4283,7 @@ The syntax of the distribute parallel loop construct is as follows:
 
 \ccppspecificstart
 \begin{boxedcode}
-\#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -4310,8 +4312,6 @@ The effect of any clause that applies to both constructs is as if it were applie
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop constructs apply.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 \end{itemize}
 
 \crossreferences
@@ -4351,7 +4351,7 @@ of multiple teams. The distribute parallel loop SIMD construct is a composite co
 The syntax of the distribute parallel loop SIMD construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -4449,7 +4449,7 @@ When a \code{target}~\code{enter}~\code{data} construct is encountered, the list
 
 The \code{target}~\code{enter}~\code{data} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target}~\code{enter}~\code{data} construct. The generated task is a \plc{target task}.
 
-A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated target task is complete.
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated \plc{target task} is complete.
 
 By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
 
