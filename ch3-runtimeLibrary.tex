@@ -2039,7 +2039,7 @@ accessed only through the routines described in this section; programs that othe
 access OpenMP lock variables are non-conforming.
 
 An OpenMP lock can be in one of the following states: \emph{uninitialized}, \emph{unlocked}, or 
-\emph{locked}. If a lock is in the unlocked state, a task can \emph{set} the lock, which changes its state 
+\emph{locked}. If a lock is in the \emph{unlocked} state, a task can \emph{set} the lock, which changes its state 
 to \emph{locked}. The task that sets the lock is then said to \emph{own} the lock. A task that owns a 
 lock can \emph{unset} that lock, returning it to the \emph{unlocked} state. A program in which a task 
 unsets a lock that is owned by another task is non-conforming.
@@ -2051,12 +2051,10 @@ it is already owned by the task trying to set it. \emph{Simple lock} variables a
 associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
 
 Each type of lock can also have a \emph{lock hint} that contains information about the intended usage 
-of the lock by the application code.  The effect of the lock hint is implementation defined, 
-that is, the OpenMP implementation can use this hint to select a proper 
-usage-specific lock if supported by the implementation.  
-Lock hints do not change the mutual exclusion semantics of locks, but allow the 
-user to suggest the use of a specific implementation to the runtime.
-A conforming implementation can safely ignore the lock hint and instead use locks without hints.
+of the lock by the application code.  The effect of the lock hint is
+implementation defined.  An OpenMP implementation can use this hint to select a
+usage-specific lock, but lock hints do not change the mutual exclusion semantics of locks. 
+A conforming implementation can safely ignore the lock hint.
 
 Constraints on the state and ownership of the lock accessed by each of the lock routines 
 are described with the routine. If these constraints are not met, the behavior of the 
@@ -2064,7 +2062,7 @@ routine is unspecified.
 
 The OpenMP lock routines access a lock variable in such a way that they always read 
 and update the most current value of the lock variable. It is not necessary for an 
-OpenMP program to include explicit \code{flush} directives to ensure that the lock variable’s 
+OpenMP program to include explicit \code{flush} directives to ensure that the lock variable's 
 value is consistent among different tasks. 
 
 \binding
@@ -2076,7 +2074,7 @@ executing the tasks belong.
 \littleheader{Simple Lock Routines}
 \index{Simple Lock Routines}
 \ccppspecificstart
-The type \code{omp\_lock\_t} is a data type capable of representing a simple lock. For the 
+The type \code{omp\_lock\_t} represents a simple lock. For the 
 following routines, a simple lock variable must be of \code{omp\_lock\_t} type. All simple 
 lock routines require an argument that is a pointer to a variable of type \code{omp\_lock\_t}.
 \ccppspecificend
@@ -2104,7 +2102,7 @@ The simple lock routines are as follows:
 
 \littleheader{Nestable Lock Routines}
 \ccppspecificstart
-The type \code{omp\_nest\_lock\_t} is a data type capable of representing a nestable lock. 
+The type \code{omp\_nest\_lock\_t} represents a nestable lock. 
 For the following routines, a nestable lock variable must be of \code{omp\_nest\_lock\_t} type. 
 All nestable lock routines require an argument that is a pointer to a variable of type 
 \code{omp\_nest\_lock\_t}.
@@ -2650,6 +2648,9 @@ The device address returned by \code{omp\_target\_alloc} can be used in an
 Pointer arithmetic is not supported on the device address returned by
 \code{omp\_target\_alloc}.
 
+Freeing the storage returned by \code{omp\_target\_alloc} with any routine
+other than \code{omp\_target\_free} results in unspecified behavior.
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see 
@@ -2719,8 +2720,8 @@ is unspecified.
 \label{subsec:omp_target_is_present}
 \summary
 
-The \code{omp\_target\_is\_present} routine validates whether a host pointer
-has an associated device buffer on a given device.
+The \code{omp\_target\_is\_present} routine tests whether a host pointer
+has corresponding storage on a given device.
 
 \format
 \begin{boxedcode}
@@ -2853,9 +2854,9 @@ limit, which must be at least three.
 \linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \effect
 
-This routine copies a multi-dimensional rectangular subvolume of \plc{src}
-in the device data environment of device \plc{src\_device\_num} 
-to \plc{dst} in the device data environment of device \plc{dst\_device\_num}.
+This routine copies a rectangular subvolume of \plc{src},
+in the device data environment of device \plc{src\_device\_num},
+to \plc{dst}, in the device data environment of device \plc{dst\_device\_num}.
 The volume is specified in terms of the size of an element, 
 number of dimensions, and constant arrays of length \plc{num\_dims}.  The 
 maximum number of dimensions supported is at least three, support for higher 
@@ -2958,7 +2959,8 @@ The routine returns zero if successful. Otherwise it returns a non-zero value.
 Only one device buffer can be associated with a given host pointer value and
 device number pair. Attempting to associate a second buffer will return
 non-zero. Associating the same pair of pointers on the same device with the
-same offset has no effect and returns zero.  The
+same offset has no effect and returns zero.  Associating pointers that share
+underlying storage will result in unspecified behavior. The
 \code{omp\_target\_is\_present} function can be used to test whether a given
 host pointer has a corresponding variable in the device data environment.
 
