@@ -2423,6 +2423,7 @@ safelen(\plc{length})
 simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
+
 private(\plc{list})
 lastprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
@@ -3442,6 +3443,7 @@ device pointers to the corresponding list item in the device data environment.
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 \end{itemize}
+
 
 
 
@@ -7091,7 +7093,7 @@ type specified. The \code{cancel} construct is a stand-alone directive.
 The syntax of the \code{cancel} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp cancel \plc{construct-type-clause[ [},\plc{] if-clause] new-line}
+\#pragma omp cancel \plc{construct-type-clause [ [},\plc{] if-clause] new-line}
 \end{boxedcode}
 
 \begin{samepage}
@@ -7115,7 +7117,7 @@ if (\plc{scalar-expression})
 The syntax of the \code{cancel} construct is as follows:
 
 \begin{boxedcode}
-!\$omp cancel \plc{construct-type-clause[ [},\plc{] if-clause]}
+!\$omp cancel \plc{construct-type-clause [ [},\plc{] if-clause]}
 \end{boxedcode}
 
 \begin{samepage}
@@ -7146,7 +7148,7 @@ specified in the directive (that is, the innermost \code{parallel}, \code{sectio
 The \code{cancel} construct activates cancellation of the binding region only if the \plc{cancel-var} ICV
 is \plc{true}, in which case the \code{cancel} construct causes the encountering task to continue execution 
 at the end of the binding region if \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or \code{sections}. 
-If the \plc{cancel-var} ICV is \plc{true} and \plc{construct-type-clause} is \code{taskgroup} the encountering task continues execution at the end of the current task region.
+If the \plc{cancel-var} ICV is \plc{true} and \plc{construct-type-clause} is \code{taskgroup}, the encountering task continues execution at the end of the current task region.
 If the \plc{cancel-var} ICV is \plc{false}, the \code{cancel} construct is 
 ignored.
 
@@ -7154,10 +7156,10 @@ Threads check for active cancellation only at cancellation points that are
 implied at the following locations:
 
 \begin{itemize}
-\item \code{cancel} regions; 
-\item \code{cancellation}~\code{point} regions;
-\item \code{barrier} regions;
-\item implicit barriers regions.
+\item \code{cancel} regions
+\item \code{cancellation}~\code{point} regions
+\item \code{barrier} regions
+\item implicit barriers regions
 \end{itemize}
 
 When a thread reaches one of the above cancellation points and if the \plc{cancel-var} ICV is \plc{true},  then:
@@ -7170,9 +7172,9 @@ of the type specified.
 
 \item If the thread is at a \code{cancel} or \code{cancellation point} region 
 and \plc{construct-type-clause} is \code{taskgroup}, the encountering task 
-checks for active cancellation of one of the taskgroup sets to which the 
-encountering task belongs and continues execution at the end of the current 
-task region if cancellation has been activated.
+checks for active cancellation of all of the \plc{taskgroup sets} to which the 
+encountering task belongs, and continues execution at the end of the current 
+task region if cancellation has been activated for any of the \plc{taskgroup sets}.
 
 \item If the encountering task is at a barrier region, the encountering task 
 checks for active cancellation of the innermost enclosing \code{parallel} 
@@ -7182,25 +7184,32 @@ continues execution at the end of the canceled region.
 
 \notestart
 \noteheader – If one thread activates cancellation and another thread encounters a cancellation 
-point, the absolute order of execution between the two threads is non-deterministic. 
+point, the order of execution between the two threads is non-deterministic. 
 Whether the thread that encounters a cancellation point detects the activated cancellation 
 depends on the underlying hardware and operating system.
 \noteend
 
-When cancellation of tasks is activated through the \code{cancel}~\code{taskgroup} construct, the tasks that belong to \plc{taskgroup set} of the  
-innermost enclosing \code{taskgroup} region will be canceled. The task that encountered the 
-\code{cancel}~\code{taskgroup} construct continues execution at the end of its \code{task} region, 
-which implies completion of that task. Any task that belongs to the innermost enclosing 
-\code{taskgroup} and has already begun execution must run to completion or until a 
-cancellation point is reached. Upon reaching a cancellation point and if cancellation is active, the task continues execution at the end of its \code{task} region, which implies the task's completion. Any task that belongs to the innermost enclosing \code{taskgroup} and that 
-has not begun execution may be discarded, which implies its completion.
+When cancellation of tasks is activated through the
+\code{cancel}~\code{taskgroup} construct, the tasks that belong to the
+\plc{taskgroup set} of the innermost enclosing \code{taskgroup} region
+will be canceled. The task that encountered the
+\code{cancel}~\code{taskgroup} construct continues execution at the
+end of its \code{task} region, which implies completion of that
+task. Any task that belongs to the innermost enclosing
+\code{taskgroup} and has already begun execution must run to
+completion or until a cancellation point is reached. Upon reaching a
+cancellation point and if cancellation is active, the task continues
+execution at the end of its \code{task} region, which implies the
+task's completion. Any task that belongs to the innermost enclosing
+\code{taskgroup} and that has not begun execution may be discarded,
+which implies its completion.
 
-When cancellation is active for a \code{parallel}, \code{sections}, \code{for}, or \code{do} region, each 
+When cancellation is active for a \code{parallel}, \code{sections}, or loop region, each 
 thread of the binding thread set resumes execution at the end of the canceled region if a 
 cancellation point is encountered. If the canceled region is a \code{parallel} region, any 
 tasks that have been created by a \code{task} construct and their descendent tasks are 
 canceled according to the above \code{taskgroup} cancellation semantics. If the canceled 
-region is a \code{sections}, \code{for}, or \code{do} region, no task cancellation occurs.
+region is a \code{sections}, or loop region, no task cancellation occurs.
 
 \cppspecificstart
 The usual C++ rules for object destruction are followed when cancellation is performed.
@@ -7211,10 +7220,6 @@ All private objects or subobjects with \code{ALLOCATABLE} attribute that are all
 the canceled construct are deallocated.
 \fortranspecificend
 
-\notestart
-\noteheader – The programmer is responsible for releasing locks and other synchronization data structures that might cause a deadlock when a \code{cancel} construct is encountered and blocked threads cannot be canceled. The programmer is also responsible for ensuring proper synchronization to avoid deadlocks that might arise from cancellation of OpenMP regions that contain OpenMP synchronization constructs.
-\noteend
-
 If the canceled construct contains a \code{reduction} or \code{lastprivate} clause, the final 
 value of the \code{reduction} or \code{lastprivate} variable is undefined.
 
@@ -7222,6 +7227,15 @@ When an \code{if} clause is present on a \code{cancel} construct and the \code{i
 to \plc{false}, the \code{cancel} construct does not activate cancellation. The cancellation point 
 associated with the \code{cancel} construct is always encountered regardless of the value of 
 the \code{if} expression.
+
+\notestart
+\noteheader – The programmer is responsible for releasing locks and
+other synchronization data structures that might cause a deadlock when
+a \code{cancel} construct is encountered and blocked threads cannot be
+canceled. The programmer is also responsible for ensuring proper
+synchronizations to avoid deadlocks that might arise from cancellation
+of OpenMP regions that contain OpenMP synchronization constructs.
+\noteend
 
 \restrictions
 The restrictions to the \code{cancel} construct are as follows:
@@ -7249,6 +7263,9 @@ inside a \code{taskgroup} region, then the behavior is unspecified.
 \item A construct that may be subject to cancellation must not encounter an orphaned 
 cancellation point. That is, a cancellation point must only be encountered within that 
 construct and must not be encountered elsewhere in its region.
+
+\item An OpenMP program with orphaned \code{cancel}~\code constructs is 
+non-conforming. 
 \end{itemize}
 
 \crossreferences
@@ -7319,7 +7336,6 @@ taskgroup
 
 \binding
 The binding thread set of the \code{cancellation point} construct is the current team.
-The binding task set of the \code{cancellation point} region is the current task region. 
 The binding region of the \code{cancellation point} region is the innermost enclosing region of the type corresponding to the \plc{construct-type-clause} 
 specified in the directive (that is, the innermost \code{parallel}, \code{sections}, loop, or 
 \code{taskgroup} region).
@@ -7327,7 +7343,7 @@ specified in the directive (that is, the innermost \code{parallel}, \code{sectio
 \descr
 This directive introduces a user-defined cancellation point at which an implicit or 
 explicit task must check if cancellation of the innermost enclosing region of the type 
-specified in the clause has been requested. This construct does not implement a 
+specified in the clause has been requested. This construct does not implement any 
 synchronization between threads or tasks.
 
 When an implicit or explicit task reaches a user-defined cancellation point and if 
@@ -7341,7 +7357,7 @@ the type specified.
 
 \item If the \plc{construct-type-clause} of the encountered 
 \code{cancellation point} construct is \code{taskgroup}, the encountering 
-task checks for active cancellation of all taskgroup sets to which the 
+task checks for active cancellation of all  \plc{taskgroup sets} to which the 
 encountering task belongs and continues execution at the end of the current 
 task region if cancellation has been activated for any of them.
 \end{itemize}
@@ -7455,7 +7471,7 @@ construct may cause an implicit reference to the variable in the enclosing const
 Such implicit references are also subject to the data-sharing attribute rules outlined in 
 this section.
 
-Certain variables and objects have predetermined data-sharing attributes as follows:
+Certain variables and objects have \emph{predetermined} data-sharing attributes as follows:
 
 \ccppspecificstart
 \begin{itemize}
@@ -7571,7 +7587,7 @@ listed in a data-sharing attribute clause on the construct.
 Rules for variables with \emph{implicitly determined} data-sharing attributes are as follows:
 
 \begin{itemize}
-\item In a \code{parallel}, \code{task}, or \code{taskloop} construct, the data-sharing attributes of these variables are
+\item In a \code{parallel}, \code{task}, \code{taskloop}, or \code{teams} construct, the data-sharing attributes of these variables are
 determined by the \code{default} clause, if present (see
 \specref{subsubsec:default clause}).
 
@@ -7757,10 +7773,10 @@ A variable is affected by a \code{copyin} clause if the variable appears in the 
 or it is in a common block that appears in the \code{copyin} clause. 
 
 If the above conditions hold, the definition, association, or allocation status of a thread’s 
-copy of a threadprivate variable or a variable in a threadprivate common 
+copy of a \code{threadprivate} variable or a variable in a \code{threadprivate} common 
 block, that is not affected by any \code{copyin} clause that appears on the second region, will 
 be retained. Otherwise, the definition and association status of a thread’s copy of the 
-variable in the second region is undefined, and the allocation status of an allocatable 
+variable in the second region are undefined, and the allocation status of an allocatable 
 variable will be implementation defined. 
 
 If a threadprivate variable or a variable in a threadprivate common block is 
@@ -8003,7 +8019,7 @@ have implicitly determined data-sharing attributes to be private.
 \fortranspecificend
 
 The \code{default(none)} clause requires that each variable that is referenced in the 
-construct, and that does not have a predetermined data-sharing attribute, must have its 
+construct, and that does not have a predetermined data-sharing attribute, have its 
 data-sharing attribute explicitly determined by being listed in a data-sharing attribute 
 clause. 
 
@@ -8050,12 +8066,12 @@ the explicit \code{task} region completes its execution.
 The association status of a shared pointer becomes undefined upon entry to and on exit 
 from the \code{parallel}, \code{task}, \code{taskloop} or \code{teams} construct if it
 is associated with a target or a  subobject of a target that is in a \code{private},
-\code{firstprivate}, \code{lastprivate}, or \code{reduction} clause inside the construct.
+\code{firstprivate}, \code{lastprivate}, or \code{reduction} clause in the construct.
 
 Under certain conditions, passing a shared variable to a non-intrinsic procedure may 
 result in the value of the shared variable being copied into temporary storage before the 
-procedure reference, and back out of the temporary storage into the actual argument 
-storage after the procedure reference. When this situation occurs is implementation defined. 
+procedure reference, and backed out of the temporary storage into the actual argument 
+storage after the procedure reference. When this situation occurs is implementation defined.
 
 \notestart
 \noteheader – Use of intervening temporary storage may occur when the following three 
@@ -8159,16 +8175,31 @@ The value and/or allocation status of the original list item will change only:
 \fortranspecificend
 \end{itemize}
 
-List items that appear in a \code{private}, \code{firstprivate}, or \code{reduction} clause in a 
-\code{parallel} construct may also appear in a \code{private} clause in an enclosed \code{parallel}, 
-\code{task}, or worksharing, or \code{simd} construct. 
+List items that appear in a \code{private}, \code{firstprivate}, or
+\code{reduction} clause in a \code{parallel} construct may also appear
+in a \code{private} clause in an enclosed \code{parallel},
+worksharing, \code{task}, \code{taskloop}, \code{simd}, or
+\code{target} construct.
 
-List items that appear in a \code{private} or \code{firstprivate} clause in a \code{task} construct 
-may also appear in a \code{private} clause in an enclosed \code{parallel} or \code{task} construct. 
+List items that appear in a \code{private} or \code{firstprivate}
+clause in a \code{task} construct may also appear in a \code{private}
+clause in an enclosed \code{parallel}, \code{task}, \code{simd}, or
+\code{target}construct.
 
-List items that appear in a \code{private}, \code{firstprivate}, \code{lastprivate}, or 
-\code{reduction} clause in a worksharing construct may also appear in a \code{private} clause 
-in an enclosed \code{parallel} or \code{task} construct. 
+List items that appear in a \code{private} or \code{firstprivate}
+clause in a \code{taskloop} construct may also appear in a \code{private}
+clause in an enclosed \code{parallel}, \code{task}, \code{simd}, or
+\code{target}construct.
+
+List items that appear in a \code{private}, \code{firstprivate},
+\code{lastprivate}, or \code{reduction} clause in a worksharing
+construct may also appear in a \code{private} clause in an enclosed
+\code{parallel}, \code{task}, \code{simd}, or \code{target} construct.
+
+List items that appear in a \code{private} or \code{lastprivate}
+clause in a \code{simd} construct may also appear in a \code{private}
+clause in an enclosed \code{parallel}, \code{task}, or \code{target}
+construct.
 
 \ccppspecificstart
 If the type of a list item is a reference to a type \plc{T} then the type will be considered to be 
@@ -8178,7 +8209,7 @@ A new list item of the same type, with automatic storage duration, is allocated 
 construct. The storage and thus lifetime of these list items lasts until the block in which 
 they are created exits. The size and alignment of the new list item are determined by the 
 type of the variable. This allocation occurs once for each task generated by the construct 
-and/or once for each SIMD lane used by the construct.
+and once for each SIMD lane used by the construct.
 
 The new list item is initialized, or has an undefined initial value, as if it had been locally 
 declared without an initializer. 
@@ -8190,34 +8221,34 @@ are called is unspecified. The order in which any destructors for different priv
 variables of class type are called is unspecified.
 \cppspecificend
 
-\fortranspecificstart
-If any statement of the construct references a list item, a new list item of the same type 
-and type parameters is allocated: once for each implicit task in the \code{parallel} 
-construct; once for each task generated by a \code{task} construct; and once for each SIMD 
-lane used by a \code{simd} construct. The initial value of the new list item is undefined. 
-Within a \code{parallel}, \code{worksharing}, \code{task}, \code{teams}, or \code{simd} region, the initial status 
-of a private pointer is undefined.
+\fortranspecificstart 
+If any statement of the construct references a list item, a new list
+item of the same type and type parameters is allocated. This
+allocation occurs once for each task generated by the construct and
+once for each SIMD lane used by the construct. The initial value of
+the new list item is undefined. The initial status of a private
+pointer is undefined.
 
 For a list item or the subobject of a list item with the \code{ALLOCATABLE} attribute:
 
 \begin{itemize}
 \item if the allocation status is ``not currently allocated'', the new list item or the subobject 
-of the new list item will have an initial allocation status of "not currently allocated";
+of the new list item will have an initial allocation status of "not currently allocated".
 
 \item if the allocation status is ``currently allocated'', the new list item or the subobject of 
-the new list item will have an initial allocation status of "currently allocated". If the 
-new list item or the subobject of the new list item is an array, its bounds will be the 
-same as those of the original list item or the subobject of the original list item.
+the new list item will have an initial allocation status of "currently allocated".
+
+\item If the new list item or the subobject of the new list item is an array, its bounds will be 
+the same as those of the original list item or the subobject of the original list item.
 \end{itemize}
 
 A list item that appears in a \code{private} clause may be storage-associated with other 
 variables when the \code{private} clause is encountered. Storage association may exist 
 because of constructs such as \code{EQUIVALENCE} or \code{COMMON}. If \plc{A} is a variable appearing 
-in a \code{private} clause and \plc{B} is a variable that is storage-associated with \plc{A}, then:
+in a \code{private} clause on a construct and \plc{B} is a variable that is storage-associated with \plc{A}, then:
 
 \begin{itemize}
-\item The contents, allocation, and association status of \plc{B} are undefined on entry to the 
-\code{parallel}, \code{task}, \code{simd}, or \code{teams} region.
+\item The contents, allocation, and association status of \plc{B} are undefined on entry to the region.
 
 \item Any definition of \plc{A}, or of its allocation or association status, causes the contents, 
 allocation, and association status of \plc{B} to become undefined. 
@@ -8231,7 +8262,10 @@ construct. If the construct association is established prior to a \code{parallel
 association between the associate name and the original list item will be retained in the 
 region.
 
-Finalization of a list item of a finalizable type or subojects of a list item of a finalizable type occurs at the end of the region. The order in which any final subroutines for different variables of a finalizable type are called is unspecified.
+Finalization of a list item of a finalizable type or subojects of a
+list item of a finalizable type occurs at the end of the region. The
+order in which any final subroutines for different variables of a
+finalizable type are called is unspecified.
 \fortranspecificend
 
 \restrictions
@@ -8315,13 +8349,16 @@ initialization of the new list item is done once for each task that references t
 in any statement in the construct. The initialization is done prior to the execution of the 
 construct.
 
-For a \code{firstprivate} clause on a \code{target}, \code{parallel}, \code{task}, or \code{teams} construct, the initial 
-value of the new list item is the value of the original list item that exists immediately 
-prior to the construct in the task region where the construct is encountered. For a 
-\code{firstprivate} clause on a worksharing construct, the initial value of the new list 
-item for each implicit task of the threads that execute the worksharing construct is the 
-value of the original list item that exists in the implicit task immediately prior to the 
-point in time that the worksharing construct is encountered.
+For a \code{firstprivate} clause on a \code{parallel}, \code{task},
+\code{taskloop}, \code{target}, or \code{teams} construct, the
+initial value of the new list item is the value of the original list
+item that exists immediately prior to the construct in the task region
+where the construct is encountered. For a \code{firstprivate} clause
+on a worksharing construct, the initial value of the new list item for
+each implicit task of the threads that execute the worksharing
+construct is the value of the original list item that exists in the
+implicit task immediately prior to the point in time that the
+worksharing construct is encountered.
 
 To avoid race conditions, concurrent updates of the original list item must be 
 synchronized with the read of the original list item that occurs as a result of the 
@@ -8356,27 +8393,29 @@ association status of the original list item as if by pointer assignment.
 The restrictions to the \code{firstprivate} clause are as follows:
 
 \begin{itemize}
-\item A list item that is private within a \code{parallel} region must not appear in a 
-\code{firstprivate} clause on a worksharing construct if any of the worksharing 
-regions arising from the worksharing construct ever bind to any of the \code{parallel} 
-regions arising from the \code{parallel} construct. 
+\item A list item that is private within a \code{parallel} region must
+not appear in a \code{firstprivate} clause on a worksharing or
+\code{taskloop} construct if any of the worksharing or task regions arising
+from the worksharing or \code{taskloop} construct ever bind to any of the
+\code{parallel} regions arising from the \code{parallel} construct.
 
 \item A list item that is private within a \code{teams} region must not appear in a 
 \code{firstprivate} clause on a \code{distribute} construct if any of the \code{distribute} 
 regions arising from the \code{distribute} construct ever bind to any of the \code{teams} 
 regions arising from the \code{teams} construct.
 
-\item A list item that appears in a \code{reduction} clause of a \code{parallel} construct must not 
-appear in a \code{firstprivate} clause on a worksharing or \code{task} construct if any of 
-the worksharing or \code{task} regions arising from the worksharing or \code{task} construct 
-ever bind to any of the \code{parallel} regions arising from the \code{parallel} construct.
+\item A list item that appears in a \code{reduction} clause of a \code{parallel} 
+construct must not appear in a \code{firstprivate} clause on a worksharing, \code{task}, 
+or \code{taskloop} construct if any of the worksharing or task regions arising from 
+the worksharing, \code{task}, or \code{taskloop} construct ever bind to any of the 
+\code{parallel} regions arising from the \code{parallel} construct.
 
 \item A list item that appears in a \code{reduction} clause of a \code{teams} construct must not 
 appear in a \code{firstprivate} clause on a \code{distribute} construct if any of the 
 \code{distribute} regions arising from the \code{distribute} construct ever bind to any of 
 the \code{teams} regions arising from the \code{teams} construct. 
 
-\item A list item that appears in a \code{reduction} clause in a worksharing construct must not 
+\item A list item that appears in a \code{reduction} clause of a worksharing construct must not 
 appear in a \code{firstprivate} clause in a \code{task} construct encountered during execution 
 of any of the worksharing regions arising from the worksharing construct.
 
@@ -8386,12 +8425,12 @@ requires an accessible, unambiguous copy constructor for the class type.
 \cppspecificend
 
 \ccppspecificstart
-\item A variable that appears in a \code{firstprivate} clause must not have an incomplete C/C++ type or be a reference to an incomplete type.
-\item If a list item is a reference type then it must bind to the same object for all threads of the team.
+\item A variable that appears in \code{firstprivate} clause must not have an incomplete C/C++ type or be a reference to an incomplete type.
+\item If a list item is a reference type, then it must bind to the same object for all threads of the team.
 \ccppspecificend
 
 \fortranspecificstart
-\item Variables that appear in namelist statements, in variable format expressions, and in 
+\item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{firstprivate} 
 clause. 
 \fortranspecificend
@@ -8474,10 +8513,12 @@ required for \code{lastprivate} occurs after all initializations for \code{first
 The restrictions to the \code{lastprivate} clause are as follows:
 
 \begin{itemize}
-\item A list item that is private within a \code{parallel} region, or that appears in the 
-\code{reduction} clause of a \code{parallel} construct, must not appear in a \code{lastprivate} 
-clause on a worksharing construct if any of the corresponding worksharing regions 
-ever binds to any of the corresponding \code{parallel} regions.
+\item A list item that is private within a \code{parallel} region, or
+that appears in the \code{reduction} clause of a \code{parallel}
+construct, must not appear in a \code{lastprivate} clause on a
+worksharing or \code{taskloop} construct if any of the corresponding
+worksharing ot task regions ever binds to any of the corresponding
+\code{parallel} regions.
 
 \cppspecificstart
 \item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
@@ -8503,7 +8544,7 @@ type unless it is of class type with a \code{mutable} member.
 
 \item If the original list item has the \code{ALLOCATABLE} attribute, the corresponding list item in the sequentially last iteration or lexically last section must have an allocation status of allocated upon exit from that iteration or section.
 
-\item Variables that appear in namelist statements, in variable format expressions, and in 
+\item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{lastprivate} 
 clause.
 \fortranspecificend
@@ -8548,7 +8589,7 @@ where:
 \code{|},
 \code{\^},
 \code{\&\&} and
-\code{||}
+\code{||} 
 \cspecificend % L1 ^^^^^
 
 \cppspecificstart % L1 vvvvv
@@ -8606,8 +8647,6 @@ is that value as expressed in the data type of the reduction list item.
 %\end{center}
 \linenumbers
 
-where \code{omp\_in} and \code{omp\_out} correspond to two identifiers that refer to storage of the 
-type of the list item. \code{omp\_out} holds the final value of the combiner operation.
 \ccppspecificend % L0 ^^^^^
 \bigskip
 
@@ -8672,13 +8711,19 @@ value as expressed in the data type of the reduction list item.
 \code{ior} & \code{omp\_priv = 0} & \code{omp\_out = ior(omp\_in, omp\_out)}\\
 \code{ieor} & \code{omp\_priv = 0} & \code{omp\_out = ieor(omp\_in, omp\_out)}\\
 \end{supertabular}
+
 \linenumbers
-\vspace{\baselineskip}
+
 \fortranspecificend
+\vspace{\baselineskip}
+
+In the above tables, \code{omp\_in} and \code{omp\_out} correspond to
+two identifiers that refer to storage of the type of the list
+item. \code{omp\_out} holds the final value of the combiner operation.
 
 Any \plc{reduction-identifier} that is defined with the \code{declare}~\code{reduction} directive is 
 also valid. In that case, the initializer and combiner of the \plc{reduction-identifier} are 
-specified by the \plc{initializer-clause} and the combiner in the \code{declare}~\code{reduction} 
+specified by the \plc{initializer-clause} and the \plc{combiner} in the \code{declare}~\code{reduction} 
 directive.
 
 \descr
@@ -8706,23 +8751,26 @@ match is done by means of a name lookup in the base language.
 
 \ccppspecificstart
 The list items that appear in the \code{reduction} clause may include array sections.
-
-If the list item is an array or an array section it will be treated as if a \code{reduction} clause would be applied to each separate element of the array section. The elements of each private array section will be allocated contiguously.
 \ccppspecificend
 
 \cppspecificstart
 If the type is a derived class, then any \plc{reduction-identifier} that matches its base classes 
-are also a match, if there is no specific match for the type.
+is also a match, if there is no specific match for the type.
 
-If the \plc{reduction-identifier} is not an \plc{id-expression} then it is implicitly converted to one by 
+If the \plc{reduction-identifier} is not an \plc{id-expression}, then it is implicitly converted to one by 
 prepending the keyword operator (for example, \code{+} becomes \code{\plc{operator}+}).
 
-If the \plc{reduction-identifier} is qualified then a qualified name lookup is used to find the 
+If the \plc{reduction-identifier} is qualified, then a qualified name lookup is used to find the 
 declaration.
 
-If the \plc{reduction-identifier} is unqualified then an \emph{argument-dependent name lookup} must 
+If the \plc{reduction-identifier} is unqualified, then an \emph{argument-dependent name lookup} must 
 be performed using the type of each list item.
 \cppspecificend
+
+If the list item is an array or array section, it will be treated as
+if a \code{reduction} clause would be applied to each separate element
+of the array section. The elements of each private array section will
+be allocated contiguously.
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the 
 construct; however, if the reduction clause is used on a construct to which \code{nowait} is 
@@ -8796,7 +8844,7 @@ the team.
 clause. 
 
 \item An original list item with the \code{POINTER} attribute or any
-  pointer component of an original list item that is referenced in
+  pointer component of an original list item that is referenced in the
   \plc{combiner} must be associated at entry to the construct that
   contains the \code{reduction} clause. Additionally, the list item or
   the pointer component of the list item must not be deallocated,
@@ -8804,7 +8852,7 @@ clause.
 
 \item An original list item with the \code{ALLOCATABLE} attribute or
   any allocatable component of an original list item that is
-  referenced in \plc{combiner} must be in the allocated state at entry
+  referenced in the \plc{combiner} must be in the allocated state at entry
   to the construct that contains the \code{reduction}
   clause. Additionally, the list item or the allocatable component of
   the list item must be neither deallocated nor allocated within the
@@ -8966,7 +9014,7 @@ threads in the team.
 The clauses accept a comma-separated list of list items (see \specref{sec:Directive Format}). 
 All list items appearing in a clause must be visible, according to the scoping rules of the 
 base language. Clauses may be repeated as needed, but a list item that specifies a given 
-variable may not appear in more than one clause on the same directive
+variable may not appear in more than one clause on the same directive.
 
 \fortranspecificstart
 An associate name preserves the association with the selector established at the \code{ASSOCIATE} statement. A list item that appears in a data copying clause may be a selector of an \code{ASSOCIATE} construct. If the construct association is established prior to a parallel region, the association between the associate name and the original list item will be retained in the region.
@@ -9168,9 +9216,9 @@ data-sharing attribute or \code{map} clauses:
 
 \begin{itemize}
 \ccppspecificstart
-\item A variable with a type of pointer, reference to array, or reference 
-to pointer is treated as if it had appeared in a \code{map} clause as the 
-variable in a zero-length array section.
+\item A variable that is of type pointer, reference to array, or reference 
+to pointer is treated as if it had appeared in a \code{map} clause as 
+a zero-length array section.
 \ccppspecificend
 
 \item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
@@ -9238,7 +9286,7 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \end{enumerate}
 \item If the corresponding list item's reference count is one, then:
 \begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{alloc} the value of the corresponding list item is undefined. 
+\item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
 \end{enumerate}
 \end{enumerate}
 
@@ -9382,7 +9430,7 @@ The following section describes the directive for declaring user-defined reducti
 \code{reduction} clause. The \code{declare}~\code{reduction} directive is a declarative directive.
 
 \syntax
-\cspecificstart
+\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp declare reduction(\plc{reduction-identifier }:\plc{ typename-list }: 
 \plc{combiner })\plc{[initializer-clause] new-line}
@@ -9403,7 +9451,7 @@ operators:
 \code{\&\&} and 
 \code{||} 
 
-\item \plc{typename-list} is list of type names 
+\item \plc{typename-list} is a list of type names 
 
 \item \plc{combiner} is an expression 
 
@@ -9411,7 +9459,7 @@ operators:
 where \plc{initializer-expr} is\linebreak
 \code{omp\_priv = }\plc{initializer} or \plc{function-name}\code{(}\plc{argument-list}\code{)} 
 \end{itemize}
-\cspecificend
+\ccppspecificend
 
 
 \cppspecificstart
@@ -9423,7 +9471,7 @@ where \plc{initializer-expr} is\linebreak
 where:
 
 \begin{itemize}
-\item \plc{reduction-identifier} is either a base language identifier or one of the following 
+\item \plc{reduction-identifier} is either an \plc{id-expression} or one of the following 
 operators: 
 \code{+}, 
 \code{-}, 
@@ -9434,14 +9482,13 @@ operators:
 \code{\&\&} and 
 \code{||} 
 
-\item \plc{typename-list} is list of type names 
+\item \plc{typename-list} is a list of type names 
 
 \item \plc{combiner} is an expression 
 
-% Is there an equal sign missing in the original spec after omp_priv?
 \item \plc{initializer-clause} is \code{initializer(}\plc{initializer-expr}\code{)} 
 where \plc{initializer-expr} is\linebreak
-\code{omp\_priv} \plc{initializer} or \plc{function-name}\code{(}\plc{argument-list}\code{)} 
+\code{omp\_priv = }\plc{initializer} or \plc{function-name}\code{(}\plc{argument-list}\code{)} 
 \end{itemize}
 \cppspecificend
 
@@ -9578,14 +9625,14 @@ will be used.
 
 \ccppspecificstart
 If \plc{reduction-identifier} is used in a \code{target} region then a \code{declare}~\code{target} construct 
-must be specified for any function that can be accessed through \plc{combiner} and 
+must be specified for any function that can be accessed through the \plc{combiner} and 
 \plc{initializer-expr}.
 \ccppspecificend
 \bigskip
 
 \fortranspecificstart
 If \plc{reduction-identifier} is used in a \code{target} region then a \code{declare}~\code{target} construct 
-must be specified for any function or subroutine that can be accessed through \plc{combiner} 
+must be specified for any function or subroutine that can be accessed through the \plc{combiner} 
 and \plc{initializer-expr}.
 \fortranspecificend
 
@@ -9631,17 +9678,17 @@ arguments must be \code{omp\_priv}.
 
 \item If the \code{declare}~\code{reduction} directive appears in the specification part of a module and the corresponding reduction clause does not appear in the same module, the \plc{reduction-identifier} must be the same as the name of a user-defined operator, one of the allowed operators that is extended or a generic name that is the same as the name of one of the allowed intrinsic procedures. 
 
-\item If the \code{declare}~\code{reduction} directive appears in the specification of a module, if the corresponding \code{reduction} clause does not appear in the same module, and if the \plc{reduction-identifier} is the same as the name of a user-defined operator or an extended operator, or the same as a generic name that is the same as one of the allowed intrinsic procedures, the interface for that operator or the generic name must be defined in the specification of the same module, or must be accessible by use association. 
+\item If the \code{declare}~\code{reduction} directive appears in the specification of a module, if the corresponding \code{reduction} clause does not appear in the same module, and if the \plc{reduction-identifier} is the same as the name of a user-defined operator or an extended operator, or the same as a generic name that is the same as one of the allowed intrinsic procedures, then the interface for that operator or the generic name must be defined in the specification of the same module, or must be accessible by use association. 
 
-\item Any subroutine, or function used in the \code{initializer} clause or \plc{combiner} expression must be an intrinsic function, or must have an accessible interface. 
+\item Any subroutine or function used in the \code{initializer} clause or \plc{combiner} expression must be an intrinsic function, or must have an accessible interface. 
 
-\item Any user-defined operator, or extended operator used in the \code{initializer} clause or \plc{combiner} expression must have an accessible interface. 
+\item Any user-defined operator or extended operator used in the \code{initializer} clause or \plc{combiner} expression must have an accessible interface. 
 
-\item If any subroutine, function, user-defined operator or extended operator is used in the \code{initializer} clause or \plc{combiner} expression, it must be accessible to the subprogram in which the corresponding \code{reduction} clause is specified. 
+\item If any subroutine, function, user-defined operator, or extended operator is used in the \code{initializer} clause or \plc{combiner} expression, it must be accessible to the subprogram in which the corresponding \code{reduction} clause is specified. 
 
 \item If the length type parameter is specified for a character type, it must be a constant, a colon or an~\code{*}. 
 
-\item If a character type with deferred or assumed length parameter is specified in a \code{declare}~\code{reduction} directive, no other \code{declare}~\code{reduction} directives with Fortran character type of the same kind parameter and the same \plc{reduction-identifier} are allowed in the same scope.
+\item If a character type with deferred or assumed length parameter is specified in a \code{declare}~\code{reduction} directive, no other \code{declare}~\code{reduction} directive with Fortran character type of the same kind parameter and the same \plc{reduction-identifier} is allowed in the same scope.
 
 \item Any subroutine used in the \code{initializer} clause or \plc{combiner} expression must not have any alternate returns appear in the argument list.
 \fortranspecificend
@@ -9708,7 +9755,7 @@ arising from an \code{ordered} construct with the \code{simd} clause.
 within a \code{target} region then the behavior is unspecified. 
 
 \item If specified, a \code{teams} construct must be contained within a \code{target} construct. That 
-\code{target} construct must contain no statements or directives outside of the \code{teams} 
+\code{target} construct must not contain any statements or directives outside of the \code{teams} 
 construct. 
 
 \item \code{distribute}, \code{distribute}~\code{simd}, \code{parallel}, 
@@ -9730,7 +9777,7 @@ inside an OpenMP construct that matches the type specified in
 
 \item A \code{cancellation}~\code{point} construct for which
 \plc{construct-type-clause} is \code{taskgroup} must be nested inside
-a \code{task} construct and the \code{cancellation}~\code{point} construct
+a \code{task} construct, and the \code{cancellation}~\code{point} construct
 must be nested inside a \code{taskgroup} region. A
 \code{cancellation}~\code{point} construct for which
 \plc{construct-type-clause} is \code{sections} must be closely nested
