@@ -1670,7 +1670,7 @@ firstprivate(\plc{list})
 lastprivate(\plc{list})
 linear(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
-schedule(\plc{[modifier}:\plc{]kind[},\plc{ chunk\_size]})
+schedule(\plc{[modifier}:\plc{[modifier}:\plc{]]kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
 ordered\plc{[}(\plc{n})\plc{]}
 nowait
@@ -1698,7 +1698,7 @@ firstprivate(\plc{list})
 lastprivate(\plc{list})
 linear(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
-schedule(\plc{[modifier}:\plc{]kind[},\plc{ chunk\_size]})
+schedule(\plc{[modifier}:\plc{[modifier}:\plc{]]kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
 ordered\plc{[}(\plc{n})\plc{]}
 \end{indentedcodelist}
@@ -1816,27 +1816,30 @@ use of the \code{nowait} clause.\\
 
 \index{dynamic@{\code{dynamic}}}
 \code{dynamic} & When \code{schedule(dynamic,\plc{ chunk\_size})} is specified, the iterations are
-distributed to threads in the team in chunks as the threads request them. Each 
+distributed to threads in the team in chunks. Each 
 thread executes a chunk of iterations, then requests another chunk, until no 
-chunks remain to be distributed.\\
+chunks remain to be distributed. No ordering of chunk distribution is
+required unless the \code{monotonic} modifier is specified.\\
 
- & Each chunk contains \plc{chunk\_size} iterations, except for the last chunk to be 
-distributed, which may have fewer iterations.\\
+ & Each chunk contains \plc{chunk\_size} iterations, except for the
+chunk that contains the sequentially last iteration, which may have fewer iterations.\\
 
  & When no \plc{chunk\_size} is specified, it defaults to 1\\
 
 \index{guided@{\code{guided}}}
 \code{guided} & When \code{schedule(guided,\plc{ chunk\_size})} is specified, the iterations are
-assigned to threads in the team in chunks as the executing threads request 
-them. Each thread executes a chunk of iterations, then requests another chunk, 
-until no chunks remain to be assigned.\\
+assigned to threads in the team in chunks. Each thread executes a
+chunk of iterations, then requests another chunk, until no chunks remain to be assigned.
+No ordering of chunk distribution is required unless the \code{monotonic} modifier is specified.\\
 
  & For a \plc{chunk\_size} of 1, the size of each chunk is proportional to the
 number of unassigned iterations divided by the number of threads in the team,
 decreasing to 1. For a \plc{chunk\_size} with value $k$ (greater than 1), the
 size of each chunk is determined in the same way, with the restriction
-that the chunks do not contain fewer than $k$ iterations (except for the last chunk
-to be assigned, which may have fewer than $k$ iterations).\\
+that the chunks do not contain fewer than $k$ iterations (except for the
+chunk that contains the sequentially last iteration, which may have fewer
+than $k$ iterations). 
+\\
 
  & When no \plc{chunk\_size} is specified, it defaults to 1.\\
 
@@ -1887,6 +1890,10 @@ $q = \lceil n/(2p) \rceil$, and set $n$ to the larger of $n-q$ and $2*p*k$.
 \bottomcaption{\code{schedule} Clause \plc{modifier} Values\label{tab:Schedule Clause Modifier Values}}
 %% \vspace{1ex}
 \begin{supertabular}{ p{0.8in} p{4.3in} }
+\code{monotonic} & When the \code{monotonic} modifier is specified then each thread executes the chunks 
+that it is assigned in increasing logical iteration order. If the \code{monotonic} modifier is not specified 
+and the \code{dynamic} or \code{guided} schedule kind is specified then the behavior of an application 
+that depends on the execution order of the chunks is unspecified.\\
 \code{simd} & When the \code{simd} modifier is specified and the loop is associated with a SIMD construct, the \plc{chunk\_size} for all chunks except the first and last chunks  is  $new\_chunk\_size =  \lceil chunk\_size / simd\_width \rceil * simd\_width $ where \plc{simd\_width} is an implementation-defined value. The first chunk will have at least \plc{new\_chunk\_size} iterations except if it is also the last chunk. The last chunk may have fewer iterations than \plc{new\_chunk\_size}. If the \code{simd} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
 \end{supertabular}
 
@@ -1912,6 +1919,8 @@ construct must be the same for all the threads in the team.
 
 \item When \code{schedule(runtime)} or \code{schedule(auto)} is specified, \plc{chunk\_size} must 
 not be specified.
+
+\item The \code{monotonic} modifier can ony be specified with \code{schedule(dynamic)} or \code{schedule(guided)}.
 
 \item Only one \code{ordered} clause can appear on a loop directive.
 
