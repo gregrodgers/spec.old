@@ -1732,59 +1732,72 @@ There is an implicit barrier at the end of a loop construct unless a \code{nowai
 specified.
 
 \index{clauses!collapse@{\code{collapse}}}
-The \code{collapse} clause or the \code{ordered} clause with the parameter 
-may be used to specify how many loops are associated with the loop construct. 
-The number of loops associated is determined by the parameters of the 
-\code{collapse} clause and the \code{ordered} clause, which must be 
-constant positive integer expressions.
+The \code{collapse} clause may be used to specify how many loops are 
+associated with the loop construct. The parameter of the \code{collapse} 
+clause must be a constant positive integer expression. If a \code{collapse} 
+clause is specified with a parameter value greater than one, then the 
+iterations of the associated loops to which the clause applies are collapsed 
+into one larger iteration space that is then divided according 
+to the \code{schedule} clause. The sequential execution of the iterations 
+in these associated loops determines the order of the iterations in the 
+collapsed iteration space. If no \code{collapse} clause is present or its 
+parameter is one, the only loop that is associated with the loop construct 
+for the purposes of determining how the iteration space is divided according 
+to the \code{schedule} clause is the one that immediately follows the 
+loop directive. 
 
-If neither the \code{collapse} nor the \code{ordered} clause is present, the only loop that is associated with the loop construct is the one that immediately follows the loop directive. If the value of the parameter in the \code{collapse} or \code{ordered} clause is larger than the number of nested loops following the construct, the behavior is unspecified.
+The iteration count for each associated loop is computed before entry to the 
+outermost loop. If execution of any associated loop changes any of the values 
+used to compute any of the iteration counts, then the behavior is unspecified.
 
-If both the \code{collapse} clause and the \code{ordered} clause with a parameter are specified, the \code{collapse} clause applies to the loops that immediately follow the directive. The \code{ordered} clause with the parameter then applies to the resulting loop nest (that is, the collapsed loop and the remaining loops). If the value of the parameter in the \code{ordered} clause is larger than the number of the loops in the resulting loop nest, the behavior is unspecified.
+The integer type (or kind, for Fortran) used to compute the iteration count 
+for the collapsed loop is implementation defined.
 
 \index{clauses!schedule@{\code{schedule}}}
-If more than one loop is associated with the loop construct and a \code{collapse} clause is specified, then the iterations of all associated loops are collapsed into one larger iteration space that is then divided according to the schedule clause.
+A worksharing loop has logical iterations numbered 0,1,...,N-1 where N is the 
+number of loop iterations, and the logical numbering denotes the sequence in 
+which the iterations would be executed if a set of associated loop(s) were 
+executed sequentially. The \code{schedule} clause specifies how iterations of 
+these associated loops are divided into contiguous non-empty subsets, called 
+chunks, and how these chunks are distributed among threads of the team. Each 
+thread executes its assigned chunk(s) in the context of its implicit task. 
+The \plc{chunk\_size} expression is evaluated using the original list items of 
+any variables that are made private in the loop construct. It is unspecified 
+whether, in what order, or how many times, any side effects of the evaluation 
+of this expression occur. The use of a variable in a \code{schedule} clause 
+expression of a loop construct causes an implicit reference to the variable 
+in all enclosing constructs.
 
-If an \code{ordered} clause with the parameter is specified for the loop construct, then the associated loops form a \emph{doacross loop nest}. 
-
-The sequential execution of the iterations in all 
-associated loops determines the order of the iterations in the collapsed iteration space.
-
-The iteration count for each associated loop is computed before entry to the outermost 
-loop. If execution of any associated loop changes any of the values used to compute any 
-of the iteration counts, then the behavior is unspecified.
-
-The integer type (or kind, for Fortran) used to compute the iteration count for the 
-collapsed loop is implementation defined.
-
-A worksharing loop has logical iterations numbered 0,1,...,N-1 where N is the number of 
-loop iterations, and the logical numbering denotes the sequence in which the iterations 
-would be executed if the associated loop(s) were executed by a single thread. The 
-\code{schedule} clause specifies how iterations of the associated loops are divided into 
-contiguous non-empty subsets, called chunks, and how these chunks are distributed 
-among threads of the team. Each thread executes its assigned chunk(s) in the context of 
-its implicit task. The \plc{chunk\_size} expression is evaluated using the original list items of 
-any variables that are made private in the loop construct. It is unspecified whether, in 
-what order, or how many times, any side effects of the evaluation of this expression 
-occur. The use of a variable in a \code{schedule} clause expression of a loop construct 
-causes an implicit reference to the variable in all enclosing constructs.
-
-Different loop regions with the same schedule and iteration count, even if they occur in 
-the same parallel region, can distribute iterations among threads differently. The only 
-exception is for the \code{static} schedule as specified in Table~\ref{tab:Schedule-Values}.
-Programs that depend 
-on which thread executes a particular iteration under any other circumstances are 
-non-conforming. 
+Different loop regions with the same schedule and iteration count, even if 
+they occur in the same parallel region, can distribute iterations among 
+threads differently. The only exception is for the \code{static} schedule 
+as specified in Table~\ref{tab:Schedule-Values}. Programs that depend 
+on which thread executes a particular iteration under any other circumstances 
+are non-conforming. 
 
 See \specref{subsubsec:Determining the Schedule of a Worksharing Loop} 
 for details of how the schedule for a worksharing loop is 
 determined. 
 
-The schedule \plc{kind} can be one of those specified in Table~\ref{tab:Schedule-Values}.
+The schedule \plc{kind} can be one of those specified in 
+Table~\ref{tab:Schedule-Values}.
 
-The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Schedule Clause Modifier Values}.
+The schedule \plc{modifier} can be one of those specified in 
+Table~\ref{tab:Schedule Clause Modifier Values}.
 
-%% \pagebreak
+The \code{ordered} clause with the parameter may also be used to specify 
+how many loops are associated with the loop construct. The parameter of 
+the \code{ordered} clause must be a constant positive integer expression
+if specified. The parameter of the \code{ordered} clause does not
+affect how the logical iteration space is then divided. If an \code{ordered} 
+clause with the parameter is specified for the loop construct, then those 
+associated loops form a \emph{doacross loop nest}. 
+
+If the value of the parameter in the \code{collapse} or \code{ordered} 
+clause is larger than the number of nested loops following the construct, 
+the behavior is unspecified.
+
+\pagebreak
 \vspace{1ex}\renewcommand{\arraystretch}{1.5}
 \tablefirsthead{%
 \hline\\[-3ex]
