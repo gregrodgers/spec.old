@@ -1505,8 +1505,8 @@ A loop has \emph{canonical loop form} if it conforms to the following:
  & \hspace{1.5em}For C, a variable of a pointer type.\\
  & If this variable would otherwise be shared, it is implicitly made private in the loop 
   construct. This variable must not be modified during the execution of the \plc{for-loop} 
-  other than in \plc{incr-expr}. Unless the variable is specified \code{lastprivate} on the
-  loop construct, its value after the loop is unspecified.\\
+  other than in \plc{incr-expr}. Unless the variable is specified \code{lastprivate}
+  or \code{linear} on the loop construct, its value after the loop is unspecified.\\
 \plc{relational-op} & One of the following:\\
  & \code{<}\\
  & \code{<=}\\
@@ -1668,7 +1668,7 @@ where clause is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{list})
-linear(\plc{list})
+linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier}:\plc{]kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
@@ -1696,7 +1696,7 @@ where \plc{clause} is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{list})
-linear(\plc{list})
+linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier}:\plc{]kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
@@ -1732,55 +1732,72 @@ There is an implicit barrier at the end of a loop construct unless a \code{nowai
 specified.
 
 \index{clauses!collapse@{\code{collapse}}}
-The \code{collapse} clause or the \code{ordered} clause with the parameter may be used to specify how many loops are associated with the loop construct. An \code{ordered} clause without a parameter is equivalent to the \code{ordered} clause with a parameter value of one specified. The number of loops associated is determined by the parameters of the \code{collapse} clause and the \code{ordered} clause, which must be constant positive integer expressions.
+The \code{collapse} clause may be used to specify how many loops are 
+associated with the loop construct. The parameter of the \code{collapse} 
+clause must be a constant positive integer expression. If a \code{collapse} 
+clause is specified with a parameter value greater than 1, then the 
+iterations of the associated loops to which the clause applies are collapsed 
+into one larger iteration space that is then divided according 
+to the \code{schedule} clause. The sequential execution of the iterations 
+in these associated loops determines the order of the iterations in the 
+collapsed iteration space. If no \code{collapse} clause is present or its 
+parameter is 1, the only loop that is associated with the loop construct 
+for the purposes of determining how the iteration space is divided according 
+to the \code{schedule} clause is the one that immediately follows the 
+loop directive. 
 
-If neither the \code{collapse} nor the \code{ordered} clause is present, the only loop that is associated with the loop construct is the one that immediately follows the loop directive. If the value of the parameter in the \code{collapse} or \code{ordered} clause is larger than the number of nested loops following the construct, the behavior is unspecified.
+The iteration count for each associated loop is computed before entry to the 
+outermost loop. If execution of any associated loop changes any of the values 
+used to compute any of the iteration counts, then the behavior is unspecified.
 
-If both the \code{collapse} clause and the \code{ordered} clause with a parameter are specified, the \code{collapse} clause applies to the loops that immediately follow the directive. The \code{ordered} clause with the parameter then applies to the resulting loop nest (that is, the collapsed loop and the remaining loops). If the value of the parameter in the \code{ordered} clause is larger than the number of the loops in the resulting loop nest, the behavior is unspecified.
+The integer type (or kind, for Fortran) used to compute the iteration count 
+for the collapsed loop is implementation defined.
 
 \index{clauses!schedule@{\code{schedule}}}
-If more than one loop is associated with the loop construct and a \code{collapse} clause is specified, then the iterations of all associated loops are collapsed into one larger iteration space that is then divided according to the schedule clause.
+A worksharing loop has logical iterations numbered 0,1,...,N-1 where N is the 
+number of loop iterations, and the logical numbering denotes the sequence in 
+which the iterations would be executed if a set of associated loop(s) were 
+executed sequentially. The \code{schedule} clause specifies how iterations of 
+these associated loops are divided into contiguous non-empty subsets, called 
+chunks, and how these chunks are distributed among threads of the team. Each 
+thread executes its assigned chunk(s) in the context of its implicit task. 
+The \plc{chunk\_size} expression is evaluated using the original list items of 
+any variables that are made private in the loop construct. It is unspecified 
+whether, in what order, or how many times, any side effects of the evaluation 
+of this expression occur. The use of a variable in a \code{schedule} clause 
+expression of a loop construct causes an implicit reference to the variable 
+in all enclosing constructs.
 
-If an \code{ordered} clause with the parameter is specified for the loop construct, then the associated loops form a \emph{doacross loop nest}. 
-
-The sequential execution of the iterations in all 
-associated loops determines the order of the iterations in the collapsed iteration space.
-
-The iteration count for each associated loop is computed before entry to the outermost 
-loop. If execution of any associated loop changes any of the values used to compute any 
-of the iteration counts, then the behavior is unspecified.
-
-The integer type (or kind, for Fortran) used to compute the iteration count for the 
-collapsed loop is implementation defined.
-
-A worksharing loop has logical iterations numbered 0,1,...,N-1 where N is the number of 
-loop iterations, and the logical numbering denotes the sequence in which the iterations 
-would be executed if the associated loop(s) were executed by a single thread. The 
-\code{schedule} clause specifies how iterations of the associated loops are divided into 
-contiguous non-empty subsets, called chunks, and how these chunks are distributed 
-among threads of the team. Each thread executes its assigned chunk(s) in the context of 
-its implicit task. The \plc{chunk\_size} expression is evaluated using the original list items of 
-any variables that are made private in the loop construct. It is unspecified whether, in 
-what order, or how many times, any side effects of the evaluation of this expression 
-occur. The use of a variable in a \code{schedule} clause expression of a loop construct 
-causes an implicit reference to the variable in all enclosing constructs.
-
-Different loop regions with the same schedule and iteration count, even if they occur in 
-the same parallel region, can distribute iterations among threads differently. The only 
-exception is for the \code{static} schedule as specified in Table~\ref{tab:Schedule-Values}.
-Programs that depend 
-on which thread executes a particular iteration under any other circumstances are 
-non-conforming. 
+Different loop regions with the same schedule and iteration count, even if 
+they occur in the same parallel region, can distribute iterations among 
+threads differently. The only exception is for the \code{static} schedule 
+as specified in Table~\ref{tab:Schedule-Values}. Programs that depend 
+on which thread executes a particular iteration under any other circumstances 
+are non-conforming. 
 
 See \specref{subsubsec:Determining the Schedule of a Worksharing Loop} 
 for details of how the schedule for a worksharing loop is 
 determined. 
 
-The schedule \plc{kind} can be one of those specified in Table~\ref{tab:Schedule-Values}.
+The schedule \plc{kind} can be one of those specified in 
+Table~\ref{tab:Schedule-Values}.
 
-The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Schedule Clause Modifier Values}.
+The schedule \plc{modifier} can be one of those specified in 
+Table~\ref{tab:Schedule Clause Modifier Values}.
 
-%% \pagebreak
+The \code{ordered} clause with the parameter may also be used to specify 
+how many loops are associated with the loop construct. The parameter of 
+the \code{ordered} clause must be a constant positive integer expression
+if specified. The parameter of the \code{ordered} clause does not
+affect how the logical iteration space is then divided. If an \code{ordered} 
+clause with the parameter is specified for the loop construct, then those 
+associated loops form a \emph{doacross loop nest}. 
+
+If the value of the parameter in the \code{collapse} or \code{ordered} 
+clause is larger than the number of nested loops following the construct, 
+the behavior is unspecified.
+
+\pagebreak
 \vspace{1ex}\renewcommand{\arraystretch}{1.5}
 \tablefirsthead{%
 \hline\\[-3ex]
@@ -1802,7 +1819,7 @@ the team in a round-robin fashion in the order of the thread number.\\
 
  & When no \plc{chunk\_size} is specified, the iteration space is divided into chunks that 
 are approximately equal in size, and at most one chunk is distributed to each 
-thread. Note that the size of the chunks is unspecified in this case.\\
+thread. The size of the chunks is unspecified in this case.\\
 
  & A compliant implementation of the \code{static} schedule must ensure that the 
 same assignment of logical iteration numbers to threads will be used in two 
@@ -1823,7 +1840,7 @@ chunks remain to be distributed.\\
  & Each chunk contains \plc{chunk\_size} iterations, except for the last chunk to be 
 distributed, which may have fewer iterations.\\
 
- & When no \plc{chunk\_size} is specified, it defaults to 1\\
+ & When no \plc{chunk\_size} is specified, it defaults to 1.\\
 
 \index{guided@{\code{guided}}}
 \code{guided} & When \code{schedule(guided,\plc{ chunk\_size})} is specified, the iterations are
@@ -1854,6 +1871,7 @@ defined.\\
 \linenumbers
 \bigskip\bigskip
 
+
 \notestart
 \noteheader – For a team of $p$ threads and a loop of $n$ iterations, let $\blceil n/p \brceil$ be the integer $q$ 
 that satisfies $n = p*q - r$, with $0 <= r < p$. One compliant implementation of the \code{static} 
@@ -1870,7 +1888,7 @@ chunk. Another compliant implementation could use the same method, except with
 $q = \blceil n/(2p) \brceil$, and set $n$ to the larger of $n-q$ and $2*p*k$. 
 \noteend
 
-%% \pagebreak
+\pagebreak
 \vspace{1ex}\renewcommand{\arraystretch}{1.5}
 \tablefirsthead{%
 \hline\\[-3ex]
@@ -1898,7 +1916,7 @@ Restrictions to the loop construct are as follows:
 must be no intervening code nor any OpenMP directive between any two loops.
 
 \item The values of the loop control expressions of the loops associated with the loop 
-construct must be the same for all the threads in the team.
+construct must be the same for all threads in the team.
 
 \item Only one \code{schedule} clause can appear on a loop directive.
 
@@ -2030,7 +2048,7 @@ Each structured block is executed once by one of the threads in the team in the 
 of its implicit task.
 
 %% BRONIS: Temporary pagination solution
-%\pagebreak
+\pagebreak
 \syntax
 \ccppspecificstart
 The syntax of the \code{sections} construct is as follows:
@@ -2338,7 +2356,7 @@ expressions occurring in the specification of the iteration space, and the maske
 assignments are each a unit of work
 
 \item For an \code{atomic} construct, the atomic operation on the storage location designated as 
-x is a unit of work.
+\plc{x} is a unit of work.
 
 \item For a \code{critical} construct, the construct is a single unit of work.
 
@@ -2457,9 +2475,11 @@ collapse(\plc{n})
 If an \code{end}~\code{simd} directive is not specified, an \code{end}~\code{simd} directive is assumed at the end 
 of the \plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an 
-\code{end}~\code{simd} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
-termination statement, then the directive can only be specified for the outermost of these 
+Any associated \plc{do-loop} must be a \plc{do-construct} or an 
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If an 
+\code{end}~\code{simd} directive follows a \plc{do-construct} in which 
+several loop statements share a \code{DO} termination statement, then the 
+directive can only be specified for the outermost of these 
 \code{DO} statements. 
 \fortranspecificend
 
@@ -2533,7 +2553,7 @@ no intervening code nor any OpenMP directive between any two loops.
 
 \item If both \code{simdlen} and \code{safelen} clauses are specified, the value of the \code{simdlen} parameter must be less than or equal to the value of the \code{safelen} parameter.
 
-\item An ordered construct with the \code{simd} clause is the only OpenMP construct that can appear in the \code{simd} region. 
+\item An \code{ordered} construct with the \code{simd} clause is the only OpenMP construct that can appear in the \code{simd} region. 
 
 \ccppspecificstart
 \item The \code{simd} region cannot contain calls to the \code{longjmp} or \code{setjmp} functions. 
@@ -2633,7 +2653,7 @@ versions of the associated function that can be used to process multiple argumen
 a single invocation from a SIMD loop concurrently.
 
 The expressions appearing in the clauses of this directive are evaluated in the scope of 
-the arguments of the function declaration or definition
+the arguments of the function declaration or definition.
 \ccppspecificend
 
 \begin{samepage}
@@ -2644,8 +2664,8 @@ single invocation from a SIMD loop concurrently.
 \fortranspecificend
 \end{samepage}
 
-If a \code{declare}~\code{simd} directive contains multiple SIMD declarations, then one or more 
-SIMD versions will be created for each declaration.
+If a \code{declare}~\code{simd} directive contains multiple SIMD declarations,
+each declaration enables the creation of SIMD versions.
 
 If a SIMD version is created, the number of concurrent arguments for the function is 
 determined by the \code{simdlen} clause. If the \code{simdlen} clause is used its value 
@@ -2709,7 +2729,7 @@ alter its execution for concurrent iterations of a SIMD chunk.
 declaration that has one must be equivalent to the one specified for the definition. 
 Otherwise, the result is unspecified.
 
-\item The function cannot contain calls to the \plc{longjmp} or \plc{setjmp} functions. 
+\item The function cannot contain calls to the \code{longjmp} or \code{setjmp} functions. 
 \ccppspecificend
 
 \cspecificstart
@@ -2821,7 +2841,7 @@ All restrictions to the loop construct and the \code{simd} construct apply to th
 construct. In addition, the following restrictions apply:
 
 \begin{itemize}
-\item No \code{ordered} clause can be specified.
+\item No \code{ordered} clause with a parameter can be specified.
 \item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
 \end{itemize}
 
@@ -2924,7 +2944,7 @@ region of the outer task.
 When an \code{if} clause is present on a \code{task} construct, and the \code{if} clause expression 
 evaluates to \plc{false}, an undeferred task is generated, and the encountering thread must 
 suspend the current task region, for which execution cannot be resumed until the 
-generated task is completed. Note that the use of a variable in an \code{if} clause expression 
+generated task is completed. The use of a variable in an \code{if} clause expression 
 of a \code{task} construct causes an implicit reference to the variable in all enclosing 
 constructs.
 
@@ -2963,8 +2983,8 @@ implementation will use the value of that ICV. A program that relies on task exe
 being determined by this \plc{priority-value} may have unspecified behavior.
 
 \notestart
-\noteheader – When storage is shared by an explicit \code{task} region, it is the programmer's 
-responsibility to ensure, by adding proper synchronization, that the storage does not 
+\noteheader – When storage is shared by an explicit \code{task} region, the 
+programmer must ensure, by adding proper synchronization, that the storage does not 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
 
@@ -3070,9 +3090,16 @@ mergeable
 nogroup
 \end{indentedcodelist}
 
-If \code{end}~\code{taskloop} directive is not specified, an \code{end}~\code{taskloop} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{taskloop} directive is not specified, an 
+\code{end}~\code{taskloop} directive is assumed at the end of the 
+\plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an \code{end}~\code{do} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} termination statement, then the directive can only be specified for the outermost of these \code{DO} statements.
+Any associated \plc{do-loop} must be \plc{do-construct} or an 
+\plc{inner-shared-do-construct} as defined by the Fortran standard. 
+If an \code{end}~\code{taskloop} directive follows a \plc{do-construct} 
+in which several loop statements share a \code{DO} 
+termination statement, then the directive can only be specified for the 
+outermost of these \code{DO} statements.
 
 If any of the loop iteration variables would otherwise be shared, they are implicitly made private for the loop-iteration tasks created by the \code{taskloop} construct. Unless the loop iteration variables are specified in a \code{lastprivate} clause on the \code{taskloop} construct, their values after the loop are unspecified.
 \fortranspecificend
@@ -3083,7 +3110,7 @@ The binding thread set of the \code{taskloop} construct is the current team. A \
 \descr
 When a thread encounters a \code{taskloop} construct, the construct partitions the associated loops into tasks for parallel execution of the loops' iterations. The data environment of the created tasks is created according to the data-sharing attribute clauses on the \code{taskloop} construct, per-data environment ICVs, and any defaults that apply. The order of the creation of the loop tasks is unspecified.
 
-If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each created task is greater than or equal to the value of the \plc{grain-size} expression, but less than two times the value of the \plc{grain-size} expression and less than or equal to the number of logical loop iterations. The parameter of the \code{grainsize} clause must be a positive integer expression. If \code{num\_tasks} is specified, the \code{taskloop} construct creates as many tasks as the minimum of the \plc{num-tasks} expression and the number of logical loop iterations. The parameter of the \code{num\_tasks} clause must evaluate to a positive integer.  If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks created and the number of logical loop iterations assigned to these tasks is implementation defined.
+If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each created task is greater than or equal to the minimum of the value of the \plc{grain-size} expression and the number of logical loop iterations, but less than two times the value of the \plc{grain-size} expression.  The parameter of the \code{grainsize} clause must be a positive integer expression.  If \code{num\_tasks} is specified, the \code{taskloop} construct creates as many tasks as the minimum of the \plc{num-tasks} expression and the number of logical loop iterations.  The parameter of the \code{num\_tasks} clause must evaluate to a positive integer.  If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks created and the number of logical loop iterations assigned to these tasks is implementation defined.
 
 The \code{collapse} clause may be used to specify how many loops are associated with the \code{taskloop} construct. The parameter of the \code{collapse} clause must be a constant positive integer expression. If no \code{collapse} clause is present, the only loop that is associated with the \code{taskloop} construct is the one that immediately follows the \code{taskloop} directive.
 
@@ -3169,7 +3196,7 @@ The syntax of the \code{taskloop}~\code{simd} construct is as follows:
 \end{boxedcode}
 where \plc{clause} can be any of the clauses accepted by the \code{taskloop} or \code{simd} directives with identical meanings and restrictions.
 
-If \code{end}~\code{taskloop}~\code{simd} directive is not specified, an \code{end}~\code{taskloop}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{taskloop}~\code{simd} directive is not specified, an \code{end}~\code{taskloop}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
 \fortranspecificend
 
 \binding
@@ -3257,30 +3284,31 @@ perform a task switch, beginning or resuming execution of a different task bound
 current team. Task scheduling points are implied at the following locations:
 
 \begin{itemize}
-\item the point immediately following the generation of an explicit task
+\item the point immediately following the generation of an explicit task;
 
-\item after the point of completion of a \code{task} region
+\item after the point of completion of a \code{task} region;
 
-\item in a \code{taskyield} region
+\item in a \code{taskyield} region;
 
-\item in a \code{taskwait} region
+\item in a \code{taskwait} region;
 
-\item at the end of a \code{taskgroup} region
+\item at the end of a \code{taskgroup} region;
 
-\item in an implicit and explicit \code{barrier} region
+\item in an implicit and explicit \code{barrier} region;
 
-\item the point immediately following the generation of a \code{target} region
+\item the point immediately following the generation of a \code{target} region;
 
-\item at the beginning and end of a \code{target}~\code{data} region
+\item at the beginning and end of a \code{target}~\code{data} region;
 
-\item in a \code{target}~\code{update} region 
+\item in a \code{target}~\code{update} region; 
 
-\item in a \code{target}~\code{enter}~\code{data} region 
+\item in a \code{target}~\code{enter}~\code{data} region; 
 
-\item in a \code{target}~\code{exit}~\code{data} region 
+\item in a \code{target}~\code{exit}~\code{data} region; 
 
-\item in either the \code{omp\_target\_memcpy} or the
-  \code{omp\_target\_memcpy\_rect} routine
+\item in the \code{omp\_target\_memcpy} routine; 
+
+\item in the \code{omp\_target\_memcpy\_rect} routine;
 
 \end{itemize}
 
@@ -3337,8 +3365,8 @@ task exists that modifies it.
 As another example, if a lock acquire and release happen in different parts of a task 
 region, no attempt should be made to acquire the same lock in any part of another task 
 that the executing thread may schedule. Otherwise, a deadlock is possible. A similar 
-situation can occur when a critical region spans multiple parts of a task and another 
-schedulable task contains a critical region with the same name.
+situation can occur when a \code{critical} region spans multiple parts of a task and another 
+schedulable task contains a \code{critical} region with the same name.
 
 The use of threadprivate variables and the use of locks or critical sections in an explicit 
 task with an \code{if} clause must take into account that when the \code{if} clause evaluates to 
