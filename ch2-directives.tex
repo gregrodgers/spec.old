@@ -4155,6 +4155,7 @@ Where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
+lastprivate(\plc{list})
 collapse(\plc{n})
 dist\_schedule(\plc{kind[},\plc{ chunk\_size]})
 \end{indentedcodelist}
@@ -4178,6 +4179,7 @@ Where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
+lastprivate(\plc{list})
 collapse(\plc{n})
 dist\_schedule(\plc{kind[},\plc{ chunk\_size]})
 \end{indentedcodelist}
@@ -4203,6 +4205,10 @@ The \code{distribute} construct is associated with a loop nest consisting of one
 loops that follow the directive.
 
 There is no implicit barrier at the end of a \code{distribute} construct.
+As there is no implicit barrier at the end of the construct, to avoid data races the original
+list items modified due to \code{lastprivate} or \code{linear} clauses
+should not be accessed in between the end of the \code{distribute} construct and the end
+of the \code{teams} region in which the \code{distribute} region has been nested.
 
 The \code{collapse} clause may be used to specify how many loops are associated with the 
 \code{distribute} construct. The parameter of the \code{collapse} clause must be a constant 
@@ -4231,6 +4237,8 @@ Restrictions to the \code{distribute} construct are as follows:
 \item The \code{distribute} construct inherits the restrictions of the loop construct.
 
 \item A \code{distribute} construct must be closely nested in a \code{teams} region. 
+
+\item A list item may appear in a \code{firstprivate} or \code{lastprivate} clause but not both.
 \end{itemize}
 
 \crossreferences
@@ -4284,8 +4292,8 @@ where \plc{clause} can be any of the clauses accepted by the \code{distribute} o
 directives with identical meanings and restrictions.
 
 If an \code{end}~\code{distribute}~\code{simd} directive is not specified, an \code{end}~\code{distribute}~\code{simd}
-directive is assumed at the end of the \plc{do-loops
-}\fortranspecificend
+directive is assumed at the end of the \plc{do-loops}.
+\fortranspecificend
 
 \descr
 The \code{distribute}~\code{simd} construct will first distribute the iterations of the associated 
@@ -4298,9 +4306,7 @@ converted to a SIMD loop in a manner consistent with any clauses that apply to t
 \begin{itemize}
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
 
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
+\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
 \end{itemize}
 
 \crossreferences
@@ -4369,6 +4375,7 @@ The effect of any clause that applies to both constructs is as if it were applie
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop constructs apply.
 \item No \code{ordered} clause can be specified.
+\item No \code{linear} clause can be specified.
 \end{itemize}
 
 \crossreferences
@@ -4447,8 +4454,7 @@ The effect of any clause that applies to both constructs is as if it were applie
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop SIMD constructs apply.
 \item No \code{ordered} clause can be specified.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
+\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
 \end{itemize}
 
 \crossreferences
