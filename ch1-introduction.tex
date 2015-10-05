@@ -35,23 +35,23 @@
 \chapter{Introduction}
 \index{introduction}
 \label{chap:introduction}
-The collection of compiler directives, library routines, and environment variables 
-described in this document collectively define the specification of the OpenMP 
-Application Program Interface (OpenMP API) for shared-memory parallelism in C, C++ 
+The collection of compiler directives, library routines, and environment
+variables described in this document collectively define the specification of
+the OpenMP Application Program Interface (OpenMP API) for parallelism in C, C++
 and Fortran programs.
 
-This specification provides a model for parallel programming that is portable across 
-shared memory architectures from different vendors. Compilers from numerous vendors 
-support the OpenMP API. More information about the OpenMP API can be found at the 
-following web site
+This specification provides a model for parallel programming that is portable
+across architectures from different vendors. Compilers from numerous vendors
+support the OpenMP API. More information about the OpenMP API can be found at
+the following web site
 
 \code{http://www.openmp.org}
 
 The directives, library routines, and environment variables defined in this document 
-allow users to create and manage parallel programs while permitting portability. The 
+allow users to create and to manage parallel programs while permitting portability. The 
 directives extend the C, C++ and Fortran base languages with single program multiple 
 data (SPMD) constructs, tasking constructs, device constructs, worksharing constructs, 
-and synchronization constructs, and they provide support for sharing and privatizing 
+and synchronization constructs, and they provide support for sharing, mapping and privatizing 
 data. The functionality to control the runtime environment is provided by library 
 routines and environment variables. Compilers that support the OpenMP API often 
 include a command line option to the compiler that activates and allows interpretation of 
@@ -70,8 +70,8 @@ explicitly specifies the actions to be taken by the compiler and runtime system 
 to execute the program in parallel. OpenMP-compliant implementations are not required 
 to check for data dependencies, data conflicts, race conditions, or deadlocks, any of 
 which may occur in conforming programs. In addition, compliant implementations are 
-not required to check for code sequences that cause a program to be classified as non-
-conforming. Application developers are responsible for correctly using the OpenMP API 
+not required to check for code sequences that cause a program to be classified as 
+non-conforming. Application developers are responsible for correctly using the OpenMP API 
 to produce a conforming program. The OpenMP API does not cover compiler-generated 
 automatic parallelization and directives to the compiler to assist such parallelization.
 
@@ -120,7 +120,7 @@ COMMENT: A \emph{device} could have one or more \emph{processors}.
 
 \glossaryterm{host device}
 \glossarydefstart
-The \emph{device} on which the \emph{OpenMP program} begins execution
+The \emph{device} on which the \emph{OpenMP program} begins execution.
 \glossarydefend
 
 \glossaryterm{target device}
@@ -161,10 +161,10 @@ single exit at the bottom, or an OpenMP \emph{construct}.
 \begin{quote}
 COMMENTS:
 
-For all \emph{base languages},
+For all \emph{base languages}:
 
 \begin{itemize}
-\item Access to the \emph{structured block} must not be the result of a branch.
+\item Access to the \emph{structured block} must not be the result of a branch; and
 
 \item The point of exit cannot be a branch out of the \emph{structured block}.
 \end{itemize}
@@ -172,11 +172,11 @@ For all \emph{base languages},
 For C/C++:
 
 \begin{itemize}
-\item The point of entry must not be a call to \code{setjmp()}.
+\item The point of entry must not be a call to \code{setjmp()};
 
-\item \code{longjmp()} and \code{throw()} must not violate the entry/exit criteria.
+\item \code{longjmp()} and \code{throw()} must not violate the entry/exit criteria;
 
-\item Calls to \code{exit()} are allowed in a \emph{structured block}.
+\item Calls to \code{exit()} are allowed in a \emph{structured block}; and
 
 \item An expression statement, iteration statement, selection statement, 
 or try block is considered to be a \emph{structured block} if the 
@@ -213,7 +213,7 @@ COMMENT: See \specref{sec:Directive Format} for a description of OpenMP \emph{di
 
 \glossaryterm{white space}
 \glossarydefstart
-A non-empty sequence of space and/or horizontal tab characters
+A non-empty sequence of space and/or horizontal tab characters.
 \glossarydefend
 
 \glossaryterm{OpenMP program}
@@ -224,7 +224,7 @@ runtime library routines.
 
 \glossaryterm{conforming program}
 \glossarydefstart
-An \emph{OpenMP program} that follows all the rules and restrictions of the OpenMP 
+An \emph{OpenMP program} that follows all rules and restrictions of the OpenMP 
 specification.
 \glossarydefend
 
@@ -251,7 +251,7 @@ An OpenMP \emph{executable directive} that has no associated executable user cod
 \glossarydefstart
 An OpenMP \emph{executable directive} (and for Fortran, the paired \code{end} \emph{directive}, if 
 any) and the associated statement, loop or \emph{structured block}, if any, not including 
-the code in any called routines. That is, in the lexical extent of an \emph{executable 
+the code in any called routines. That is, the lexical extent of an \emph{executable 
 directive}.
 \glossarydefend
 
@@ -271,9 +271,10 @@ A construct that is composed of two constructs but does not have identical seman
 All code encountered during a specific instance of the execution of a given 
 \emph{construct} or of an OpenMP library routine. A \emph{region} includes any code in called 
 routines as well as any implicit code introduced by the OpenMP implementation. 
-The generation of a \emph{task} at the point where a \code{task} \emph{directive} is encountered is a 
-part of the \emph{region} of the \emph{encountering thread}, but the \emph{explicit task region}
-associated with the \code{task} \emph{directive} is not. The point where a \code{target} or \code{teams}
+The generation of a \emph{task} at the point where a \emph{task generating construct} is encountered is a 
+part of the \emph{region} of the \emph{encountering thread}, but an \emph{explicit task region}
+associated with a \emph{task generating construct} is not unless it is an
+\emph{included task region}. The point where a \code{target} or \code{teams}
 directive is encountered is a part of the \emph{region} of the \emph{encountering thread}, but the 
 \emph{region} associated with the \code{target} or \code{teams} directive is not.
 
@@ -319,8 +320,11 @@ in the program execution.
 
 \glossaryterm{master thread}
 \glossarydefstart
-The \emph{thread} that encounters a \code{parallel} \emph{construct}, creates a \emph{team}, generates a set 
-of \emph{implicit tasks}, then executes one of those \emph{tasks} as \emph{thread} number 0.
+An \emph{OpenMP thread} that has  \emph{thread} number 0. A \emph{master
+thread} may be an \emph{initial thread} or the \emph{thread} that encounters a
+\code{parallel} \emph{construct}, creates a \emph{team}, generates a set of
+\emph{implicit tasks}, and then executes one of those \emph{tasks} as
+\emph{thread} number 0.
 \glossarydefend
 
 \glossaryterm{parent thread}
@@ -369,7 +373,7 @@ For an \emph{inactive parallel region}, the \emph{team} comprises only the \emph
 
 \glossaryterm{league}
 \glossarydefstart
-The set of \emph{thread teams} created by a \code{target} construct or a \code{teams} construct.
+The set of \emph{thread teams} created by a \code{teams} construct.
 \glossarydefend
 
 \glossaryterm{contention group}
@@ -379,9 +383,11 @@ An initial \emph{thread} and its \emph{descendent threads}.
 
 \glossaryterm{implicit parallel region}
 \glossarydefstart
-An \emph{inactive parallel region} that generates an \emph{initial task region}. \emph{Implicit parallel
-regions} surround the whole OpenMP program, all \code{target} regions, and all 
-\code{teams} regions
+An \emph{inactive parallel region} that is not generated from a
+\code{parallel} \emph{construct}. \emph{Implicit parallel regions} surround the whole
+\emph{OpenMP program}, all \code{target} \emph{regions}, and all \code{teams}
+\emph{regions}.
+
 \glossarydefend
 
 \glossaryterm{initial thread}
@@ -445,14 +451,14 @@ All \emph{tasks} participating in the \emph{OpenMP program}.
 
 \glossaryterm{current team tasks}
 \glossarydefstart
-All \emph{tasks} encountered by the corresponding \emph{team}. Note that the \emph{implicit tasks}
+All \emph{tasks} encountered by the corresponding \emph{team}. The \emph{implicit tasks}
 constituting the \code{parallel} \emph{region} and any \emph{descendent tasks} encountered during 
 the execution of these \emph{implicit tasks} are included in this set of tasks. 
 \glossarydefend
 
 \glossaryterm{generating task}
 \glossarydefstart
-For a given \emph{region}, the task whose execution by a \emph{thread} generated the \emph{region}.
+For a given \emph{region}, the task for which execution by a \emph{thread} generated the \emph{region}.
 \glossarydefend
 
 \glossaryterm{binding thread set}
@@ -461,7 +467,8 @@ The set of \emph{threads} that are affected by, or provide the context for, the 
 a \emph{region}. 
 
 The \emph{binding thread} set for a given \emph{region} can be \emph{all threads} on a \emph{device}, \emph{all 
-threads} in a \emph{contention group}, the \emph{current team}, or the \emph{encountering thread}.
+threads} in a \emph{contention group}, all \emph{master threads} executing an
+enclosing \code{teams} \emph{region}, the \emph{current team}, or the \emph{encountering thread}.
 
 \begin{quote}
 COMMENT: The \emph{binding thread set} for a particular \emph{region} is described in its 
@@ -489,8 +496,8 @@ described in its corresponding subsection of this specification.
 The enclosing \emph{region} that determines the execution context and limits the scope of 
 the effects of the bound \emph{region} is called the \emph{binding region}.
 
-\emph{Binding region} is not defined for \emph{regions} whose \emph{binding thread} set is \emph{all threads}
-or the \emph{encountering thread}, nor is it defined for \emph{regions} whose \emph{binding task set} is 
+\emph{Binding region} is not defined for \emph{regions} for which the \emph{binding thread} set is \emph{all threads}
+or the \emph{encountering thread}, nor is it defined for \emph{regions} for which the \emph{binding task set} is 
 \emph{all tasks}.
 
 \begin{quote}
@@ -524,7 +531,7 @@ A \emph{region} never binds to any \emph{region} outside of the innermost enclos
 
 \glossaryterm{orphaned construct}
 \glossarydefstart
-A \emph{construct} that gives rise to a \emph{region} whose \emph{binding thread set} is the \emph{current 
+A \emph{construct} that gives rise to a \emph{region} for which the \emph{binding thread set} is the \emph{current 
 team}, but is not nested within another \emph{construct} giving rise to the \emph{binding region}.
 \glossarydefend
 
@@ -539,10 +546,10 @@ For Fortran, \emph{worksharing constructs} are \code{do}, \code{sections}, \code
 \code{workshare}.
 \glossarydefend
 
-
+\newpage
 \glossaryterm{place}
 \glossarydefstart
-Unordered set of \emph{processors} that is treated by the execution environment as a 
+Unordered set of \emph{processors} on a device that is treated by the execution environment as a 
 location unit when dealing with OpenMP thread affinity.
 \glossarydefend
 
@@ -556,7 +563,7 @@ environment.
 \glossarydefstart
 An ordered list that corresponds to a contiguous interval in the OpenMP \emph{place list}. 
 It describes the \emph{places} currently available to the execution environment for a given 
-parallel region.
+parallel \emph{region}.
 \glossarydefend
 
 \glossaryterm{place number}
@@ -587,16 +594,17 @@ by means of \emph{SIMD instructions}.
 %
 \subsection{Loop Terminology}
 \index{loop terminology}
+\label{subsec:Loop Terminology}
 \glossaryterm{loop directive}
 \glossarydefstart
-An OpenMP \emph{executable} directive whose associated user code must be a loop nest that is a \emph{structured block}.
+An OpenMP \emph{executable} directive for which the associated user code must be a loop nest that is a \emph{structured block}.
 \glossarydefend
 
 \glossaryterm{associated loop(s)}
 \glossarydefstart
 The loop(s) controlled by a \emph{loop directive}.
 \begin{quote}
-COMMENT: If the \emph{loop directive} contains a \code{collapse} or an \code{ordered(}\plc{n}\code{)} clause then there may be more than one \emph{associated loop}.
+COMMENT: If the \emph{loop directive} contains a \code{collapse} or an \code{ordered(}\plc{n}\code{)} clause then it may have more than one \emph{associated loop}.
 \end{quote}
 \glossarydefend
 
@@ -614,7 +622,7 @@ A loop that includes at least one \emph{SIMD chunk}.
 \glossarydefstart
 A loop nest that has cross-iteration dependence. An iteration is dependent on one or more lexicographically earlier iterations.
 \begin{quote}
-COMMENT: The loop directive with an \code{ordered} clause with the parameter identifies the loop(s) associated for the \emph{doacross loop nest}.
+COMMENT: The \code{ordered} clause parameter on a loop directive identifies the loop(s) associated with the \emph{doacross loop nest}.
 \end{quote}
 \glossarydefend
 
@@ -623,6 +631,7 @@ COMMENT: The loop directive with an \code{ordered} clause with the parameter ide
 %
 \subsection{Synchronization Terminology}
 \index{synchronization terminology}
+\label{subsec:Synchronization Terminology}
 \glossaryterm{barrier}
 \glossarydefstart
 A point in the execution of a program encountered by a \emph{team} of \emph{threads}, beyond 
@@ -661,7 +670,9 @@ COMMENT: For a list of cancellation points, see \specref{subsec:cancel Construct
 \glossaryterm{task}
 \glossarydefstart
 A specific instance of executable code and its \emph{data environment}, generated when a 
-\emph{thread} encounters a \code{task} \emph{construct} or a \code{parallel} \emph{construct}. 
+\emph{thread} encounters a \code{task}, \code{taskloop}, \code{parallel}, \code{target}, or
+\code{teams} \emph{construct} (or any \emph{combined construct} that specifies
+any of these \emph{constructs}).
 \glossarydefend
 
 \glossaryterm{task region}
@@ -718,7 +729,7 @@ A \emph{task} that is the \emph{child task} of a \emph{task region} or of one of
 \emph{construct} that generated the \emph{task} is reached.
 
 \begin{quote}
-COMMENT: Completion of the \emph{initial task} occurs at program exit.
+COMMENT: Completion of the \emph{initial task} that is generated when the program begins occurs at program exit.
 \end{quote}
 \glossarydefend
 
@@ -729,7 +740,7 @@ suspended to be resumed later; or the point of \emph{task completion}, after whi
 executing thread may switch to a different \emph{task region}. 
 
 \begin{quote}
-COMMENT: For a list of task scheduling points, see \specref{subsec:Task Scheduling}.
+COMMENT: For a list of \emph{task scheduling points}, see \specref{subsec:Task Scheduling}.
 \end{quote}
 \glossarydefend
 
@@ -766,7 +777,7 @@ That is, an \emph{included task} is \emph{undeferred} and executed immediately b
 
 \glossaryterm{merged task}
 \glossarydefstart
-A \emph{task} whose \emph{data environment}, inclusive of ICVs, is the same as that of its 
+A \emph{task} for which the \emph{data environment}, inclusive of ICVs, is the same as that of its 
 generating \emph{task region}.
 \glossarydefend
 
@@ -801,6 +812,12 @@ A \code{taskwait}, \code{taskgroup}, or a \code{barrier} \emph{construct}.
 \glossarydefend
 \bigskip
 
+\glossaryterm{task generating construct}
+\glossarydefstart
+A \code{task} or a \code{taskloop} \emph{construct}.
+\glossarydefend
+\bigskip
+
 \glossaryterm{target task}
 \glossarydefstart
 A \emph{merged task} that is executed immediately.
@@ -813,9 +830,10 @@ A set of tasks that are logically grouped by a \code{taskgroup} region.
 
 \subsection{Data Terminology}
 \index{data terminology}
+\label{subsec:Data Terminology} 
 \glossaryterm{variable}
 \glossarydefstart
-A named data storage block, whose value can be defined and redefined during the 
+A named data storage block, for which the value can be defined and redefined during the 
 execution of a program.
 
 \begin{adjustwidth}{-0.75in}{0in}
@@ -829,11 +847,12 @@ execution of a program.
 \glossarydefstart
 For C/C++:
 \nopagebreak
-A scalar variable.
+A scalar variable, as defined by the base language.
 
 For Fortran:
 \nopagebreak
-A scalar variable with intrinsic type, excluding character type.
+A scalar variable with intrinsic type, as defined by the base language,
+excluding character type.
 \glossarydefend
 
 %\glossaryterm{aggregate variable}
@@ -848,20 +867,30 @@ A designated subset of the elements of an array.
 
 \glossaryterm{array item}
 \glossarydefstart
-An array, an array section or an array element.
+An array, an array section, or an array element.
 \glossarydefend
 
 \glossaryterm{structure}
 \glossarydefstart
-A structure is a variable that contains one or more variables. Structures 
-are implemented using structs in C or C++, classes in C++, and derived types 
-in Fortran.
+A structure is a variable that contains one or more variables. 
+
+For C/C++: 
+\nopagebreak
+Implemented using struct types.
+
+For C++: 
+\nopagebreak
+Implemented using class types.        
+
+For Fortran: 
+\nopagebreak
+Implemented using derived types.        
 \glossarydefend
 
 \glossaryterm{private variable}
 \glossarydefstart
 With respect to a given set of \emph{task regions} or \emph{SIMD lanes} that bind to the same
-\code{parallel} \emph{region}, a \emph{variable} whose name provides access to a different block of 
+\code{parallel} \emph{region}, a \emph{variable} for which the name provides access to a different block of 
 storage for each \emph{task region} or \emph{SIMD lane}.
 
 A \emph{variable} that is part of another variable (as an array or structure element) cannot 
@@ -871,7 +900,7 @@ be made private independently of other components.
 \glossaryterm{shared variable}
 \glossarydefstart
 With respect to a given set of \emph{task regions} that bind to the same \code{parallel} 
-\emph{region}, a \emph{variable} whose name provides access to the same block of storage for 
+\emph{region}, a \emph{variable} for which the name provides access to the same block of storage for 
 each \emph{task region}.
 
 A \emph{variable} that is part of another variable (as an array or structure element) cannot 
@@ -963,7 +992,7 @@ The type must be definable.
 In addition, for derived types:
 
 \begin{itemize}
-\item All type-bound procedures accessed in any target region must appear in a declare target directive.
+\item All type-bound procedures accessed in any target region must appear in a \code{declare}~\code{target} directive.
 \end{itemize}
 \glossarydefend
 
@@ -1130,14 +1159,9 @@ another device. Threads cannot migrate from one device to another device. The
 execution model is host-centric such that the host device offloads \code{target} regions to
 target devices.
 
-The initial thread that executes the implicit parallel region that surrounds the \code{target}
-region may execute on a \emph{target device}. An initial thread executes sequentially, as if
-enclosed in an implicit task region, called an initial task region, that is defined by an 
-implicit inactive \code{parallel} region that surrounds the entire \code{target} region.
+When a \code{target} construct is encountered, the \code{target} region is executed by an initial thread.  The initial thread may execute on a \emph{target device}.  The initial thread executes sequentially, as if enclosed in an implicit task region, called an initial task region, that is defined by an implicit \code{parallel} region that surrounds the entire \code{target} region.
 
-When a \code{target} construct is encountered, the \code{target} region is executed by the
-implicit device task. The task that encounters the \code{target} construct waits at the end of
-the construct until execution of the region completes.  If the target device does not exist or the implementation does not support the target device, all \code{target} regions associated with that device are executed by the host device.
+When a \code{target} construct is encountered, the task that encounters the \code{target} construct waits at the end of the construct until execution of the region completes unless the \code{nowait} clause is specified for the construct.  If the target device does not exist or the implementation does not support the target device, all \code{target} regions associated with that device are executed by the host device.
 
 The implementation must ensure that the \code{target} region executes as if it were executed in the data environment of the target device unless an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}.
 
@@ -1449,7 +1473,7 @@ directives.
 \index{compliance}
 An implementation of the OpenMP API is compliant if and only if it compiles and 
 executes all conforming programs according to the syntax and semantics laid out in 
-Chapters 1, 2, 3 and 4. Appendices A, B, C, D, E and F and sections designated as Notes 
+Chapters 1, 2, 3 and 4. Appendices A, B, C and D and sections designated as Notes 
 (see \specref{sec:Organization of this document}) 
 are for information purposes only and are not part of the 
 specification.
@@ -1572,41 +1596,41 @@ The remainder of this document is structured as follows:
 \end{itemize}
 
 Some sections of this document only apply to programs written in a certain base 
-language. Text that applies only to programs whose base language is C or C++ is shown 
+language. Text that applies only to programs for which the base language is C or C++ is shown 
 as follows: 
 
 \ccppspecificstart
 C/C++ specific text...
 \ccppspecificend
 
-Text that applies only to programs whose base language is C only is shown as follows:
+Text that applies only to programs for which the base language is C only is shown as follows:
 
 \cspecificstart
 C specific text...
 \cspecificend
 
-Text that applies only to programs whose base language is C90 only is shown as 
+Text that applies only to programs for which the base language is C90 only is shown as 
 follows:
 
 \cNinetyspecificstart
 C90 specific text...
 \cNinetyspecificend
 
-Text that applies only to programs whose base language is C99 only is shown as 
+Text that applies only to programs for which the base language is C99 only is shown as 
 follows:
 
 \cNinetyNinespecificstart
 C99 specific text...
 \cNinetyNinespecificend
 
-Text that applies only to programs whose base language is C++ only is shown as 
+Text that applies only to programs for which the base language is C++ only is shown as 
 follows:
 
 \cppspecificstart
 C++ specific text...
 \cppspecificend
 
-Text that applies only to programs whose base language is Fortran is shown as follows: 
+Text that applies only to programs for which the base language is Fortran is shown as follows: 
 
 \fortranspecificstart
 Fortran specific text......

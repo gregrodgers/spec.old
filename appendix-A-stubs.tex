@@ -40,7 +40,8 @@ This section provides stubs for the runtime library routines defined in the Open
 The stubs are provided to enable portability to platforms that do not support the 
 OpenMP API. On these platforms, OpenMP programs must be linked with a library 
 containing these stub routines. The stub routines assume that the directives in the 
-OpenMP program are ignored. As such, they emulate serial semantics.
+OpenMP program are ignored. As such, they emulate serial semantics
+executing on the host.
 
 Note that the lock variable that appears in the lock routines must be accessed 
 exclusively through these routines. It should not be initialized or otherwise modified in 
@@ -206,7 +207,7 @@ int omp\_get\_place\_num\_procs(int place\_num)
     return 0;
 \}
 
-void omp\_get\_place\_proc\_ids(int place\_num)
+void omp\_get\_place\_proc\_ids(int place\_num, int *ids)
 \{
 \}
 
@@ -442,18 +443,17 @@ double omp\_get\_wtick(void)
 
 void * omp\_target\_alloc(size\_t size, int device\_num)
 \{
-    if(device\_num != -10)
+    if (device\_num != -10)
       return NULL;
     return malloc(size)
 \}
 
-void omp\_target\_free(void * device\_ptr, int device\_num)
+void omp\_target\_free(void *device\_ptr, int device\_num)
 \{
     free(device\_ptr);
 \}
 
-int omp\_target\_is\_present(void * ptr, size\_t offset,
-                             int device\_num)
+int omp\_target\_is\_present(void *ptr, int device\_num)
 \{
     return 1;
 \}
@@ -462,8 +462,8 @@ int omp\_target\_memcpy(void *dst, void *src, size\_t length,
                       size\_t dst\_offset, size\_t src\_offset,
                       int dst\_device, int src\_device)
 \{
-    //only the default device is valid in a stub
-    if(dst\_device != -10 || src\_device != -10
+    // only the default device is valid in a stub
+    if (dst\_device != -10 || src\_device != -10
             || ! dst || ! src )
         return EINVAL;
     memcpy((char *)dst + dst\_offset,
@@ -486,15 +486,15 @@ int omp\_target\_memcpy\_rect(
     int ret=0;
     // Both null, return number of dimensions supported,
     // this stub supports an arbitrary number
-    if(dst == NULL && src == NULL) return INT\_MAX;
+    if (dst == NULL && src == NULL) return INT\_MAX;
 
-    if(!volume || !dst\_offsets || !src\_offsets
+    if (!volume || !dst\_offsets || !src\_offsets
             || !dst\_dimensions || !src\_dimensions
             || num\_dims < 1 ) \{
         ret = EINVAL;
         goto done;
     \}
-    if(num\_dims == 1) \{
+    if (num\_dims == 1) \{
         ret = omp\_target\_memcpy(dst, src,
                                 element\_size * volume[0],
                                 dst\_offsets[0] * element\_size,
@@ -504,40 +504,42 @@ int omp\_target\_memcpy\_rect(
     \} else \{
         size\_t dst\_slice\_size = element\_size;
         size\_t src\_slice\_size = element\_size;
-        for(int i=1; i < num\_dims; i++) \{
+        for (int i=1; i < num\_dims; i++) \{
             dst\_slice\_size *= dst\_dimensions[i];
             src\_slice\_size *= src\_dimensions[i];
         \}
         size\_t dst\_off = dst\_offsets[0] * dst\_slice\_size;
         size\_t src\_off = src\_offsets[0] * src\_slice\_size;
-        for(size\_t i=0; i < volume[0]; i++) \{
-            ret = omp\_target\_memcpy\_rect((char *)dst + dst\_off + dst\_slice\_size*i,
-                                         (char *)src + src\_off + src\_slice\_size*i,
-                                         element\_size,
-                                         num\_dims - 1,
-                                         volume + 1,
-                                         dst\_offsets + 1,
-                                         src\_offsets + 1,
-                                         dst\_dimensions + 1,
-                                         src\_dimensions + 1,
-                                         dst\_device\_num,
-                                         src\_device\_num);
-            if(ret) goto done;
+        for (size\_t i=0; i < volume[0]; i++) \{
+            ret = omp\_target\_memcpy\_rect(
+                        (char *)dst + dst\_off + dst\_slice\_size*i,
+                        (char *)src + src\_off + src\_slice\_size*i,
+                        element\_size,
+                        num\_dims - 1,
+                        volume + 1,
+                        dst\_offsets + 1,
+                        src\_offsets + 1,
+                        dst\_dimensions + 1,
+                        src\_dimensions + 1,
+                        dst\_device\_num,
+                        src\_device\_num);
+            if (ret) goto done;
         \}
     \}
 done:
     return ret;
 \}
 
-int omp_target_associate_ptr(void * host_ptr, void * device_ptr,
-                             size_t size, size_t device_offset,
-                             int device_num)
+int omp\_target\_associate\_ptr(void *host\_ptr, void *device\_ptr,
+                             size\_t size, size\_t device\_offset,
+                             int device\_num)
 \{
-    // No association is possible because all host pointers are considered present
+    // No association is possible because all host pointers 
+    // are considered present
     return EINVAL;
 \}
 
-int omp_target_disassociate_ptr(void * ptr, int device_num)
+int omp\_target\_disassociate\_ptr(void *ptr, int device\_num)
 \{
     return EINVAL;
 \}
@@ -631,8 +633,8 @@ integer function omp\_get\_thread\_limit()
   return
 end function
 
-subroutine omp\_set\_max\_active\_levels( level )
-  integer level
+subroutine omp\_set\_max\_active\_levels(max\_level)
+  integer max\_level
 end subroutine
 
 integer function omp\_get\_max\_active\_levels()
@@ -645,7 +647,7 @@ integer function omp\_get\_level()
   return
 end function
 
-integer function omp\_get\_ancestor\_thread\_num( level )
+integer function omp\_get\_ancestor\_thread\_num(level)
   integer level
   if ( level .eq. 0 ) then
      omp\_get\_ancestor\_thread\_num = 0
@@ -655,7 +657,7 @@ integer function omp\_get\_ancestor\_thread\_num( level )
   return
 end function
 
-integer function omp\_get\_team\_size( level )
+integer function omp\_get\_team\_size(level)
   integer level
   if ( level .eq. 0 ) then
      omp\_get\_team\_size = 1
@@ -676,7 +678,7 @@ logical function omp\_in\_final()
 end function
 
 function omp\_get\_proc\_bind()
-  use omp\_lib\_kinds
+  include 'omp\_lib\_kinds.h'
   integer (kind=omp\_proc\_bind\_kind) omp\_get\_proc\_bind
   omp\_get\_proc\_bind = omp\_proc\_bind\_false
 end function 
@@ -690,7 +692,7 @@ integer function omp\_get\_place\_num\_procs(place\_num)
   return 0
 end function
 
-subroutine omp\_get\_place\_proc\_ids(place_num, ids)
+subroutine omp\_get\_place\_proc\_ids(place\_num, ids)
   integer place\_num
   integer ids(*)
   return

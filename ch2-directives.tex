@@ -45,11 +45,11 @@ into the following sections:
 \item Mechanisms to control conditional compilation 
 (\specref{sec:Conditional Compilation})
 
-\item How to specify and to use array sections for all base languages 
-(\specref{sec:Array Sections}) 
-
 \item Control of OpenMP API ICVs 
 (\specref{sec:Internal Control Variables})
+
+\item How to specify and to use array sections for all base languages 
+(\specref{sec:Array Sections}) 
 
 \item Details of each OpenMP directive 
 (\specref{sec:parallel Construct} to 
@@ -79,7 +79,8 @@ compilation with these OpenMP features enabled.
 \restrictions
 The following restriction applies to all OpenMP directives: 
 \begin{itemize}
-\item OpenMP directives may not appear in \code{PURE} or \code{ELEMENTAL} procedures.
+\item OpenMP directives, except SIMD constructs, may not appear in
+  pure procedures.
 \end{itemize}
 \fortranspecificend
 \end{samepage}
@@ -310,6 +311,7 @@ end taskloop
 \linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
 \end{figure}
 \begin{indentedcodelist}
+end taskloop simd
 end teams
 end teams distribute
 end teams distribute parallel do
@@ -333,6 +335,7 @@ target teams distribute parallel do
 target teams distribute parallel do simd
 target teams distribute simd
 target update
+taskloop simd
 teams distribute
 teams distribute parallel do
 teams distribute parallel do simd
@@ -344,10 +347,10 @@ teams distribute simd
 equivalent (the first line represents the position of the first 9 columns):
 
 \begin{alltt}\code{!23456789
-       !\$omp parallel do
+       !\$omp parallel do \&
                  !\$omp shared(a,b,c)
 
-       !\$omp parallel
+       !\$omp parallel \&
       !\$omp\&do shared(a,b,c)
 
 !\$omp paralleldo shared(a,b,c)}
@@ -495,7 +498,7 @@ satisfy the following criteria:
 \item Initial lines must have a space after the sentinel. 
 
 \item Continued lines must have an ampersand as the last non-blank character on the line, 
-prior to any comment appearing on the conditionally compiled line. Continued lines 
+prior to any comment appearing on the conditionally compiled line. Continuation lines 
 can have an ampersand after the sentinel, with optional white space before and after 
 the ampersand. 
 \end{itemize}
@@ -603,7 +606,7 @@ loop regions. There is one copy of this ICV per data environment.
 regions. There is one copy of this ICV per device. 
 \end{itemize}
 
-The following ICVs store values that affect the program execution.
+The following ICVs store values that affect program execution.
 
 \begin{itemize}
 \item \plc{stacksize-var} - controls the stack size for threads that the OpenMP implementation 
@@ -652,9 +655,9 @@ environment variables, and initial values.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{ICV Initial Values\label{tab:ICV Initial Values}}
+\tablecaption{ICV Initial Values\label{tab:ICV Initial Values}}
 \begin{supertabular}{p{1.3in} p{1.7in} p{1.5in}}
-\plc{dyn-var} & \code{OMP\_DYNAMIC} & See comments below\\
+\plc{dyn-var} & \code{OMP\_DYNAMIC} & See description below\\
 \plc{nest-var} & \code{OMP\_NESTED} & \plc{false}\\
 \plc{nthreads-var} & \code{OMP\_NUM\_THREADS} & Implementation defined\\
 \plc{run-sched-var} & \code{OMP\_SCHEDULE} & Implementation defined\\
@@ -663,7 +666,7 @@ environment variables, and initial values.
 \plc{stacksize-var} & \code{OMP\_STACKSIZE} & Implementation defined\\
 \plc{wait-policy-var} & \code{OMP\_WAIT\_POLICY} & Implementation defined\\
 \plc{thread-limit-var} & \code{OMP\_THREAD\_LIMIT} & Implementation defined\\
-\plc{max-active-levels-var} & \code{OMP\_MAX\_ACTIVE\_LEVELS} & See comments below\\
+\plc{max-active-levels-var} & \code{OMP\_MAX\_ACTIVE\_LEVELS} & See description below\\
 \plc{active-levels-var} & (none) & \plc{zero}\\
 \plc{levels-var} & (none) & \plc{zero}\\
 \plc{place-partition-var} & \code{OMP\_PLACES} & Implementation defined\\
@@ -673,7 +676,7 @@ environment variables, and initial values.
 \end{supertabular}
 \linenumbers
 
-\comments
+\descr
 \begin{itemize}
 \item Each device has its own ICVs.
 
@@ -756,7 +759,7 @@ through OpenMP API routines.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{Ways to Modify and to Retrieve ICV Values\label{tab:Ways to Modify and to Retrieve ICV Values}}
+\tablecaption{Ways to Modify and to Retrieve ICV Values\label{tab:Ways to Modify and to Retrieve ICV Values}}
 \begin{supertabular}{ p{1.2in} p{2.0in} p{1.5in}}
 \plc{dyn-var} & \code{omp\_set\_dynamic()} & \code{omp\_get\_dynamic()}\\
 
@@ -782,7 +785,7 @@ through OpenMP API routines.
 
 \plc{levels-var} & (none) & \code{omp\_get\_level()}\\
 
-\plc{place-partition-var} & (none) & \code{omp\_get\_partition\_num\_places()} \\
+\plc{place-partition-var} & (none) & See description below \\
 
 \plc{cancel-var} & (none) & \code{omp\_get\_cancellation()}\\
 
@@ -793,7 +796,7 @@ through OpenMP API routines.
 \end{supertabular}
 \linenumbers} % end of \small block
 
-\comments
+\descr
 \begin{itemize}
 \item The value of the \plc{nthreads-var} ICV is a list. The runtime call 
 \code{omp\_set\_num\_threads()} sets the value of the first element of this list, and 
@@ -886,7 +889,7 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{Scopes of ICVs\label{tab:Scopes of ICVs}}
+\tablecaption{Scopes of ICVs\label{tab:Scopes of ICVs}}
 \begin{supertabular}{p{1.5in} p{2.5in}}
 \plc{dyn-var} & data environment\\
 \plc{nest-var} & data environment\\
@@ -907,7 +910,7 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \end{supertabular}
 \renewcommand{\arraystretch}{1.5} % restore the previous value
 
-\comments
+\descr
 \begin{itemize}
 \item There is one copy per device of each ICV with device scope
 
@@ -982,7 +985,7 @@ among construct clauses and ICVs.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{ICV Override Relationships\label{tab:ICV Override Relationships}}
+\tablecaption{ICV Override Relationships\label{tab:ICV Override Relationships}}
 \begin{supertabular}{ p{1.3in} p{2.0in}}
 \plc{dyn-var} & (none)\\
 \plc{nest-var} & (none)\\
@@ -1003,7 +1006,7 @@ among construct clauses and ICVs.
 \end{supertabular}
 \linenumbers
 
-\comments
+\descr
 \begin{itemize}
 \item The \code{num\_threads} clause overrides the value of the first element of the 
 \plc{nthreads-var} ICV.
@@ -1071,7 +1074,7 @@ represent a set of integer values as follows:
 
 \{ \plc{lower-bound}, \plc{lower-bound} + 1, \plc{lower-bound} + 2,... , \plc{lower-bound} + \plc{length} - 1 \}
 
-The \plc{lower-bound} and \plc{length} must evaluate to non-negative integers.
+The \plc{length} must evaluate to a non-negative integer.
 
 When the size of the array dimension is not known, the \plc{length} must be specified 
 explicitly.
@@ -1228,7 +1231,7 @@ one less than the number of threads in the team. A thread may obtain its own thr
 number by a call to the \code{omp\_get\_thread\_num} library routine.
 
 A set of implicit tasks, equal in number to the number of threads in the team, is 
-generated by the encountering thread. The structured block of the parallel construct 
+generated by the encountering thread. The structured block of the \code{parallel} construct 
 determines the code that will be executed in each implicit task. Each task is assigned to 
 a different thread in the team and becomes tied. The task region of the task being 
 executed by the encountering thread is suspended and each thread in the team executes 
@@ -1285,7 +1288,7 @@ has unspecified behavior.
 
 \crossreferences
 \begin{itemize}
-\item \code{if} Clause, see \specref{sec:if Clause}.
+\item \code{if} clause, see \specref{sec:if Clause}.
 
 \item \code{default}, \code{shared}, \code{private}, \code{firstprivate}, and \code{reduction} clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
@@ -1315,7 +1318,7 @@ values of the \plc{nthreads-var}, \plc{dyn-var}, \plc{thread-limit-var},
 \plc{max-active-levels-var}, and \plc{nest-var} 
 ICVs are used to determine the number of threads to use in the region.
 
-Note that using a variable in an \code{if} or \code{num\_threads} clause expression of a 
+Using a variable in an \code{if} or \code{num\_threads} clause expression of a 
 \code{parallel} construct causes an implicit reference to the variable in all enclosing 
 constructs. The \code{if} clause expression and the \code{num\_threads} clause expression are 
 evaluated in the context outside of the \code{parallel} construct, and no ordering of those 
@@ -1377,17 +1380,17 @@ expression;
 
 \textbf{else if} (\plc{dyn-var} = \plc{false}) \textbf{and} (\plc{ThreadsRequested} > \plc{ThreadsAvailable})
 
-\textbf{then} behavior is implementation defined;\\[-2ex]
+\textbf{then} behavior is implementation defined;
+\end{quote}
 
 \nolinenumbers\line(1,0){400}\linenumbers
-\end{quote}
 \end{samepage}
 \bigskip
 
 \notestart
 \noteheader – Since the initial value of the \plc{dyn-var} ICV is implementation defined, programs 
 that depend on a specific number of threads for correct execution should explicitly 
-disable dynamic adjustment of the number of threads
+disable dynamic adjustment of the number of threads.
 \noteend
 
 \crossreferences
@@ -1412,7 +1415,7 @@ disable dynamic adjustment of the number of threads
 \index{thread affinity}
 \index{affinity}
 
-When a thread encounters a parallel directive without a \code{proc\_bind} clause, the \plc{bind-var} ICV is used to determine the policy for assigning OpenMP threads to places within the current place partition, that is, the places listed in the \plc{place-partition-var} ICV for the implicit task of the encountering thread. If the parallel directive has a \code{proc\_bind} clause then the binding policy specified by the \code{proc\_bind} clause overrides the policy specified by the first element of the \plc{bind-var} ICV. Once a thread in the team is assigned to a place, the OpenMP implementation should not move it to another place. 
+When a thread encounters a \code{parallel} directive without a \code{proc\_bind} clause, the \plc{bind-var} ICV is used to determine the policy for assigning OpenMP threads to places within the current place partition, that is, the places listed in the \plc{place-partition-var} ICV for the implicit task of the encountering thread. If the \code{parallel} directive has a \code{proc\_bind} clause then the binding policy specified by the \code{proc\_bind} clause overrides the policy specified by the first element of the \plc{bind-var} ICV. Once a thread in the team is assigned to a place, the OpenMP implementation should not move it to another place. 
 
 The \code{master} thread affinity policy instructs the execution environment to assign every thread in the team to the same place as the master thread. The place partition is not changed by this policy, and each implicit task inherits the \plc{place-partition-var} ICV of the parent implicit task.
 
@@ -1423,7 +1426,7 @@ The \code{close} thread affinity policy instructs the execution environment to a
 The master thread executes on the place of the parent thread. The thread with the next smallest thread number executes on the next place in the place partition, and so on, with wrap around with respect to the place partition of the master thread.
 \item $T>P$.
 Each place $P$ will contain $S_{p}$ threads with consecutive thread numbers, 
-where $\left \lfloor{(T/P)}\right \rfloor\leq Sp \leq \left \lceil{(T/P)}\right \rceil$. The first $S_{0}$ threads (including the master thread) are assigned to the place of the parent thread. The next $S_{1}$ threads are assigned to the next place in the place partition, and so on, with wrap around with respect to the place partition of the master thread. When $P$ does not divide $T$ evenly, the exact number of threads in a particular place is implementation defined.
+where $\blfloor T/P \brfloor \leq Sp \leq \blceil T/P \brceil$. The first $S_{0}$ threads (including the master thread) are assigned to the place of the parent thread. The next $S_{1}$ threads are assigned to the next place in the place partition, and so on, with wrap around with respect to the place partition of the master thread. When $P$ does not divide $T$ evenly, the exact number of threads in a particular place is implementation defined.
 \end{itemize}
 
 
@@ -1435,14 +1438,14 @@ set of threads ($T>P$) is assigned to each subpartition. The
 \plc{place-partition-var} ICV of each implicit task is set to its subpartition.
 The subpartitioning is not only a mechanism for achieving a sparse 
 distribution, it also defines a subset of places for a thread to use when 
-creating a nested parallel region. The assignment of threads to places is as 
+creating a nested \code{parallel} region. The assignment of threads to places is as 
 follows:
 
 \begin{itemize}
 \item $T\leq P$. The parent thread's place partition is split into $T$ subpartitions, where each subpartition 
-contains $\left \lfloor{(P/T)}\right \rfloor$ or $\left \lceil{(P/T)}\right \rceil$ consecutive places. A single thread is assigned to each subpartition. The master thread executes on the place of the parent thread and is assigned to the subpartition that includes that place. The thread with the next smallest thread number is assigned to the first place in the next subpartition, and so on, with wrap around with respect to the original place partition of the master thread.
+contains $\blfloor P/T \brfloor$ or $\blceil P/T \brceil$ consecutive places. A single thread is assigned to each subpartition. The master thread executes on the place of the parent thread and is assigned to the subpartition that includes that place. The thread with the next smallest thread number is assigned to the first place in the next subpartition, and so on, with wrap around with respect to the original place partition of the master thread.
 
-\item $T>P$. The parent thread's place partition is split into $P$ subpartitions, each consisting of a single place. Each subpartition is assigned $S_{p}$ threads with consecutive thread numbers, where $\left \lfloor{(T/P)}\right \rfloor\leq S_{p} \leq \left \lceil{(T/P)}\right \rceil$. The first $S_{0}$ threads (including the master thread) are assigned to the subpartition containing the place of the parent thread. The next $S_{1}$ threads are assigned to the next subpartition, and so on, with wrap around with respect to the original place partition of the master thread. When P does not divide $T$ evenly, the exact number of threads in a particular subpartition is implementation defined. 
+\item $T>P$. The parent thread's place partition is split into $P$ subpartitions, each consisting of a single place. Each subpartition is assigned $S_{p}$ threads with consecutive thread numbers, where $\blfloor T/P \brfloor \leq S_{p} \leq \blceil T/P \brceil$. The first $S_{0}$ threads (including the master thread) are assigned to the subpartition containing the place of the parent thread. The next $S_{1}$ threads are assigned to the next subpartition, and so on, with wrap around with respect to the original place partition of the master thread. When P does not divide $T$ evenly, the exact number of threads in a particular subpartition is implementation defined. 
 \end{itemize}
 
 The determination of whether the affinity request can be fulfilled is implementation defined. If the affinity request cannot be fulfilled, then the affinity of threads in the team is implementation defined.
@@ -1459,14 +1462,14 @@ The determination of whether the affinity request can be fulfilled is implementa
 \ccppspecificstart
 A loop has \emph{canonical loop form} if it conforms to the following:
 
-\nolinenumbers\line(1,0){400}\\
-\code{for (\plc{init-expr}; \plc{test-expr}; \plc{incr-expr}) \plc{structured-block}}\\[-2ex]
-\line(1,0){400}\linenumbers
-
+\medskip
 \nolinenumbers
 \renewcommand{\arraystretch}{1.0}
 \tablefirsthead{%
-\\[-3ex]
+\hline\\[-2ex]
+\multicolumn{2}{l}{\hspace*{-5pt}%
+\code{for (\plc{init-expr}; \plc{test-expr}; \plc{incr-expr}) \plc{structured-block}}}\\[2pt]
+\hline\\[-2ex]
 }
 \tablehead{%
 \multicolumn{2}{l}{\small\sl continued from previous page}\\
@@ -1505,8 +1508,8 @@ A loop has \emph{canonical loop form} if it conforms to the following:
  & \hspace{1.5em}For C, a variable of a pointer type.\\
  & If this variable would otherwise be shared, it is implicitly made private in the loop 
   construct. This variable must not be modified during the execution of the \plc{for-loop} 
-  other than in \plc{incr-expr}. Unless the variable is specified \code{lastprivate} on the
-  loop construct, its value after the loop is unspecified.\\
+  other than in \plc{incr-expr}. Unless the variable is specified \code{lastprivate}
+  or \code{linear} on the loop construct, its value after the loop is unspecified.\\
 \plc{relational-op} & One of the following:\\
  & \code{<}\\
  & \code{<=}\\
@@ -1668,7 +1671,7 @@ where clause is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{list})
-linear(\plc{list})
+linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier}:\plc{[modifier}:\plc{]]kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
@@ -1696,7 +1699,7 @@ where \plc{clause} is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{list})
-linear(\plc{list})
+linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier}:\plc{[modifier}:\plc{]]kind[},\plc{ chunk\_size]})
 collapse(\plc{n})
@@ -1732,55 +1735,71 @@ There is an implicit barrier at the end of a loop construct unless a \code{nowai
 specified.
 
 \index{clauses!collapse@{\code{collapse}}}
-The \code{collapse} clause or the \code{ordered} clause with the parameter may be used to specify how many loops are associated with the loop construct. An \code{ordered} clause without a parameter is equivalent to the \code{ordered} clause with a parameter value of one specified. The number of loops associated is determined by the parameters of the \code{collapse} clause and the \code{ordered} clause, which must be constant positive integer expressions.
+The \code{collapse} clause may be used to specify how many loops are 
+associated with the loop construct. The parameter of the \code{collapse} 
+clause must be a constant positive integer expression. If a \code{collapse} 
+clause is specified with a parameter value greater than 1, then the 
+iterations of the associated loops to which the clause applies are collapsed 
+into one larger iteration space that is then divided according 
+to the \code{schedule} clause. The sequential execution of the iterations 
+in these associated loops determines the order of the iterations in the 
+collapsed iteration space. If no \code{collapse} clause is present or its 
+parameter is 1, the only loop that is associated with the loop construct 
+for the purposes of determining how the iteration space is divided according 
+to the \code{schedule} clause is the one that immediately follows the 
+loop directive. 
 
-If neither the \code{collapse} nor the \code{ordered} clause is present, the only loop that is associated with the loop construct is the one that immediately follows the loop directive. If the value of the parameter in the \code{collapse} or \code{ordered} clause is larger than the number of nested loops following the construct, the behavior is unspecified.
+The iteration count for each associated loop is computed before entry to the 
+outermost loop. If execution of any associated loop changes any of the values 
+used to compute any of the iteration counts, then the behavior is unspecified.
 
-If both the \code{collapse} clause and the \code{ordered} clause with a parameter are specified, the \code{collapse} clause applies to the loops that immediately follow the directive. The \code{ordered} clause with the parameter then applies to the resulting loop nest (that is, the collapsed loop and the remaining loops). If the value of the parameter in the \code{ordered} clause is larger than the number of the loops in the resulting loop nest, the behavior is unspecified.
+The integer type (or kind, for Fortran) used to compute the iteration count 
+for the collapsed loop is implementation defined.
 
 \index{clauses!schedule@{\code{schedule}}}
-If more than one loop is associated with the loop construct and a \code{collapse} clause is specified, then the iterations of all associated loops are collapsed into one larger iteration space that is then divided according to the schedule clause.
+A worksharing loop has logical iterations numbered 0,1,...,N-1 where N is the 
+number of loop iterations, and the logical numbering denotes the sequence in 
+which the iterations would be executed if a set of associated loop(s) were 
+executed sequentially. The \code{schedule} clause specifies how iterations of 
+these associated loops are divided into contiguous non-empty subsets, called 
+chunks, and how these chunks are distributed among threads of the team. Each 
+thread executes its assigned chunk(s) in the context of its implicit task. 
+The \plc{chunk\_size} expression is evaluated using the original list items of 
+any variables that are made private in the loop construct. It is unspecified 
+whether, in what order, or how many times, any side effects of the evaluation 
+of this expression occur. The use of a variable in a \code{schedule} clause 
+expression of a loop construct causes an implicit reference to the variable 
+in all enclosing constructs.
 
-If an \code{ordered} clause with the parameter is specified for the loop construct, then the associated loops form a \emph{doacross loop nest}. 
-
-The sequential execution of the iterations in all 
-associated loops determines the order of the iterations in the collapsed iteration space.
-
-The iteration count for each associated loop is computed before entry to the outermost 
-loop. If execution of any associated loop changes any of the values used to compute any 
-of the iteration counts, then the behavior is unspecified.
-
-The integer type (or kind, for Fortran) used to compute the iteration count for the 
-collapsed loop is implementation defined.
-
-A worksharing loop has logical iterations numbered 0,1,...,N-1 where N is the number of 
-loop iterations, and the logical numbering denotes the sequence in which the iterations 
-would be executed if the associated loop(s) were executed by a single thread. The 
-\code{schedule} clause specifies how iterations of the associated loops are divided into 
-contiguous non-empty subsets, called chunks, and how these chunks are distributed 
-among threads of the team. Each thread executes its assigned chunk(s) in the context of 
-its implicit task. The \plc{chunk\_size} expression is evaluated using the original list items of 
-any variables that are made private in the loop construct. It is unspecified whether, in 
-what order, or how many times, any side effects of the evaluation of this expression 
-occur. The use of a variable in a \code{schedule} clause expression of a loop construct 
-causes an implicit reference to the variable in all enclosing constructs.
-
-Different loop regions with the same schedule and iteration count, even if they occur in 
-the same parallel region, can distribute iterations among threads differently. The only 
-exception is for the \code{static} schedule as specified in Table~\ref{tab:Schedule-Values}.
-Programs that depend 
-on which thread executes a particular iteration under any other circumstances are 
-non-conforming. 
+Different loop regions with the same schedule and iteration count, even if 
+they occur in the same parallel region, can distribute iterations among 
+threads differently. The only exception is for the \code{static} schedule 
+as specified in Table~\ref{tab:Schedule-Values}. Programs that depend 
+on which thread executes a particular iteration under any other circumstances 
+are non-conforming. 
 
 See \specref{subsubsec:Determining the Schedule of a Worksharing Loop} 
 for details of how the schedule for a worksharing loop is 
 determined. 
 
-The schedule \plc{kind} can be one of those specified in Table~\ref{tab:Schedule-Values}.
+The schedule \plc{kind} can be one of those specified in 
+Table~\ref{tab:Schedule-Values}.
 
 The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Schedule Clause Modifier Values}. If neither the \code{monotonic} modifier nor the \code{nonmonotonic} modifier are specified it will be as if the \code{monotonic} modifier was specified for the \code{static} schedule kind or if the \code{ordered} clauses is specified. It will be as if the \code{nonmonotonic} modifier was specified otherwise.
 
-%% \pagebreak
+The \code{ordered} clause with the parameter may also be used to specify 
+how many loops are associated with the loop construct. The parameter of 
+the \code{ordered} clause must be a constant positive integer expression
+if specified. The parameter of the \code{ordered} clause does not
+affect how the logical iteration space is then divided. If an \code{ordered} 
+clause with the parameter is specified for the loop construct, then those 
+associated loops form a \emph{doacross loop nest}. 
+
+If the value of the parameter in the \code{collapse} or \code{ordered} 
+clause is larger than the number of nested loops following the construct, 
+the behavior is unspecified.
+
+\pagebreak
 \vspace{1ex}\renewcommand{\arraystretch}{1.5}
 \tablefirsthead{%
 \hline\\[-3ex]
@@ -1794,7 +1813,7 @@ The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Sche
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{\code{schedule} Clause \plc{kind} Values\label{tab:Schedule-Values}}
+\tablecaption{\code{schedule} Clause \plc{kind} Values\label{tab:Schedule-Values}}
 \begin{supertabular}{ p{0.8in} p{4.3in} }
 \code{static} & When \code{schedule(static,\plc{ chunk\_size})} is specified, iterations are divided 
 into chunks of size \plc{chunk\_size}, and the chunks are assigned to the threads in 
@@ -1802,7 +1821,7 @@ the team in a round-robin fashion in the order of the thread number.\\
 
  & When no \plc{chunk\_size} is specified, the iteration space is divided into chunks that 
 are approximately equal in size, and at most one chunk is distributed to each 
-thread. Note that the size of the chunks is unspecified in this case.\\
+thread. The size of the chunks is unspecified in this case.\\
 
  & A compliant implementation of the \code{static} schedule must ensure that the 
 same assignment of logical iteration numbers to threads will be used in two 
@@ -1824,7 +1843,7 @@ required unless the \code{monotonic} modifier is specified.\\
  & Each chunk contains \plc{chunk\_size} iterations, except for the
 chunk that contains the sequentially last iteration, which may have fewer iterations.\\
 
- & When no \plc{chunk\_size} is specified, it defaults to 1\\
+ & When no \plc{chunk\_size} is specified, it defaults to 1.\\
 
 \index{guided@{\code{guided}}}
 \code{guided} & When \code{schedule(guided,\plc{ chunk\_size})} is specified, the iterations are
@@ -1857,8 +1876,9 @@ defined.\\
 \linenumbers
 \bigskip\bigskip
 
+
 \notestart
-\noteheader – For a team of $p$ threads and a loop of $n$ iterations, let $\lceil n/p \rceil$ be the integer $q$ 
+\noteheader – For a team of $p$ threads and a loop of $n$ iterations, let $\blceil n/p \brceil$ be the integer $q$ 
 that satisfies $n = p*q - r$, with $0 <= r < p$. One compliant implementation of the \code{static} 
 schedule (with no specified \plc{chunk\_size}) would behave as though \plc{chunk\_size} had been 
 specified with value $q$. Another compliant implementation would assign $q$ iterations to 
@@ -1866,14 +1886,14 @@ the first $p-r$ threads, and $q-1$ iterations to the remaining $r$ threads. This
 conforming program must not rely on the details of a particular implementation. 
 
 A compliant implementation of the \code{guided} schedule with a \plc{chunk\_size} value of $k$ 
-would assign $q = \lceil n/p \rceil$ iterations to the first available thread and set $n$ to the larger of 
+would assign $q = \blceil n/p \brceil$ iterations to the first available thread and set $n$ to the larger of 
 $n-q$ and $p*k$. It would then repeat this process until $q$ is greater than or equal to the 
 number of remaining iterations, at which time the remaining iterations form the final 
 chunk. Another compliant implementation could use the same method, except with 
-$q = \lceil n/(2p) \rceil$, and set $n$ to the larger of $n-q$ and $2*p*k$. 
+$q = \blceil n/(2p) \brceil$, and set $n$ to the larger of $n-q$ and $2*p*k$. 
 \noteend
 
-%% \pagebreak
+\pagebreak
 \vspace{1ex}\renewcommand{\arraystretch}{1.5}
 \tablefirsthead{%
 \hline\\[-3ex]
@@ -1887,14 +1907,14 @@ $q = \lceil n/(2p) \rceil$, and set $n$ to the larger of $n-q$ and $2*p*k$.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{\code{schedule} Clause \plc{modifier} Values\label{tab:Schedule Clause Modifier Values}}
+\tablecaption{\code{schedule} Clause \plc{modifier} Values\label{tab:Schedule Clause Modifier Values}}
 %% \vspace{1ex}
 \begin{supertabular}{ p{0.8in} p{4.3in} }
 \code{monotonic} & When the \code{monotonic} modifier is specified then each thread executes the chunks 
 that it is assigned in increasing logical iteration order.\\
 \code{nonmonotonic} & When the \code{nonmonotonic} modifier is specified then chunks are assigned to threads 
 in any order and the behavior of an application that depends on the execution order of the chunks is unspecified. This modifier can only be specified for the \code{dynamic} and \code{guided} schedule kinds. This modifier cannot be specified in loops where the \code{ordered} clause is specified.\\
-\code{simd} & When the \code{simd} modifier is specified and the loop is associated with a SIMD construct, the \plc{chunk\_size} for all chunks except the first and last chunks  is  $new\_chunk\_size =  \lceil chunk\_size / simd\_width \rceil * simd\_width $ where \plc{simd\_width} is an implementation-defined value. The first chunk will have at least \plc{new\_chunk\_size} iterations except if it is also the last chunk. The last chunk may have fewer iterations than \plc{new\_chunk\_size}. If the \code{simd} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
+\code{simd} & When the \code{simd} modifier is specified and the loop is associated with a SIMD construct, the \plc{chunk\_size} for all chunks except the first and last chunks  is  $new\_chunk\_size = \blceil chunk\_size / simd\_width \brceil * simd\_width $ where \plc{simd\_width} is an implementation-defined value. The first chunk will have at least \plc{new\_chunk\_size} iterations except if it is also the last chunk. The last chunk may have fewer iterations than \plc{new\_chunk\_size}. If the \code{simd} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
 \end{supertabular}
 
 \restrictions
@@ -1905,7 +1925,7 @@ Restrictions to the loop construct are as follows:
 must be no intervening code nor any OpenMP directive between any two loops.
 
 \item The values of the loop control expressions of the loops associated with the loop 
-construct must be the same for all the threads in the team.
+construct must be the same for all threads in the team.
 
 \item Only one \code{schedule} clause can appear on a loop directive.
 
@@ -1928,6 +1948,10 @@ not be specified.
 ever binds to a loop region arising from the loop construct.
 
 \item The loop iteration variable may not appear in a \code{threadprivate} directive.
+
+\item If both the \code{collapse} and \code{ordered} clause with a parameter are specified,
+the parameter of the \code{ordered} clause must be greater than or equal to the parameter of the
+\code{collapse} clause.
 \end{itemize}
 
 \ccppspecificstart
@@ -2347,7 +2371,7 @@ expressions occurring in the specification of the iteration space, and the maske
 assignments are each a unit of work
 
 \item For an \code{atomic} construct, the atomic operation on the storage location designated as 
-x is a unit of work.
+\plc{x} is a unit of work.
 
 \item For a \code{critical} construct, the construct is a single unit of work.
 
@@ -2432,6 +2456,7 @@ safelen(\plc{length})
 simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
+
 private(\plc{list})
 lastprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
@@ -2466,9 +2491,11 @@ collapse(\plc{n})
 If an \code{end}~\code{simd} directive is not specified, an \code{end}~\code{simd} directive is assumed at the end 
 of the \plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an 
-\code{end}~\code{simd} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
-termination statement, then the directive can only be specified for the outermost of these 
+Any associated \plc{do-loop} must be a \plc{do-construct} or an 
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If an 
+\code{end}~\code{simd} directive follows a \plc{do-construct} in which 
+several loop statements share a \code{DO} termination statement, then the 
+directive can only be specified for the outermost of these 
 \code{DO} statements. 
 \fortranspecificend
 
@@ -2542,7 +2569,7 @@ no intervening code nor any OpenMP directive between any two loops.
 
 \item If both \code{simdlen} and \code{safelen} clauses are specified, the value of the \code{simdlen} parameter must be less than or equal to the value of the \code{safelen} parameter.
 
-\item An ordered construct with the \code{simd} clause is the only OpenMP construct that can appear in the \code{simd} region. 
+\item An \code{ordered} construct with the \code{simd} clause is the only OpenMP construct that can appear in the \code{simd} region. 
 
 \ccppspecificstart
 \item The \code{simd} region cannot contain calls to the \code{longjmp} or \code{setjmp} functions. 
@@ -2590,7 +2617,7 @@ pointer, or the list item must have the \code{POINTER} or \code{ALLOCATABLE} att
 \summary
 The \code{declare}~\code{simd} construct can be applied to a function (C, C++ and Fortran) or a 
 subroutine (Fortran) to enable the creation of one or more versions that can process 
-multiple arguments using SIMD instructions from a single invocation from a SIMD 
+multiple arguments using SIMD instructions from a single invocation in a SIMD 
 loop. The \code{declare}~\code{simd} directive is a declarative directive. There may be multiple 
 \code{declare}~\code{simd} directives for a function (C, C++, Fortran) or subroutine (Fortran).
 
@@ -2639,22 +2666,22 @@ notinbranch
 \ccppspecificstart
 The use of a \code{declare}~\code{simd} construct on a function enables the creation of SIMD 
 versions of the associated function that can be used to process multiple arguments from 
-a single invocation from a SIMD loop concurrently.
+a single invocation in a SIMD loop concurrently.
 
 The expressions appearing in the clauses of this directive are evaluated in the scope of 
-the arguments of the function declaration or definition
+the arguments of the function declaration or definition.
 \ccppspecificend
 
 \begin{samepage}
 \fortranspecificstart
 The use of a \code{declare}~\code{simd} construct enables the creation of SIMD versions of the 
 specified subroutine or function that can be used to process multiple arguments from a 
-single invocation from a SIMD loop concurrently. 
+single invocation in a SIMD loop concurrently. 
 \fortranspecificend
 \end{samepage}
 
-If a \code{declare}~\code{simd} directive contains multiple SIMD declarations, then one or more 
-SIMD versions will be created for each declaration.
+If a \code{declare}~\code{simd} directive contains multiple SIMD declarations,
+each declaration enables the creation of SIMD versions.
 
 If a SIMD version is created, the number of concurrent arguments for the function is 
 determined by the \code{simdlen} clause. If the \code{simdlen} clause is used its value 
@@ -2687,10 +2714,10 @@ The optional parameter of the \code{aligned} clause, \plc{alignment}, must be a 
 integer expression. If no optional parameter is specified, implementation-defined default 
 alignments for SIMD instructions on the target platforms are assumed.
 
-The \code{inbranch} clause specifies that the function will always be called from inside a 
+The \code{inbranch} clause specifies that the SIMD version of the function will always be called from inside a 
 conditional statement of a SIMD loop. The \code{notinbranch} clause specifies that the 
-function will never be called from inside a conditional statement of a SIMD loop. If 
-neither clause is specified, then the function may or may not be called from inside a 
+SIMD version of the function will never be called from inside a conditional statement of a SIMD loop. If 
+neither clause is specified, then the SIMD version of the function may or may not be called from inside a 
 conditional statement of a SIMD loop.
 
 \restrictions
@@ -2718,7 +2745,7 @@ alter its execution for concurrent iterations of a SIMD chunk.
 declaration that has one must be equivalent to the one specified for the definition. 
 Otherwise, the result is unspecified.
 
-\item The function cannot contain calls to the \plc{longjmp} or \plc{setjmp} functions. 
+\item The function cannot contain calls to the \code{longjmp} or \code{setjmp} functions. 
 \ccppspecificend
 
 \cspecificstart
@@ -2827,10 +2854,10 @@ construct. The effect of any clause that applies to both constructs is as if it 
 
 \restrictions
 All restrictions to the loop construct and the \code{simd} construct apply to the loop SIMD 
-construct. In addition, the following restriction applies:
+construct. In addition, the following restrictions apply:
 
 \begin{itemize}
-\item No \code{ordered} clause can be specified.
+\item No \code{ordered} clause with a parameter can be specified.
 \item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
 \end{itemize}
 
@@ -2928,12 +2955,12 @@ The encountering thread may immediately execute the task, or defer its execution
 latter case, any thread in the team may be assigned the task. Completion of the task can 
 be guaranteed using task synchronization constructs. A \code{task} construct may be nested 
 inside an outer task, but the \code{task} region of the inner task is not a part of the \code{task} 
-region of the outer task.
+region of the outer task, unless the inner task is an included task.
 
 When an \code{if} clause is present on a \code{task} construct, and the \code{if} clause expression 
 evaluates to \plc{false}, an undeferred task is generated, and the encountering thread must 
 suspend the current task region, for which execution cannot be resumed until the 
-generated task is completed. Note that the use of a variable in an \code{if} clause expression 
+generated task is completed. The use of a variable in an \code{if} clause expression 
 of a \code{task} construct causes an implicit reference to the variable in all enclosing 
 constructs.
 
@@ -2947,7 +2974,7 @@ The \code{if} clause expression and the \code{final} clause expression are evalu
 outside of the \code{task} construct, and no ordering of those evaluations is specified.
 
 A thread that encounters a task scheduling point within the \code{task} region may 
-temporarily suspend the \code{task} region. By default, a task is tied and its suspended task 
+temporarily suspend the \code{task} region. By default, a task is tied and its suspended \code{task} 
 region can only be resumed by the thread that started its execution. If the \code{untied} 
 clause is present on a \code{task} construct, any thread in the team can resume the \code{task} 
 region after a suspension. The \code{untied} clause is ignored if a \code{final} clause is present 
@@ -2972,8 +2999,8 @@ implementation will use the value of that ICV. A program that relies on task exe
 being determined by this \plc{priority-value} may have unspecified behavior.
 
 \notestart
-\noteheader – When storage is shared by an explicit \code{task} region, it is the programmer's 
-responsibility to ensure, by adding proper synchronization, that the storage does not 
+\noteheader – When storage is shared by an explicit \code{task} region, the 
+programmer must ensure, by adding proper synchronization, that the storage does not 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
 
@@ -3079,20 +3106,27 @@ mergeable
 nogroup
 \end{indentedcodelist}
 
-If \code{end}~\code{taskloop} directive is not specified, an \code{end}~\code{taskloop} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{taskloop} directive is not specified, an 
+\code{end}~\code{taskloop} directive is assumed at the end of the 
+\plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an \code{end}~\code{do} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} termination statement, then the directive can only be specified for the outermost of these \code{DO} statements.
+Any associated \plc{do-loop} must be \plc{do-construct} or an 
+\plc{inner-shared-do-construct} as defined by the Fortran standard. 
+If an \code{end}~\code{taskloop} directive follows a \plc{do-construct} 
+in which several loop statements share a \code{DO} 
+termination statement, then the directive can only be specified for the 
+outermost of these \code{DO} statements.
 
 If any of the loop iteration variables would otherwise be shared, they are implicitly made private for the loop-iteration tasks created by the \code{taskloop} construct. Unless the loop iteration variables are specified in a \code{lastprivate} clause on the \code{taskloop} construct, their values after the loop are unspecified.
 \fortranspecificend
 
 \binding
-The binding thread set of the \code{taskloop} construct is the current team. A \code{taskloop} region binds to the innermost enclosing \code{parallel} region.
+The binding thread set of the \code{taskloop} region is the current team. A \code{taskloop} region binds to the innermost enclosing \code{parallel} region.
 
 \descr
 When a thread encounters a \code{taskloop} construct, the construct partitions the associated loops into tasks for parallel execution of the loops' iterations. The data environment of the created tasks is created according to the data-sharing attribute clauses on the \code{taskloop} construct, per-data environment ICVs, and any defaults that apply. The order of the creation of the loop tasks is unspecified.
 
-If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each created task is larger than or equal to the value of the \plc{grain-size} expression, but less than two times the value of the \plc{grain-size} expression and less than or equal to the number of logical loop iterations. The parameter of the \code{grainsize} clause must be a positive integer expression. If \code{num\_tasks} is specified, the \code{taskloop} construct creates as many tasks as the minimum of the \plc{num-tasks} expression and the number of logical loop iterations. The parameter of the \code{num\_tasks} clause must evaluate to a positive integer.  If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks created and the number of logical loop iterations assigned to these tasks is implementation defined.
+If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each created task is greater than or equal to the minimum of the value of the \plc{grain-size} expression and the number of logical loop iterations, but less than two times the value of the \plc{grain-size} expression.  The parameter of the \code{grainsize} clause must be a positive integer expression.  If \code{num\_tasks} is specified, the \code{taskloop} construct creates as many tasks as the minimum of the \plc{num-tasks} expression and the number of logical loop iterations.  The parameter of the \code{num\_tasks} clause must evaluate to a positive integer.  If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks created and the number of logical loop iterations assigned to these tasks is implementation defined.
 
 The \code{collapse} clause may be used to specify how many loops are associated with the \code{taskloop} construct. The parameter of the \code{collapse} clause must be a constant positive integer expression. If no \code{collapse} clause is present, the only loop that is associated with the \code{taskloop} construct is the one that immediately follows the \code{taskloop} directive.
 
@@ -3105,9 +3139,9 @@ When an \code{if} clause is present on a \code{taskloop} construct, and if the \
 When a \code{final} clause is present on a \code{taskloop} construct and the \code{final} clause expression evaluates to \plc{true}, the generated tasks will be final tasks. The use of a variable in a \code{final} clause expression of a \code{taskloop} construct causes an implicit reference to the variable in all enclosing constructs.
 
 When a \code{priority} clause is present on a \code{taskloop} construct,
-the generated tasks will have the \plc{priority-value} as if it was 
+the generated tasks have the \plc{priority-value} as if it was 
 specified for each individual task.  
-If the \code{priority} clause has not been specified, tasks generated by 
+If the \code{priority} clause is not specified, tasks generated by 
 the \code{taskloop} construct have the default task priority (zero).
 
 If the \code{untied} clause is specified, all tasks created by the \code{taskloop} construct are untied tasks.
@@ -3115,6 +3149,10 @@ If the \code{untied} clause is specified, all tasks created by the \code{taskloo
 When a \code{mergeable} clause is present on a \code{taskloop} construct, and the generated tasks are undeferred or included tasks, the implementation may generate merged tasks instead.
 
 By default, the \code{taskloop} construct executes as if it was enclosed in a \code{taskgroup} construct with no statements or directives outside of the \code{taskloop} construct. Thus, the \code{taskloop} construct creates an implicit \code{taskgroup} region. If the \code{nogroup} clause is present, no implicit \code{taskgroup} region is created.
+
+\cppspecificstart
+For \code{firstprivate} variables of class type, the number of invocations of copy constructors to perform the initialization  is implementation-defined.
+\cppspecificend
 
 \notestart
 \noteheader – When storage is shared by a \code{taskloop} region, the programmer must ensure, by adding proper synchronization, that the storage does not reach the end of its lifetime before the \code{taskloop} region and its descendant tasks complete their execution.
@@ -3178,11 +3216,11 @@ The syntax of the \code{taskloop}~\code{simd} construct is as follows:
 \end{boxedcode}
 where \plc{clause} can be any of the clauses accepted by the \code{taskloop} or \code{simd} directives with identical meanings and restrictions.
 
-If \code{end}~\code{taskloop}~\code{simd} directive is not specified, an \code{end}~\code{taskloop}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{taskloop}~\code{simd} directive is not specified, an \code{end}~\code{taskloop}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
 \fortranspecificend
 
 \binding
-The binding thread set of the \code{taskloop}~\code{simd} construct is the current team. A \code{taskloop}~\code{simd} region binds to the innermost enclosing parallel region.
+The binding thread set of the \code{taskloop}~\code{simd} region is the current team. A \code{taskloop}~\code{simd} region binds to the innermost enclosing parallel region.
 
 \descr
 The \code{taskloop}~\code{simd} construct will first distribute the iterations of the associated loop(s) across tasks in a manner consistent with any clauses that apply to the \code{taskloop} construct. The resulting tasks will then be converted to a SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
@@ -3266,26 +3304,31 @@ perform a task switch, beginning or resuming execution of a different task bound
 current team. Task scheduling points are implied at the following locations:
 
 \begin{itemize}
-\item the point immediately following the generation of an explicit task
+\item the point immediately following the generation of an explicit task;
 
-\item after the point of completion of a \code{task} region
+\item after the point of completion of a \code{task} region;
 
-\item in a \code{taskyield} region
+\item in a \code{taskyield} region;
 
-\item in a \code{taskwait} region
+\item in a \code{taskwait} region;
 
-\item at the end of a \code{taskgroup} region
+\item at the end of a \code{taskgroup} region;
 
-\item in an implicit and explicit \code{barrier} region
+\item in an implicit and explicit \code{barrier} region;
 
-\item the point immediately following the generation of a \code{target} region
+\item the point immediately following the generation of a \code{target} region;
 
-\item at the beginning and end of a \code{target}~\code{data} region
+\item at the beginning and end of a \code{target}~\code{data} region;
 
-\item in a \code{target}~\code{update} region 
+\item in a \code{target}~\code{update} region; 
 
-\item in either the \code{omp\_target\_memcpy} or the
-  \code{omp\_target\_memcpy\_rect} routine
+\item in a \code{target}~\code{enter}~\code{data} region; 
+
+\item in a \code{target}~\code{exit}~\code{data} region; 
+
+\item in the \code{omp\_target\_memcpy} routine; 
+
+\item in the \code{omp\_target\_memcpy\_rect} routine;
 
 \end{itemize}
 
@@ -3342,8 +3385,8 @@ task exists that modifies it.
 As another example, if a lock acquire and release happen in different parts of a task 
 region, no attempt should be made to acquire the same lock in any part of another task 
 that the executing thread may schedule. Otherwise, a deadlock is possible. A similar 
-situation can occur when a critical region spans multiple parts of a task and another 
-schedulable task contains a critical region with the same name.
+situation can occur when a \code{critical} region spans multiple parts of a task and another 
+schedulable task contains a \code{critical} region with the same name.
 
 The use of threadprivate variables and the use of locks or critical sections in an explicit 
 task with an \code{if} clause must take into account that when the \code{if} clause evaluates to 
@@ -3374,7 +3417,7 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 The syntax of the \code{target}~\code{data} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target data \plc{[clause[ [},\plc{] clause] } \plc{... ] new-line}
+\#pragma omp target data \plc{clause[ [ [},\plc{] clause] ... ] new-line}
 \plc{structured-block}
 \end{boxedcode}
 
@@ -3395,7 +3438,7 @@ use\_device\_ptr(\plc{list})
 The syntax of the \code{target}~\code{data} construct is as follows:
 
 \begin{boxedcode}
-!\$omp target data \plc{[clause[ [},\plc{] clause] ... ]}
+!\$omp target data \plc{clause[ [ [},\plc{] clause] ... ]}
 \plc{structured-block}
 !\$omp end target data
 \end{boxedcode}
@@ -3413,8 +3456,8 @@ The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{
 \fortranspecificend
 
 \binding
-The binding task region for a \code{target}~\code{data} construct is the encountering task. The 
-target region binds to the enclosing parallel or task region.
+The binding task set for a \code{target}~\code{data} region is the generating task. The 
+\code{target}~\code{data} region binds to the region of the generating task.
 
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
@@ -3428,7 +3471,7 @@ device pointers to the corresponding list item in the device data environment.
     \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
   \item At most one \code{device} clause can appear on the directive. The \code{device} expression
-    must evaluate to a non-negative integer value strictly less than the value
+    must evaluate to a non-negative integer value less than the value
     of \code{omp\_get\_num\_devices()}.
 
   \item At most one \code{if} clause can appear on the directive.
@@ -3445,14 +3488,15 @@ device pointers to the corresponding list item in the device data environment.
 
 \crossreferences
 \begin{itemize}
-\item \code{map} clause, see 
-\specref{subsec:map Clause}.
-
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}. 
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{map} clause, see 
+\specref{subsec:map Clause}.
 \end{itemize}
+
 
 
 
@@ -3525,12 +3569,14 @@ The \code{end}~\code{target} directive denotes the end of the \code{target} cons
 \fortranspecificend
 
 \binding
-The binding task for a \code{target} construct is the encountering task. The target region 
-binds to the enclosing parallel or task region.
+The binding task set for a \code{target} region is the
+generating task, which is the \plc{target task} generated
+by the \code{target} construct. The \code{target}
+region binds to the corresponding \plc{target task} region.
 
 \descr
-The \code{target} construct provides a superset of the functionality and
-restrictions provided by the \code{target}~\code{data} directive, excepting
+The \code{target} construct provides a superset of the functionality
+provided by the \code{target}~\code{data} directive, except for 
 the \code{use\_device\_ptr} clause.
 
 The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
@@ -3547,7 +3593,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 The \code{is\_device\_ptr} clause is used to indicate that a list item is a device
 pointer already in the device data environment and that it should be used
-directly.  Support for pointers created outside of OpenMP, specifically
+directly.  Support for device pointers created outside of OpenMP, specifically
 outside of the \code{omp\_target\_alloc} routine and the \code{use\_device\_ptr} clause,
 is implementation defined.
 
@@ -3585,7 +3631,7 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
     device pointer in the device data environment.
 
 \ccppspecificstart
-\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variables's corresponding private variable is modified in the region.
+\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variable's corresponding private variable is modified in the region.
 \ccppspecificend
 
 \cppspecificstart
@@ -3607,22 +3653,22 @@ same \code{target} region, and the same thread that threw the exception must cat
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}. 
 
-\item \code{target}~\code{data} construct, see 
-\specref{subsec:target data Construct}.
-
 \item \code{task} construct, see 
 \specref{subsec:task Construct}.
 
 \item \code{task} scheduling constraints, see 
 \specref{subsec:Task Scheduling}
 
-\item \code{if} Clause, see \specref{sec:if Clause}.
+\item \code{target}~\code{data} construct, see 
+\specref{subsec:target data Construct}.
 
-\item Data-mapping Attribute Rules and Clauses, see 
-\specref{subsec:Data-mapping Attribute Rules and Clauses}.
+\item \code{if} Clause, see \specref{sec:if Clause}.
 
 \item \code{private} and \code{firstprivate} clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Data-mapping Attribute Rules and Clauses, see 
+\specref{subsec:Data-mapping Attribute Rules and Clauses}.
 \end{itemize}
 
 
@@ -3648,7 +3694,7 @@ clauses. The \code{target}~\code{update} construct is a stand-alone directive.
 The syntax of the \code{target}~\code{update} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target update \plc{clause[ [},\plc{] clause] ... ] new-line}
+\#pragma omp target update \plc{clause[ [ [},\plc{] clause] ... ] new-line}
 \end{boxedcode}
 where \plc{clause} is either \plc{motion-clause} or one of the following:
 
@@ -3671,7 +3717,7 @@ from(\plc{list})
 The syntax of the \code{target}~\code{update} construct is as follows:
 
 \begin{boxedcode}
-!\$omp target update \plc{clause[ [},\plc{] clause] ... ]}
+!\$omp target update \plc{clause[ [ [},\plc{] clause] ... ]}
 \end{boxedcode}
 
 where \plc{clause} is either \plc{motion-clause} or one of the following:
@@ -3692,8 +3738,10 @@ from(\plc{list})
 \fortranspecificend
 
 \binding
-The binding task for a \code{target}~\code{update} construct is the encountering task.The 
-\code{target}~\code{update} directive is a stand-alone directive.
+The binding task set for a \code{target}~\code{update} region is the
+generating task, which is the \plc{target task} generated
+by the \code{target}~\code{update} construct. The \code{target}~\code{update}
+region binds to the corresponding \plc{target task} region.
 
 \descr
 For each list item in a \code{to} or \code{from} clause there is a corresponding list item and an 
@@ -3731,10 +3779,11 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
 
-\item A list item in a \code{to} or \code{from} clause must have a mappable type
+\item A list item in a \code{to} or \code{from} clause must have a mappable type.
 
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression 
-must evaluate to a non-negative integer value.
+\item At most one \code{device} clause can appear on the directive. The \code{device} expression
+      must evaluate to a non-negative integer value less than the value
+      of \code{omp\_get\_num\_devices()}.
 
 \item At most one \code{if} clause can appear on the directive. 
 
@@ -3746,9 +3795,6 @@ must evaluate to a non-negative integer value.
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}.
 
-\item \code{target}~\code{data}, see 
-\specref{subsec:target data Construct}. 
-
 \item Array sections, 
 \specref{sec:Array Sections}
 
@@ -3757,6 +3803,9 @@ must evaluate to a non-negative integer value.
 
 \item \code{task} scheduling constraints, see 
 \specref{subsec:Task Scheduling}
+
+\item \code{target}~\code{data}, see 
+\specref{subsec:target data Construct}. 
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
@@ -3798,7 +3847,7 @@ the following forms:
 or
 
 \begin{boxedcode}
-\#pragma omp declare target \plc{clause[ [},\plc{] clause] ... ] new-line}
+\#pragma omp declare target \plc{[clause[ [},\plc{] clause] ... ] new-line}
 \end{boxedcode}
 
 where \plc{clause} is one of the following:
@@ -4016,7 +4065,8 @@ The \code{end}~\code{teams} directive denotes the end of the \code{teams} constr
 \fortranspecificend
 
 \binding
-The binding thread set for a \code{teams} region is the encountering thread.
+The binding thread set for a \code{teams} region is the encountering thread,
+which is the initial thread of the \code{target} region.
 
 \descr
 When a thread encounters a \code{teams} construct, a league of thread teams is created and 
@@ -4024,6 +4074,7 @@ the master thread of each thread team executes the \code{teams} region.
 
 The number of teams created is implementation defined, but is less than or equal to the 
 value specified in the \code{num\_teams} clause.
+A thread may obtain the number of teams by a call to the \code{omp\_get\_num\_teams} routine.
 
 The maximum number of threads participating in the contention group that each team 
 initiates is implementation defined, but is less than or equal to the value specified in the 
@@ -4059,8 +4110,10 @@ expression must evaluate to a positive integer value.
 
 \item If specified, a \code{teams} construct must be contained within a \code{target} construct. That \code{target} construct must contain no statements, declarations or directives outside of the \code{teams} construct.
 
-\item \code{distribute}, \code{parallel}, \code{parallel}~\code{sections}, \code{parallel}~\code{workshare}, 
-and the parallel loop and parallel loop SIMD constructs are the only OpenMP 
+\item \code{distribute}, \code{distribute simd}, \code{parallel}, 
+\code{parallel}~\code{sections}, \code{parallel}~\code{workshare}, 
+and the distribute parallel loop, distribute parallel loop SIMD, parallel 
+loop and parallel loop SIMD constructs are the only OpenMP 
 constructs that can be closely nested in the \code{teams} region. 
 \end{itemize}
 
@@ -4102,7 +4155,7 @@ The syntax of the \code{distribute} construct is as follows:
 
 \begin{boxedcode}
 \#pragma omp distribute \plc{[clause[ [},\plc{] clause] ... ] new-line}
-\plc{for-loops}
+   \plc{for-loops}
 \end{boxedcode}
 
 Where \plc{clause} is one of the following:
@@ -4124,7 +4177,7 @@ The syntax of the \code{distribute} construct is as follows:
 
 \begin{boxedcode}
 !\$omp distribute \plc{[clause[ [},\plc{] clause] ... ]}
-\plc{do-loops}
+   \plc{do-loops}
 \plc{[}!\$omp end distribute\plc{]}
 \end{boxedcode}
 
@@ -4140,16 +4193,17 @@ dist\_schedule(\plc{kind[},\plc{ chunk\_size]})
 If an \code{end}~\code{distribute} directive is not specified, an \code{end}~\code{distribute} directive 
 is assumed at the end of the \plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an 
-\code{end}~\code{do} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
+Any associated \plc{do-loop} must be a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If an 
+\code{end}~\code{distribute} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
 termination statement, then the directive can only be specified for the outermost of these 
 \code{DO} statements.
 \fortranspecificend
 
 \binding
-The binding thread set for a \code{distribute} region is the set of master threads created by 
-a \code{teams} construct. A \code{distribute} region binds to the innermost enclosing \code{teams} 
-region. Only the threads executing the binding \code{teams} region participate in the 
+The binding thread set for a \code{distribute} region is the set of master
+threads executing an enclosing \code{teams} region. A \code{distribute} region
+binds to this \code{teams} region. Only the threads executing the binding \code{teams} region participate in the 
 execution of the loop iterations.
 
 \descr
@@ -4173,7 +4227,7 @@ If \code{dist\_schedule} is specified, \plc{kind} must be \code{static}. If spec
 divided into chunks of size \plc{chunk\_size}, chunks are assigned to the teams of the league in 
 a round-robin fashion in the order of the team number. When no \plc{chunk\_size} is specified, 
 the iteration space is divided into chunks that are approximately equal in size, and at 
-most one chunk is distributed to each team of the league. Note that the size of the 
+most one chunk is distributed to each team of the league. The size of the 
 chunks is unspecified in this case.
 
 When no \code{dist\_schedule} clause is specified, the schedule is implementation defined.
@@ -4219,7 +4273,7 @@ The syntax of the \code{distribute}~\code{simd} construct is as follows:
 
 \ccppspecificstart
 \begin{boxedcode}
-\#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ] newline}
    \plc{for-loops}
 \end{boxedcode}
 
@@ -4251,9 +4305,10 @@ converted to a SIMD loop in a manner consistent with any clauses that apply to t
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 
+\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
+
+\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 \end{itemize}
 
 \crossreferences
@@ -4292,7 +4347,7 @@ The syntax of the distribute parallel loop construct is as follows:
 
 \ccppspecificstart
 \begin{boxedcode}
-\#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -4321,8 +4376,7 @@ The effect of any clause that applies to both constructs is as if it were applie
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop constructs apply.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
+\item No \code{ordered} clause can be specified.
 \end{itemize}
 
 \crossreferences
@@ -4362,7 +4416,7 @@ of multiple teams. The distribute parallel loop SIMD construct is a composite co
 The syntax of the distribute parallel loop SIMD construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -4400,6 +4454,7 @@ The effect of any clause that applies to both constructs is as if it were applie
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop SIMD constructs apply.
+\item No \code{ordered} clause can be specified.
 \item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
 \item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 \end{itemize}
@@ -4426,7 +4481,7 @@ The \code{target}~\code{enter}~\code{data} directive specifies that variables ar
 \ccppspecificstart
 The syntax of the \code{target}~\code{enter}~\code{data} construct is as follows:
 \begin{boxedcode}
-\#pragma omp target enter data \plc{[clause[[,] clause]...] new-line}
+\#pragma omp target enter data \plc{[ clause[ [,] clause]...] new-line}
 \end{boxedcode}
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
@@ -4440,7 +4495,7 @@ nowait
 \fortranspecificstart
 The syntax of the \code{target}~\code{enter}~\code{data} is as follows:
 \begin{boxedcode}
-!\$omp target enter data \plc{[clause[[,] clause]...]}
+!\$omp target enter data \plc{[ clause[ [,] clause]...]}
 \end{boxedcode}
 where clause is one of the following:
 \begin{indentedcodelist}
@@ -4453,14 +4508,18 @@ nowait
 \fortranspecificend
 
 \binding
-The binding task for a \code{target}~\code{enter}~\code{data} construct is the encountering task. 
+The binding task set for a \code{target}~\code{enter}~\code{data} region is
+the generating task, which is the \plc{target task} generated by the
+\code{target}~\code{enter}~\code{data} construct. The
+\code{target}~\code{enter}~\code{data} region binds to the corresponding
+\plc{target task} region.
 
 \descr
 When a \code{target}~\code{enter}~\code{data} construct is encountered, the list items are mapped to the device data environment according to the \code{map} clause semantics.
 
 The \code{target}~\code{enter}~\code{data} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target}~\code{enter}~\code{data} construct. The generated task is a \plc{target task}.
 
-A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated target task is complete.
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated \plc{target task} is complete.
 
 By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
 
@@ -4482,13 +4541,21 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 \crossreferences
 \begin{itemize}
-\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
-\item \code{target}~\code{exit}~\code{data}, see \specref{subsec:target exit data Construct}.
-\item \code{map} clause, see \specref{subsec:map Clause}.
 \item \plc{default-device-var}, see \specref{subsec:ICV Descriptions}.
+
 \item \code{task}, see \specref{subsec:task Construct}.
-\item \code{task}~\code{scheduling}~\code{constraints}, see \specref{subsec:Task Scheduling}. 
+
+\item \code{task}~\code{scheduling}~\code{constraints}, 
+      see \specref{subsec:Task Scheduling}. 
+
+\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
+
+\item \code{target}~\code{exit}~\code{data}, 
+      see \specref{subsec:target exit data Construct}.
+
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{map} clause, see \specref{subsec:map Clause}.
 \end{itemize}
 
 
@@ -4505,7 +4572,7 @@ The \code{target}~\code{exit}~\code{data} directive specifies that list items ar
 \ccppspecificstart
 The syntax of the \code{target}~\code{exit}~\code{data} construct is as follows:
 \begin{boxedcode}
-\#pragma omp target exit data \plc{[clause[[,] clause]...] new-line}
+\#pragma omp target exit data \plc{[ clause[ [,] clause]...] new-line}
 \end{boxedcode}
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
@@ -4519,7 +4586,7 @@ nowait
 \fortranspecificstart
 The syntax of the \code{target}~\code{exit}~\code{data} is as follows:
 \begin{boxedcode}
-!\$omp target exit data \plc{[clause[[,] clause]...]}
+!\$omp target exit data \plc{[ clause[ [,] clause]...]}
 \end{boxedcode}
 where clause is one of the following:
 \begin{indentedcodelist}
@@ -4530,8 +4597,13 @@ depend(\plc{dependence-type} : \plc{list})
 nowait
 \end{indentedcodelist}
 \fortranspecificend
+
 \binding
-The binding task for a \code{target}~\code{exit}~\code{data} construct is the encountering task. 
+The binding task set for a \code{target}~\code{exit}~\code{data} region is
+the generating task, which is the \plc{target task} generated by the
+\code{target}~\code{exit}~\code{data} construct. The
+\code{target}~\code{exit}~\code{data} region binds to the corresponding
+\plc{target task} region.
 
 \descr
 When a \code{target}~\code{exit}~\code{data} construct is encountered, the list items in the \code{map} clauses are unmapped from the device data environment according to the \code{map} clause semantics.
@@ -4559,13 +4631,21 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 \crossreferences
 \begin{itemize}
-\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
-\item \code{target}~\code{enter}~\code{data}, see \specref{subsec:target enter data Construct}.
-\item \code{map} clause, see \specref{subsec:map Clause}.
 \item \plc{default-device-var}, see \specref{subsec:ICV Descriptions}.
+
 \item \code{task}, see \specref{subsec:task Construct}.
-\item \code{task}~\code{scheduling}~\code{constraints}, see \specref{subsec:Task Scheduling}. 
+
+\item \code{task}~\code{scheduling}~\code{constraints}, 
+      see \specref{subsec:Task Scheduling}. 
+
+\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
+
+\item \code{target}~\code{enter}~\code{data}, 
+      see \specref{subsec:target enter data Construct}.
+
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{map} clause, see \specref{subsec:map Clause}.
 \end{itemize}
 
 
@@ -4609,8 +4689,8 @@ program's behavior is unspecified.
 \index{combined constructs!parallel loop construct}
 \index{worksharing!parallel}
 \summary
-The parallel loop construct is a shortcut for specifying a \code{parallel} construct 
-containing one or more associated loops and no other statements.
+The parallel loop construct is a shortcut for specifying a \code{parallel} construct
+containing one loop constuct with one or more associated loops and no other statements.
 
 \syntax
 \ccppspecificstart
@@ -4618,7 +4698,7 @@ The syntax of the parallel loop construct is as follows:
 
 \begin{boxedcode}
 \#pragma omp parallel for \plc{[clause[ [},\plc{] clause] ... ] new-line}
-   \plc{for-loop}
+   \plc{for-loops}
 \end{boxedcode}
 
 where \plc{clause} can be any of the clauses accepted by the \code{parallel} or \code{for} directives, 
@@ -4648,7 +4728,7 @@ followed by a loop directive.
 
 \restrictions
 \begin{itemize}
-\item The restrictions for the \code{parallel} construct and the loop construct apply
+\item The restrictions for the \code{parallel} construct and the loop construct apply.
 \end{itemize}
 
 \crossreferences
@@ -4656,8 +4736,8 @@ followed by a loop directive.
 \item \code{parallel} construct, see 
 \specref{sec:parallel Construct}.
 
-\item loop construct, see 
-\specref{subsec:Loop Construct}.
+\item loop SIMD construct, see 
+\specref{subsec:Loop SIMD Construct}.
 
 \item Data attribute clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
@@ -4829,8 +4909,9 @@ The syntax of the parallel loop SIMD construct is as follows:
     \plc{for-loops}
 \end{boxedcode}
 
-where \plc{clause} can be any of the clauses accepted by the \code{parallel}, \code{for} or \code{simd} 
-directives, except the \code{nowait} clause, with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{parallel}
+or \code{for}~\code{simd} directives, except the \code{nowait} clause, with 
+identical meanings and restrictions.
 \ccppspecificend
 \end{samepage}
 
@@ -4845,8 +4926,8 @@ The syntax of the parallel loop SIMD construct is as follows:
 \end{boxedcode}
 \end{samepage}
 
-where \plc{clause} can be any of the clauses accepted by the \code{parallel}, \code{do} or \code{simd} 
-directives, with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{parallel}
+or \code{do}~\code{simd} directives, with identical meanings and restrictions.
 
 \begin{samepage}
 If an \code{end}~\code{parallel}~\code{do}~\code{simd} directive is not specified, an 
@@ -4899,12 +4980,12 @@ construct containing a \code{parallel} construct and no other statements.
 The syntax of the \code{target} \code{parallel} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp\plc{ }target\plc{ }parallel \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp\plc{ }target\plc{ }parallel \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{structured-block}
 \end{boxedcode}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or
-\code{parallel} directives with identical meanings and restrictions.
+\code{parallel} directives, except for \code{copyin}, with identical meanings and restrictions.
 \ccppspecificend
 
 \needspace{6\baselineskip}\begin{samepage}
@@ -4919,7 +5000,7 @@ The syntax of the \code{target} \code{parallel} construct is as follows:
 \end{samepage}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or 
-\code{parallel} directives with identical meanings and restrictions.
+\code{parallel} directives, except for \code{copyin}, with identical meanings and restrictions.
 \fortranspecificend
 
 \descr
@@ -4989,12 +5070,12 @@ construct containing a parallel loop construct and no other statements.
 The syntax of the target parallel loop construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp\plc{ }target\plc{ }parallel\plc{ }for \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp\plc{ }target\plc{ }parallel\plc{ }for \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or
-\code{parallel}~\code{for} directives with identical meanings and restrictions.
+\code{parallel}~\code{for} directives, except for \code{copyin}, with identical meanings and restrictions.
 \ccppspecificend
 
 \needspace{6\baselineskip}\begin{samepage}
@@ -5009,7 +5090,7 @@ The syntax of the target parallel loop construct is as follows:
 \end{samepage}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or 
-\code{parallel}~\code{do} directives with identical meanings and restrictions.
+\code{parallel}~\code{do} directives, except for \code{copyin}, with identical meanings and restrictions.
 
 If an \code{end}~\code{target}~\code{parallel}~\code{do} directive is not specified, an 
 \code{end}~\code{target}~\code{parallel}~\code{do} directive is assumed at the end of 
@@ -5082,12 +5163,13 @@ construct containing a parallel loop SIMD construct and no other statements.
 The syntax of the target parallel loop SIMD construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp\plc{ }target\plc{ }parallel\plc{ }for\plc{ }simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp\plc{ }target\plc{ }parallel\plc{ }for\plc{ }simd \plc{[clause[
+[},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or
-\code{parallel}~\code{for}~\code{simd} directives with identical meanings and restrictions.
+\code{parallel}~\code{for}~\code{simd} directives, except for \code{copyin}, with identical meanings and restrictions.
 \ccppspecificend
 
 \needspace{6\baselineskip}\begin{samepage}
@@ -5102,7 +5184,7 @@ The syntax of the target parallel loop SIMD construct is as follows:
 \end{samepage}
 
 where \plc{clause} can be any of the clauses accepted by the \code{target} or 
-\code{parallel}~\code{do}~\code{simd} directives with identical meanings and restrictions.
+\code{parallel}~\code{do}~\code{simd} directives, except for \code{copyin}, with identical meanings and restrictions.
 
 If an \code{end}~\code{target}~\code{parallel}~\code{do}~\code{simd} directive is not specified, an 
 \code{end}~\code{target}~\code{parallel}~\code{do}~\code{simd} directive is assumed at the end of 
@@ -5173,7 +5255,7 @@ construct containing a \code{simd} construct and no other statements.
 The syntax of the \code{target} \code{simd} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp\plc{ }target\plc{ }simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp\plc{ }target\plc{ }simd \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5243,7 +5325,7 @@ containing a \code{teams} construct and no other statements.
 The syntax of the \code{target}~\code{teams} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target teams \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp target teams \plc{[clause[ [},\plc{] clause] ... ] new-line}
    \plc{structured-block}
 \end{boxedcode}
 
@@ -5306,7 +5388,7 @@ containing a \code{distribute} construct and no other statements.
 The syntax of the \code{teams}~\code{distribute} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp teams distribute \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp teams distribute \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5332,7 +5414,8 @@ If an \code{end}~\code{teams}~\code{distribute} directive is not specified, an
 
 \descr
 The semantics are identical to explicitly specifying a \code{teams} directive immediately 
-followed by a \code{distribute} directive. Some clauses are permitted on both constructs.
+followed by a \code{distribute} directive. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately.
+
 
 \restrictions
 The restrictions for the \code{teams} and \code{distribute} constructs apply.
@@ -5374,7 +5457,7 @@ containing a \code{distribute}~\code{simd} construct and no other statements.
 The syntax of the \code{teams}~\code{distribute}~\code{simd} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp teams distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp teams distribute simd \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5394,13 +5477,15 @@ The syntax of the \code{teams}~\code{distribute}~\code{simd} construct is as fol
 where \plc{clause} can be any of the clauses accepted by the \code{teams} or \code{distribute}~\code{simd} 
 directives with identical meanings and restrictions.
 
-If an \code{end}~\code{teams}~\code{distribute} directive is not specified, an 
-\code{end}~\code{teams}~\code{distribute} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{teams}~\code{distribute}~\code{simd} directive is 
+not specified, an \code{end}~\code{teams}~\code{distribute}~\code{simd} 
+directive is assumed at the end of the \plc{do-loops}.
 \fortranspecificend
 
 \descr
 The semantics are identical to explicitly specifying a \code{teams} directive immediately 
-followed by a \code{distribute}~\code{simd} directive. Some clauses are permitted on both constructs.
+followed by a \code{distribute}~\code{simd} directive. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately.
+
 
 \restrictions
 The restrictions for the \code{teams} and \code{distribute}~\code{simd} constructs apply.
@@ -5441,7 +5526,7 @@ containing a \code{teams}~\code{distribute} construct and no other statements.
 The syntax of the \code{target}~\code{teams}~\code{distribute} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target teams distribute \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp target teams distribute \plc{[clause[ [},\plc{] clause] ... ] new-line}
    \plc{for-loops}
 \end{boxedcode}
 
@@ -5507,7 +5592,7 @@ containing a \code{teams}~\code{distribute}~\code{simd} construct and no other s
 The syntax of the \code{target}~\code{teams}~\code{distribute}~\code{simd} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target teams distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp target teams distribute simd \plc{[clause[ [},\plc{] clause] ...  ] new-line}
    \plc{for-loops}
 \end{boxedcode}
 
@@ -5573,8 +5658,8 @@ construct containing a distribute parallel loop construct and no other statement
 \ccppspecificstart
 The syntax of the teams distribute parallel loop construct is as follows:
 
-\begin{boxedcode}
-\#pragma omp teams distribute parallel for \plc{[clause[ [},\plc{] clause] ... ]}
+\begin{boxedcode}[fontsize=\small]
+\#pragma omp teams distribute parallel for \plc{[clause[ [},\plc{] clause] ...  ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5639,8 +5724,8 @@ construct containing a teams distribute parallel loop construct and no other sta
 \ccppspecificstart
 The syntax of the target teams distribute parallel loop construct is as follows:
 
-\begin{boxedcode}
-\#pragma omp\plc{ }target\plc{ }teams\plc{ }distribute\plc{ }parallel\plc{ }for \plc{[clause[ [},\plc{] clause] ... ]}
+\begin{boxedcode}[fontsize=\small]
+\#pragma omp\plc{ }target\plc{ }teams\plc{ }distribute\plc{ }parallel\plc{ }for \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5698,14 +5783,13 @@ loop constructs apply except for the following explicit modifications:
 \begin{itemize}
 \item \code{target} construct, see \specref{subsec:target Construct}.
 
-\item Distribute parallel loop construct, see 
+\item Teams distribute parallel loop construct, see
       \specref{subsec:Teams Distribute Parallel Loop Construct}.
-
-\item Data attribute clauses, see 
-      \specref{subsec:Data-Sharing Attribute Clauses}.
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
+\item Data attribute clauses, see 
+      \specref{subsec:Data-Sharing Attribute Clauses}.
 \end{itemize}
 
 
@@ -5730,8 +5814,8 @@ construct containing a distribute parallel loop SIMD construct and no other stat
 \ccppspecificstart
 The syntax of the teams distribute parallel loop construct is as follows:
 
-\begin{boxedcode}
-\#pragma omp teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
+\begin{boxedcode}[fontsize=\small]
+\#pragma omp teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5801,8 +5885,9 @@ construct containing a teams distribute parallel loop SIMD construct and no othe
 \ccppspecificstart
 The syntax of the target teams distribute parallel loop SIMD construct is as follows:
 
-\begin{boxedcode}[fontsize=\small]
-\#pragma omp target teams distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
+\begin{boxedcode}
+\#pragma omp target teams distribute parallel for simd \plc{\textbackslash}
+            \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -5861,11 +5946,10 @@ loop SIMD constructs apply except for the following explicit modifications:
 \item Teams distribute parallel loop SIMD construct, see 
       \specref{subsec:Teams Distribute Parallel Loop SIMD Construct}.
 
-\item Data attribute clauses, see 
-      \specref{subsec:Data-Sharing Attribute Clauses}.
-
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
+\item Data attribute clauses, see 
+      \specref{subsec:Data-Sharing Attribute Clauses}.
 \end{itemize}
 
 
@@ -5920,19 +6004,19 @@ constructs to which an \code{if} clause can apply.
 \index{synchronization constructs}
 OpenMP provides the following synchronization constructs:
 \begin{itemize}
-\item the \code{master} construct.
+\item the \code{master} construct;
 
-\item the \code{critical} construct.
+\item the \code{critical} construct;
 
-\item the \code{barrier} construct.
+\item the \code{barrier} construct;
 
-\item the \code{taskwait} construct.
+\item the \code{taskwait} construct;
 
-\item the \code{taskgroup} construct.
+\item the \code{taskgroup} construct;
 
-\item the \code{atomic} construct.
+\item the \code{atomic} construct;
 
-\item the \code{flush} construct.
+\item the \code{flush} construct;
 
 \item the \code{ordered} construct.
 \end{itemize}
@@ -6019,7 +6103,7 @@ The syntax of the \code{critical} construct is as follows:
     \plc{structured-block}
 \end{boxedcode}
 
-where \plc{hint-expression} is an integer constant expression which
+where \plc{hint-expression} is an integer constant expression that
 evaluates to a valid lock hint (as described 
 in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 
@@ -6027,14 +6111,14 @@ in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-!\$omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ] new-line}
+!\$omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ]}
     \plc{structured-block}
 !\$omp end critical \plc{[}(\plc{name})\plc{]}  
 \end{boxedcode}
 
 where \plc{hint-expression} is a constant expression that evaluates to
-a scalar value with kind \code{omp\_lock\_hint\_kind} with a value
-which is a valid lock hint (as described 
+a scalar value with kind \code{omp\_lock\_hint\_kind} and  a value
+that is a valid lock hint (as described 
 in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 \fortranspecificend
 
@@ -6525,15 +6609,15 @@ In the preceding statements:
 \begin{itemize}
 \item \plc{x} and \plc{v} (as applicable) are both scalar variables of intrinsic type.
 
-\item \plc{x} must not have the \code{ALLOCATABLE} attribute. .
+\item \plc{x} must not have the \code{ALLOCATABLE} attribute.
 
 \item During the execution of an atomic region, multiple syntactic occurrences of \plc{x} must 
 designate the same storage location.
 
-\item None of \plc{v}, \plc{expr} and \plc{expr\_list} (as applicable) may access the same storage location as 
+\item None of \plc{v}, \plc{expr}, and \plc{expr\_list} (as applicable) may access the same storage location as 
 \plc{x}. 
 
-\item None of \plc{x}, \plc{expr} and \plc{expr\_list} (as applicable) may access the same storage location as 
+\item None of \plc{x}, \plc{expr}, and \plc{expr\_list} (as applicable) may access the same storage location as 
 \plc{v}.
 
 \item \plc{expr} is a scalar expression.
@@ -6598,7 +6682,7 @@ update. The original or final value of the location designated by \plc{x} is wri
 location designated by \plc{v} depending on the form of the \code{atomic} construct structured 
 block or statements following the usual language semantics. Only the read and write of 
 the location designated by \plc{x} are performed mutually atomically. Neither the evaluation 
-of \plc{expr} or \plc{expr\_list}, nor the write to the location designated by \plc{v} need be atomic with 
+of \plc{expr} or \plc{expr\_list}, nor the write to the location designated by \plc{v}, need be atomic with
 respect to the read or write of the location designated by \plc{x}. No task scheduling points 
 are allowed between the read and the write of the location designated by \plc{x}.
 
@@ -6617,7 +6701,7 @@ non-sequentially consistent \code{atomic} construct has the same semantics as a
 
 Unlike non-sequentially consistent \code{atomic} constructs, sequentially consistent \code{atomic} 
 constructs preserve the interleaving (sequentially consistent) behavior of correct, 
-data-race-free programs. However, they are not designed to replace the \code{flush} directive 
+data race free programs. However, they are not designed to replace the \code{flush} directive 
 as a mechanism to enforce ordering for non-sequentially consistent \code{atomic} constructs, 
 and attempts to do so require extreme caution. For example, a sequentially consistent 
 \code{atomic}~\code{write} construct may appear to be reordered with a subsequent 
@@ -6627,7 +6711,8 @@ directive.
 \noteend
 
 For all forms of the \code{atomic} construct, any combination of two or more of these 
-\code{atomic} constructs enforces mutually exclusive access to the locations designated by \plc{x}. 
+\code{atomic} constructs executed in the same contention group
+enforces mutually exclusive access to the locations designated by \plc{x}. 
 To avoid race conditions, all accesses of the locations designated by \plc{x} that could 
 potentially occur in parallel must be protected with an \code{atomic} construct. 
 
@@ -6707,7 +6792,7 @@ are required to have the same type and type parameters.
 \label{subsec:flush Construct}
 \summary
 The \code{flush} construct executes the OpenMP flush operation. This operation makes a 
-thread’s temporary view of memory consistent with memory, and enforces an order on 
+thread’s temporary view of memory consistent with memory and enforces an order on 
 the memory operations of the variables explicitly specified or implied. See the memory 
 model description in \specref{sec:Memory Model} for more details. The \code{flush} construct is a 
 stand-alone directive.
@@ -6799,7 +6884,7 @@ the protected section on thread 2 does not reference \code{a}). If either re-ord
 threads can simultaneously execute the protected section.
 
 The following pseudocode example correctly ensures that the protected section is executed 
-by not more than one of the two threads at any one time. Notice that execution of the 
+by not more than one of the two threads at any one time. Execution of the 
 protected section by neither thread is considered correct in this example. This occurs if 
 both flushes complete prior to either thread executing its \code{if} statement.
 
@@ -6840,7 +6925,7 @@ performed in a sequentially consistent atomic region.
 \item During \code{omp\_test\_lock}, \code{omp\_set\_nest\_lock}, \code{omp\_unset\_nest\_lock} 
 and \code{omp\_test\_nest\_lock} regions, if the region causes the lock to be set or unset.
 \item Immediately before and immediately after every task scheduling point.
-\item During a \code{cancel} or \code{cancellation point} region, if \plc{cancel-var} is \plc{true} and cancellation has been activated.
+\item During a \code{cancel} or \code{cancellation point} region, if the \plc{cancel-var} ICV is \plc{true} and cancellation has been activated.
 \end{itemize}
 
 A \code{flush} region with a list is implied at the following locations:
@@ -6876,9 +6961,12 @@ the \code{atomic} construct in
 \index{constructs!ordered@{\code{ordered}}}
 \label{subsec:ordered Construct}
 \summary
-The \code{ordered} construct specifies a structured block in a loop region that will be 
-executed in the order of the loop iterations. This sequentializes and orders the code 
-within an \code{ordered} region while allowing code outside the region to run in parallel. 
+The \code{ordered} construct either specifies a structured block in a loop,
+\code{simd}, or loop SIMD region that will be executed in the order of the
+loop iterations, or it is a stand-alone directive that specifies
+cross-iteration dependences in a doacross loop nest. The \code{ordered}
+construct sequentializes and orders the execution of \code{ordered} regions
+while allowing code outside the region to run in parallel.
 
 \begin{samepage}
 \syntax
@@ -6886,7 +6974,7 @@ within an \code{ordered} region while allowing code outside the region to run in
 The syntax of the \code{ordered} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp ordered \plc{[clause[ [},\plc{] clause] ... ]} \plc{new-line}
+\#pragma omp ordered \plc{[clause[ [},\plc{] clause] ]} \plc{new-line}
    \plc{structured-block}
 \end{boxedcode}
 
@@ -6901,9 +6989,10 @@ or
 \begin{boxedcode}
 \#pragma omp ordered \plc{clause [[[},\plc{] clause] ... ]} \plc{new-line}
 \end{boxedcode}
-where \plc{clause} is:
+where \plc{clause} is one of the following:
 \begin{indentedcodelist}
-depend(\plc{dependence-type} \plc{[}: \plc{vec]})
+depend(source)
+depend(sink : \plc{vec})
 \end{indentedcodelist}
 
 
@@ -6914,7 +7003,7 @@ depend(\plc{dependence-type} \plc{[}: \plc{vec]})
 The syntax of the \code{ordered} construct is as follows:
 
 \begin{boxedcode}
-!\$omp ordered \plc{[clause[ [},\plc{] clause] ... ]}
+!\$omp ordered \plc{[clause[ [},\plc{] clause] ]}
     \plc{structured-block}
 !\$omp end ordered
 \end{boxedcode}
@@ -6931,9 +7020,10 @@ or
 !\$omp ordered \plc{clause [[[},\plc{] clause] ... ]}
 \end{boxedcode}
 
-where \plc{clause} is:
+where \plc{clause} is one of the following:
 \begin{indentedcodelist}
-depend(\plc{dependence-type} \plc{[}: \plc{vec]})
+depend(source)
+depend(sink : \plc{vec})
 \end{indentedcodelist}
 \fortranspecificend
 
@@ -6941,31 +7031,72 @@ If the \code{depend} clause is specified, the \code{ordered} construct is a stan
  
 \binding
 The binding thread set for an \code{ordered} region is the current team. An \code{ordered} region 
-binds to the innermost enclosing loop region. \code{ordered} regions that bind to different 
-loop regions execute independently of each other.
+binds to the innermost enclosing \code{simd} or loop SIMD region if the
+\code{simd} clause is present, and otherwise it binds to the innermost
+enclosing loop region. \code{ordered} regions that bind to different regions
+execute independently of each other.
 
 \descr
-If no clause is specified, the \code{ordered} construct behaves as if the \code{threads} clause had been specified. If the \code{threads} clause is specified, the threads in the team executing the loop region execute \code{ordered} regions sequentially in the order of the loop iterations. If any \code{depend} clauses are specified then those clauses specify the order in which the threads in the team execute \code{ordered} regions. When the thread executing the first iteration of the loop encounters an \code{ordered} construct, it can enter the \code{ordered} region without waiting. When a thread executing any subsequent iteration encounters an \code{ordered} region, it waits at the beginning of that ordered region until execution of all \code{ordered} regions belonging to all previous iterations or iterations specified by the \code{depend} clauses have completed. If the \code{simd} clause is specified, the \code{ordered} regions encountered by any thread will use only a single SIMD lane to execute the \code{ordered} regions in the order of the loop iterations.
+If no clause is specified, the \code{ordered} construct behaves as if the
+\code{threads} clause had been specified. If the \code{threads} clause is
+specified, the threads in the team executing the loop region execute
+\code{ordered} regions sequentially in the order of the loop iterations.
+If any \code{depend} clauses are specified then those clauses specify the 
+order in which the threads in the team execute \code{ordered} regions. If
+the \code{simd} clause is specified, the \code{ordered} regions encountered by
+any thread will use only a single SIMD lane to execute the \code{ordered}
+regions in the order of the loop iterations.
+
+When the thread executing the first iteration of the loop encounters an
+\code{ordered} construct, it can enter the \code{ordered} region without
+waiting. When a thread executing any subsequent iteration encounters an
+\code{ordered} construct without a \code{depend} clause, it waits at the
+beginning of the \code{ordered} region until execution of all \code{ordered}
+regions belonging to all previous iterations has completed. When a thread
+executing any subsequent iteration encounters an \code{ordered} construct with
+one or more \code{depend(sink:\plc{vec})} clauses, it waits until its dependences on 
+all valid iterations specified by the \code{depend} clauses
+are satisfied before it completes execution of the \code{ordered} region.
+These dependences are satisfied when the specified valid iterations 
+complete execution or when the threads executing these iterations encounter
+an \code{ordered} construct with a \code{depend(source)} clause.
 
 \restrictions
 Restrictions to the \code{ordered} construct are as follows:
 
 \begin{itemize}
-\item The loop region to which an \code{ordered} region without any clause or with a \code{threads} clause binds must have an \code{ordered} clause without the parameter specified on the corresponding loop directive. 
+\item At most one \code{threads} clause can appear on an \code{ordered} construct.
 
-\item The loop region to which an \code{ordered} region with any \code{depend} clauses binds must have an \code{ordered} clause with the parameter specified on the corresponding loop directive. 
+\item At most one \code{simd} clause can appear on an \code{ordered} construct.
 
-\item An \code{ordered} construct with the \code{depend} clause specified must be closely nested inside a loop (or parallel loop) construct. 
+\item At most one \code{depend(source)} clause can appear on an \code{ordered} construct.
 
-\item An \code{ordered} construct with the \code{depend} clause specified must not be closely nested in a \code{simd} construct. 
+\item The loop or loop SIMD region to which an \code{ordered}
+region arising from an \code{ordered} construct without a \code{depend}
+clause binds must have an \code{ordered} clause without the parameter
+specified on the corresponding loop or loop SIMD directive.
 
-\item During execution of an iteration of a loop or a loop nest within a loop region, a thread must not execute more than one ordered region that arises from an \code{ordered} clause with no parameter and binds to the same loop region. 
+\item The loop region to which an \code{ordered} region arising from an
+\code{ordered} construct with any \code{depend}
+clauses binds must have an \code{ordered} clause with the parameter specified 
+on the corresponding loop directive. 
+
+\item An \code{ordered} construct with the \code{depend} clause specified must
+be closely nested inside a loop (or parallel loop) construct. 
+
+\item An \code{ordered} region arising from an \code{ordered} construct with
+the \code{simd} clause specified must be closely nested inside a
+\code{simd} or loop SIMD region.
+
+\item During execution of an iteration of a loop or a loop nest within a loop, \code{simd}, or loop SIMD
+region, a thread must not execute more than one \code{ordered} region arising
+from an \code{ordered} construct without a \code{depend} clause. 
 \end{itemize}
 \cppspecificstart
 \begin{itemize}
-\item A throw executed inside a \code{ordered} region must cause execution to resume within 
-the same \code{ordered} region, and the same thread that threw the exception must catch 
-it.
+\item A throw executed inside a \code{ordered} region must cause execution to 
+resume within the same \code{ordered} region, and the same thread that threw 
+the exception must catch it.
 \end{itemize}
 \cppspecificend
 
@@ -6975,6 +7106,9 @@ it.
 \begin{itemize}
 \item loop construct, see 
 \specref{subsec:Loop Construct}.
+
+\item \code{simd} construct, see
+\specref{subsec:simd Construct}.
 
 \item parallel loop construct, see 
 \specref{subsec:Parallel Loop Construct}.
@@ -6999,25 +7133,59 @@ The syntax of the \code{depend} clause is as follows:
 depend(\plc{dependence-type }:\plc{ list})
 \end{boxedcode}
 
+where \plc{dependence-type} is one of the following:
+\begin{indentedcodelist}
+in
+out
+inout
+\end{indentedcodelist}
+
 or
 
 \begin{boxedcode}
-depend(\plc{dependence-type }\plc{[: vec]})
+depend(\plc{dependence-type})
 \end{boxedcode}
 
-where \plc{vec} is the iteration vector.
+where \plc{dependence-type} is:
+\begin{indentedcodelist}
+source
+\end{indentedcodelist}
+
+or
+
+\begin{boxedcode}
+depend(\plc{dependence-type} : \plc{vec})
+\end{boxedcode}
+
+where \plc{dependence-type} is:
+\begin{indentedcodelist}
+sink
+\end{indentedcodelist}
+
+and where \plc{vec} is the iteration vector, which has the form:
+
+x$_{1}$ [$\pm $ d$_{1}$], x$_{2}$ [$\pm $ d$_{2}$], \ldots, x$_{\plc{n}}$ [$\pm $ d$_{\plc{n}}$]
+
+where \plc{n} is the value specified by the \code{ordered} clause in the loop
+directive, x$_{\plc{i}}$ denotes the loop iteration variable of the \plc{i}-th
+nested loop associated with the loop directive, and d$_{\plc{i}}$ is a
+constant non-negative integer.
 
 \descr
 Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list 
-items, where \plc{dependence-type} is one of the following:
+items when \plc{dependence-type} is \code{in}, \code{out}, or \code{inout}.
 
-The \code{in} \plc{dependence-type}. The generated task will be a dependent task of all previously 
-generated sibling tasks that reference at least one of the list items in an \code{out} or \code{inout} 
-\plc{dependence-type} list.
+For the \code{in} \plc{dependence-type}, if the storage location of at least one
+of the list items is the same as the storage location of a list item appearing
+in an \code{out} or \code{inout} \plc{dependence-type} list of a \code{task} construct
+from which a sibling task was previously generated, then the generated task
+will be a dependent task of that sibling task.
 
-The \code{out} and \code{inout} \plc{dependence-types}. The generated task will be a dependent task of 
-all previously generated sibling tasks that reference at least one of the list items in an 
-\code{in}, \code{out}, or \code{inout} \plc{dependence-type} list.
+For the \code{out} and \code{inout} \plc{dependence-types}, if the storage location of at least one
+of the list items is the same as the storage location of a list item appearing
+in an \code{in}, \code{out}, or \code{inout} \plc{dependence-type} list of
+a \code{task} construct from which a sibling task was previously generated, then the
+generated task will be a dependent task of that sibling task.
 
 \fortranspecificstart
 If a list item has the \code{ALLOCATABLE} attribute and its allocation
@@ -7034,33 +7202,51 @@ accesses performed by a dependent task with respect to accesses performed by the
 predecessor tasks. However, it is the responsibility of the programmer to synchronize properly with respect to other concurrent accesses that occur outside of those tasks.
 \noteend
 
-Loop dependences are derived from the \plc{dependence-type} of a \code{depend} clause and the iteration vector \plc{vec}.
+The \code{source} \plc{dependence-type} specifies the satisfaction of
+cross-iteration dependences that arise from the current iteration.
 
-The \code{source} \plc{dependence-type} specifies the completion of cross-iteration dependences that arise from the current iteration.
+The \code{sink} \plc{dependence-type} specifies a cross-iteration dependence,
+where the iteration vector \plc{vec} indicates the iteration that satisfies
+the dependence.
 
-The \code{sink} \plc{dependence-type} specifies a sink of cross-iteration dependences. The current iteration is blocked until all source iterations specified complete execution.
+If the iteration vector \plc{vec} does not occur in the iteration space,
+the \code{depend} clause is ignored.  If all \code{depend} clauses on an
+\code{ordered} construct are ignored then the construct is ignored.
 
-The iteration vector \plc{vec} must have the form of 
-(x$_{1}$ $\pm $ d$_{1}$, x$_{2}$ $\pm $ d$_{2}$ , ... , x$_{n}$ $\pm $ d$_{n}$), 
-where \plc{n} is the value specified by the \code{ordered} clause in the loop directive, 
-x$_{\plc{i}}$ denotes the loop iteration variable of the \plc{i}-th nested loop associated with the loop directive, and 
-d$_{\plc{i}}$ is a constant non-negative integer. 
-If the iteration vector \plc{vec} indicates a lexicographically later iteration, it can cause a deadlock. If the iteration vector \plc{vec} indicates an invalid iteration, the \code{ordered} construct with the \code{depend} clause is ignored.
-
+\notestart
+\noteheader – If the iteration vector \plc{vec} does not indicate a lexicographically earlier iteration, it can cause a deadlock.
+\noteend
 
 \restrictions
 Restrictions to the \code{depend} clause are as follows:
 
 \begin{itemize}
 \item List items used in \code{depend} clauses of the same task or sibling tasks must indicate 
-identical storage or disjoint storage. 
+identical storage locations or disjoint storage locations. 
 
 \item List items used in \code{depend} clauses cannot be zero-length array sections. 
 
 \item A variable that is part of another variable (such as an element of a structure) but is not an 
 array element or an array section cannot appear in a \code{depend} clause.
 
-\item If the \plc{dependence-type} is \code{source}, the iteration vector \plc{vec} must not be specified.  
+\item For a \plc{vec} element of \code{sink} \plc{dependence-type} of the form
+x$_{i}$ $+$ d$_{i}$ or x$_{i}$ $-$ d$_{i}$ if the loop iteration variable
+x$_{i}$ has an integral or pointer type, the expression x$_{i}$ $+$ d$_{i}$ or
+x$_{i}$ $-$ d$_{i}$ for any value of the loop iteration variable x$_{i}$ that
+can encounter the \code{ordered} construct must be computable in the
+loop iteration variable's type without overflow.
+
+\cppspecificstart
+\item For a \plc{vec} element of \code{sink} \plc{dependence-type} of the form
+x$_{i}$ $+$ d$_{i}$ or x$_{i}$ $-$ d$_{i}$ if the loop iteration variable
+x$_{i}$ is of a random access iterator type other than pointer type,
+the expression $($ x$_{i}$ - lb$_{i}$ $)$ $+$ d$_{i}$ or
+$($ x$_{i}$ - lb$_{i}$ $)$ $-$ d$_{i}$ for any value of the loop iteration variable
+x$_{i}$ that can encounter the \code{ordered} construct must be computable in the
+type that would be used by \plc{std::distance} applied to variables of the
+type of x$_{i}$ without overflow.
+\cppspecificend
+
 \end{itemize}
 
 \crossreferences
@@ -7102,7 +7288,7 @@ type specified. The \code{cancel} construct is a stand-alone directive.
 The syntax of the \code{cancel} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp cancel \plc{construct-type-clause[ [},\plc{] if-clause] new-line}
+\#pragma omp cancel \plc{construct-type-clause [ [},\plc{] if-clause] new-line}
 \end{boxedcode}
 
 \begin{samepage}
@@ -7126,7 +7312,7 @@ if (\plc{scalar-expression})
 The syntax of the \code{cancel} construct is as follows:
 
 \begin{boxedcode}
-!\$omp cancel \plc{construct-type-clause[ [},\plc{] if-clause]}
+!\$omp cancel \plc{construct-type-clause [ [},\plc{] if-clause]}
 \end{boxedcode}
 
 \begin{samepage}
@@ -7154,24 +7340,24 @@ specified in the directive (that is, the innermost \code{parallel}, \code{sectio
 \code{taskgroup} region).
 
 \descr
-The \code{cancel} construct activates cancellation of the binding region only if \plc{cancel-var} 
+The \code{cancel} construct activates cancellation of the binding region only if the \plc{cancel-var} ICV
 is \plc{true}, in which case the \code{cancel} construct causes the encountering task to continue execution 
 at the end of the binding region if \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or \code{sections}. 
-If \plc{cancel-var} is \plc{true} and \plc{construct-type-clause} is \code{taskgroup} the encountering task continues execution at the end of the current task region.
-If \plc{cancel-var} is \plc{false}, the \code{cancel} construct is 
+If the \plc{cancel-var} ICV is \plc{true} and \plc{construct-type-clause} is \code{taskgroup}, the encountering task continues execution at the end of the current task region.
+If the \plc{cancel-var} ICV is \plc{false}, the \code{cancel} construct is 
 ignored.
 
 Threads check for active cancellation only at cancellation points that are 
 implied at the following locations:
 
 \begin{itemize}
-\item \code{cancel} regions; 
+\item \code{cancel} regions;
 \item \code{cancellation}~\code{point} regions;
 \item \code{barrier} regions;
 \item implicit barriers regions.
 \end{itemize}
 
-When a thread reaches one of the above cancellation points and if \plc{cancel-var} is \plc{true},  then:
+When a thread reaches one of the above cancellation points and if the \plc{cancel-var} ICV is \plc{true},  then:
 \begin{itemize}
 \item If the thread is at a \code{cancel} or \code{cancellation point} region 
 and \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or 
@@ -7181,9 +7367,9 @@ of the type specified.
 
 \item If the thread is at a \code{cancel} or \code{cancellation point} region 
 and \plc{construct-type-clause} is \code{taskgroup}, the encountering task 
-checks for active cancellation of one of the taskgroup sets to which the 
-encountering task belongs and continues execution at the end of the current 
-task region if cancellation has been activated.
+checks for active cancellation of all of the \plc{taskgroup sets} to which the 
+encountering task belongs, and continues execution at the end of the current 
+task region if cancellation has been activated for any of the \plc{taskgroup sets}.
 
 \item If the encountering task is at a barrier region, the encountering task 
 checks for active cancellation of the innermost enclosing \code{parallel} 
@@ -7193,25 +7379,32 @@ continues execution at the end of the canceled region.
 
 \notestart
 \noteheader – If one thread activates cancellation and another thread encounters a cancellation 
-point, the absolute order of execution between the two threads is non-deterministic. 
+point, the order of execution between the two threads is non-deterministic. 
 Whether the thread that encounters a cancellation point detects the activated cancellation 
 depends on the underlying hardware and operating system.
 \noteend
 
-When cancellation of tasks is activated through the \code{cancel}~\code{taskgroup} construct, the tasks that belong to \plc{taskgroup set} of the  
-innermost enclosing \code{taskgroup} region will be canceled. The task that encountered the 
-\code{cancel}~\code{taskgroup} construct continues execution at the end of its \code{task} region, 
-which implies completion of that task. Any task that belongs to the innermost enclosing 
-\code{taskgroup} and has already begun execution must run to completion or until a 
-cancellation point is reached. Upon reaching a cancellation point and if cancellation is active, the task continues execution at the end of its \code{task} region, which implies the task's completion. Any task that belongs to the innermost enclosing \code{taskgroup} and that 
-has not begun execution may be discarded, which implies its completion.
+When cancellation of tasks is activated through the
+\code{cancel}~\code{taskgroup} construct, the tasks that belong to the
+\plc{taskgroup set} of the innermost enclosing \code{taskgroup} region
+will be canceled. The task that encountered the
+\code{cancel}~\code{taskgroup} construct continues execution at the
+end of its \code{task} region, which implies completion of that
+task. Any task that belongs to the innermost enclosing
+\code{taskgroup} and has already begun execution must run to
+completion or until a cancellation point is reached. Upon reaching a
+cancellation point and if cancellation is active, the task continues
+execution at the end of its \code{task} region, which implies the
+task's completion. Any task that belongs to the innermost enclosing
+\code{taskgroup} and that has not begun execution may be discarded,
+which implies its completion.
 
-When cancellation is active for a \code{parallel}, \code{sections}, \code{for}, or \code{do} region, each 
+When cancellation is active for a \code{parallel}, \code{sections}, or loop region, each 
 thread of the binding thread set resumes execution at the end of the canceled region if a 
 cancellation point is encountered. If the canceled region is a \code{parallel} region, any 
 tasks that have been created by a \code{task} construct and their descendent tasks are 
 canceled according to the above \code{taskgroup} cancellation semantics. If the canceled 
-region is a \code{sections}, \code{for}, or \code{do} region, no task cancellation occurs.
+region is a \code{sections}, or loop region, no task cancellation occurs.
 
 \cppspecificstart
 The usual C++ rules for object destruction are followed when cancellation is performed.
@@ -7222,10 +7415,6 @@ All private objects or subobjects with \code{ALLOCATABLE} attribute that are all
 the canceled construct are deallocated.
 \fortranspecificend
 
-\notestart
-\noteheader – The programmer is responsible for releasing locks and other synchronization data structures that might cause a deadlock when a \code{cancel} construct is encountered and blocked threads cannot be canceled. The programmer is also responsible for ensuring proper synchronization to avoid deadlocks that might arise from cancellation of OpenMP regions that contain OpenMP synchronization constructs.
-\noteend
-
 If the canceled construct contains a \code{reduction} or \code{lastprivate} clause, the final 
 value of the \code{reduction} or \code{lastprivate} variable is undefined.
 
@@ -7233,6 +7422,15 @@ When an \code{if} clause is present on a \code{cancel} construct and the \code{i
 to \plc{false}, the \code{cancel} construct does not activate cancellation. The cancellation point 
 associated with the \code{cancel} construct is always encountered regardless of the value of 
 the \code{if} expression.
+
+\notestart
+\noteheader – The programmer is responsible for releasing locks and
+other synchronization data structures that might cause a deadlock when
+a \code{cancel} construct is encountered and blocked threads cannot be
+canceled. The programmer is also responsible for ensuring proper
+synchronizations to avoid deadlocks that might arise from cancellation
+of OpenMP regions that contain OpenMP synchronization constructs.
+\noteend
 
 \restrictions
 The restrictions to the \code{cancel} construct are as follows:
@@ -7250,21 +7448,19 @@ Otherwise, the \code{cancel} construct must be closely
 nested inside an OpenMP construct that matches the type specified in
 \plc{construct-type-clause} of the \code{cancel} construct.
 
-\item If \plc{construct-type-clause} is \code{taskgroup} and the \code{cancel} region is not strictly closely nested 
-inside a \code{taskgroup} region, then the behavior is unspecified.
-
 \item A worksharing construct that is canceled must not have a \code{nowait} clause.
 
 \item A loop construct that is canceled must not have an \code{ordered} clause.
 
-\item A construct that may be subject to cancellation must not encounter an orphaned 
-cancellation point. That is, a cancellation point must only be encountered within that 
-construct and must not be encountered elsewhere in its region.
+\item During execution of a construct that may be subject to cancellation, a
+thread must not encounter an orphaned cancellation point. That is, a
+cancellation point must only be encountered within that construct and must
+not be encountered elsewhere in its region.
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item \plc{cancel-var}, see 
+\item \plc{cancel-var} ICV, see
 \specref{subsec:ICV Descriptions}.
 
 \item \code{cancellation}~\code{point} construct, see 
@@ -7330,7 +7526,6 @@ taskgroup
 
 \binding
 The binding thread set of the \code{cancellation point} construct is the current team.
-The binding task set of the \code{cancellation point} region is the current task region. 
 The binding region of the \code{cancellation point} region is the innermost enclosing region of the type corresponding to the \plc{construct-type-clause} 
 specified in the directive (that is, the innermost \code{parallel}, \code{sections}, loop, or 
 \code{taskgroup} region).
@@ -7338,11 +7533,11 @@ specified in the directive (that is, the innermost \code{parallel}, \code{sectio
 \descr
 This directive introduces a user-defined cancellation point at which an implicit or 
 explicit task must check if cancellation of the innermost enclosing region of the type 
-specified in the clause has been requested. This construct does not implement a 
+specified in the clause has been requested. This construct does not implement any 
 synchronization between threads or tasks.
 
 When an implicit or explicit task reaches a user-defined cancellation point and if 
-\plc{cancel-var} is \plc{true}, then:
+the \plc{cancel-var} ICV is \plc{true}, then:
 \begin{itemize}
 \item If the \plc{construct-type-clause} of the encountered \code{cancellation
 point} construct is \code{parallel}, \code{for}, \code{do}, or \code{sections},
@@ -7352,7 +7547,7 @@ the type specified.
 
 \item If the \plc{construct-type-clause} of the encountered 
 \code{cancellation point} construct is \code{taskgroup}, the encountering 
-task checks for active cancellation of all taskgroup sets to which the 
+task checks for active cancellation of all  \plc{taskgroup sets} to which the 
 encountering task belongs and continues execution at the end of the current 
 task region if cancellation has been activated for any of them.
 \end{itemize}
@@ -7369,15 +7564,12 @@ inside a \code{sections} or \code{section} construct. Otherwise, a
 \code{cancellation}~\code{point} construct must be closely nested inside
 an OpenMP construct that matches the type specified in
 \plc{construct-type-clause}.
-
-\item An OpenMP program with orphaned \code{cancellation}~\code{point} constructs is 
-non-conforming. 
 \end{itemize}
 
 \begin{samepage}
 \crossreferences
 \begin{itemize}
-\item \plc{cancel-var}, see 
+\item \plc{cancel-var} ICV, see
 \specref{subsec:ICV Descriptions}.
 
 \item \code{cancel} construct, see 
@@ -7400,18 +7592,18 @@ non-conforming.
 \label{sec:Data Environment}
 \index{data environment}
 This section presents a directive and several clauses for controlling the data environment 
-during the execution of \code{target}, \code{teams}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions.
+during the execution of \code{target}, \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
 
 \begin{itemize}
 \item \specref{subsec:Data-sharing Attribute Rules} 
 describes how the data-sharing attributes of variables
-referenced in \code{target}, \code{teams}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined.
+referenced in \code{target}, \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
 
 \item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
 is described in \specref{subsec:threadprivate Directive}.
 
 \item Clauses that may be specified on directives to control the data-sharing attributes of 
-variables referenced in \code{target}, \code{teams}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
+variables referenced in \code{target}, \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
 
 \item Clauses that may be specified on directives to copy data values from private or 
 threadprivate variables on one thread to the corresponding variables on other threads 
@@ -7466,7 +7658,7 @@ construct may cause an implicit reference to the variable in the enclosing const
 Such implicit references are also subject to the data-sharing attribute rules outlined in 
 this section.
 
-Certain variables and objects have predetermined data-sharing attributes as follows:
+Certain variables and objects have \emph{predetermined} data-sharing attributes as follows:
 
 \ccppspecificstart
 \begin{itemize}
@@ -7488,6 +7680,8 @@ the associated \plc{for-loop}.
 
 \item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with 
 multiple associated \plc{for-loops} are lastprivate. 
+
+\item The loop iteration variable(s) in the associated \plc{for-loop(s)} of a \code{taskloop} construct is (are) private. 
 
 \item Variables with static storage duration that are declared in a scope inside the construct 
 are shared.
@@ -7511,8 +7705,10 @@ the associated \plc{do-loop}.
 \item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with 
 multiple associated \plc{do-loops} are lastprivate. 
 
-\item A loop iteration variable for a sequential loop in a \code{parallel}, \code{task}, or \code{taskloop} construct is 
+\item A loop iteration variable for a sequential loop in a \code{parallel} or task generating construct is 
 private in the innermost such construct that encloses the loop.
+
+\item The loop iteration variable in the associated \plc{do-loop(s)} of a \code{taskloop} construct is (are) private.
 
 \item Implied-do indices and \code{forall} indices are private. 
 
@@ -7543,6 +7739,8 @@ that is the increment of the associated \plc{for-loop}.
 \item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with 
 multiple associated \plc{for-loops} may be listed in a \code{lastprivate} clause. 
 
+\item The loop iteration variable(s) in the associated \plc{for-loop(s)} of a \code{taskloop} construct may be listed in a \code{private} or \code{lastprivate} clause.
+
 \item Variables with \code{const}-qualified type having no mutable member may be listed in a
 \code{firstprivate} clause, even if they are static data members.
 \end{itemize}
@@ -7561,9 +7759,11 @@ that is the increment of the associated loop.
 \item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with 
 multiple associated \plc{do-loops} may be listed in a \code{lastprivate} clause. 
 
-\item Variables used as loop iteration variables in sequential loops in a \code{parallel},  
-\code{task}, or \code{taskloop} construct may be listed in data-sharing clauses on the construct itself, and on 
+\item Variables used as loop iteration variables in sequential loops in a \code{parallel} 
+or task generating construct may be listed in data-sharing clauses on the construct itself, and on 
 enclosed constructs, subject to other restrictions.
+
+\item The loop iteration variable(s) in the associated \plc{do-loop(s)} of a \code{taskloop} construct may be listed in a \code{private} or \code{lastprivate} clause.
 
 \item Assumed-size arrays may be listed in a \code{shared} clause.
 \end{itemize}
@@ -7582,16 +7782,16 @@ listed in a data-sharing attribute clause on the construct.
 Rules for variables with \emph{implicitly determined} data-sharing attributes are as follows:
 
 \begin{itemize}
-\item In a \code{parallel}, \code{task}, or \code{taskloop} construct, the data-sharing attributes of these variables are
+\item In a \code{parallel}, \code{teams}, or task generating construct, the data-sharing attributes of these variables are
 determined by the \code{default} clause, if present (see
 \specref{subsubsec:default clause}).
 
 \item In a \code{parallel} construct, if no \code{default} clause is present, these variables are 
 shared.
 
-\item For constructs other than \code{task}, \code{taskloop}, or \code{target}, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
+\item For constructs other than task generating constructs or \code{target} constructs, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
 
-\item In a \code{task} or \code{taskloop} construct, if no \code{default} clause is present, a variable that in the 
+\item In a task generating construct, if no \code{default} clause is present, a variable that in the 
 enclosing context is determined to be shared by all implicit tasks bound to the current 
 team is shared.
 
@@ -7601,7 +7801,7 @@ team is shared.
 \needspace{9\baselineskip}\begin{samepage}
 \fortranspecificstart
 \begin{itemize}
-\item In an orphaned \code{task} construct or an orphaned \code{taskloop} 
+\item In an orphaned task generating
 construct, if no \code{default} clause is present, dummy arguments 
 are firstprivate.
 \end{itemize}
@@ -7609,13 +7809,13 @@ are firstprivate.
 \end{samepage}
 
 \begin{itemize}
-\item In a \code{task} construct or a \code{taskloop} construct, if no 
-\code{default} clause is present, a variable whose data-sharing 
+\item In a task generating construct, if no
+\code{default} clause is present, a variable for which the data-sharing 
 attribute is not determined by the rules above is firstprivate.
 \end{itemize}
 
 Additional restrictions on the variables for which data-sharing attributes cannot be 
-implicitly determined in a \code{task} or \code{taskloop} construct are described in 
+implicitly determined in a task generating construct are described in
 \specref{subsubsec:firstprivate clause}.
 
 
@@ -7727,9 +7927,9 @@ During a sequential part references will be to the initial thread’s copy of th
 The values of data in the initial thread’s copy of a threadprivate variable are guaranteed 
 to persist between any two consecutive references to the variable in the program. 
 
-The values of data in the threadprivate variables of non-initial threads are guaranteed to 
-persist between two consecutive active \code{parallel} regions only if all the following 
-conditions hold:
+The values of data in the threadprivate variables of non-initial threads 
+are guaranteed to persist between two consecutive active \code{parallel} 
+regions only if all of the following conditions hold:
 
 \begin{itemize}  % L0 vvvvvvvvvvvvvvvvvvvvvvvvv
 \item Neither \code{parallel} region is nested inside another explicit \code{parallel} region. 
@@ -7768,13 +7968,13 @@ A variable is affected by a \code{copyin} clause if the variable appears in the 
 or it is in a common block that appears in the \code{copyin} clause. 
 
 If the above conditions hold, the definition, association, or allocation status of a thread’s 
-copy of a \code{threadprivate} variable or a variable in a \code{threadprivate} common 
+copy of a threadprivate variable or a variable in a threadprivate common 
 block, that is not affected by any \code{copyin} clause that appears on the second region, will 
 be retained. Otherwise, the definition and association status of a thread’s copy of the 
-variable in the second region is undefined, and the allocation status of an allocatable 
+variable in the second region are undefined, and the allocation status of an allocatable 
 variable will be implementation defined. 
 
-If a \code{threadprivate} variable or a variable in a \code{threadprivate} common block is 
+If a threadprivate variable or a variable in a threadprivate common block is 
 not affected by any \code{copyin} clause that appears on the first \code{parallel} region in which 
 it is referenced, the variable or any subobject of the variable is initially defined or 
 undefined according to the following rules:
@@ -7885,7 +8085,7 @@ program unit, then such a directive must also appear in every other program unit
 contains a \code{COMMON} statement specifying the same name. It must appear after the last 
 such \code{COMMON} statement in the program unit.
 
-\item If a \code{threadprivate} variable or a \code{threadprivate} common block is declared 
+\item If a threadprivate variable or a threadprivate common block is declared 
 with the \code{BIND} attribute, the corresponding C entities must also be specified in a 
 \code{threadprivate} directive in the C program.
 
@@ -7905,7 +8105,7 @@ scope of a module or have the \code{SAVE} attribute, either explicitly or implic
 \item \plc{dyn-var} ICV, see 
 \specref{sec:Internal Control Variables}.
 
-\item number of threads used to execute a \code{parallel} region, see 
+\item Number of threads used to execute a \code{parallel} region, see 
 \specref{subsec:Determining the Number of Threads for a parallel Region}.
 
 \item \code{copyin} clause, see 
@@ -7980,7 +8180,7 @@ in another data-sharing attribute clause in that directive. When individual memb
 \index{clauses!default@{\code{default}}}
 \summary
 The \code{default} clause explicitly determines the data-sharing attributes of variables that 
-are referenced in a \code{parallel}, \code{task}, \code{taskloop} or \code{teams} construct
+are referenced in a \code{parallel}, \code{teams}, or task generating construct
 and would otherwise be implicitly determined (see
 \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}).
 
@@ -8022,8 +8222,8 @@ clause.
 The restrictions to the \code{default} clause are as follows:
 
 \begin{itemize}
-\item Only a single default clause may be specified on a \code{parallel}, \code{task},
-\code{taskloop} or \code{teams} directive.
+\item Only a single \code{default} clause may be specified on a 
+\code{parallel}, \code{task}, \code{taskloop} or \code{teams} directive.
 \end{itemize}
 
 
@@ -8040,7 +8240,7 @@ The restrictions to the \code{default} clause are as follows:
 \index{clauses!shared@{\code{shared}}}
 \summary
 The \code{shared} clause declares one or more list items to be shared by tasks generated by 
-a \code{parallel}, \code{task}, \code{taskloop} or \code{teams} construct.
+a \code{parallel}, \code{teams}, or task generating construct.
 
 \syntax
 The syntax of the \code{shared} clause is as follows:
@@ -8053,27 +8253,26 @@ shared(\plc{list})
 All references to a list item within a task refer to the storage area of the original variable 
 at the point the directive was encountered. 
 
-It is the programmer's responsibility to ensure, by adding proper synchronization, that 
+The programmer must ensure, by adding proper synchronization, that 
 storage shared by an explicit \code{task} region does not reach the end of its lifetime before 
 the explicit \code{task} region completes its execution. 
 
 \fortranspecificstart
 The association status of a shared pointer becomes undefined upon entry to and on exit 
-from the \code{parallel}, \code{task}, \code{taskloop} or \code{teams} construct if it
+from the \code{parallel}, \code{teams}, or task generating construct if it
 is associated with a target or a  subobject of a target that is in a \code{private},
-\code{firstprivate}, \code{lastprivate}, or \code{reduction} clause inside the construct.
+\code{firstprivate}, \code{lastprivate}, or \code{reduction} clause in the construct.
 
 Under certain conditions, passing a shared variable to a non-intrinsic procedure may 
 result in the value of the shared variable being copied into temporary storage before the 
 procedure reference, and back out of the temporary storage into the actual argument 
-storage after the procedure reference. It is implementation defined when this situation 
-occurs
+storage after the procedure reference. When this situation occurs is implementation defined.
 
 \notestart
 \noteheader – Use of intervening temporary storage may occur when the following three 
 conditions hold regarding an actual argument in a reference to a non-intrinsic procedure:
 
-\begin{enumerate}[label=\alph*] % L0 vvvvvvvvvvv
+\begin{enumerate}%%[label=\alph*] % L0 vvvvvvvvvvv
 \item The actual argument is one of the following:
 
 \begin{itemize} % L1 vvvvvv
@@ -8171,16 +8370,21 @@ The value and/or allocation status of the original list item will change only:
 \fortranspecificend
 \end{itemize}
 
-List items that appear in a \code{private}, \code{firstprivate}, or \code{reduction} clause in a 
-\code{parallel} construct may also appear in a \code{private} clause in an enclosed \code{parallel}, 
-\code{task}, or worksharing, or \code{simd} construct. 
+List items that appear in a \code{private}, \code{firstprivate}, or
+\code{reduction} clause in a \code{parallel} construct may also appear
+in a \code{private} clause in an enclosed \code{parallel},
+worksharing, \code{task}, \code{taskloop}, \code{simd}, or
+\code{target} construct.
 
-List items that appear in a \code{private} or \code{firstprivate} clause in a \code{task} construct 
-may also appear in a \code{private} clause in an enclosed \code{parallel} or \code{task} construct. 
+List items that appear in a \code{private} or \code{firstprivate}
+clause in a \code{task} or \code{taskloop} construct may also appear in a \code{private}
+clause in an enclosed \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, or
+\code{target} construct.
 
-List items that appear in a \code{private}, \code{firstprivate}, \code{lastprivate}, or 
-\code{reduction} clause in a worksharing construct may also appear in a \code{private} clause 
-in an enclosed \code{parallel} or \code{task} construct. 
+List items that appear in a \code{private}, \code{firstprivate},
+\code{lastprivate}, or \code{reduction} clause in a worksharing
+construct may also appear in a \code{private} clause in an enclosed
+\code{parallel}, \code{task}, \code{simd}, or \code{target} construct.
 
 \ccppspecificstart
 If the type of a list item is a reference to a type \plc{T} then the type will be considered to be 
@@ -8190,7 +8394,7 @@ A new list item of the same type, with automatic storage duration, is allocated 
 construct. The storage and thus lifetime of these list items lasts until the block in which 
 they are created exits. The size and alignment of the new list item are determined by the 
 type of the variable. This allocation occurs once for each task generated by the construct 
-and/or once for each SIMD lane used by the construct.
+and once for each SIMD lane used by the construct.
 
 The new list item is initialized, or has an undefined initial value, as if it had been locally 
 declared without an initializer. 
@@ -8202,34 +8406,34 @@ are called is unspecified. The order in which any destructors for different priv
 variables of class type are called is unspecified.
 \cppspecificend
 
-\fortranspecificstart
-If any statement of the construct references a list item, a new list item of the same type 
-and type parameters is allocated: once for each implicit task in the \code{parallel} 
-construct; once for each task generated by a \code{task} construct; and once for each SIMD 
-lane used by a \code{simd} construct. The initial value of the new list item is undefined. 
-Within a \code{parallel}, \code{worksharing}, \code{task}, \code{teams}, or \code{simd} region, the initial status 
-of a private pointer is undefined.
+\fortranspecificstart 
+If any statement of the construct references a list item, a new list
+item of the same type and type parameters is allocated. This
+allocation occurs once for each task generated by the construct and
+once for each SIMD lane used by the construct. The initial value of
+the new list item is undefined. The initial status of a private
+pointer is undefined.
 
 For a list item or the subobject of a list item with the \code{ALLOCATABLE} attribute:
 
 \begin{itemize}
 \item if the allocation status is ``not currently allocated'', the new list item or the subobject 
-of the new list item will have an initial allocation status of "not currently allocated";
+of the new list item will have an initial allocation status of "not currently allocated".
 
 \item if the allocation status is ``currently allocated'', the new list item or the subobject of 
-the new list item will have an initial allocation status of "currently allocated". If the 
-new list item or the subobject of the new list item is an array, its bounds will be the 
-same as those of the original list item or the subobject of the original list item.
+the new list item will have an initial allocation status of "currently allocated".
+
+\item If the new list item or the subobject of the new list item is an array, its bounds will be 
+the same as those of the original list item or the subobject of the original list item.
 \end{itemize}
 
 A list item that appears in a \code{private} clause may be storage-associated with other 
 variables when the \code{private} clause is encountered. Storage association may exist 
 because of constructs such as \code{EQUIVALENCE} or \code{COMMON}. If \plc{A} is a variable appearing 
-in a \code{private} clause and \plc{B} is a variable that is storage-associated with \plc{A}, then:
+in a \code{private} clause on a construct and \plc{B} is a variable that is storage-associated with \plc{A}, then:
 
 \begin{itemize}
-\item The contents, allocation, and association status of \plc{B} are undefined on entry to the 
-\code{parallel}, \code{task}, \code{simd}, or \code{teams} region.
+\item The contents, allocation, and association status of \plc{B} are undefined on entry to the region.
 
 \item Any definition of \plc{A}, or of its allocation or association status, causes the contents, 
 allocation, and association status of \plc{B} to become undefined. 
@@ -8243,7 +8447,10 @@ construct. If the construct association is established prior to a \code{parallel
 association between the associate name and the original list item will be retained in the 
 region.
 
-Finalization of a list item of a finalizable type or subojects of a list item of a finalizable type occurs at the end of the region. The order in which any final subroutines for different variables of a finalizable type are called is unspecified.
+Finalization of a list item of a finalizable type or subojects of a
+list item of a finalizable type occurs at the end of the region. The
+order in which any final subroutines for different variables of a
+finalizable type are called is unspecified.
 \fortranspecificend
 
 \restrictions
@@ -8327,13 +8534,16 @@ initialization of the new list item is done once for each task that references t
 in any statement in the construct. The initialization is done prior to the execution of the 
 construct.
 
-For a \code{firstprivate} clause on a \code{target}, \code{parallel}, \code{task}, or \code{teams} construct, the initial 
-value of the new list item is the value of the original list item that exists immediately 
-prior to the construct in the task region where the construct is encountered. For a 
-\code{firstprivate} clause on a worksharing construct, the initial value of the new list 
-item for each implicit task of the threads that execute the worksharing construct is the 
-value of the original list item that exists in the implicit task immediately prior to the 
-point in time that the worksharing construct is encountered.
+For a \code{firstprivate} clause on a \code{parallel}, \code{task},
+\code{taskloop}, \code{target}, or \code{teams} construct, the
+initial value of the new list item is the value of the original list
+item that exists immediately prior to the construct in the task region
+where the construct is encountered. For a \code{firstprivate} clause
+on a worksharing construct, the initial value of the new list item for
+each implicit task of the threads that execute the worksharing
+construct is the value of the original list item that exists in the
+implicit task immediately prior to the point in time that the
+worksharing construct is encountered.
 
 To avoid race conditions, concurrent updates of the original list item must be 
 synchronized with the read of the original list item that occurs as a result of the 
@@ -8368,28 +8578,30 @@ association status of the original list item as if by pointer assignment.
 The restrictions to the \code{firstprivate} clause are as follows:
 
 \begin{itemize}
-\item A list item that is private within a \code{parallel} region must not appear in a 
-\code{firstprivate} clause on a worksharing construct if any of the worksharing 
-regions arising from the worksharing construct ever bind to any of the \code{parallel} 
-regions arising from the \code{parallel} construct. 
+\item A list item that is private within a \code{parallel} region must
+not appear in a \code{firstprivate} clause on a worksharing construct
+if any of the worksharing regions arising
+from the worksharing construct ever bind to any of the
+\code{parallel} regions arising from the \code{parallel} construct.
 
 \item A list item that is private within a \code{teams} region must not appear in a 
 \code{firstprivate} clause on a \code{distribute} construct if any of the \code{distribute} 
 regions arising from the \code{distribute} construct ever bind to any of the \code{teams} 
 regions arising from the \code{teams} construct.
 
-\item A list item that appears in a \code{reduction} clause of a \code{parallel} construct must not 
-appear in a \code{firstprivate} clause on a worksharing or \code{task} construct if any of 
-the worksharing or \code{task} regions arising from the worksharing or \code{task} construct 
-ever bind to any of the \code{parallel} regions arising from the \code{parallel} construct.
+\item A list item that appears in a \code{reduction} clause of a \code{parallel} 
+construct must not appear in a \code{firstprivate} clause on a worksharing, \code{task}, 
+or \code{taskloop} construct if any of the worksharing or task regions arising from 
+the worksharing, \code{task}, or \code{taskloop} construct ever bind to any of the 
+\code{parallel} regions arising from the \code{parallel} construct.
 
 \item A list item that appears in a \code{reduction} clause of a \code{teams} construct must not 
 appear in a \code{firstprivate} clause on a \code{distribute} construct if any of the 
 \code{distribute} regions arising from the \code{distribute} construct ever bind to any of 
 the \code{teams} regions arising from the \code{teams} construct. 
 
-\item A list item that appears in a \code{reduction} clause in a worksharing construct must not 
-appear in a \code{firstprivate} clause in a task construct encountered during execution 
+\item A list item that appears in a \code{reduction} clause of a worksharing construct must not 
+appear in a \code{firstprivate} clause in a \code{task} construct encountered during execution 
 of any of the worksharing regions arising from the worksharing construct.
 
 \cppspecificstart
@@ -8403,7 +8615,7 @@ requires an accessible, unambiguous copy constructor for the class type.
 \ccppspecificend
 
 \fortranspecificstart
-\item Variables that appear in namelist statements, in variable format expressions, and in 
+\item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{firstprivate} 
 clause. 
 \fortranspecificend
@@ -8486,10 +8698,12 @@ required for \code{lastprivate} occurs after all initializations for \code{first
 The restrictions to the \code{lastprivate} clause are as follows:
 
 \begin{itemize}
-\item A list item that is private within a \code{parallel} region, or that appears in the 
-\code{reduction} clause of a \code{parallel} construct, must not appear in a \code{lastprivate} 
-clause on a worksharing construct if any of the corresponding worksharing regions 
-ever binds to any of the corresponding \code{parallel} regions.
+\item A list item that is private within a \code{parallel} region, or
+that appears in the \code{reduction} clause of a \code{parallel}
+construct, must not appear in a \code{lastprivate} clause on a
+worksharing construct if any of the corresponding
+worksharing regions ever binds to any of the corresponding
+\code{parallel} regions.
 
 \cppspecificstart
 \item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
@@ -8515,7 +8729,7 @@ type unless it is of class type with a \code{mutable} member.
 
 \item If the original list item has the \code{ALLOCATABLE} attribute, the corresponding list item in the sequentially last iteration or lexically last section must have an allocation status of allocated upon exit from that iteration or section.
 
-\item Variables that appear in namelist statements, in variable format expressions, and in 
+\item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{lastprivate} 
 clause.
 \fortranspecificend
@@ -8560,7 +8774,7 @@ where:
 \code{|},
 \code{\^},
 \code{\&\&} and
-\code{||}
+\code{||} 
 \cspecificend % L1 ^^^^^
 
 \cppspecificstart % L1 vvvvv
@@ -8584,9 +8798,9 @@ is that value as expressed in the data type of the reduction list item.
 % Table 
 \nolinenumbers
 \renewcommand{\arraystretch}{1.5}
-\begin{center}
-\bottomcaption{Implicitly Declared C/C++ \plc{reduction-identifiers}\label{tab:Implicitly Declared C/C++ Reduction Identifiers}}
-%% \bottomcaption*{}
+%\begin{center}
+\tablecaption{Implicitly Declared C/C++ \plc{reduction-identifiers}\label{tab:Implicitly Declared C/C++ Reduction Identifiers}}
+%% \tablecaption*{}
 \tablefirsthead{%
 \hline
 \textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
@@ -8603,7 +8817,7 @@ is that value as expressed in the data type of the reduction list item.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\begin{supertabular}{ p{0.1\textwidth} p{0.3\textwidth} p{0.45\textwidth}}
+\begin{supertabular}{ p{0.1\textwidth} p{0.3\textwidth} p{0.5\textwidth}}
 \code{+} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
 \code{*} & \code{omp\_priv = 1} & \code{omp\_out *= omp\_in}\\
 \code{-} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
@@ -8615,11 +8829,9 @@ is that value as expressed in the data type of the reduction list item.
 \code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = omp\_in > omp\_out ? omp\_in : omp\_out}\\
 \code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = omp\_in < omp\_out ? omp\_in : omp\_out}\\
 \end{supertabular}
-\end{center}
+%\end{center}
 \linenumbers
 
-where \code{omp\_in} and \code{omp\_out} correspond to two identifiers that refer to storage of the 
-type of the list item. \code{omp\_out} holds the final value of the combiner operation.
 \ccppspecificend % L0 ^^^^^
 \bigskip
 
@@ -8669,28 +8881,34 @@ value as expressed in the data type of the reduction list item.
 \multicolumn{2}{l}{\small\sl table continued on next page}\\
 }
 \tablelasttail{\hline}
-\bottomcaption{Implicitly Declared Fortran \plc{reduction-identifiers}\label{tab:Implicitly Declared Fortran Reduction Identifiers}}
-\begin{supertabular}{ p{0.1\textwidth} p{0.30\textwidth} p{0.60\textwidth}}
+\tablecaption{Implicitly Declared Fortran \plc{reduction-identifiers}\label{tab:Implicitly Declared Fortran Reduction Identifiers}}
+\begin{supertabular}{ p{0.1\textwidth} p{0.30\textwidth} p{0.5\textwidth}}
 \code{+} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
 \code{*} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in * omp\_out}\\
 \code{-} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
-\code{.and.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .and. omp\_out}\\
-\code{.or.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .or. omp\_out}\\
-\code{.eqv.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .eqv. omp\_out}\\
-\code{.neqv.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .neqv. omp\_out}\\
+\code{.and.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .and.\ omp\_out}\\
+\code{.or.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .or.\ omp\_out}\\
+\code{.eqv.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .eqv.\ omp\_out}\\
+\code{.neqv.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .neqv.\ omp\_out}\\
 \code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = max(omp\_in, omp\_out)}\\
 \code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = min(omp\_in, omp\_out)}\\
 \code{iand} & \code{omp\_priv = \plc{All bits on}} & \code{omp\_out = iand(omp\_in, omp\_out)}\\
 \code{ior} & \code{omp\_priv = 0} & \code{omp\_out = ior(omp\_in, omp\_out)}\\
 \code{ieor} & \code{omp\_priv = 0} & \code{omp\_out = ieor(omp\_in, omp\_out)}\\
 \end{supertabular}
+
 \linenumbers
-\vspace{\baselineskip}
+
 \fortranspecificend
+\vspace{\baselineskip}
+
+In the above tables, \code{omp\_in} and \code{omp\_out} correspond to
+two identifiers that refer to storage of the type of the list
+item. \code{omp\_out} holds the final value of the combiner operation.
 
 Any \plc{reduction-identifier} that is defined with the \code{declare}~\code{reduction} directive is 
 also valid. In that case, the initializer and combiner of the \plc{reduction-identifier} are 
-specified by the \plc{initializer-clause} and the combiner in the \code{declare}~\code{reduction} 
+specified by the \plc{initializer-clause} and the \plc{combiner} in the \code{declare}~\code{reduction} 
 directive.
 
 \descr
@@ -8718,15 +8936,13 @@ match is done by means of a name lookup in the base language.
 
 \ccppspecificstart
 The list items that appear in the \code{reduction} clause may include array sections.
-
-If the list item is an array or an array section it will be treated as if a \code{reduction} clause would be applied to each separate element of the array section. The elements of each private array section will be allocated contiguously.
 \ccppspecificend
 
 \cppspecificstart
 If the type is a derived class, then any \plc{reduction-identifier} that matches its base classes 
-are also a match, if there is no specific match for the type.
+is also a match, if there is no specific match for the type.
 
-If the \plc{reduction-identifier} is not an \plc{id-expression} then it is implicitly converted to one by 
+If the \plc{reduction-identifier} is not an \plc{id-expression}, then it is implicitly converted to one by 
 prepending the keyword operator (for example, \code{+} becomes \code{\plc{operator}+}).
 
 If the \plc{reduction-identifier} is qualified then a qualified name lookup is used to find the 
@@ -8735,6 +8951,11 @@ declaration.
 If the \plc{reduction-identifier} is unqualified then an \emph{argument-dependent name lookup} must 
 be performed using the type of each list item.
 \cppspecificend
+
+If the list item is an array or array section, it will be treated as
+if a \code{reduction} clause would be applied to each separate element
+of the array section. The elements of each private array section will
+be allocated contiguously.
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the 
 construct; however, if the reduction clause is used on a construct to which \code{nowait} is 
@@ -8775,8 +8996,6 @@ directive must appear before its use in a \code{reduction} clause.
 \item 
 If a list item is an array section, it must specify contiguous storage and it cannot be a zero-length array section.
 
-\item If a list item is an array section, its lower-bound must be zero.
-
 \item If a list item is an array section, accesses to the elements of the array outside the specified array section result in unspecified behavior.
 
 \ccppspecificstart
@@ -8808,7 +9027,7 @@ the team.
 clause. 
 
 \item An original list item with the \code{POINTER} attribute or any
-  pointer component of an original list item that is referenced in
+  pointer component of an original list item that is referenced in the
   \plc{combiner} must be associated at entry to the construct that
   contains the \code{reduction} clause. Additionally, the list item or
   the pointer component of the list item must not be deallocated,
@@ -8816,7 +9035,7 @@ clause.
 
 \item An original list item with the \code{ALLOCATABLE} attribute or
   any allocatable component of an original list item that is
-  referenced in \plc{combiner} must be in the allocated state at entry
+  referenced in the \plc{combiner} must be in the allocated state at entry
   to the construct that contains the \code{reduction}
   clause. Additionally, the list item or the allocatable component of
   the list item must be neither deallocated nor allocated within the
@@ -8978,7 +9197,7 @@ threads in the team.
 The clauses accept a comma-separated list of list items (see \specref{sec:Directive Format}). 
 All list items appearing in a clause must be visible, according to the scoping rules of the 
 base language. Clauses may be repeated as needed, but a list item that specifies a given 
-variable may not appear in more than one clause on the same directive
+variable may not appear in more than one clause on the same directive.
 
 \fortranspecificstart
 An associate name preserves the association with the selector established at the \code{ASSOCIATE} statement. A list item that appears in a data copying clause may be a selector of an \code{ASSOCIATE} construct. If the construct association is established prior to a parallel region, the association between the associate name and the original list item will be retained in the region.
@@ -9098,8 +9317,8 @@ at the end of the construct.
 
 \ccppspecificstart
 In all other implicit tasks belonging to the \code{parallel} region, each specified list item 
-becomes defined with the value of the corresponding list item in the implicit task whose 
-thread executed the structured block. For variables of non-array type, the definition 
+becomes defined with the value of the corresponding list item in the implicit task associated with the 
+thread that executed the structured block. For variables of non-array type, the definition 
 occurs by copy assignment. For an array of elements of non-array type, each element is
 copied by copy assignment from an element of the array in the data environment of the 
 implicit task associated with the thread that executed the structured block to the 
@@ -9180,9 +9399,9 @@ data-sharing attribute or \code{map} clauses:
 
 \begin{itemize}
 \ccppspecificstart
-\item A variable with a type of pointer, reference to array, or reference 
-to pointer is treated as if it had appeared in a \code{map} clause as the 
-variable in a zero-length array section.
+\item A variable that is of type pointer, reference to array, or reference 
+to pointer is treated as if it had appeared in a \code{map} clause as 
+a zero-length array section.
 \ccppspecificend
 
 \item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
@@ -9213,6 +9432,19 @@ The syntax of the map clause is as follows:
 map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
 \end{boxedcode}
 
+where \plc{map-type} is one of the following:
+
+\begin{indentedcodelist}
+to
+from
+tofrom
+alloc
+release
+delete
+\end{indentedcodelist}
+
+and \plc{map-type-modifier} is \code{always}.
+
 \descr
 The list items that appear in a \code{map} clause may include array sections and structure elements.
 
@@ -9237,7 +9469,7 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \end{enumerate}
 \item If the corresponding list item's reference count is one, then:
 \begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{alloc} the value of the corresponding list item is undefined. 
+\item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
 \end{enumerate}
 \end{enumerate}
 
@@ -9317,6 +9549,7 @@ clauses of the same construct.
 
 \item A list item cannot be a variable that is a member of a structure with a union type.
 
+\item A bit-field cannot appear in a \code{map} clause.
 \end{itemize}
 \ccppspecificend
 
@@ -9381,7 +9614,7 @@ The following section describes the directive for declaring user-defined reducti
 \code{reduction} clause. The \code{declare}~\code{reduction} directive is a declarative directive.
 
 \syntax
-\cspecificstart
+\ccppspecificstart
 \begin{boxedcode}
 \#pragma omp declare reduction(\plc{reduction-identifier }:\plc{ typename-list }: 
 \plc{combiner })\plc{[initializer-clause] new-line}
@@ -9402,7 +9635,7 @@ operators:
 \code{\&\&} and 
 \code{||} 
 
-\item \plc{typename-list} is list of type names 
+\item \plc{typename-list} is a list of type names 
 
 \item \plc{combiner} is an expression 
 
@@ -9410,7 +9643,7 @@ operators:
 where \plc{initializer-expr} is\linebreak
 \code{omp\_priv = }\plc{initializer} or \plc{function-name}\code{(}\plc{argument-list}\code{)} 
 \end{itemize}
-\cspecificend
+\ccppspecificend
 
 
 \cppspecificstart
@@ -9422,7 +9655,7 @@ where \plc{initializer-expr} is\linebreak
 where:
 
 \begin{itemize}
-\item \plc{reduction-identifier} is either a base language identifier or one of the following 
+\item \plc{reduction-identifier} is either an \plc{id-expression} or one of the following 
 operators: 
 \code{+}, 
 \code{-}, 
@@ -9433,14 +9666,13 @@ operators:
 \code{\&\&} and 
 \code{||} 
 
-\item \plc{typename-list} is list of type names 
+\item \plc{typename-list} is a list of type names 
 
 \item \plc{combiner} is an expression 
 
-% Is there an equal sign missing in the original spec after omp_priv?
 \item \plc{initializer-clause} is \code{initializer(}\plc{initializer-expr}\code{)} 
 where \plc{initializer-expr} is\linebreak
-\code{omp\_priv} \plc{initializer} or \plc{function-name}\code{(}\plc{argument-list}\code{)} 
+\code{omp\_priv = }\plc{initializer} or \plc{function-name}\code{(}\plc{argument-list}\code{)} 
 \end{itemize}
 \cppspecificend
 
@@ -9577,14 +9809,14 @@ will be used.
 
 \ccppspecificstart
 If \plc{reduction-identifier} is used in a \code{target} region then a \code{declare}~\code{target} construct 
-must be specified for any function that can be accessed through \plc{combiner} and 
+must be specified for any function that can be accessed through the \plc{combiner} and 
 \plc{initializer-expr}.
 \ccppspecificend
 \bigskip
 
 \fortranspecificstart
 If \plc{reduction-identifier} is used in a \code{target} region then a \code{declare}~\code{target} construct 
-must be specified for any function or subroutine that can be accessed through \plc{combiner} 
+must be specified for any function or subroutine that can be accessed through the \plc{combiner} 
 and \plc{initializer-expr}.
 \fortranspecificend
 
@@ -9630,17 +9862,17 @@ arguments must be \code{omp\_priv}.
 
 \item If the \code{declare}~\code{reduction} directive appears in the specification part of a module and the corresponding reduction clause does not appear in the same module, the \plc{reduction-identifier} must be the same as the name of a user-defined operator, one of the allowed operators that is extended or a generic name that is the same as the name of one of the allowed intrinsic procedures. 
 
-\item If the \code{declare}~\code{reduction} directive appears in the specification of a module, if the corresponding \code{reduction} clause does not appear in the same module, and if the \plc{reduction-identifier} is the same as the name of a user-defined operator or an extended operator, or the same as a generic name that is the same as one of the allowed intrinsic procedures, the interface for that operator or the generic name must be defined in the specification of the same module, or must be accessible by use association. 
+\item If the \code{declare}~\code{reduction} directive appears in the specification of a module, if the corresponding \code{reduction} clause does not appear in the same module, and if the \plc{reduction-identifier} is the same as the name of a user-defined operator or an extended operator, or the same as a generic name that is the same as one of the allowed intrinsic procedures then the interface for that operator or the generic name must be defined in the specification of the same module, or must be accessible by use association. 
 
-\item Any subroutine, or function used in the \code{initializer} clause or \plc{combiner} expression must be an intrinsic function, or must have an accessible interface. 
+\item Any subroutine or function used in the \code{initializer} clause or \plc{combiner} expression must be an intrinsic function, or must have an accessible interface. 
 
-\item Any user-defined operator, or extended operator used in the \code{initializer} clause or \plc{combiner} expression must have an accessible interface. 
+\item Any user-defined operator or extended operator used in the \code{initializer} clause or \plc{combiner} expression must have an accessible interface. 
 
-\item If any subroutine, function, user-defined operator or extended operator is used in the \code{initializer} clause or \plc{combiner} expression, it must be accessible to the subprogram in which the corresponding \code{reduction} clause is specified. 
+\item If any subroutine, function, user-defined operator, or extended operator is used in the \code{initializer} clause or \plc{combiner} expression, it must be accessible to the subprogram in which the corresponding \code{reduction} clause is specified. 
 
 \item If the length type parameter is specified for a character type, it must be a constant, a colon or an~\code{*}. 
 
-\item If a character type with deferred or assumed length parameter is specified in a \code{declare}~\code{reduction} directive, no other \code{declare}~\code{reduction} directives with Fortran character type of the same kind parameter and the same \plc{reduction-identifier} are allowed in the same scope.
+\item If a character type with deferred or assumed length parameter is specified in a \code{declare}~\code{reduction} directive, no other \code{declare}~\code{reduction} directive with Fortran character type of the same kind parameter and the same \plc{reduction-identifier} is allowed in the same scope.
 
 \item Any subroutine used in the \code{initializer} clause or \plc{combiner} expression must not have any alternate returns appear in the argument list.
 \fortranspecificend
@@ -9677,30 +9909,43 @@ nesting are as follows:
 \item A \code{master} region may not be closely nested inside a worksharing, \code{atomic},  
 explicit \code{task}, or \code{taskloop} region.
 
-\item An \code{ordered} region may not be closely nested inside a \code{critical}, \code{atomic},
-explicit \code{task}, or \code{taskloop} region. 
+\item An \code{ordered} region arising from an \code{ordered} construct without
+any clause or with the \code{threads} or \code{depend} clause may not be closely
+nested inside a \code{critical}, \code{ordered}, \code{atomic}, explicit \code{task},
+or \code{taskloop} region. 
 
-\item An \code{ordered} region must be closely nested inside a loop region (or parallel loop 
-region) with an \code{ordered} clause.
+\item An \code{ordered} region arising from an \code{ordered} construct without
+any clause or with the \code{threads} or \code{depend} clause must be closely nested
+inside a loop region (or parallel loop region) with an \code{ordered} clause.
+
+\item An \code{ordered} region arising from an \code{ordered} construct with the
+\code{simd} clause must be closely nested inside a \code{simd} (or loop SIMD)
+region.
 
 \item A \code{critical} region may not be nested (closely or otherwise) inside a \code{critical} 
-region with the same name. Note that this restriction is not sufficient to prevent 
+region with the same name. This restriction is not sufficient to prevent 
 deadlock.
 
 \item OpenMP constructs may not be nested inside an \code{atomic} region.
 
-\item OpenMP constructs may not be nested inside a \code{simd} region.
+\item OpenMP constructs other than the \code{ordered} construct with the
+\code{simd} clause may not be nested inside a \code{simd} region.
+
+\item OpenMP constructs may not be nested inside an \code{ordered} region
+arising from an \code{ordered} construct with the \code{simd} clause.
 
 \item If a \code{target}, \code{target}~\code{update}, \code{target}~\code{data},
 \code{target}~\code{enter}~\code{data}, or \code{target}~\code{exit}~\code{data} construct appears
 within a \code{target} region then the behavior is unspecified. 
 
 \item If specified, a \code{teams} construct must be contained within a \code{target} construct. That 
-\code{target} construct must contain no statements or directives outside of the \code{teams} 
+\code{target} construct must not contain any statements or directives outside of the \code{teams} 
 construct. 
 
-\item \code{distribute}, \code{parallel}, \code{parallel}~\code{sections}, \code{parallel}~\code{workshare}, and 
-the parallel loop and parallel loop SIMD constructs are the only OpenMP constructs 
+\item \code{distribute}, \code{distribute}~\code{simd}, \code{parallel}, 
+\code{parallel}~\code{sections}, \code{parallel}~\code{workshare}, and 
+the distribute parallel loop, distribute parallel loop SIMD, parallel loop 
+and parallel loop SIMD constructs are the only OpenMP constructs 
 that can be closely nested in the \code{teams} region. 
 
 \item A \code{distribute} construct must be closely nested in a \code{teams} region. 
@@ -9716,7 +9961,7 @@ inside an OpenMP construct that matches the type specified in
 
 \item A \code{cancellation}~\code{point} construct for which
 \plc{construct-type-clause} is \code{taskgroup} must be nested inside
-a \code{task} construct and the \code{cancellation}~\code{point} construct
+a \code{task} construct, and the \code{cancellation}~\code{point} construct
 must be nested inside a \code{taskgroup} region. A
 \code{cancellation}~\code{point} construct for which
 \plc{construct-type-clause} is \code{sections} must be closely nested
