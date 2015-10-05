@@ -3409,7 +3409,7 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 The syntax of the \code{target}~\code{data} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target data \plc{[clause[ [},\plc{] clause] } \plc{... ] new-line}
+\#pragma omp target data \plc{clause[ [ [},\plc{] clause] ... ] new-line}
 \plc{structured-block}
 \end{boxedcode}
 
@@ -3430,7 +3430,7 @@ use\_device\_ptr(\plc{list})
 The syntax of the \code{target}~\code{data} construct is as follows:
 
 \begin{boxedcode}
-!\$omp target data \plc{[clause[ [},\plc{] clause] ... ]}
+!\$omp target data \plc{clause[ [ [},\plc{] clause] ... ]}
 \plc{structured-block}
 !\$omp end target data
 \end{boxedcode}
@@ -3448,8 +3448,8 @@ The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{
 \fortranspecificend
 
 \binding
-The binding task region for a \code{target}~\code{data} construct is the encountering task. The 
-target region binds to the enclosing parallel or task region.
+The binding task set for a \code{target}~\code{data} region is the generating task. The 
+\code{target}~\code{data} region binds to the region of the generating task.
 
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
@@ -3463,7 +3463,7 @@ device pointers to the corresponding list item in the device data environment.
     \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
   \item At most one \code{device} clause can appear on the directive. The \code{device} expression
-    must evaluate to a non-negative integer value strictly less than the value
+    must evaluate to a non-negative integer value less than the value
     of \code{omp\_get\_num\_devices()}.
 
   \item At most one \code{if} clause can appear on the directive.
@@ -3480,13 +3480,13 @@ device pointers to the corresponding list item in the device data environment.
 
 \crossreferences
 \begin{itemize}
-\item \code{map} clause, see 
-\specref{subsec:map Clause}.
-
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}. 
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{map} clause, see 
+\specref{subsec:map Clause}.
 \end{itemize}
 
 
@@ -3561,12 +3561,14 @@ The \code{end}~\code{target} directive denotes the end of the \code{target} cons
 \fortranspecificend
 
 \binding
-The binding task for a \code{target} construct is the encountering task. The target region 
-binds to the enclosing parallel or task region.
+The binding task set for a \code{target} region is the
+generating task, which is the \plc{target task} generated
+by the \code{target} construct. The \code{target}
+region binds to the corresponding \plc{target task} region.
 
 \descr
-The \code{target} construct provides a superset of the functionality and
-restrictions provided by the \code{target}~\code{data} directive, excepting
+The \code{target} construct provides a superset of the functionality
+provided by the \code{target}~\code{data} directive, except for 
 the \code{use\_device\_ptr} clause.
 
 The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
@@ -3583,7 +3585,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 The \code{is\_device\_ptr} clause is used to indicate that a list item is a device
 pointer already in the device data environment and that it should be used
-directly.  Support for pointers created outside of OpenMP, specifically
+directly.  Support for device pointers created outside of OpenMP, specifically
 outside of the \code{omp\_target\_alloc} routine and the \code{use\_device\_ptr} clause,
 is implementation defined.
 
@@ -3621,7 +3623,7 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
     device pointer in the device data environment.
 
 \ccppspecificstart
-\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variables's corresponding private variable is modified in the region.
+\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variable's corresponding private variable is modified in the region.
 \ccppspecificend
 
 \cppspecificstart
@@ -3643,22 +3645,22 @@ same \code{target} region, and the same thread that threw the exception must cat
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}. 
 
-\item \code{target}~\code{data} construct, see 
-\specref{subsec:target data Construct}.
-
 \item \code{task} construct, see 
 \specref{subsec:task Construct}.
 
 \item \code{task} scheduling constraints, see 
 \specref{subsec:Task Scheduling}
 
-\item \code{if} Clause, see \specref{sec:if Clause}.
+\item \code{target}~\code{data} construct, see 
+\specref{subsec:target data Construct}.
 
-\item Data-mapping Attribute Rules and Clauses, see 
-\specref{subsec:Data-mapping Attribute Rules and Clauses}.
+\item \code{if} Clause, see \specref{sec:if Clause}.
 
 \item \code{private} and \code{firstprivate} clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Data-mapping Attribute Rules and Clauses, see 
+\specref{subsec:Data-mapping Attribute Rules and Clauses}.
 \end{itemize}
 
 
@@ -3684,7 +3686,7 @@ clauses. The \code{target}~\code{update} construct is a stand-alone directive.
 The syntax of the \code{target}~\code{update} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp target update \plc{clause[ [},\plc{] clause] ... ] new-line}
+\#pragma omp target update \plc{clause[ [ [},\plc{] clause] ... ] new-line}
 \end{boxedcode}
 where \plc{clause} is either \plc{motion-clause} or one of the following:
 
@@ -3707,7 +3709,7 @@ from(\plc{list})
 The syntax of the \code{target}~\code{update} construct is as follows:
 
 \begin{boxedcode}
-!\$omp target update \plc{clause[ [},\plc{] clause] ... ]}
+!\$omp target update \plc{clause[ [ [},\plc{] clause] ... ]}
 \end{boxedcode}
 
 where \plc{clause} is either \plc{motion-clause} or one of the following:
@@ -3728,8 +3730,10 @@ from(\plc{list})
 \fortranspecificend
 
 \binding
-The binding task for a \code{target}~\code{update} construct is the encountering task.The 
-\code{target}~\code{update} directive is a stand-alone directive.
+The binding task set for a \code{target}~\code{update} region is the
+generating task, which is the \plc{target task} generated
+by the \code{target}~\code{update} construct. The \code{target}~\code{update}
+region binds to the corresponding \plc{target task} region.
 
 \descr
 For each list item in a \code{to} or \code{from} clause there is a corresponding list item and an 
@@ -3767,10 +3771,11 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
 
-\item A list item in a \code{to} or \code{from} clause must have a mappable type
+\item A list item in a \code{to} or \code{from} clause must have a mappable type.
 
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression 
-must evaluate to a non-negative integer value.
+\item At most one \code{device} clause can appear on the directive. The \code{device} expression
+      must evaluate to a non-negative integer value less than the value
+      of \code{omp\_get\_num\_devices()}.
 
 \item At most one \code{if} clause can appear on the directive. 
 
@@ -3782,9 +3787,6 @@ must evaluate to a non-negative integer value.
 \item \plc{default-device-var}, see 
 \specref{sec:Internal Control Variables}.
 
-\item \code{target}~\code{data}, see 
-\specref{subsec:target data Construct}. 
-
 \item Array sections, 
 \specref{sec:Array Sections}
 
@@ -3793,6 +3795,9 @@ must evaluate to a non-negative integer value.
 
 \item \code{task} scheduling constraints, see 
 \specref{subsec:Task Scheduling}
+
+\item \code{target}~\code{data}, see 
+\specref{subsec:target data Construct}. 
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
@@ -3834,7 +3839,7 @@ the following forms:
 or
 
 \begin{boxedcode}
-\#pragma omp declare target \plc{clause[ [},\plc{] clause] ... ] new-line}
+\#pragma omp declare target \plc{[clause[ [},\plc{] clause] ... ] new-line}
 \end{boxedcode}
 
 where \plc{clause} is one of the following:
@@ -4052,7 +4057,8 @@ The \code{end}~\code{teams} directive denotes the end of the \code{teams} constr
 \fortranspecificend
 
 \binding
-The binding thread set for a \code{teams} region is the encountering thread.
+The binding thread set for a \code{teams} region is the encountering thread,
+which is the initial thread of the \code{target} region.
 
 \descr
 When a thread encounters a \code{teams} construct, a league of thread teams is created and 
@@ -4060,6 +4066,7 @@ the master thread of each thread team executes the \code{teams} region.
 
 The number of teams created is implementation defined, but is less than or equal to the 
 value specified in the \code{num\_teams} clause.
+A thread may obtain the number of teams by a call to the \code{omp\_get\_num\_teams} routine.
 
 The maximum number of threads participating in the contention group that each team 
 initiates is implementation defined, but is less than or equal to the value specified in the 
@@ -4095,8 +4102,10 @@ expression must evaluate to a positive integer value.
 
 \item If specified, a \code{teams} construct must be contained within a \code{target} construct. That \code{target} construct must contain no statements, declarations or directives outside of the \code{teams} construct.
 
-\item \code{distribute}, \code{parallel}, \code{parallel}~\code{sections}, \code{parallel}~\code{workshare}, 
-and the parallel loop and parallel loop SIMD constructs are the only OpenMP 
+\item \code{distribute}, \code{distribute simd}, \code{parallel}, 
+\code{parallel}~\code{sections}, \code{parallel}~\code{workshare}, 
+and the distribute parallel loop, distribute parallel loop SIMD, parallel 
+loop and parallel loop SIMD constructs are the only OpenMP 
 constructs that can be closely nested in the \code{teams} region. 
 \end{itemize}
 
@@ -4138,7 +4147,7 @@ The syntax of the \code{distribute} construct is as follows:
 
 \begin{boxedcode}
 \#pragma omp distribute \plc{[clause[ [},\plc{] clause] ... ] new-line}
-\plc{for-loops}
+   \plc{for-loops}
 \end{boxedcode}
 
 Where \plc{clause} is one of the following:
@@ -4160,7 +4169,7 @@ The syntax of the \code{distribute} construct is as follows:
 
 \begin{boxedcode}
 !\$omp distribute \plc{[clause[ [},\plc{] clause] ... ]}
-\plc{do-loops}
+   \plc{do-loops}
 \plc{[}!\$omp end distribute\plc{]}
 \end{boxedcode}
 
@@ -4176,16 +4185,17 @@ dist\_schedule(\plc{kind[},\plc{ chunk\_size]})
 If an \code{end}~\code{distribute} directive is not specified, an \code{end}~\code{distribute} directive 
 is assumed at the end of the \plc{do-loops}.
 
-All associated \plc{do-loops} must be \plc{do-constructs} as defined by the Fortran standard. If an 
-\code{end}~\code{do} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
+Any associated \plc{do-loop} must be a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If an 
+\code{end}~\code{distribute} directive follows a \plc{do-construct} in which several loop statements share a \code{DO} 
 termination statement, then the directive can only be specified for the outermost of these 
 \code{DO} statements.
 \fortranspecificend
 
 \binding
-The binding thread set for a \code{distribute} region is the set of master threads created by 
-a \code{teams} construct. A \code{distribute} region binds to the innermost enclosing \code{teams} 
-region. Only the threads executing the binding \code{teams} region participate in the 
+The binding thread set for a \code{distribute} region is the set of master
+threads executing an enclosing \code{teams} region. A \code{distribute} region
+binds to this \code{teams} region. Only the threads executing the binding \code{teams} region participate in the 
 execution of the loop iterations.
 
 \descr
@@ -4209,7 +4219,7 @@ If \code{dist\_schedule} is specified, \plc{kind} must be \code{static}. If spec
 divided into chunks of size \plc{chunk\_size}, chunks are assigned to the teams of the league in 
 a round-robin fashion in the order of the team number. When no \plc{chunk\_size} is specified, 
 the iteration space is divided into chunks that are approximately equal in size, and at 
-most one chunk is distributed to each team of the league. Note that the size of the 
+most one chunk is distributed to each team of the league. The size of the 
 chunks is unspecified in this case.
 
 When no \code{dist\_schedule} clause is specified, the schedule is implementation defined.
@@ -4255,7 +4265,7 @@ The syntax of the \code{distribute}~\code{simd} construct is as follows:
 
 \ccppspecificstart
 \begin{boxedcode}
-\#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ] newline}
    \plc{for-loops}
 \end{boxedcode}
 
@@ -4287,9 +4297,10 @@ converted to a SIMD loop in a manner consistent with any clauses that apply to t
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 
+\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
+
+\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 \end{itemize}
 
 \crossreferences
@@ -4328,7 +4339,7 @@ The syntax of the distribute parallel loop construct is as follows:
 
 \ccppspecificstart
 \begin{boxedcode}
-\#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -4357,8 +4368,7 @@ The effect of any clause that applies to both constructs is as if it were applie
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop constructs apply.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
-\item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
+\item No \code{ordered} clause can be specified.
 \end{itemize}
 
 \crossreferences
@@ -4398,7 +4408,7 @@ of multiple teams. The distribute parallel loop SIMD construct is a composite co
 The syntax of the distribute parallel loop SIMD construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ]}
+\#pragma omp distribute parallel for simd \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{boxedcode}
 
@@ -4436,6 +4446,7 @@ The effect of any clause that applies to both constructs is as if it were applie
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel loop SIMD constructs apply.
+\item No \code{ordered} clause can be specified.
 \item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
 \item A list item may appear in a \code{linear} or \code{lastprivate} clause but not both.
 \end{itemize}
@@ -4462,7 +4473,7 @@ The \code{target}~\code{enter}~\code{data} directive specifies that variables ar
 \ccppspecificstart
 The syntax of the \code{target}~\code{enter}~\code{data} construct is as follows:
 \begin{boxedcode}
-\#pragma omp target enter data \plc{[clause[[,] clause]...] new-line}
+\#pragma omp target enter data \plc{[ clause[ [,] clause]...] new-line}
 \end{boxedcode}
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
@@ -4476,7 +4487,7 @@ nowait
 \fortranspecificstart
 The syntax of the \code{target}~\code{enter}~\code{data} is as follows:
 \begin{boxedcode}
-!\$omp target enter data \plc{[clause[[,] clause]...]}
+!\$omp target enter data \plc{[ clause[ [,] clause]...]}
 \end{boxedcode}
 where clause is one of the following:
 \begin{indentedcodelist}
@@ -4489,14 +4500,18 @@ nowait
 \fortranspecificend
 
 \binding
-The binding task for a \code{target}~\code{enter}~\code{data} construct is the encountering task. 
+The binding task set for a \code{target}~\code{enter}~\code{data} region is
+the generating task, which is the \plc{target task} generated by the
+\code{target}~\code{enter}~\code{data} construct. The
+\code{target}~\code{enter}~\code{data} region binds to the corresponding
+\plc{target task} region.
 
 \descr
 When a \code{target}~\code{enter}~\code{data} construct is encountered, the list items are mapped to the device data environment according to the \code{map} clause semantics.
 
 The \code{target}~\code{enter}~\code{data} construct executes as if it was enclosed in a \code{task} construct with no statements or directives outside of the \code{target}~\code{enter}~\code{data} construct. The generated task is a \plc{target task}.
 
-A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated target task is complete.
+A \plc{target task} is executed immediately and waits at a task scheduling point for the device to complete the \code{target}~\code{enter}~\code{data} region. The encountering thread becomes available to execute other tasks at that task scheduling point. If the \plc{target task} is undeferred then the encountering thread must suspend the current task region, for which execution cannot be resumed until the generated \plc{target task} is complete.
 
 By default the generated task is undeferred. When a \code{nowait} clause is present, the current task may resume execution before the generated task completes its execution.
 
@@ -4518,13 +4533,21 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 \crossreferences
 \begin{itemize}
-\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
-\item \code{target}~\code{exit}~\code{data}, see \specref{subsec:target exit data Construct}.
-\item \code{map} clause, see \specref{subsec:map Clause}.
 \item \plc{default-device-var}, see \specref{subsec:ICV Descriptions}.
+
 \item \code{task}, see \specref{subsec:task Construct}.
-\item \code{task}~\code{scheduling}~\code{constraints}, see \specref{subsec:Task Scheduling}. 
+
+\item \code{task}~\code{scheduling}~\code{constraints}, 
+      see \specref{subsec:Task Scheduling}. 
+
+\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
+
+\item \code{target}~\code{exit}~\code{data}, 
+      see \specref{subsec:target exit data Construct}.
+
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{map} clause, see \specref{subsec:map Clause}.
 \end{itemize}
 
 
@@ -4541,7 +4564,7 @@ The \code{target}~\code{exit}~\code{data} directive specifies that list items ar
 \ccppspecificstart
 The syntax of the \code{target}~\code{exit}~\code{data} construct is as follows:
 \begin{boxedcode}
-\#pragma omp target exit data \plc{[clause[[,] clause]...] new-line}
+\#pragma omp target exit data \plc{[ clause[ [,] clause]...] new-line}
 \end{boxedcode}
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
@@ -4555,7 +4578,7 @@ nowait
 \fortranspecificstart
 The syntax of the \code{target}~\code{exit}~\code{data} is as follows:
 \begin{boxedcode}
-!\$omp target exit data \plc{[clause[[,] clause]...]}
+!\$omp target exit data \plc{[ clause[ [,] clause]...]}
 \end{boxedcode}
 where clause is one of the following:
 \begin{indentedcodelist}
@@ -4566,8 +4589,13 @@ depend(\plc{dependence-type} : \plc{list})
 nowait
 \end{indentedcodelist}
 \fortranspecificend
+
 \binding
-The binding task for a \code{target}~\code{exit}~\code{data} construct is the encountering task. 
+The binding task set for a \code{target}~\code{exit}~\code{data} region is
+the generating task, which is the \plc{target task} generated by the
+\code{target}~\code{exit}~\code{data} construct. The
+\code{target}~\code{exit}~\code{data} region binds to the corresponding
+\plc{target task} region.
 
 \descr
 When a \code{target}~\code{exit}~\code{data} construct is encountered, the list items in the \code{map} clauses are unmapped from the device data environment according to the \code{map} clause semantics.
@@ -4595,13 +4623,21 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 \crossreferences
 \begin{itemize}
-\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
-\item \code{target}~\code{enter}~\code{data}, see \specref{subsec:target enter data Construct}.
-\item \code{map} clause, see \specref{subsec:map Clause}.
 \item \plc{default-device-var}, see \specref{subsec:ICV Descriptions}.
+
 \item \code{task}, see \specref{subsec:task Construct}.
-\item \code{task}~\code{scheduling}~\code{constraints}, see \specref{subsec:Task Scheduling}. 
+
+\item \code{task}~\code{scheduling}~\code{constraints}, 
+      see \specref{subsec:Task Scheduling}. 
+
+\item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
+
+\item \code{target}~\code{enter}~\code{data}, 
+      see \specref{subsec:target enter data Construct}.
+
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{map} clause, see \specref{subsec:map Clause}.
 \end{itemize}
 
 
