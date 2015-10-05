@@ -47,6 +47,8 @@ these cases.
 \item \textbf{Device}: an implementation defined logical execution engine (see 
 \specref{subsec:Threading Concepts}). 
 
+\item \textbf{Device address}: an address in a \emph{device data environment} (see \specref{subsec:Data Terminology}).
+
 \item \textbf{Memory model}: the minimum size at which a memory update may also read and 
 write back adjacent variables that are part of another variable (as array or structure 
 elements) is implementation defined but is no larger than required by the base 
@@ -62,7 +64,9 @@ non-sequentially consistent atomic directives (see \specref{subsec:OpenMP Memory
 \plc{def-sched-var}, \plc{bind-var}, \plc{stacksize-var}, 
 \plc{wait-policy-var}, \plc{thread-limit-var}, 
 \plc{max-active-levels-var}, \plc{place-partition-var}, and 
-\plc{default-device-var} are implementation defined (see \specref{subsec:ICV Initialization}).
+\plc{default-device-var} are implementation defined.  The method for
+initializing a target device's internal control variable is
+implementation defined (see \specref{subsec:ICV Initialization}).
 
 \index{dynamic thread adjustment}
 \item \textbf{Dynamic adjustment of threads}: providing the ability to dynamically adjust the 
@@ -70,18 +74,22 @@ number of threads is implementation defined . Implementations are allowed to del
 fewer threads (but at least one) than indicated in Algorithm 2-1 even if dynamic 
 adjustment is disabled (see \specref{subsec:Determining the Number of Threads for a parallel Region}).
 
-\item \textbf{Thread affinity}: With $T\leq P$, when $T$ does not divide $P$ evenly, the assignment of the 
-remaining $P-T*S$ places into subpartitions is implementation defined. With $T>P$, 
-when $P$ does not divide $T$ evenly, the assignment of the remaining $T-P*S$ threads into 
-places is implementation defined. The determination of whether the affinity request 
-can be fulfilled is implementation defined. If not, the number of threads in the team 
-and their mapping to places become implementation defined 
-(see \specref{subsec:Controlling OpenMP Thread Affinity}). 
+\item \textbf{Thread affinity}: For the \code{close} thread affinity
+  policy, if $T > P$ and $P$ does not divide $T$ evenly, the exact
+  number of threads in a particular place is implementation defined.
+  For the \code{spread} thread affinity, if $T > P$ and $P$ does not
+  divide $T$ evenly, the exact number of threads in a particular
+  subpartition is implementation defined.  The determination of
+  whether the affinity request can be fulfilled is implementation
+  defined.  If not, the number of threads in the team and their mapping
+  to places become implementation defined (see
+  \specref{subsec:Controlling OpenMP Thread Affinity}).
 
 \item \textbf{Loop directive}: the integer type (or kind, for Fortran) used to compute the iteration 
 count of a collapsed loop is implementation defined. The effect of the 
 \code{schedule(runtime)} clause when the \plc{run-sched-var} ICV is set to \code{auto} is 
-implementation defined. The \plc{simd\_width} used when a \code{simd} schedule modifier is specified is implementation defined. See \specref{subsec:Loop Construct}. 
+implementation defined. The \plc{simd\_width} used when a \code{simd}
+schedule modifier is specified is implementation defined (see \specref{subsec:Loop Construct}).
 
 \item \code{sections} \textbf{construct}: the method of scheduling the structured blocks among threads 
 in the team is implementation defined (see \specref{subsec:sections Construct}).
@@ -89,34 +97,46 @@ in the team is implementation defined (see \specref{subsec:sections Construct}).
 \item \code{single} \textbf{construct}: the method of choosing a thread to execute the structured block 
 is implementation defined (see \specref{subsec:single Construct})
 
-\item \textbf{simd construct}: the integer type (or kind, for Fortran) used to compute the iteration 
-count for the collapsed loop is implementation defined. The number of iterations that 
-are executed concurrently at any given time is implementation defined. If the 
-\code{aligned} clause is not specified, the assumed alignment is implementation defined 
-(see \specref{subsec:simd Construct}). 
+\item \code{simd} \textbf{construct}: the integer type (or kind, for
+  Fortran) used to compute the iteration count for the collapsed loop
+  is implementation defined. The number of iterations that are
+  executed concurrently at any given time is implementation
+  defined. If the \plc{alignment} parameter is not specified in the
+  \code{aligned} clause, the default alignments for the SIMD
+  instructions are implementation defined (see \specref{subsec:simd
+    Construct}).
 
-\item \textbf{declare simd construct}: if the \code{simdlen} clause is not specified, the number of 
-concurrent arguments for the function is implementation defined. If the \code{aligned} 
-clause is not specified, the assumed alignment is implementation defined (see 
-\specref{subsec:declare simd Construct}). 
+\item \code{declare simd} \textbf{construct}: if the parameter of the
+  \code{simdlen} clause is not a constant positive integer expression,
+  the number of concurrent arguments for the function is
+  implementation defined. If the \plc{alignment} parameter of the
+  \code{aligned} clause is not specified, the default alignments for
+  SIMD instructions are implementation defined (see
+  \specref{subsec:declare simd Construct}).
 
-\item The number of loop iterations assigned to a task created from a \code{taskloop} construct is implementation defined, unless the \code{grainsize} or \code{num\_tasks} clauses are specified (see \specref{subsec:taskloop Construct}.
+\item \code{taskloop} \textbf{construct}: The number of loop
+  iterations assigned to a task created from a \code{taskloop}
+  construct is implementation defined, unless the \code{grainsize} or
+  \code{num\_tasks} clauses are specified. The integer type (or kind,
+  for Fortran) used to compute the iteration count for the collapsed
+  loop is implementation defined (see \specref{subsec:taskloop
+    Construct}).
 
 \item \code{is\_device\_ptr} \textbf{clause}: 
   Support for pointers created outside of the OpenMP device data managmenet
   routines is implementation defined (see \specref{subsec:target Construct}).
 
-\item \textbf{teams construct}: the number of teams that are created is implementation defined but 
+\item \code{teams} \textbf{construct}: the number of teams that are created is implementation defined but 
 less than or equal to the value of the \code{num\_teams} clause if specified. The maximum 
 number of threads participating in the contention group that each team initiates is 
 implementation defined but less than or equal to the value of the \code{thread\_limit} 
 clause if specified (see \specref{subsec:teams Construct}). 
 
-\item If no \code{dist\_schedule} clause is specified then the schedule for the \code{distribute} 
+\item \code{distribute} \textbf{construct}: If no \code{dist\_schedule} clause is specified then the schedule for the \code{distribute} 
 construct is implementation defined (see \specref{subsec:distribute Construct}). 
 
 \item \code{critical} \textbf{construct}: the effect of using a \code{hint}
-construct is implementation defined (see \specref{subsec:critical Construct}). 
+clause is implementation defined (see \specref{subsec:critical Construct}). 
 
 \item \code{atomic} \textbf{construct}: a compliant implementation may enforce exclusive access 
 \index{atomic construct@{\code{atomic} construct}}
@@ -126,6 +146,27 @@ designated by $x$ is not size-aligned (that is, if the byte alignment of $x$ is 
 of the size of $x$), then the behavior of the atomic region is implementation defined 
 (see \specref{subsec:atomic Construct}).
 
+\fortranspecificstart
+
+\item \code{threadprivate} \textbf{directive}: if the conditions for values of data in the threadprivate 
+objects of threads (other than an initial thread) to persist between two consecutive 
+active parallel regions do not all hold, the allocation status of an allocatable variable 
+in the second region is implementation defined (see \specref{subsec:threadprivate Directive}).
+
+\item \code{shared} \textbf{clause}: passing a shared variable to a non-intrinsic procedure may result in 
+the value of the shared variable being copied into temporary storage before the 
+procedure reference, and back out of the temporary storage into the actual argument 
+storage after the procedure reference. Situations where this occurs other than those 
+specified are implementation defined (see \specref{subsubsec:shared clause}).
+
+\item \textbf{Runtime library definitions}: it is implementation defined whether the include file 
+\code{omp\_lib.h} or the module \code{omp\_lib} (or both) is provided. It is implementation 
+defined whether any of the OpenMP runtime library routines that take an argument 
+are extended with a generic interface so arguments of different \code{KIND} type can be 
+accommodated (see \specref{sec:runtime library definitions}).
+
+\fortranspecificend
+
 \item \code{omp\_set\_num\_threads} \textbf{routine}: if the argument is not a positive integer the 
 behavior is implementation defined (see \specref{subsec:omp_set_num_threads}).
 
@@ -134,13 +175,13 @@ values and associated meanings of the second argument are implementation defined
 (see \specref{subsec:omp_set_schedule}).
 
 \item \code{omp\_set\_max\_active\_levels} \textbf{routine}: when called from within any explicit 
-parallel region the binding thread set (and binding region, if required) for the 
+\code{parallel} region the binding thread set (and binding region, if required) for the 
 \code{omp\_set\_max\_active\_levels} region is implementation defined and the 
 behavior is implementation defined. If the argument is not a non-negative integer 
 then the behavior is implementation defined (see \specref{subsec:omp_set_max_active_levels}).
 
 \item \code{omp\_get\_max\_active\_levels} \textbf{routine}: when called from within any explicit 
-parallel region the binding thread set (and binding region, if required) for the 
+\code{parallel} region the binding thread set (and binding region, if required) for the 
 \code{omp\_get\_max\_active\_levels} region is implementation defined (see 
 \specref{subsec:omp_get_max_active_levels}).
 
@@ -149,14 +190,17 @@ nonnegative numerical identifiers returned by the
 \code{omp\_get\_place\_proc\_ids} routine is implementation defined (see 
 \specref{subsec:omp_get_place_proc_ids}).
 
+\item \code{omp\_get\_initial\_device} \textbf{routine}: the value of
+  the device number is implementation defined (see \specref{subsec:omp_get_initial_device}).
+
 \item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint} \textbf{routines}: 
 if hints are stored with a lock variable, the effect of the hints on the locks are implementation defined (see \specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
 
-\item \verb#omp_target_memcpy_rect# \textbf{routine}: 
+\item \code{omp\_target\_memcpy\_rect} \textbf{routine}: 
   the maximum number of dimensions supported is implementation defined, but
   must be at least three (see \specref{subsec:omp_target_memcpy_rect}).
 
-\item \code{OMP\_SCHEDULE} \textbf{environment variable}: if the value of the variable does not 
+\item \code{OMP\_SCHEDULE} \textbf{environment variable}: if the value does not 
 conform to the specified format then the result is implementation defined (see 
 \specref{sec:OMP_SCHEDULE}).
 
@@ -165,7 +209,7 @@ conform to the specified format then the result is implementation defined (see
 greater than the implementation can support, or if any value is not a positive integer, 
 then the result is implementation defined (see \specref{sec:OMP_NUM_THREADS}).
 
-\item \code{OMP\_PROC\_BIND} \textbf{environment variable}: if the value is not \code{true}, false, or a 
+\item \code{OMP\_PROC\_BIND} \textbf{environment variable}: if the value is not \code{true}, \code{false}, or a 
 comma separated list of \code{master}, \code{close}, or \code{spread}, the behavior is 
 implementation defined. The behavior is also implementation defined if an initial 
 thread cannot be bound to the first place in the OpenMP place list (see 
@@ -207,31 +251,6 @@ numerical value (either explicitly defined or implicitly derived from an interva
 within the \code{OMP\_PLACES} list to a processor on the target platform, or if it maps to an 
 unavailable processor. The behavior is also implementation defined when the 
 \code{OMP\_PLACES} environment variable is defined using an abstract name (see \specref{sec:OMP_PLACES}).
-
-\item \textbf{Thread affinity policy}: if the affinity request for a \code{parallel} construct cannot be 
-fulfilled, the behavior of the thread affinity policy is implementation defined for that 
-\code{parallel} construct.
-
-\fortranspecificstart
-
-\item \code{threadprivate} \textbf{directive}: if the conditions for values of data in the threadprivate 
-objects of threads (other than an initial thread) to persist between two consecutive 
-active parallel regions do not all hold, the allocation status of an allocatable variable 
-in the second region is implementation defined (see \specref{subsec:threadprivate Directive}).
-
-\item \code{shared} \textbf{clause}: passing a shared variable to a non-intrinsic procedure may result in 
-the value of the shared variable being copied into temporary storage before the 
-procedure reference, and back out of the temporary storage into the actual argument 
-storage after the procedure reference. Situations where this occurs other than those 
-specified are implementation defined (see \specref{subsubsec:shared clause}).
-
-\item \textbf{Runtime library definitions}: it is implementation defined whether the include file 
-\code{omp\_lib.h} or the module \code{omp\_lib} (or both) is provided. It is implementation 
-defined whether any of the OpenMP runtime library routines that take an argument 
-are extended with a generic interface so arguments of different \code{KIND} type can be 
-accommodated (see \specref{sec:runtime library definitions}).
-
-\fortranspecificend
 
 \end{itemize}
 
