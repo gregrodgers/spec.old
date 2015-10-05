@@ -2072,7 +2072,7 @@ accessed only through the routines described in this section; programs that othe
 access OpenMP lock variables are non-conforming.
 
 An OpenMP lock can be in one of the following states: \emph{uninitialized}, \emph{unlocked}, or 
-\emph{locked}. If a lock is in the unlocked state, a task can \emph{set} the lock, which changes its state 
+\emph{locked}. If a lock is in the \emph{unlocked} state, a task can \emph{set} the lock, which changes its state 
 to \emph{locked}. The task that sets the lock is then said to \emph{own} the lock. A task that owns a 
 lock can \emph{unset} that lock, returning it to the \emph{unlocked} state. A program in which a task 
 unsets a lock that is owned by another task is non-conforming.
@@ -2084,20 +2084,18 @@ it is already owned by the task trying to set it. \emph{Simple lock} variables a
 associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
 
 Each type of lock can also have a \emph{lock hint} that contains information about the intended usage 
-of the lock by the application code.  The effect of the lock hint is implementation defined, 
-that is, the OpenMP implementation can use this hint to select a proper 
-usage-specific lock if supported by the implementation.  
-Lock hints do not change the mutual exclusion semantics of locks, but allow the 
-user to suggest the use of a specific implementation to the runtime.
-A conforming implementation can safely ignore the lock hint and instead use locks without hints.
+of the lock by the application code.  The effect of the lock hint is
+implementation defined.  An OpenMP implementation can use this hint to select a
+usage-specific lock, but lock hints do not change the mutual exclusion semantics of locks. 
+A conforming implementation can safely ignore the lock hint.
 
 Constraints on the state and ownership of the lock accessed by each of the lock routines 
 are described with the routine. If these constraints are not met, the behavior of the 
 routine is unspecified. 
 
-The OpenMP lock routines access a lock variable in such a way that they always read 
+The OpenMP lock routines access a lock variable such that they always read 
 and update the most current value of the lock variable. It is not necessary for an 
-OpenMP program to include explicit \code{flush} directives to ensure that the lock variable’s 
+OpenMP program to include explicit \code{flush} directives to ensure that the lock variable's 
 value is consistent among different tasks. 
 
 \binding
@@ -2106,10 +2104,11 @@ As a consequence, for each OpenMP lock, the lock routine effects relate to all t
 call the routines, without regard to which teams the threads in the contention group 
 executing the tasks belong.
 
+
 \littleheader{Simple Lock Routines}
 \index{Simple Lock Routines}
 \ccppspecificstart
-The type \code{omp\_lock\_t} is a data type capable of representing a simple lock. For the 
+The type \code{omp\_lock\_t} represents a simple lock. For the 
 following routines, a simple lock variable must be of \code{omp\_lock\_t} type. All simple 
 lock routines require an argument that is a pointer to a variable of type \code{omp\_lock\_t}.
 \ccppspecificend
@@ -2137,14 +2136,14 @@ The simple lock routines are as follows:
 
 \littleheader{Nestable Lock Routines}
 \ccppspecificstart
-The type \code{omp\_nest\_lock\_t} is a data type capable of representing a nestable lock. 
-For the following routines, a nested lock variable must be of \code{omp\_nest\_lock\_t} type. 
+The type \code{omp\_nest\_lock\_t} represents a nestable lock. 
+For the following routines, a nestable lock variable must be of \code{omp\_nest\_lock\_t} type. 
 All nestable lock routines require an argument that is a pointer to a variable of type 
 \code{omp\_nest\_lock\_t}.
 \ccppspecificend
 
 \fortranspecificstart
-For the following routines, a nested lock variable must be an integer variable of 
+For the following routines, a nestable lock variable must be an integer variable of 
 \code{kind=omp\_nest\_lock\_kind}.
 \fortranspecificend
 
@@ -2273,7 +2272,7 @@ typedef enum omp\_lock\_hint\_t \{
   omp\_lock\_hint\_uncontended = 1,
   omp\_lock\_hint\_contended = 2,
   omp\_lock\_hint\_nonspeculative = 4,
-  omp\_lock\_hint\_speculative = 8,
+  omp\_lock\_hint\_speculative = 8
 \} omp\_lock\_hint\_t;
 \end{codepar}
 \ccppspecificend
@@ -2328,7 +2327,7 @@ After initialization no task owns the lock. In addition, the nesting count for a
 \index{omp\_destroy\_lock@{\code{omp\_destroy\_lock}}}
 \index{omp\_destroy\_nest\_lock@{\code{omp\_destroy\_nest\_lock}}}
 \summary
-These routines ensure that the OpenMP lock is uninitialized
+These routines ensure that the OpenMP lock is uninitialized.
 
 \format
 \ccppspecificstart
@@ -2370,8 +2369,8 @@ The effect of these routines is to change the state of the lock to uninitialized
 \index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
 \summary
 These routines provide a means of setting an OpenMP lock. The calling
-task region behaves as if it were suspended until the lock can be set
-by this thread.
+task region behaves as if it was suspended until the lock can be set
+by this task.
 
 \format
 \ccppspecificstart
@@ -2568,7 +2567,7 @@ The \code{omp\_get\_wtime} routine returns a value equal to the elapsed wall clo
 seconds since some ``time in the past''. The actual ``time in the past'' is arbitrary, but it is 
 guaranteed not to change during the execution of the application program. The time 
 returned is a ``per-thread time'', so it is not required to be globally consistent across all 
-the threads participating in an application.
+threads participating in an application.
 
 \notestart
 \noteheader – It is anticipated that the routine will be used to measure elapsed times as shown 
@@ -2647,9 +2646,8 @@ successive clock ticks of the timer used by \code{omp\_get\_wtime}.
 \index{device memory routines}
 \index{target memory routines}
 \label{sec:Device Memory Routines}
-This section describes routines that support allocation and management of
-pointers in the data environments of target devices.
-
+This section describes routines that support allocation of memory and 
+management of pointers in the data environments of target devices.
 
 
 \subsection{\code{omp\_target\_alloc}}
@@ -2683,16 +2681,22 @@ The device address returned by \code{omp\_target\_alloc} can be used in an
 Pointer arithmetic is not supported on the device address returned by
 \code{omp\_target\_alloc}.
 
+Freeing the storage returned by \code{omp\_target\_alloc} with any routine
+other than \code{omp\_target\_free} results in unspecified behavior.
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see 
 \specref{subsec:target Construct}
-\item \code{omp\_target\_free} routine, see 
-\specref{subsec:omp_target_free}
-\item \code{omp\_get\_initial\_device} routine, see 
-\specref{subsec:omp_get_initial_device}
+
 \item \code{omp\_get\_num\_devices} routine, see 
 \specref{subsec:omp_get_num_devices}
+
+\item \code{omp\_get\_initial\_device} routine, see 
+\specref{subsec:omp_get_initial_device}
+
+\item \code{omp\_target\_free} routine, see 
+\specref{subsec:omp_target_free}
 \end{itemize}
 
 
@@ -2715,11 +2719,9 @@ void omp\_target\_free(void * \plc{device\_ptr}, int \plc{device\_num});
 
 A program that calls \code{omp\_target\_free} with a non-\code{NULL} pointer 
 that does not have a value returned from \code{omp\_target\_alloc} is
-non-conforming. When called from within a \code{target} region 
-the effect of this routine is unspecified. The \plc{device\_num}
-must be greater than or equal to zero and less than the result of
-\code{omp\_get\_num\_devices()} or the result of a call to
-\code{omp\_get\_initial\_device()}.
+non-conforming.  The \plc{device\_num} must be greater than or equal to 
+zero and less than the result of \code{omp\_get\_num\_devices()} or the
+ result of a call to \code{omp\_get\_initial\_device()}.
 
 \effect
 
@@ -2730,16 +2732,22 @@ environment associated with \plc{device\_ptr}.  If \plc{device\_ptr} is
 Synchronization must be inserted to ensure that all accesses to 
 \plc{device\_ptr} are completed before the call to \code{omp\_target\_free}.
 
+When called from within a \code{target} region the effect of this routine
+is unspecified.
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see 
 \specref{subsec:target Construct}
-\item \code{omp\_target\_alloc} routine, see 
-\specref{subsec:omp_target_alloc}
-\item \code{omp\_get\_initial\_device} routine, see 
-\specref{subsec:omp_get_initial_device}
+
 \item \code{omp\_get\_num\_devices} routine, see 
 \specref{subsec:omp_get_num_devices}
+
+\item \code{omp\_get\_initial\_device} routine, see 
+\specref{subsec:omp_get_initial_device}
+
+\item \code{omp\_target\_alloc} routine, see 
+\specref{subsec:omp_target_alloc}
 \end{itemize}
 
 
@@ -2751,21 +2759,17 @@ Synchronization must be inserted to ensure that all accesses to
 \label{subsec:omp_target_is_present}
 \summary
 
-The \code{omp\_target\_is\_present} routine validates whether a host pointer
-has an associated device buffer on a given device.
+The \code{omp\_target\_is\_present} routine tests whether a host pointer
+has corresponding storage on a given device.
 
 \format
 \begin{boxedcode}
-int omp\_target\_is\_present(void * \plc{ptr}, size\_t \plc{offset},
-                          int \plc{device\_num});
+int omp\_target\_is\_present(void * \plc{ptr}, int \plc{device\_num});
 \end{boxedcode}
 
 \constraints
 
 The value of \plc{ptr} must be a valid host pointer or \code{NULL}.
-The device specified by \plc{device\_num} must be valid.
-When called from within a \code{target} region 
-the effect of this routine is unspecified.
 The \plc{device\_num}
 must be greater than or equal to zero and less than the result of
 \code{omp\_get\_num\_devices()} or the result of a call to
@@ -2774,19 +2778,23 @@ must be greater than or equal to zero and less than the result of
 \effect
 
 This routine returns \plc{true} if the specified pointer
-and offset would be found present on device \plc{device\_num} by a \code{map}
+would be found present on device \plc{device\_num} by a \code{map}
 clause; otherwise, it returns \plc{false}.
+
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
 
 \crossreferences
 \begin{itemize}
-\item \code{target} construct, see 
-\specref{subsec:target Construct}
-\item \code{map} clause, see 
-\specref{subsec:map Clause}.
-\item \code{omp\_get\_initial\_device} routine, see 
-\specref{subsec:omp_get_initial_device}
+\item \code{target} construct, see \specref{subsec:target Construct}
+
+\item \code{map} clause, see \specref{subsec:map Clause}.
+
 \item \code{omp\_get\_num\_devices} routine, see 
 \specref{subsec:omp_get_num_devices}
+
+\item \code{omp\_get\_initial\_device} routine, see 
+\specref{subsec:omp_get_initial_device}
 \end{itemize}
 
 
@@ -2812,16 +2820,19 @@ Each device must
 be compatible with the device pointer specified on the same side of the copy.
 The \plc{dst\_device\_num} and \plc{src\_device\_num}
 must be greater than or equal to zero and less than the result of
-\code{omp\_get\_num\_devices()} or the result of a call to
+\code{omp\_get\_num\_devices()} or equal to the result of a call to
 \code{omp\_get\_initial\_device()}.
 
 \effect
 
-\plc{length} bytes of memory at offset \plc{src\_offset} from  \plc{src} are
-copied to \plc{dst} starting at offset \plc{dst\_offset}.  
+
+\plc{length} bytes of memory at offset \plc{src\_offset} from  \plc{src}
+in the device data environment of device \plc{src\_device\_num} are
+copied to \plc{dst} starting at offset \plc{dst\_offset} in the device data
+environment of device \plc{dst\_device\_num}.  
 The return value is zero on success and non-zero on failure.  The host device
-and host device data environment can be referenced with the device nummber
-returned by \code{omp\_get\_initial\_device}.  This routine contains a task
+and host device data environment can be referenced with the device number
+returned by \code{omp\_get\_initial\_device}. This routine contains a task
 scheduling point.
 
 When called from within a \code{target} region 
@@ -2829,12 +2840,12 @@ the effect of this routine is unspecified.
 
 \crossreferences
 \begin{itemize}
-\item \code{target} construct, see 
-\specref{subsec:target Construct}
-\item \code{omp\_target\_alloc} routine, see 
-\specref{subsec:omp_target_alloc}
+\item \code{target} construct, see \specref{subsec:target Construct}
+
 \item \code{omp\_get\_initial\_device} routine, see 
 \specref{subsec:omp_get_initial_device}
+
+\item \code{omp\_target\_alloc} routine, see \specref{subsec:omp_target_alloc}
 \end{itemize}
 
 
@@ -2871,7 +2882,7 @@ The length of the offset and dimension arrays must be at least the
 value of \plc{num\_dims}.
 The \code{dst\_device\_num} and \code{src\_device\_num}
 must be greater than or equal to zero and less than the result of
-\code{omp\_get\_num\_devices()} or the result of a call to
+\code{omp\_get\_num\_devices()} or equal to the result of a call to
 \code{omp\_get\_initial\_device()}.
 
 The value of \plc{num\_dims} must be between 1 and the implementation-defined
@@ -2882,8 +2893,10 @@ limit, which must be at least three.
 \linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \effect
 
-This routine copies a multi-dimensional rectangular subvolume of \plc{src} 
-to \plc{dst}. The volume is specified in terms of the size of the element, 
+This routine copies a rectangular subvolume of \plc{src},
+in the device data environment of device \plc{src\_device\_num},
+to \plc{dst}, in the device data environment of device \plc{dst\_device\_num}.
+The volume is specified in terms of the size of an element, 
 number of dimensions, and constant arrays of length \plc{num\_dims}.  The 
 maximum number of dimensions supported is at least three, support for higher 
 dimensionality is implementation defined. The volume array specifies the 
@@ -2929,12 +2942,12 @@ the effect of this routine is unspecified.
 
 \crossreferences
 \begin{itemize}
-\item \code{target} construct, see 
-\specref{subsec:target Construct}
-\item \code{omp\_target\_alloc} routine, see 
-\specref{subsec:omp_target_alloc}
+\item \code{target} construct, see \specref{subsec:target Construct}
+
 \item \code{omp\_get\_initial\_device} routine, see 
 \specref{subsec:omp_get_initial_device}
+
+\item \code{omp\_target\_alloc} routine, see \specref{subsec:omp_target_alloc}
 \end{itemize}
 
 \subsection{\code{omp\_target\_associate\_ptr}}
@@ -2961,12 +2974,13 @@ The value of \plc{device\_ptr} value must be a valid pointer to device
 memory for the device denoted by the value of \plc{device\_num}.
 The \plc{device\_num} argument
 must be greater than or equal to zero and less than the result of
-\code{omp\_get\_num\_devices()} or the result of a call to
+\code{omp\_get\_num\_devices()} or equal to the result of a call to
 \code{omp\_get\_initial\_device()}.
 
 \effect
 
 The \code{omp\_target\_associate\_ptr} routine associates a device pointer
+in the device data environment of device \plc{device\_num}
 with a host pointer such that when the host pointer appears in a subsequent
 \code{map} clause, the associated device pointer is used as the target for
 data motion associated with that host pointer.  The \plc{device\_offset}
@@ -2984,22 +2998,25 @@ The routine returns zero if successful. Otherwise it returns a non-zero value.
 Only one device buffer can be associated with a given host pointer value and
 device number pair. Attempting to associate a second buffer will return
 non-zero. Associating the same pair of pointers on the same device with the
-same offset has no effect and returns zero.  The
+same offset has no effect and returns zero.  Associating pointers that share
+underlying storage will result in unspecified behavior. The
 \code{omp\_target\_is\_present} function can be used to test whether a given
 host pointer has a corresponding variable in the device data environment.
 
 \crossreferences
 \begin{itemize}
-\item \code{target} construct, see 
-\specref{subsec:target Construct}
+\item \code{target} construct, see \specref{subsec:target Construct}
+
+\item \code{map} clause, see \specref{subsec:map Clause}.
+
+\item \code{omp\_target\_alloc} routine, see \specref{subsec:omp_target_alloc}
+
 \item \code{omp\_target\_disassociate\_ptr} routine, see 
 \specref{subsec:omp_target_associate_ptr}
-\item \code{map} clause, see 
-\specref{subsec:map Clause}.
-\item \code{omp\_target\_alloc} routine, see 
-\specref{subsec:omp_target_alloc}
 \end{itemize}
 
+\pagebreak
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
 \subsection{\code{omp\_target\_disassociate\_ptr}}
 \index{omp\_target\_disassociate\_ptr@{\code{omp\_target\_disassociate\_ptr}}}
 \label{subsec:omp_target_disassociate_ptr}
@@ -3015,11 +3032,10 @@ int omp\_target\_disassociate\_ptr(void * \plc{ptr}, int \plc{device\_num});
 
 \constraints
 
-When called from within a \code{target} region 
-the effect of this routine is unspecified.
+
 The \plc{device\_num}
 must be greater than or equal to zero and less than the result of
-\code{omp\_get\_num\_devices()} or the result of a call to
+\code{omp\_get\_num\_devices()} or equal to the result of a call to
 \code{omp\_get\_initial\_device()}.
 
 \effect
@@ -3031,6 +3047,8 @@ on device \plc{device\_num} from the presence table for host pointer
 in unspecified behavior.  The reference count of the mapping is reduced to 
 zero, regardless of its current value.
 
+When called from within a \code{target} region 
+the effect of this routine is unspecified.
 
 After a call to \code{omp\_target\_disassociate\_ptr}, the contents of the device
 buffer are invalidated.
