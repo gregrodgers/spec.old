@@ -1764,6 +1764,7 @@ executed sequentially. The \code{schedule} clause specifies how iterations of
 these associated loops are divided into contiguous non-empty subsets, called 
 chunks, and how these chunks are distributed among threads of the team. Each 
 thread executes its assigned chunk(s) in the context of its implicit task. 
+The iterations of a given chunk are executed is sequential order by the assigned thread.
 The \plc{chunk\_size} expression is evaluated using the original list items of 
 any variables that are made private in the loop construct. It is unspecified 
 whether, in what order, or how many times, any side effects of the evaluation 
@@ -1785,7 +1786,15 @@ determined.
 The schedule \plc{kind} can be one of those specified in 
 Table~\ref{tab:Schedule-Values}.
 
-The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Schedule Clause Modifier Values}. If neither the \code{monotonic} modifier nor the \code{nonmonotonic} modifier are specified, the effect will be as if the \code{monotonic} modifier was specified for the \code{static} schedule kind or if the \code{ordered} clauses is specified. Otherwise, the effect will be as if the \code{nonmonotonic} modifier was specified.
+The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Schedule Clause Modifier Values}. If neither the \code{monotonic} modifier nor the \code{nonmonotonic} modifier are specified, the effect will be as if the \code{monotonic} modifier was specified if the \code{static} schedule kind is specified or if the \code{ordered} clause is specified. 
+
+\notestart
+\noteheader – The next release of the OpenMP specification will include the following statement:
+
+For schedule kinds other than the \code{static} schedule kind and if no \code{ordered} clause is specified the effect will be as if the \code{nonmonotonic} modifier was specified.
+
+\noteend
+
 
 The \code{ordered} clause with the parameter may also be used to specify 
 how many loops are associated with the loop construct. The parameter of 
@@ -1837,8 +1846,7 @@ use of the \code{nowait} clause.\\
 \code{dynamic} & When \code{schedule(dynamic,\plc{ chunk\_size})} is specified, the iterations are
 distributed to threads in the team in chunks. Each 
 thread executes a chunk of iterations, then requests another chunk, until no 
-chunks remain to be distributed. No ordering of chunk distribution is
-required unless the \code{monotonic} modifier is specified.\\
+chunks remain to be distributed. \\
 
  & Each chunk contains \plc{chunk\_size} iterations, except for the
 chunk that contains the sequentially last iteration, which may have fewer iterations.\\
@@ -1848,8 +1856,7 @@ chunk that contains the sequentially last iteration, which may have fewer iterat
 \index{guided@{\code{guided}}}
 \code{guided} & When \code{schedule(guided,\plc{ chunk\_size})} is specified, the iterations are
 assigned to threads in the team in chunks. Each thread executes a
-chunk of iterations, then requests another chunk, until no chunks remain to be assigned.
-No ordering of chunk distribution is required unless the \code{monotonic} modifier is specified.\\
+chunk of iterations, then requests another chunk, until no chunks remain to be assigned.\\
 
  & For a \plc{chunk\_size} of 1, the size of each chunk is proportional to the
 number of unassigned iterations divided by the number of threads in the team,
@@ -1913,7 +1920,7 @@ $q = \blceil n/(2p) \brceil$, and set $n$ to the larger of $n-q$ and $2*p*k$.
 \code{monotonic} & When the \code{monotonic} modifier is specified then each thread executes the chunks 
 that it is assigned in increasing logical iteration order.\\
 \code{nonmonotonic} & When the \code{nonmonotonic} modifier is specified then chunks are assigned to threads 
-in any order and the behavior of an application that depends on the execution order of the chunks is unspecified.\\
+in any order and the behavior of an application that depends on any execution order of the chunks is unspecified.\\
 \code{simd} & When the \code{simd} modifier is specified and the loop is associated with a SIMD construct, the \plc{chunk\_size} for all chunks except the first and last chunks  is  $new\_chunk\_size = \blceil chunk\_size / simd\_width \brceil * simd\_width $ where \plc{simd\_width} is an implementation-defined value. The first chunk will have at least \plc{new\_chunk\_size} iterations except if it is also the last chunk. The last chunk may have fewer iterations than \plc{new\_chunk\_size}. If the \code{simd} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
 \end{supertabular}
 
@@ -1947,9 +1954,9 @@ ever binds to a loop region arising from the loop construct.
 
 \item The \code{nonmonotonic} modifier can only be specified with \code{schedule(dynamic)} or \code{schedule(guided)}.
 
-\item The \code{nonmonotonic} modifier cannot be specified if an \code{ordered} clause is present.
+\item The \code{nonmonotonic} modifier cannot be specified if an \code{ordered} clause is specified.
 
-\item Only one of modifier of \code{monotonic} or \code{nonmonotonic} can be specified.
+\item Either the \code{monotonic} modifier or the \code{nonmonotonic} modifier can be specified but not both.
 
 \item The loop iteration variable may not appear in a \code{threadprivate} directive.
 
