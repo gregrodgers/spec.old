@@ -1123,12 +1123,15 @@ Restrictions to array sections are as follows:
 
 \ccppspecificstart
 \item An array section can only be specified for a base language identifier. 
-
-\item The type of the variable appearing in an array section must be array, pointer, 
-reference to array, or reference to pointer.
 \ccppspecificend
 
+\cspecificstart
+\item The type of the variable appearing in an array section must be array or pointer.
+\cspecificend
+
 \cppspecificstart
+\item The type of the variable appearing in an array section must be array, pointer, reference to array, or reference to pointer.
+
 \item An array section cannot be used in a C++ user-defined \code{[]}-operator.
 \cppspecificend
 \end{itemize}
@@ -3590,9 +3593,9 @@ outside of the \code{omp\_target\_alloc} routine and the \code{use\_device\_ptr}
 is implementation defined.
 
 \ccppspecificstart
-If an array section is a list item in a \code{map} clause, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the data-sharing attribute for that variable in the construct is firstprivate.  Prior to the execution of the construct, the private variable is initialized with the address of the storage location of the corresponding array section in the device data environment.
+If an array section is a list item in a \code{map} clause, and the array section is derived from a variable for which the type is pointer then the data-sharing attribute for that variable in the construct is firstprivate.  Prior to the execution of the construct, the private variable is initialized with the address of the storage location of the corresponding array section in the device data environment.
 
-If a zero-length array section is a list item in a \code{map} clause, and the array section is derived from a variable for the which the type is pointer or reference to pointer then that variable is initialized with the address of the corresponding storage location in the device data environemnt.  If the corresponding storage location is not present in the device data environment then the private variable is initialized to NULL.  
+If a zero-length array section is a list item in a \code{map} clause, and the array section is derived from a variable for the which the type is pointer then that variable is initialized with the address of the corresponding storage location in the device data environment.  If the corresponding storage location is not present in the device data environment then the private variable is initialized to NULL.  
 \ccppspecificend
 
 \restrictions
@@ -3627,6 +3630,10 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 %\ccppspecificstart
 %\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then the behavior is unspecified if that variables's corresponding private variable is modified in the region.
 %\ccppspecificend
+
+\cspecificstart
+\item A list item that appears in an \code{is\_device\_ptr} clause must have a type of pointer or array.
+\cspecificend
 
 \cppspecificstart
 \item A list item that appears in an \code{is\_device\_ptr} clause must have a type
@@ -7680,7 +7687,7 @@ multiple associated \plc{for-loops} are lastprivate.
 \item Variables with static storage duration that are declared in a scope inside the construct 
 are shared.
 
-\item If an array section is a list item in a \code{map} clause on the \code{target} construct, and the array section is derived from a variable for which the type is pointer, reference to array or reference to pointer then that variable is firstprivate. 
+\item If an array section is a list item in a \code{map} clause on the \code{target} construct, and the array section is derived from a variable for which the type is pointer or reference to pointer then that variable is firstprivate. 
 \end{itemize}
 \ccppspecificend
 
@@ -8381,9 +8388,6 @@ construct may also appear in a \code{private} clause in an enclosed
 \code{parallel}, \code{task}, \code{simd}, or \code{target} construct.
 
 \ccppspecificstart
-If the type of a list item is a reference to a type \plc{T} then the type will be considered to be 
-\plc{T} for all purposes of this clause.
-
 A new list item of the same type, with automatic storage duration, is allocated for the 
 construct. The storage and thus lifetime of these list items lasts until the block in which 
 they are created exits. The size and alignment of the new list item are determined by the 
@@ -8395,6 +8399,9 @@ declared without an initializer.
 \ccppspecificend
 
 \cppspecificstart
+If the type of a list item is a reference to a type \plc{T} then the type will be considered to be 
+\plc{T} for all purposes of this clause.
+
 The order in which any default constructors for different private variables of class type 
 are called is unspecified. The order in which any destructors for different private 
 variables of class type are called is unspecified.
@@ -9393,9 +9400,9 @@ data-sharing attribute or \code{map} clauses:
 
 \begin{itemize}
 \ccppspecificstart
-\item A variable that is of type pointer, reference to array, or reference 
-to pointer is treated as if it had appeared in a \code{map} clause as 
-a zero-length array section.
+\item A variable with a type of pointer or reference 
+to pointer is treated as if it had appeared in a \code{map} clause as the 
+variable in a zero-length array section.
 \ccppspecificend
 
 \item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
@@ -9491,7 +9498,8 @@ duration, is allocated for the construct. The size and alignment of the new list
 item are determined by the type of the variable. This allocation occurs if the region
 references the list item in any statement.
 
-If a new list item is created for an array section and the type of the variable appearing in that array section is pointer, reference to array, or reference to pointer then if the variable appears in a \code{to} or \code{from} clause in a \code{target}~\code{update} region during the lifetime of the new list item but not as part of the specification of an array section, the behavior is unspecified. 
+% Remove this restriction.  It is specified.
+If a new list item is created for an array section and the type of the variable appearing in that array section is pointer or reference to pointer then if the variable appears in a \code{to} or \code{from} clause in a \code{target}~\code{update} region during the lifetime of the new list item but not as part of the specification of an array section, the behavior is unspecified. 
 \ccppspecificend
 
 \fortranspecificstart
@@ -9527,25 +9535,27 @@ device data environment prior to the task encountering the construct.
 \item A list item must have a mappable type.
 
 \item \code{threadprivate} variables cannot appear in a \code{map} clause.
-\end{itemize}
+
+\cppspecificstart
+\item If the type of a list item is a reference to a type \plc{T} then the type will be considered to be 
+\plc{T} for all purposes of this clause.
+\cppspecificend
 
 \ccppspecificstart
-\begin{itemize}
 \item Initialization and assignment are through bitwise copy.
 
-\item A variable for which the type is pointer, reference to array, or reference to pointer and 
-an array section derived from that variable must not appear as list items of \code{map}
-clauses of the same construct. 
+% Do we still need these three resitrictions?
+\item A variable for which the type is pointer and an array section derived from that variable must not appear as list items of \code{map} clauses of the same construct. 
 
-\item A variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains an array section derived from that variable.
+%\item A variable for which the type is pointer must not appear as a list item if the device data environment already contains an array section derived from that variable.
 
-\item An array section derived from a variable for which the type is pointer, reference to array, or reference to pointer must not appear as a list item if the device data environment already contains that variable. 
+%\item An array section derived from a variable for which the type is pointer or must not appear as a list item if the device data environment already contains that variable. 
 
 \item A list item cannot be a variable that is a member of a structure with a union type.
 
 \item A bit-field cannot appear in a \code{map} clause.
-\end{itemize}
 \ccppspecificend
+\end{itemize}
 
 \begin{samepage}
 \fortranspecificstart
