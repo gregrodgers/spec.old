@@ -31,7 +31,7 @@ debug:
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf
-	rm -rf diffs-fast-complete.tmp diffs-fast-minimal.tmp
+	rm -rf *.tmpdir
 
 #NOTE: set these either as environment variables or on the command line, 
 #      DO NOT change these default values and check them in
