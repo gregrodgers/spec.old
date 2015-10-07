@@ -63,10 +63,10 @@ BASE_DIR:=$(shell pwd)
 COMMON_DIFF_OPTS:=--math-markup=whole \
                   --append-safecmd=ld-safe.txt \
                   --append-textcmd=plc,code,glossaryterm \
-                  --exclude-textcmd=section,subsection,subsubsection,vcode \
-                  -c "${BASE_DIR}/latexdiff.cfg"
-GIT_DIFF_OPTS:=${COMMON_DIFF_OPTS} --ignore-latex-errors --main openmp.tex --latexdiff-flatten
-VC_DIFF_OPTS:=${COMMON_DIFF_OPTS}  --type="${DIFF_TYPE}" --flatten --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}
+                  --exclude-textcmd=section,subsection,subsubsection,vcode
+
+GIT_DIFF_OPTS:=${COMMON_DIFF_OPTS} --config="${BASE_DIR}/latexdiff.cfg" --ignore-latex-errors --main openmp.tex --latexdiff-flatten
+VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c "${BASE_DIR}/latexdiff.cfg" --type="${DIFF_TYPE}" --flatten --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}
 
 VC_DIFF_MINIMAL_OPTS:= --only-changes --subtype=ZLABEL
 
