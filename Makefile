@@ -58,17 +58,17 @@ DIFF_FROM:=master
 DIFF_TO:=HEAD
 DIFF_TYPE:=UNDERLINE
 
+BASE_DIR:=$(shell pwd)
+
 COMMON_DIFF_OPTS:=--math-markup=whole \
                   --append-safecmd=ld-safe.txt \
                   --append-textcmd=plc,code,glossaryterm \
                   --exclude-textcmd=section,subsection,subsubsection,vcode \
-                  --config ./latexdiff.cfg
+                  --config="${BASE_DIR}"/latexdiff.cfg
 GIT_DIFF_OPTS:=${COMMON_DIFF_OPTS} --ignore-latex-errors --main openmp.tex --latexdiff-flatten
 VC_DIFF_OPTS:=${COMMON_DIFF_OPTS}  --type="${DIFF_TYPE}" --flatten --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}
 
 VC_DIFF_MINIMAL_OPTS:= --only-changes --subtype=ZLABEL
-
-BASE_DIR:=$(shell pwd)
 
 git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
