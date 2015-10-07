@@ -64,7 +64,7 @@ COMMON_DIFF_OPTS:=--math-markup=whole \
                   --append-safecmd=ld-safe.txt \
                   --append-textcmd=plc,code,glossaryterm \
                   --exclude-textcmd=section,subsection,subsubsection,vcode \
-                  --config="${BASE_DIR}"/latexdiff.cfg
+                  -c "${BASE_DIR}/latexdiff.cfg"
 GIT_DIFF_OPTS:=${COMMON_DIFF_OPTS} --ignore-latex-errors --main openmp.tex --latexdiff-flatten
 VC_DIFF_OPTS:=${COMMON_DIFF_OPTS}  --type="${DIFF_TYPE}" --flatten --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}
 
@@ -74,20 +74,17 @@ git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
 
-openmp-diff-full.pdf: openmp.pdf
-	mkdir -p diffs-fast-complete.tmp/
-	cp -f "${BASE_DIR}"/*.sty "${BASE_DIR}"/*.fls "${BASE_DIR}"/*.png ./diffs-fast-complete.tmp/ || true
-	latexdiff-vc --fast -d diffs-fast-complete.tmp ${VC_DIFF_OPTS} openmp.tex
-	cp ./diffs-fast-complete.tmp/openmp.pdf "${BASE_DIR}"/openmp-diff-full.pdf
-	rm -rf diffs-fast-complete.tmp/
+%.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png)
+	mkdir -p $@
+	cp -f $^ "$@/" || true
 
-openmp-diff-abridged.pdf: openmp.pdf
-	mkdir -p diffs-fast-minimal.tmp/
-	cp -f "${BASE_DIR}"/*.sty "${BASE_DIR}"/*.fls "${BASE_DIR}"/*.png ./diffs-fast-minimal.tmp/ || true
-	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d diffs-fast-minimal.tmp ${VC_DIFF_OPTS} openmp.tex
-	cp ./diffs-fast-minimal.tmp/openmp.pdf "${BASE_DIR}"/openmp-diff-abridged.pdf
-	rm -rf diffs-fast-minimal.tmp/
+openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
+	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
+	cp $</openmp.pdf $@
 
+openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
+	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
+	cp $</openmp.pdf $@
 
 # Slow but portable diffs
 
@@ -96,13 +93,14 @@ git-diff-all: openmp-diff.pdf openmp-diff-traditional.pdf openmp-diff-nodel.pdf
 openmp-diff.pdf: openmp.pdf
 	git latexdiff --output $@ --type="${DIFF_TYPE}" ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
 
-openmp-diff-minimal.pdf:
-	latexdiff-vc ${VC_DIFF_OPTS} --only-changes --type="${DIFF_TYPE}" --subtype=ZLABEL -r ${DIFF_FROM} -r ${DIFF_TO} openmp.tex
+openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir openmp.pdf
+	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
+	cp $</openmp.pdf $@
 
 openmp-diff-traditional.pdf: openmp.pdf
 	git latexdiff --output $@ --type=CTRADITIONAL ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
 
 openmp-diff-nodel.pdf: openmp.pdf
-	git latexdiff --output $@ --preamble="$(shell pwd)/omp-latexdiff-preamble.tex" ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
+	git latexdiff --output $@ --preamble="${BASE_DIR}/omp-latexdiff-preamble.tex" ${GIT_DIFF_OPTS}  ${DIFF_FROM} ${DIFF_TO}
 
 
