@@ -1952,7 +1952,10 @@ ever binds to a loop region arising from the loop construct.
 \item If both the \code{collapse} and \code{ordered} clause with a parameter are specified,
 the parameter of the \code{ordered} clause must be greater than or equal to the parameter of the
 \code{collapse} clause.
+
+\item A \code{linear} clause or an \code{ordered} clause with a parameter can be specified on a loop directive but not both.
 \end{itemize}
+
 
 \ccppspecificstart
 \begin{itemize}
@@ -9230,21 +9233,19 @@ uval
 
 
 \descr
-The \code{linear} clause provides a superset of the functionality provided by the \code{private} 
-clause.
+The \code{linear} clause provides a superset of the functionality provided by the \code{private} clause.
+A list item that appears in a \code{linear} clause is subject to the \code{private} clause semantics described
+in \specref{subsubsec:private clause} except as noted.
+If \plc{linear-step} is not specified, it is assumed to be 1.
 
-A list item that appears in a \code{linear} clause is subject to the \code{private} clause semantics 
-described in 
-\specref{subsubsec:private clause} 
-except as noted. In addition, if the \code{val} or \code{uval} modifier is used, the value of the 
-new list item on each iteration of the associated loop(s) corresponds to the value of the 
-original list item before entering the construct plus the logical number of the iteration 
-times \plc{linear-step}. If the \code{ref} modifier is used, the value of the new list item on each iteration of the associated loop(s) corresponds to the value of the variable resulting from applying  the \plc{linear-step} times the logical number of the iteration as a subscript to the original list item. If no modifier is specified it is assumed to be \code{val}.
-If \plc{linear-step} is not specified it is assumed to be 1. The value 
-corresponding to the sequentially last iteration of the associated loops is assigned to the 
-original list item.
+When a \code{linear} clause is specified on a construct, the value of the new list item on each iteration of the associated loop(s) corresponds to the value of the original list item before entering the construct plus the logical number of the iteration times \plc{linear-step}. 
+The value corresponding to the sequentially last iteration of the associated loop(s) is assigned to the original list item.
 
-The \code{uval} modifier declares the address of the original list item to have an invariant value for all iterations of the associated loop(s).
+When a \code{linear} clause is specified on a declarative directive, all list items must be formal parameters (or, in Fortran, dummy arguments) of a function that will be invoked concurrently on each SIMD lane.
+If no \plc{modifier} is specified or the \code{val} or \code{uval} modifier is specified, the value of each list item on each lane corresponds to the value of the list item upon entry to the function plus the logical number of the lane times \plc{linear-step}.
+If the \code{uval} modifier is specified, each invocation uses the same storage location for each SIMD lane; this storage location is updated with the final value of the logically last lane.
+If the \code{ref} modifier is specified, the storage location of each list item on each lane corresponds to an array at the storage location upon entry to the function indexed by the logical number of the lane times \plc{linear-step}.
+
 
 \restrictions
 \begin{itemize}
@@ -9266,6 +9267,7 @@ attribute clause.
 \item The \code{ref} or \code{uval} modifier can only be used if the \plc{list-item} is of a reference type.
 \item If a list item in a \code{linear} clause on a worksharing
 construct has a reference type then it must bind to the same object for all threads of the team.
+\item If the list item is of a reference type and the \code{ref} modifier is not specified and if any write to the list item occurs before any read of the list item then the result is unspecified.
 \cppspecificend
 
 \fortranspecificstart
@@ -9273,13 +9275,9 @@ construct has a reference type then it must bind to the same object for all thre
 \item The \code{ref} or \code{uval} modifier can only be used if the \plc{list-item} is a dummy argument without the \code{VALUE} attribute.
 \item Variables that have the \code{POINTER} attribute and Cray pointers may not appear in a linear clause. 
 \item The list item with the \code{ALLOCATABLE} attribute in the sequentially last iteration must have an allocation status of allocated upon exit from that iteration. 
+\item If the list item is a dummy argument without the \code{VALUE} attribute and the \code{ref} modifier is not specified and if any write to the list item occurs before any read of the list item then the result is unspecified.
 \fortranspecificend
 \end{itemize}
-
-
-
-
-
 
 
 
