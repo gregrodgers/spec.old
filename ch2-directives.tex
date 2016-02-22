@@ -8303,6 +8303,8 @@ repeated as needed. A list item that specifies a given variable may not appear i
 than one clause on the same directive, except that a variable may be specified in both 
 \code{firstprivate} and \code{lastprivate} clauses.
 
+The reduction data-sharing clauses are explained in Section \ref{subsec:Reduction Clauses}.
+
 \cppspecificstart
 If a variable referenced in a data-sharing attribute clause has a type derived from a 
 template, and there are no other references to that variable in the program, then any 
@@ -8925,330 +8927,6 @@ clause.
 
 
 
-\subsubsection{\code{reduction} Clause}
-\index{reduction@{\code{reduction}}}
-\index{clauses!reduction@{\code{reduction}}}
-\label{subsubsec:reduction clause}
-\summary
-The \code{reduction} clause specifies a \plc{reduction-identifier} and one or more list items. For 
-each list item, a private copy is created in each implicit task or SIMD lane, and is 
-initialized with the initializer value of the \plc{reduction-identifier}. After the end of the 
-region, the original list item is updated with the values of the private copies using the 
-combiner associated with the \plc{reduction-identifier}.
-
-\syntax
-\ccppspecificstart % L0 vvvvv
-The syntax of the \code{reduction} clause is as follows:
-
-\begin{boxedcode}
-reduction(\plc{reduction-identifier }:\plc{ list})
-\end{boxedcode}
-
-where:
-
-\cspecificstart % L1 vvvvv
-\plc{reduction-identifier} is either an \plc{identifier} or one of the following operators:
-\code{+},
-\code{-},
-\code{*}, 
-\code{\&},
-\code{|},
-\code{\^},
-\code{\&\&} and
-\code{||} 
-\cspecificend % L1 ^^^^^
-
-\cppspecificstart % L1 vvvvv
-\plc{reduction-identifier} is either an \plc{id-expression} or one of the following operators:
-\code{+},
-\code{-},
-\code{*}, 
-\code{\&},
-\code{|},
-\code{\^},
-\code{\&\&} and
-\code{||}
-\cppspecificend % L1 ^^^^^
-
-Table~\ref{tab:Implicitly Declared C/C++ Reduction Identifiers} lists each 
-\plc{reduction-identifier} that is implicitly declared at every 
-scope for arithmetic types and its semantic initializer value. The actual initializer value 
-is that value as expressed in the data type of the reduction list item.
-
-
-% Table 
-\nolinenumbers
-\renewcommand{\arraystretch}{1.5}
-%\begin{center}
-\tablecaption{Implicitly Declared C/C++ \plc{reduction-identifiers}\label{tab:Implicitly Declared C/C++ Reduction Identifiers}}
-%% \tablecaption*{}
-\tablefirsthead{%
-\hline
-\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
-\hline \\[-3ex]
-}
-\tablehead{%
-\multicolumn{2}{l}{\small\sl table continued from previous page}\\
-\hline
-\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
-\hline \\[-3ex]
-}
-\tabletail{%
-\hline\\[-4ex]
-\multicolumn{2}{l}{\small\sl table continued on next page}\\
-}
-\tablelasttail{\hline}
-\begin{supertabular}{ p{0.1\textwidth} p{0.3\textwidth} p{0.5\textwidth}}
-\code{+} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
-\code{*} & \code{omp\_priv = 1} & \code{omp\_out *= omp\_in}\\
-\code{-} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
-\code{\&} & \code{omp\_priv = ~0} & \code{omp\_out \&= omp\_in}\\
-\code{|} & \code{omp\_priv = 0} & \code{omp\_out |= omp\_in}\\
-\code{\^} & \code{omp\_priv = 0} & \code{omp\_out \^}\code{= omp\_in}\\
-\code{\&\&} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in \&\& omp\_out}\\
-\code{||} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in || omp\_out}\\
-\code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = omp\_in > omp\_out ? omp\_in : omp\_out}\\
-\code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = omp\_in < omp\_out ? omp\_in : omp\_out}\\
-\end{supertabular}
-%\end{center}
-\linenumbers
-
-\ccppspecificend % L0 ^^^^^
-\bigskip
-
-\fortranspecificstart
-The syntax of the \code{reduction} clause is as follows:
-
-\begin{boxedcode}
-reduction(\plc{reduction-identifier }:\plc{ list})
-\end{boxedcode}
-
-where \plc{reduction-identifier} is either a base language identifier, or a user-defined operator, 
-or one of the following operators: 
-\code{+}, 
-\code{-}, 
-\code{*}, 
-\code{.and.}, 
-\code{.or.}, 
-\code{.eqv.}, 
-\code{.neqv.}, 
- or one of the following intrinsic procedure names: 
-\code{max}, 
-\code{min}, 
-\code{iand}, 
-\code{ior}, 
-\code{ieor}. 
-
-Table~\ref{tab:Implicitly Declared Fortran Reduction Identifiers} lists each \plc{reduction-identifier} that is implicitly declared for numeric 
-and logical types and its semantic initializer value. The actual initializer value is that 
-value as expressed in the data type of the reduction list item.
-
-% Table
-\nolinenumbers
-\renewcommand{\arraystretch}{1.5}
-\tablefirsthead{%
-\hline
-\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
-\hline \\[-3ex]
-}
-\tablehead{%
-\multicolumn{2}{l}{\small\sl table continued from previous page}\\
-\hline
-\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
-\hline \\[-3ex]
-}
-\tabletail{%
-\hline\\[-4ex]
-\multicolumn{2}{l}{\small\sl table continued on next page}\\
-}
-\tablelasttail{\hline}
-\tablecaption{Implicitly Declared Fortran \plc{reduction-identifiers}\label{tab:Implicitly Declared Fortran Reduction Identifiers}}
-\begin{supertabular}{ p{0.1\textwidth} p{0.30\textwidth} p{0.5\textwidth}}
-\code{+} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
-\code{*} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in * omp\_out}\\
-\code{-} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
-\code{.and.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .and.\ omp\_out}\\
-\code{.or.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .or.\ omp\_out}\\
-\code{.eqv.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .eqv.\ omp\_out}\\
-\code{.neqv.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .neqv.\ omp\_out}\\
-\code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = max(omp\_in, omp\_out)}\\
-\code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = min(omp\_in, omp\_out)}\\
-\code{iand} & \code{omp\_priv = \plc{All bits on}} & \code{omp\_out = iand(omp\_in, omp\_out)}\\
-\code{ior} & \code{omp\_priv = 0} & \code{omp\_out = ior(omp\_in, omp\_out)}\\
-\code{ieor} & \code{omp\_priv = 0} & \code{omp\_out = ieor(omp\_in, omp\_out)}\\
-\end{supertabular}
-
-\linenumbers
-
-\fortranspecificend
-\vspace{\baselineskip}
-
-In the above tables, \code{omp\_in} and \code{omp\_out} correspond to
-two identifiers that refer to storage of the type of the list
-item. \code{omp\_out} holds the final value of the combiner operation.
-
-Any \plc{reduction-identifier} that is defined with the \code{declare}~\code{reduction} directive is 
-also valid. In that case, the initializer and combiner of the \plc{reduction-identifier} are 
-specified by the \plc{initializer-clause} and the \plc{combiner} in the \code{declare}~\code{reduction} 
-directive.
-
-\descr
-The reduction clause can be used to perform some forms of recurrence calculations 
-(involving mathematically associative and commutative operators) in parallel.
-
-For \code{parallel} and worksharing constructs, a private copy of each list item is created, 
-one for each implicit task, as if the \code{private} clause had been used. For the \code{simd} 
-construct, a private copy of each list item is created, one for each SIMD lane as if the 
-\code{private} clause had been used. For the \code{teams} construct, a private copy of each list 
-item is created, one for each team in the league as if the \code{private} clause had been 
-used. The private copy is then initialized as specified above. At the end of the region for 
-which the \code{reduction} clause was specified, the original list item is updated by 
-combining its original value with the final value of each of the private copies, using the 
-combiner of the specified \plc{reduction-identifier}.
-
-\pagebreak
-
-\begin{samepage}
-\fortranspecificstart
-If the original list item has the \code{POINTER} attribute, the
-private copy of the list item is associated with a private target.
-\fortranspecificend
-\end{samepage}
-
-The \plc{reduction-identifier} specified in the \code{reduction} clause must match a previously 
-declared \plc{reduction-identifier} of the same name and type for each of the list items. This 
-match is done by means of a name lookup in the base language. 
-
-\ccppspecificstart
-The list items that appear in the \code{reduction} clause may include array sections.
-\ccppspecificend
-
-\cppspecificstart
-If the type is a derived class, then any \plc{reduction-identifier} that matches its base classes 
-is also a match, if there is no specific match for the type.
-
-If the \plc{reduction-identifier} is not an \plc{id-expression}, then it is implicitly converted to one by 
-prepending the keyword operator (for example, \code{+} becomes \code{\plc{operator}+}).
-
-If the \plc{reduction-identifier} is qualified then a qualified name lookup is used to find the 
-declaration.
-
-If the \plc{reduction-identifier} is unqualified then an \emph{argument-dependent name lookup} must 
-be performed using the type of each list item.
-\cppspecificend
-
-If the list item is an array or array section, it will be treated as
-if a \code{reduction} clause would be applied to each separate element
-of the array section. The elements of each private array section will
-be allocated contiguously.
-
-If \code{nowait} is not used, the reduction computation will be complete at the end of the 
-construct; however, if the reduction clause is used on a construct to which \code{nowait} is 
-also applied, accesses to the original list item will create a race and, thus, have 
-unspecified effect unless synchronization ensures that they occur after all threads have 
-executed all of their iterations or \code{section} constructs, and the reduction computation 
-has completed and stored the computed value of that list item. This can most simply be 
-ensured through a barrier synchronization. 
-
-The location in the OpenMP program at which the values are combined and the order in 
-which the values are combined are unspecified. Therefore, when comparing sequential 
-and parallel runs, or when comparing one parallel run to another (even if the number of 
-threads used is the same), there is no guarantee that bit-identical results will be obtained 
-or that side effects (such as floating-point exceptions) will be identical or take place at 
-the same location in the OpenMP program.
-
-To avoid race conditions, concurrent reads or updates of the original list item must be 
-synchronized with the update of the original list item that occurs as a result of the 
-\code{reduction} computation.
-
-\restrictions
-The restrictions to the \code{reduction} clause are as follows:
-
-\begin{itemize}
-\item A list item that appears in a \code{reduction} clause of a worksharing construct must be 
-shared in the \code{parallel} regions to which any of the worksharing regions arising 
-from the worksharing construct bind.
-
-\item A list item that appears in a \code{reduction} clause of the innermost enclosing 
-worksharing or \code{parallel} construct may not be accessed in an explicit task.
-
-\item Any number of \code{reduction} clauses can be specified on the directive, but a list item 
-can appear only once in the \code{reduction} clauses for that directive.
-
-\item For a \plc{reduction-identifier} declared with the \code{declare}~\code{reduction} construct, the 
-directive must appear before its use in a \code{reduction} clause.
-
-\item 
-If a list item is an array section, it must specify contiguous storage and it cannot be a zero-length array section.
-
-\item If a list item is an array section, accesses to the elements of the array outside the specified array section result in unspecified behavior.
-
-\ccppspecificstart
-\item The type of a list item that appears in a \code{reduction} clause must be valid for the 
-\plc{reduction-identifier}. For a \code{max} or \code{min} reduction in C, the type of the list item must 
-be an allowed arithmetic data type: \code{char}, \code{int}, \code{float}, \code{double}, or \code{\_Bool}, 
-possibly modified with \code{long}, \code{short}, \code{signed}, or \code{unsigned}. For a \code{max} or \code{min} 
-reduction in C++, the type of the list item must be an allowed arithmetic data type: 
-\code{char}, \code{wchar\_t}, \code{int}, \code{float}, \code{double}, or \code{bool}, possibly modified with \code{long}, 
-\code{short}, \code{signed}, or \code{unsigned}.
-
-\item A list item that appears in a \code{reduction} clause must not be \code{const}-qualified.
-
-\item If a list item in a \code{reduction} clause on a worksharing
-construct has a reference type then it must bind to the same object for all threads of the team.
-
-\item The \plc{reduction-identifier} for any list item must be unambiguous and accessible.
-\ccppspecificend
-\bigskip
-
-\fortranspecificstart
-\item The type and the rank of a list item that appears in a \code{reduction} clause must be valid for the \plc{combiner} and \plc{initializer}.
-
-\item A list item that appears in a \code{reduction} clause must be definable.
-
-\item A procedure pointer may not appear in a \code{reduction} clause.
-
-\item A pointer with the \code{INTENT(IN)} attribute may not appear in the \code{reduction} 
-clause. 
-
-\item An original list item with the \code{POINTER} attribute or any
-  pointer component of an original list item that is referenced in the
-  \plc{combiner} must be associated at entry to the construct that
-  contains the \code{reduction} clause. Additionally, the list item or
-  the pointer component of the list item must not be deallocated,
-  allocated, or pointer assigned within the region.
-
-\item An original list item with the \code{ALLOCATABLE} attribute or
-  any allocatable component of an original list item that is
-  referenced in the \plc{combiner} must be in the allocated state at entry
-  to the construct that contains the \code{reduction}
-  clause. Additionally, the list item or the allocatable component of
-  the list item must be neither deallocated nor allocated within the
-  region.
-
-\item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction} directive, the 
-\code{declare}~\code{reduction} directive must be in the same subprogram, or accessible by 
-host or use association.
-
-\item If the \plc{reduction-identifier} is a user-defined operator, the same explicit interface for 
-that operator must be accessible as at the \code{declare}~\code{reduction} directive.
-
-\item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction} directive, any 
-subroutine or function referenced in the initializer clause or combiner expression 
-must be an intrinsic function, or must have an explicit interface where the same 
-explicit interface is accessible as at the \code{declare}~\code{reduction} directive.
-\fortranspecificend
-\end{itemize}
-
-
-
-
-
-
-
-
-
-
 \subsubsection{\code{linear} Clause}
 \index{linear@{\code{linear}}}
 \index{clauses!linear@{\code{linear}}}
@@ -9359,6 +9037,506 @@ construct has a reference type then it must bind to the same object for all thre
 \item If the list item is a dummy argument without the \code{VALUE} attribute and the \code{ref} modifier is not specified and if any write to the list item occurs before any read of the list item then the result is unspecified.
 \fortranspecificend
 \end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Reduction Clauses}
+\label{subsec:Reduction Clauses}
+The reduction clauses can be used to perform some forms of recurrence
+calculations (involving mathematically associative and commutative operators)
+in parallel.
+
+Reduction clauses are reduction scoping clauses and reduction participating clauses.
+Reduction scoping clauses define the region in which a reduction is computed.
+Reduction participating clauses define the constructs that participate in the
+reduction.
+
+
+
+
+
+
+\subsubsection{Properties Common To All Reduction Clauses}
+\label{subsubsec:Properties Common To All Reduction Clauses}
+
+\syntax
+The syntax of a \plc{reduction-identifier} is defined as follows:
+\cspecificstart % L1 vvvvv
+A \plc{reduction-identifier} is either an \plc{identifier} or one of the following operators:
+\code{+},
+\code{-},
+\code{*},
+\code{\&},
+\code{|},
+\code{\^},
+\code{\&\&} and
+\code{||}
+\cspecificend % L1 ^^^^^
+
+\cppspecificstart % L1 vvvvv
+A \plc{reduction-identifier} is either an \plc{id-expression} or one of the following operators:
+\code{+},
+\code{-},
+\code{*},
+\code{\&},
+\code{|},
+\code{\^},
+\code{\&\&} and
+\code{||}
+\cppspecificend % L1 ^^^^^
+
+\fortranspecificstart
+A \plc{reduction-identifier} is either a base language identifier, or a user-defined operator,
+or one of the following operators:
+\code{+},
+\code{-},
+\code{*},
+\code{.and.},
+\code{.or.},
+\code{.eqv.},
+\code{.neqv.},
+ or one of the following intrinsic procedure names:
+\code{max},
+\code{min},
+\code{iand},
+\code{ior},
+\code{ieor}.
+\fortranspecificstart
+
+
+\ccppspecificstart % L0 vvvvv
+Table~\ref{tab:Implicitly Declared C/C++ Reduction Identifiers} lists each
+\plc{reduction-identifier} that is implicitly declared at every scope for
+arithmetic types and its semantic initializer value. The actual initializer
+value is that value as expressed in the data type of the reduction list item.
+
+
+% Table 
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+%\begin{center}
+\tablecaption{Implicitly Declared C/C++ \plc{reduction-identifiers}\label{tab:Implicitly Declared C/C++ Reduction Identifiers}}
+%% \tablecaption*{}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\sl table continued from previous page}\\
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\sl table continued on next page}\\
+}
+\tablelasttail{\hline}
+\begin{supertabular}{ p{0.1\textwidth} p{0.3\textwidth} p{0.5\textwidth}}
+\code{+} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
+\code{*} & \code{omp\_priv = 1} & \code{omp\_out *= omp\_in}\\
+\code{-} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
+\code{\&} & \code{omp\_priv = ~0} & \code{omp\_out \&= omp\_in}\\
+\code{|} & \code{omp\_priv = 0} & \code{omp\_out |= omp\_in}\\
+\code{\^} & \code{omp\_priv = 0} & \code{omp\_out \^}\code{= omp\_in}\\
+\code{\&\&} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in \&\& omp\_out}\\
+\code{||} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in || omp\_out}\\
+\code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = omp\_in > omp\_out ? omp\_in : omp\_out}\\
+\code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = omp\_in < omp\_out ? omp\_in : omp\_out}\\
+\end{supertabular}
+%\end{center}
+\linenumbers
+
+\ccppspecificend % L0 ^^^^^
+\bigskip
+
+\fortranspecificstart
+Table~\ref{tab:Implicitly Declared Fortran Reduction Identifiers} lists each
+\plc{reduction-identifier} that is implicitly declared for numeric and logical
+types and its semantic initializer value. The actual initializer value is that
+value as expressed in the data type of the reduction list item.
+
+% Table
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\sl table continued from previous page}\\
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\sl table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Implicitly Declared Fortran \plc{reduction-identifiers}\label{tab:Implicitly Declared Fortran Reduction Identifiers}}
+\begin{supertabular}{ p{0.1\textwidth} p{0.30\textwidth} p{0.5\textwidth}}
+\code{+} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
+\code{*} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in * omp\_out}\\
+\code{-} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
+\code{.and.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .and.\ omp\_out}\\
+\code{.or.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .or.\ omp\_out}\\
+\code{.eqv.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .eqv.\ omp\_out}\\
+\code{.neqv.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .neqv.\ omp\_out}\\
+\code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = max(omp\_in, omp\_out)}\\
+\code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = min(omp\_in, omp\_out)}\\
+\code{iand} & \code{omp\_priv = \plc{All bits on}} & \code{omp\_out = iand(omp\_in, omp\_out)}\\
+\code{ior} & \code{omp\_priv = 0} & \code{omp\_out = ior(omp\_in, omp\_out)}\\
+\code{ieor} & \code{omp\_priv = 0} & \code{omp\_out = ieor(omp\_in, omp\_out)}\\
+\end{supertabular}
+
+\linenumbers
+
+\fortranspecificend
+\vspace{\baselineskip}
+
+In the above tables, \code{omp\_in} and \code{omp\_out} correspond to two
+identifiers that refer to storage of the type of the list item. \code{omp\_out}
+holds the final value of the combiner operation.
+
+Any \plc{reduction-identifier} that is defined with the \code{declare}~\code{reduction}
+directive is also valid. In that case, the initializer and combiner of the
+\plc{reduction-identifier} are specified by the \plc{initializer-clause} and
+the \plc{combiner} in the \code{declare}~\code{reduction} directive.
+
+
+
+
+\descr
+A reduction clause specifies a \plc{reduction-identifier} and one or more list
+items.
+
+The \plc{reduction-identifier} specified in a reduction clause must match a
+previously declared \plc{reduction-identifier} of the same name and type for
+each of the list items. This match is done by means of a name lookup in the
+base language.
+
+The list items that appear in a reduction clause may include array sections.
+
+
+\cppspecificstart
+If the type is a derived class, then any \plc{reduction-identifier} that
+matches its base classes is also a match, if there is no specific match for the
+type.
+
+If the \plc{reduction-identifier} is not an \plc{id-expression}, then it is
+implicitly converted to one by prepending the keyword operator (for example,
+\code{+} becomes \code{\plc{operator}+}).
+
+If the \plc{reduction-identifier} is qualified then a qualified name lookup is
+used to find the declaration.
+
+If the \plc{reduction-identifier} is unqualified then an \emph{argument-dependent name lookup}
+must be performed using the type of each list item.
+\cppspecificend
+
+If the list item is an array or array section, it will be treated as
+if a reduction clause would be applied to each separate element
+of the array section. 
+
+
+
+\restrictions
+The restrictions common to reduction clauses are as follows:
+
+\begin{itemize}
+\item Any number of reduction clauses can be specified on the directive, but a
+list item can appear only once in reduction clauses for that directive.
+
+\item For a \plc{reduction-identifier} declared with the \code{declare}~\code{reduction}
+construct, the directive must appear before its use in a reduction clause.
+
+\item If a list item is an array section, it must specify contiguous storage
+and it cannot be a zero-length array section.
+
+\item If a list item is an array section, accesses to the elements of the array
+outside the specified array section result in unspecified behavior.
+
+\ccppspecificstart
+\item The type of a list item that appears in a reduction clause must be valid for the 
+\plc{reduction-identifier}. For a \code{max} or \code{min} reduction in C, the type of the list item must 
+be an allowed arithmetic data type: \code{char}, \code{int}, \code{float}, \code{double}, or \code{\_Bool}, 
+possibly modified with \code{long}, \code{short}, \code{signed}, or \code{unsigned}. For a \code{max} or \code{min} 
+reduction in C++, the type of the list item must be an allowed arithmetic data type: 
+\code{char}, \code{wchar\_t}, \code{int}, \code{float}, \code{double}, or \code{bool}, possibly modified with \code{long}, 
+\code{short}, \code{signed}, or \code{unsigned}.
+
+\item A list item that appears in a reduction clause must not be \code{const}-qualified.
+
+\item The \plc{reduction-identifier} for any list item must be unambiguous and accessible.
+\ccppspecificend
+\bigskip
+
+\fortranspecificstart
+\item The type and the rank of a list item that appears in a reduction clause
+must be valid for the \plc{combiner} and \plc{initializer}.
+
+\item A list item that appears in a reduction clause must be definable.
+
+\item A procedure pointer may not appear in a reduction clause.
+
+\item A pointer with the \code{INTENT(IN)} attribute may not appear in the
+reduction clause.
+
+\item An original list item with the \code{POINTER} attribute or any pointer
+component of an original list item that is referenced in the \plc{combiner}
+must be associated at entry to the construct that contains the reduction
+clause. Additionally, the list item or the pointer component of the list item
+must not be deallocated, allocated, or pointer assigned within the region.
+
+\item An original list item with the \code{ALLOCATABLE} attribute or any
+allocatable component of an original list item that is referenced in the
+\plc{combiner} must be in the allocated state at entry to the construct that
+contains the reduction clause. Additionally, the list item or the allocatable
+component of the list item must be neither deallocated nor allocated within the
+region.
+
+\item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction}
+directive, the \code{declare}~\code{reduction} directive must be in the same
+subprogram, or accessible by host or use association.
+
+\item If the \plc{reduction-identifier} is a user-defined operator, the same
+explicit interface for that operator must be accessible as at the
+\code{declare}~\code{reduction} directive.
+
+\item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction}
+directive, any subroutine or function referenced in the initializer clause or
+combiner expression must be an intrinsic function, or must have an explicit
+interface where the same explicit interface is accessible as at the
+\code{declare}~\code{reduction} directive.
+\fortranspecificend
+\end{itemize}
+
+
+
+
+
+\subsubsection{Reduction Scoping Clauses}
+\label{subsubsec:Reduction Scoping Clauses}
+Reduction scoping clauses define the region in which a reduction is computed by
+task regions or SIMD lanes. All properties defined in
+Section~\ref{subsubsec:Properties Common To All Reduction Clauses} apply to
+reduction scoping clauses.
+
+The number of copies created for each list item and the time at which those
+copies are initialized are determined by the particular reduction scoping clause
+that appears on the construct. Any copies associated with the reduction are
+initialized with the intializer value of the \plc{reduction-identifier}.
+
+
+Any copies are combined using the combiner associated with the
+\plc{reduction-identifier}. The time at which the original list item contains the result
+of the reduction is determined by the particular reduction scoping clause.
+
+\begin{samepage}
+\fortranspecificstart
+If the original list item has the \code{POINTER} attribute, copies of
+the list item are associated with private targets.
+\fortranspecificend
+\end{samepage}
+
+If the list item is an array section, the elements of any copy of the array section will
+be allocated contiguously.
+
+The location in the OpenMP program at which values are combined and the
+order in which values are combined are unspecified. Therefore, when
+comparing sequential and parallel runs, or when comparing one parallel run to
+another (even if the number of threads used is the same), there is no guarantee
+that bit-identical results will be obtained or that side effects (such as
+floating-point exceptions) will be identical or take place at the same location
+in the OpenMP program.
+
+To avoid race conditions, concurrent reads or updates of the original list item
+must be synchronized with the update of the original list item that occurs as a
+result of the reduction computation.
+
+
+
+
+
+
+
+
+
+
+
+\subsubsection{Reduction Participating Clauses}
+\label{subsubsec:Reduction Participating Clauses}
+A reduction participating clause specifies a task region or a SIMD lane as a
+participant in a reduction defined by a reduction scoping clause. All properties defined in
+Section~\ref{subsubsec:Properties Common To All Reduction Clauses} apply to
+reduction participating clauses.
+
+Accesses to the original list item may be replaced by
+accesses to copies of the original list item. Otherwise, accesses to the
+original list item are synchronized.
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{reduction} Clause}
+\index{reduction@{\code{reduction}}}
+\index{clauses!reduction@{\code{reduction}}}
+\label{subsubsec:reduction clause}
+\summary
+The \code{reduction} clause specifies a \plc{reduction-identifier} and one or
+more list items. For each list item, a private copy is created in each implicit
+task or SIMD lane and is initialized with the initializer value of the
+\plc{reduction-identifier}. After the end of the region, the original list item
+is updated with the values of the private copies using the combiner associated
+with the \plc{reduction-identifier}.
+
+\syntax
+\begin{boxedcode}
+\code{reduction}(\plc{reduction-identifier }:\plc{ list})
+\end{boxedcode}
+Where \plc{reduction-identifier} is defined in Section
+\ref{subsubsec:Properties Common To All Reduction Clauses}.
+
+\descr
+The \code{reduction} clause is a reduction scoping clause and a reduction
+participating clause, as described in Sections \ref{subsubsec:Reduction Scoping
+Clauses} and \ref{subsubsec:Reduction Participating Clauses}.
+
+For \code{parallel} and worksharing constructs, a private copy of each list item is created, 
+one for each implicit task, as if the \code{private} clause had been used. For the \code{simd} 
+construct, a private copy of each list item is created, one for each SIMD lane as if the 
+\code{private} clause had been used. For the \code{teams} construct, a private copy of each list 
+item is created and initialized, one for each team in the league as if the \code{private} clause had been 
+used.
+
+
+If \code{nowait} is not used, the reduction computation will be complete at the end of the 
+construct; however, if the reduction clause is used on a construct to which \code{nowait} is 
+also applied, accesses to the original list item will create a race and, thus, have 
+unspecified effect unless synchronization ensures that they occur after all threads have 
+executed all of their iterations or \code{section} constructs, and the reduction computation 
+has completed and stored the computed value of that list item. This can most simply be 
+ensured through a barrier synchronization.
+
+
+\restrictions
+The restrictions to the \code{reduction} clause are as follows:
+
+\begin{itemize}
+\item All the common restrictions listed in Section \ref{subsubsec:Properties
+Common To All Reduction Clauses} apply to this clause.
+
+\item A list item that appears in a \code{reduction} clause of a worksharing
+construct must be shared in the \code{parallel} regions to which any of the
+worksharing regions arising from the worksharing construct bind.
+
+\item A list item that appears in a \code{reduction} clause of the innermost
+enclosing worksharing or \code{parallel} construct may not be accessed in an
+explicit task that does not define a \code{in\_reduction} clause over the
+same list item.
+
+\ccppspecificstart
+\item If a list item in a \code{reduction} clause on a worksharing
+construct has a reference type then it must bind to the same object for all threads of the team.
+\ccppspecificend
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{task\_reduction} Clause}
+\index{task\_reduction@{\code{task\_reduction}}}
+\index{clauses!task\_reduction@{\code{task\_reduction}}}
+\label{subsubsec:task_reduction clause}
+\summary
+The \code{task\_reduction} clause specifies a reduction among tasks.
+
+\syntax
+\begin{boxedcode}
+\code{task\_reduction}(\plc{reduction-identifier }:\plc{ list})
+\end{boxedcode}
+Where \plc{reduction-identifier} is defined in Section
+\ref{subsubsec:Properties Common To All Reduction Clauses}.
+
+\descr
+The \code{task\_reduction} clause is a reduction scoping clause, as described in
+\ref{subsubsec:Reduction Scoping Clauses}.
+
+For each list item, the number of copies is unspecified. Any copies associated
+with the reduction are initialized before they are accessed by the task regions
+participating in the reduction. After the end of the region, the original list
+item contains the result of the reduction.
+
+\restrictions
+\begin{itemize}
+\item All the common restrictions listed in Section \ref{subsubsec:Properties
+Common To All Reduction Clauses} apply to this clause.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{in\_reduction} Clause}
+\index{in\_reduction@{\code{in\_reduction}}}
+\index{clauses!in\_reduction@{\code{in\_reduction}}}
+\label{subsubsec:in_reduction clause}
+\summary
+The \code{in\_reduction} clause specifies that a task participates in a reduction.
+
+\syntax
+\begin{boxedcode}
+\code{in\_reduction}(\plc{reduction-identifier }:\plc{ list})
+\end{boxedcode}
+Where \plc{reduction-identifier} is defined in Section \ref{subsubsec:Properties Common To All Reduction Clauses}
+
+\descr
+The \code{in\_reduction} clause is a reduction participating clause, as described in
+Section \ref{subsubsec:Reduction Participating Clauses}.
+
+\restrictions
+The restrictions to the \code{in\_reduction} clause are as follows:
+\begin{itemize}
+\item All the common restrictions listed in Section \ref{subsubsec:Properties
+Common To All Reduction Clauses} apply to this clause.
+
+\item A list item that appears in a \code{in\_reduction} clause of a task
+construct must appear in a \code{task\_reduction} clause of a construct
+associated with an enclosing region. The construct associated with the
+innermost region that meets this condition must specify the same
+\plc{reduction-identifier} as the \code{in\_reduction} clause.
+\end{itemize}
+
+
+
+
+
 
 
 
