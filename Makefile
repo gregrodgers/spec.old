@@ -9,7 +9,8 @@ CHAPTERS=titlepage.tex \
 	ch1-introduction.tex \
 	ch2-directives.tex \
 	ch3-runtimeLibrary.tex \
-	ch4-environmentVariables.tex \
+	ch4-toolsSupport.tex \
+	ch5-environmentVariables.tex \
 	appendix-A-stubs.tex \
 	appendix-B-grammar.tex \
 	appendix-C-InterfaceDeclarations.tex \
