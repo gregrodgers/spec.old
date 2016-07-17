@@ -54,6 +54,9 @@ execution environment
 
 \item Device memory routines that can be used to allocate memory and 
 to manage pointers on target devices (\specref{sec:Device Memory Routines}).
+
+\item Execution routines to control the application monitoring
+(\specref{sec:tool control for applications})
 \end{itemize}
 
 Throughout this chapter, \plc{true} and \plc{false} are used as generic terms to simplify the 
@@ -3076,6 +3079,66 @@ buffer are invalidated.
 \end{itemize}
 
 \ccppspecificend
+
+\section{Tool Control for Applications}
+\index{tool control for applications}
+\label{sec:tool control for applications}
+
+The OMPT API provides only one application-facing routine: \code{ompt\_control}.
+An application may call the function \code{ompt\_control} to control tool operation.
+While tool support for \code{ompt\_control} is optional, the runtime is required to pass a control command to a tool if the tool registered a callback with the \code{ompt\_event\_control} event.
+As an application-facing routine, this function has type signatures for both C and Fortran:
+
+\format
+\ccppspecificstart
+\begin{boxedcode}
+void ompt\_control(uint64\_t \plc{command}, uint64\_t \plc{modifier});
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+\begin{boxedcode}
+subroutine ompt\_control(\plc{command}, \plc{modifier})
+integer*8 \plc{command}
+integer*8 \plc{modifier}
+\end{boxedcode}
+\fortranspecificend
+
+A classic use case for \code{ompt\_control} is for an application to start and stop data collection by a tool.
+A tool may allow an application to turn monitoring on and off many times during an execution to monitor only code regions of interest.
+To support this common usage, the OMPT standard defines four values for \plc{command}:
+
+\begin{quote}
+\begin{verbatim}
+1: start or restart monitoring
+2: pause monitoring
+3: flush tool buffers
+4: permanently turn off monitoring
+\end{verbatim}
+\end{quote}
+
+\noindent
+%
+A \plc{command} code of 1 asks a tool to start or restart monitoring if it is off. If monitoring is already on, this command is idempotent. If monitoring has already been turned off permanently, this command will have no effect.
+%
+A \plc{command} code of 2 asks a tool to temporarily turn monitoring off. If monitoring is already off, it is idempotent.
+%
+A \plc{command} code of 3 asks a tool to flush any performance data that it has buffered. This command may be applied whether monitoring is on or off.
+%
+A \plc{command} code of 4 turns monitoring off permanently;  the tool may perform finalization at this point and write all of its outputs.
+
+Other values of \plc{command} and \plc{modifier} appropriate for any tool will be tool specific.
+Tool-specific commands codes must be $\geq$ 64.
+Tools must ignore \plc{command} codes that they are not explicitly designed to handle and implement callbacks for such codes as no-ops.
+
+\crossreferences
+\begin{itemize}
+\item tools support, see
+\specchapterref{chap:ToolsSupport}
+\item \code{ompt\_event\_control} callback, see
+\specref{subsec:ompt_event_control}
+\end{itemize}
+
 
 % This is the end of chapter 3 - Runtime Library
 
