@@ -89,11 +89,15 @@ will take in response to possible values of \plc{omp-tool-var}.
 % The signature for \code{ompt\_tool} is shown below:
 % The signature for \code{ompt\_tool} is shown below:
 
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 extern "C" \{\\
   ompt_initialize_fn_t ompt_tool(void);\\
 \};
 \end{boxedcode}
+\ccppspecificend
+}
 
 If a tool provides an implementation of \code{ompt\_tool} in a program's address space, \code{ompt\_tool} may return \code{NULL} indicating that the tool declines to register itself; otherwise, the tool may register itself by having \code{ompt\_tool} return a non-\code{NULL} pointer to a function with type signature \code{ompt\_initialize\_fn\_t}.
 The type signature for \code{ompt\_initialize\_fn\_t} is described in Section~\ref{sec:ToolsSupport_init}. 
@@ -113,67 +117,74 @@ When an OpenMP runtime receives a non-\code{NULL} pointer to a tool initializer 
 The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
 The signature for the tool initializer callback is shown below:
 
-\begin{quote}
-\begin{verbatim}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
 typedef void (*ompt_initialize_fn_t) (
-  ompt_function_lookup_t lookup,
-  const char *runtime_version, 
-  unsigned int ompt_version
+  ompt_function_lookup_t \plc{lookup},
+  const char * \plc{runtime_version}, 
+  unsigned int \plc{ompt_version}
 );
-\end{verbatim}
-\end{quote}
+\end{boxedcode}
+\ccppspecificend
+}
 
-The second argument to \code{ompt\_initialize} is a version string that unambiguously identifies an OpenMP runtime implementation.
+The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP runtime implementation.
 This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP runtime implementation.
 Knowing exactly what version of an OpenMP runtime is present in a binary may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
 
 The third argument \code{ompt\_version} indicates the version of the OMPT interface supported by a runtime system.
 The version of OMPT described by this document is 2.
 
-The two principal duties of a tool initializer are looking up pointers to all OMPT API functions that the tool uses and registering tool callbacks.
+The two principal duties of a tool initializer are looking up pointers to all OMPT interface functions that the tool uses and registering tool callbacks.
 These two operations are described below.
 
-\subsection{Looking up functions in the OMPT API.}
-The first argument to \code{ompt\_initialize} is \code{lookup}---a callback that a tool must use to interrogate the runtime system to obtain pointers to all OMPT interface functions.
+\subsection{Looking up OMPT Interface Functions}
+The first argument to a tool initializer is \code{lookup}---a callback that a tool must use to interrogate the runtime system to obtain pointers to all OMPT interface functions.
 The type signature for \code{lookup} is:
 
-\begin{quote}
-\begin{verbatim}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
 typedef ompt_interface_fn_t (*ompt_function_lookup_t) (
-  const char *interface_function_name
+  const char * \plc{interface_function_name}
 );
-\end{verbatim}
-\end{quote}
+\end{boxedcode}
+\ccppspecificend
+}
 
 \noindent
 The \code{lookup} callback is necessary because, when the OpenMP runtime is dynamically loaded by a shared library, the OMPT interface functions provided by the library may not be visible to a preloaded tool.
-Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT API.
-All functions in the OMPT API are marked with \code{OMPT\_API}.
+Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
+All functions in the OMPT interface are marked with \code{OMPT\_API}.
 These functions should not be global symbols in an OpenMP runtime implementation to avoid tempting tool developers to call them directly. 
 
-Below, we show how to use the \code{lookup} function to obtain a pointer to the OMPT API function \code{ompt\_get\_thread\_id}:
+The following example shows how to use the \code{lookup} function to obtain a pointer to the OMPT interface function \code{ompt\_get\_thread\_id}:
 
-\begin{quote}
-\begin{verbatim}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
 ompt_interface_fn_t ompt_get_thread_id_fn =
                         lookup("ompt_get_thread_id");
-\end{verbatim}
-\end{quote}
-Other functions in the OMPT API may be looked up analogously.
+\end{boxedcode}
+\ccppspecificend
+}
+
+Other functions in the OMPT interface may be looked up analogously.
 If a named function is not available in an OpenMP runtime's implementation of OMPT, \code{lookup} will return \code{NULL}.
 
-\subsection{Registering Callbacks.} 
-Tools register callbacks to receive notification of various events that occur as an OpenMP program executes by using the OMPT API function \code{ompt\_set\_callback}.
-The signature for this function is shown below
-{
-\begin{quote}
-\begin{verbatim}
+\subsection{Registering Callbacks} 
+Tools register callbacks to receive notification of various events that occur as an OpenMP program executes by using the OMPT interface function \code{ompt\_set\_callback}.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
 OMPT_API int ompt_set_callback(
-  ompt_event_t event, 
-  ompt_callback_t callback
+  ompt_event_t \plc{event}, 
+  ompt_callback_t \plc{callback}
 );
-\end{verbatim}
-\end{quote}
+\end{boxedcode}
+\ccppspecificend
 }
 
 \begin{table}
@@ -187,26 +198,29 @@ return code & meaning \\\hline
 3 & event may occur; callback invoked when convenient\\\hline
 4 & event may occur; callback always invoked when event occurs\\\hline
 \end{tabular}
-\caption{Meaning of return codes for {\tt ompt\_set\_callback}.}
+\vspace{1ex}
+\caption{Meaning of return codes for \code{ompt\_set\_callback}.}
 \label{table:ToolsSupport_set_rc}
 \end{table}
 
 \noindent
-The  function \code{ompt\_set\_callback} may only be called within the implementation of \code{ompt\_initialize}.
+The  function \code{ompt\_set\_callback} may only be called within the implementation of a tool's initializer.
 The possible return codes for \code{ompt\_set\_callback} and their meaning is shown in Table~\ref{table:ToolsSupport_set_rc}.
-Registration of supported callbacks may fail if this function is called outside  \code{ompt\_initialize}.
+Registration of supported callbacks may fail if this function is called outside a tool's initializer.
 The \code{ompt\_callback\_t} type for a callback does not reflect the actual signature of the callback; OMPT uses this generic type to avoid the need to declare a separate registration function for each actual callback type.
 
-The OMPT API function \code{ompt\_get\_callback} may be called at any time to determine whether a callback has been registered or not. 
+The OMPT interface function \code{ompt\_get\_callback} may be called at any time to determine whether a callback has been registered or not. 
 
-\begin{quote}
-\begin{verbatim}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
 OMPT_API int ompt_get_callback(
-  ompt_event_t event, 
-  ompt_callback_t *callback
+  ompt_event_t \plc{event}, 
+  ompt_callback_t * \plc{callback}
 );
-\end{verbatim}
-\end{quote}
+\end{boxedcode}
+\ccppspecificend
+}
 
 \noindent
 If a callback has been registered, \code{ompt\_get\_callback} will return 1 and set \code{callback} to the address of the callback function; otherwise \code{ompt\_get\_callback} will return 0.
@@ -216,8 +230,10 @@ If a callback has been registered, \code{ompt\_get\_callback} will return 1 and 
 \section{OMPT Data Types}
 \label{sec:data}
 
-\subsection{Thread Identifier}
-  Each OpenMP thread  has an associated identifier of type \verb|ompt_thread_id_t|. 
+\littleheader{Thread Identifier}
+\index{Thread Identifier}
+
+Each OpenMP thread  has an associated identifier of type \verb|ompt_thread_id_t|. 
 \begin{comment}
 \begin{quote}
 \begin{verbatim}
@@ -233,9 +249,10 @@ typedef uint64_t ompt_thread_id_t;
   Tools should not assume that \verb|ompt_thread_id_t| values are small or densely allocated. 
   The value \verb|ompt_thread_id_none| is reserved to indicate an invalid thread id.
 
-\subsection{Parallel Region Identifiers}
-  Each OpenMP parallel region has an associated identifier of type
-  \verb|ompt_parallel_id_t|. 
+\littleheader{Parallel Region Identifiers}
+\index{Parallel Region Identifiers}
+Each OpenMP parallel region has an associated identifier of type
+\verb|ompt_parallel_id_t|. 
 \begin{comment}
 \begin{quote}
 \begin{verbatim}
@@ -253,10 +270,11 @@ typedef uint64_t ompt_parallel_id_t;
   The value \verb|ompt_parallel_id_none| is reserved to indicate an invalid parallel id.
  
  
-  \subsection{Task Region Identifiers}
-  Each OpenMP task has an associated identifier of type
-  \verb|ompt_task_id_t|. Task identifiers are assigned to
-   initial, implicit, explicit, and target tasks.
+\littleheader{Task Region Identifiers}
+\index{Task Region Identifiers}
+Each OpenMP task has an associated identifier of type
+\verb|ompt_task_id_t|. Task identifiers are assigned to
+initial, implicit, explicit, and target tasks.
 \begin{comment}
 \begin{quote}
 \begin{verbatim}
@@ -273,7 +291,8 @@ typedef uint64_t ompt_task_id_t;
   Tools should not assume that \verb|ompt_task_id_t| values are small or densely allocated. 
   The value \verb|ompt_task_id_none| is reserved to indicate an invalid task identifier.
   
-\subsection{Target Region and Operation Identifiers}
+\littleheader{Target Region and Operation Identifiers}
+\index{Target Region and Operation Identifiers}
 Each OpenMP target region and target operation has an associated identifier of type \verb|ompt_target_id_t|. 
 A unique target identifier is assigned on the host each time an instance of a target construct is encountered.
 Each operation within a target region, e.g., transferring data to/from a device or launching a kernel launch 
@@ -285,7 +304,9 @@ Tools should not assume that \verb|ompt_target_id_t| values are small or densely
 The value \verb|ompt_target_id_none| is reserved to indicate an invalid target identifier. 
 The value \verb|ompt_target_id_none| will be returned for (a) the target region identifier if \verb|ompt_get_target_info| is invoked outside a target region and (b) the target operation identifier if \verb|ompt_get_target_info| is invoked while no target operation is in progress.
 
-\subsection{Wait Identifiers}
+\littleheader{Wait Identifiers}
+\index{Wait Identifiers}
+
 Each thread instance maintains a {\em wait identifier} of type \verb|ompt_wait_id_t|. 
 When a task executing on a thread is waiting for something, the thread's wait identifer indicates what the thread is awaiting. 
 A wait identifier may represent a critical section {\em name}, a lock,  a program variable accessed in an atomic region, or a synchronization object internal to an OpenMP runtime implementation. 
@@ -304,77 +325,77 @@ When a thread is not in a wait state, a thread's wait identifier has an undefine
 %%johnmc says: a wait_id typically is set to the address of a lock on which you are spinning. If you aren't spinning on a lock, this value is undefined.
 %%             we could zero it out, but that would cost more.
  
-\subsection{Frames}
+\littleheader{Frames}
+\index{Frames}
 
-  When executing an OpenMP program, at times procedure frames from the OpenMP runtime appear on the call stack between user code procedure frames.
-  To enable a tool to classify procedure frames on the call stack as belonging to the user program or the OpenMP runtime,
-  the runtime system maintains an instance of an \verb|ompt_frame_t| data structure 
-  for each (possibly degenerate) task. A task is considered degenerate if a call to the OpenMP runtime to create a parallel 
-  region or task does not create a new task. A degenerate task may arise when a parallel construct is encountered
-   in a parallel region and nested parallelism is not enabled or when an orphaned directive that would create a task is encountered outside a parallel region.
-  A degenerate task region may add runtime frames to the call stack before 
-  invoking user code for the degenerate task and thus require an \verb|ompt_frame_t| data structure. 
-  To simplify the discussion below, we omit the qualifier ``possibly degenerate'' each time we use the terms {\em task}.
+When executing an OpenMP program, at times procedure frames from the OpenMP runtime appear on the call stack between procedure frames for user code.
+To enable a tool to determine whether each procedure frame on the call stack represents 
+user code or an OpenMP runtime routine,
+an implementation of the OpenMP API must maintains an instance of an \verb|ompt_frame_t| 
+for each (possibly degenerate\footnote{
+A task is considered degenerate if a call to the OpenMP runtime to create a parallel 
+region or task does not create a new task. 
+A degenerate task may arise when a parallel construct is encountered
+in a parallel region and nested parallelism is not enabled or when an orphaned directive that would create a task is encountered outside a parallel region.
+A degenerate task region may add runtime frames to the call stack before 
+invoking an outlined function for the degenerate task and thus require an \code{ompt\_frame\_t} 
+data structure.}) task that is active on a thread's stack.
+To simplify discussion that follows, 
+we omit the qualifier ``possibly degenerate'' each time we use the term {\em task}.
 
   Each initial, implicit, explicit, or target task maintains an \verb|ompt_frame_t| data structure
   that contains a pair of pointers.   
   
 \vbox{    
-\begin{quote}
-\begin{verbatim}
-typedef struct ompt_frame_s {
-    void *exit_frame;  /* runtime frame that calls user code */
-    void *enter_frame; /* user frame that calls the runtime  */
-} ompt_frame_t;
-\end{verbatim}
-\end{quote}
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_frame_s \{\\
+  void * \plc{exit_frame};  /* runtime frame that calls user code */
+  void * \plc{enter_frame}; /* user frame that calls the runtime  */
+\} ompt_frame_t;
+\end{boxedcode}
+\ccppspecificend
 }
 
 \noindent
-  An \verb|ompt_frame_t|'s  lifetime begins when a task  is
-  created and ends when the task is destroyed.  Tools should not assume that a frame structure remains at a constant location in memory
-  throughout a task's lifetime.
-  Frame data is passed to some callbacks; it can also be retrieved
-  asynchronously
-  by invoking the \verb|ompt_get_task_info|  function (described in Section~\ref{sec:task-region}) in a signal handler.
-  Frame data contains two components:
+An \verb|ompt_frame_t|'s  lifetime begins when a task  is
+created and ends when the task is destroyed.  Tools should not assume that a frame structure remains at a constant location in memory
+throughout a task's lifetime.
+A frame object is passed to some callbacks; it can also be retrieved
+asynchronously
+by invoking the \verb|ompt_get_task_info|  function (described in Section~\ref{sec:task-region}) in a signal handler.
+A task's frame object contains two fields: \code{exit\_frame} and \code{enter\_frame}.
 
-\begin{description}
-\item \verb|exit_frame|
-     This value is set before the OpenMP runtime invokes a procedure containing user code. 
-%%? This description is misleading IMO. Surely this field contains the *value* of the user frame pointer. 
-%%? It doesn't point to the user frame pointer, but to the user frame itself. 
-%%? This language suggests another indirection which I don't believe is present.
-%%johnmc says: what you described above is not how we implemented it. we set the exit_frame to the frame pointer of the runtime frame that is calling a 
-%%             user procedure, not the user procedure's frame pointer.
-     This field points to the frame pointer of the runtime procedure frame that invoked the user code. 
-     For compilers that generate code where the master thread for a parallel region invokes user code directly (e.g., older versions of GNU compilers), 
-     this may point to a frame of user code for the enclosing task.
-     This value is NULL until just before the runtime invokes a procedure containing user code. 
-  
-\item \verb|enter_frame|
-     This value is set each time the current task re-enters the 
-     runtime to create a new implicit, explicit, or target task region. This field 
-%%? And here too
-%%johnmc says: we set the enter_frame to the frame pointer of the user procedure frame that is calling a runtime system function, not the frame pointer of 
-%%             of the runtime 
-     points to the frame pointer for a user function that invokes the runtime to create a task region.  
-     This value is set when a task enters the runtime and cleared before the runtime returns control to the task.
+The \code{exit\_frame} field of a task's frame object 
+is set just before the task invokes an outlined function to begin execution 
+of user code. 
+The field contains the canonical frame address of the procedure that invoked the outlined function. 
+For compilers that generate code where the master thread for a parallel region invokes an 
+outlined procedure directly, 
+\code{exit\_frame} will contain the canonical frame address of a procedure containing  user code 
+that belongs to the enclosing task.
+The value of \code{exit\_frame} is \code{NULL} in a task's frame object until just 
+before the task calls an outlined function to begin execution. 
 
-\end{description}
-
-
+The \code{enter\_frame} field of a task's frame object is set each time the task re-enters the 
+runtime to create a new implicit, explicit, or target task. When a task invokes an entry point in the
+OpenMP runtime to create a task,
+the \code{enter\_frame} field of the task's frame object will be set to 
+the canonical frame address of the user function that invoked the runtime.
+The value of \code{enter\_frame} is set when a task enters the OpenMP runtime 
+and cleared before the OpenMP runtime returns control to the task.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{|l|p{2in}|p{2in}|}
+\begin{tabular}{|p{1in}|p{2in}|p{2in}|}
 \hline
-exit / enter 	& enter = null										& enter = defined \\\hline\hline
-exit = null		& case 1)  initial task in user code case 2) task that is created but not yet scheduled &  task entered the runtime to schedule an implicit, explicit, or target task \\\hline
-exit = defined 	& non-initial task in (or soon to be in) user code							& non-initial task entered the runtime and scheduled an implicit, explicit, or target task\\\hline
+\code{exit\_frame} / \code{enter\_frame} 	& \code{enter\_frame} is \code{NULL}										& \code{enter\_frame} is defined \\\hline\hline
+\code{exit\_frame} is \code{NULL} & case 1)  initial task in user code case 2) task that is created but not yet scheduled &  task entered the runtime to schedule an implicit, explicit, or target task \\\hline
+\code{exit\_frame} is defined 	& non-initial task in (or soon to be in) user code							& non-initial task entered the runtime and scheduled an implicit, explicit, or target task\\\hline
 \end{tabular}
+\vspace{1ex}
 \end{center}
-\caption{Meaning of various values for {\tt exit\_frame} and {\tt enter\_frame}.}
+\caption{Meaning of various values for \code{exit\_frame} and \code{enter\_frame}.}
 \label{tab:frame}
 \end{table}
 
@@ -385,7 +406,7 @@ In the presence of nested parallelism, a tool may observe a sequence of \verb|om
 \paragraph{Advice to tool implementers:} A monitoring tool using
       asynchronous sampling can observe values of 
       \verb|exit_frame| and \verb|enter_frame| at inconvenient times. 
-      Tools must be prepared to observe and handle frame exit and reenter values that have not yet been set or reset as the program enters into, or returns from, the runtime. 
+      Tools must be prepared to observe and handle frame exit and reenter values that have not yet been set or reset as the program enters or leaves the runtime. 
 
 
 
