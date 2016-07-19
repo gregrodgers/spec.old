@@ -33,27 +33,43 @@
 %
 
 
-\chapter{Tools Support}
+\chapter{Tool Interface}
 \index{Tools Support}
 \label{chap:ToolsSupport}
 
-This chapter describes the OpenMP API specific to interact with third-party tools.
-The chapter covers how an OpenMP runtime uses the value of the \plc{omp-tool-var} ICV to decide whether or not an OpenMP runtime will try to register a tool prior to runtime initialization.
-Follows an explanation on how a registered tool initializes itself.
+This chapter describes the OMPT interface provided by the OpenMP API 
+to support third-party monitoring and performance analysis tools.
+The chapter first explains if and how an implementation of
+the OpenMP API will attempt to register a tool prior to initializing the OpenMP runtime and
+how a registered tool will use the OMPT interface to initialize tool state maintained by 
+an implementation of the OpenMP API. 
+It concludes with a description of data types 
+used to identify entities managed by an OpenMP runtime and to interpret the
+call stack of an OpenMP thread.
 
 \section{Tool Registration}
 \index{tool registration}
 \label{sec:ToolsSupport_Registration}
 
-The \code{OMP\_TOOL} environment variable sets the \plc{omp-tool-var} ICV, which controls whether or not an OpenMP runtime will try to register a tool.
-The value assigned to \code{OMP\_TOOL} is case insensitive and may have leading and trailing white space.
-The value of this environment variable must be \code{enabled} or \code{disabled}.
-If \code{OMP\_TOOL} is set to any value other than \code{enabled} or \code{disabled}, an OpenMP runtime will print a fatal error to the standard error file descriptor indicating that an illegal value had been supplied for \code{OMP\_TOOL} and the program's execution will terminate.
+The \code{OMP\_TOOL} environment variable sets the \plc{omp-tool-var} ICV, which controls whether or not an 
+implementation of the OpenMP API will attempt to register a tool.
+The value of \code{OMP\_TOOL} is case insensitive and may have leading and trailing white space.
+The only legal values of \code{OMP\_TOOL} are \code{enabled} or \code{disabled}.
+If the value of \plc{omp-tool-var} is \code{enabled},
+the OpenMP API implementation will attempt to register a tool by determining if 
+an implementation of the function \code{ompt\_tool} exists in a program's address space and, if so, 
+calling \code{ompt\_tool} before initializing the OpenMP runtime.
+If the value of \plc{omp-tool-var} is \code{disabled}, the OpenMP API implementation will not 
+call \code{ompt\_tool}, regardless of whether or not an implementation of \code{ompt\_tool} exists in the 
+address space.
+If \code{OMP\_TOOL} is set to any other value, an implementation of the OpenMP API 
+will print a fatal error to the standard error file descriptor indicating that an illegal value had been supplied for \code{OMP\_TOOL} and the program's execution will terminate.
 If \code{OMP\_TOOL} is not defined, the default value for \plc{omp-tool-var} is \code{enabled}.
 
+\begin{comment}
 \begin{table}
 \begin{center}
-\begin{tabular}{|c|p{4.5in}|}
+\begin{tabular}{|c|p{4in}|}
 \hline
  {\em omp-tool-var} value & action \\\hline
 enabled & the OpenMP runtime will call \code{ompt\_tool} before initializing itself.\\\hline
@@ -65,23 +81,30 @@ disabled & the OpenMP runtime will not call \code{ompt\_tool}, regardless of whe
 \end{table}
 
 \sloppy
-Table~\ref{table:ToolsSupport_env-var} describes the action that an OpenMP runtime will take in response to possible values of \plc{omp-tool-var}.
-If the value of \plc{omp-tool-var} is \code{enabled}, the runtime will attempt to register a tool by calling the function \code{ompt\_tool} before performing runtime initialization.
-The signature for \code{ompt\_tool} is shown below:
-\begin{quote}
-\begin{verbatim}
-extern "C" {
-  ompt_initialize_fn_t ompt_tool(void);
-};
-\end{verbatim}
-\end{quote}
-If a tool provides an implementation of \code{ompt\_tool} in the application's address space, it may return \code{NULL} indicating that the tool declines to register itself with the runtime; otherwise, the tool may register itself with the runtime by returning a non-\code{NULL} pointer to a function with type signature \code{ompt\_initialize\_fn\_t}.
+Table~\ref{table:ToolsSupport_env-var} describes the action that an implementation of the OpenMP API 
+will take in response to possible values of \plc{omp-tool-var}.
+\end{comment}
+
+
+% The signature for \code{ompt\_tool} is shown below:
+% The signature for \code{ompt\_tool} is shown below:
+
+\begin{boxedcode}
+extern "C" \{\\
+  ompt_initialize_fn_t ompt_tool(void);\\
+\};
+\end{boxedcode}
+
+If a tool provides an implementation of \code{ompt\_tool} in a program's address space, \code{ompt\_tool} may return \code{NULL} indicating that the tool declines to register itself; otherwise, the tool may register itself by having \code{ompt\_tool} return a non-\code{NULL} pointer to a function with type signature \code{ompt\_initialize\_fn\_t}.
 The type signature for \code{ompt\_initialize\_fn\_t} is described in Section~\ref{sec:ToolsSupport_init}. 
 Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP runtime, only one tool may register itself. 
-If a tool-supplied implementation of \code{ompt\_tool} returns a non-\code{NULL} initializer, the OpenMP runtime will maintain state information for each OpenMP thread and will perform OMPT event callbacks registered during tool initialization. 
+If a tool-supplied implementation of \code{ompt\_tool} returns a non-\code{NULL} initializer, 
+an implementation of the OpenMP API will maintain state information for each OpenMP thread and will perform 
+any OMPT event callbacks registered during tool initialization. 
 
 After a process fork, if OpenMP is re-initialized in the child process,
-the OpenMP runtime in the child process will call \code{ompt\_tool} under the same conditions as it would for any process. 
+an implementation of the OpenMP API in the child process will call \code{ompt\_tool} 
+under the same conditions as it would for any process. 
 
 \section{Tool Initialization}
 \label{sec:ToolsSupport_init}
@@ -190,7 +213,7 @@ If a callback has been registered, \code{ompt\_get\_callback} will return 1 and 
 
 
 
-\section{Tool Data Structures}
+\section{OMPT Data Types}
 \label{sec:data}
 
 \subsection{Thread Identifier}
@@ -281,7 +304,7 @@ When a thread is not in a wait state, a thread's wait identifier has an undefine
 %%johnmc says: a wait_id typically is set to the address of a lock on which you are spinning. If you aren't spinning on a lock, this value is undefined.
 %%             we could zero it out, but that would cost more.
  
-\subsection{Structure to Support Classification of Stack Frames}
+\subsection{Frames}
 
   When executing an OpenMP program, at times procedure frames from the OpenMP runtime appear on the call stack between user code procedure frames.
   To enable a tool to classify procedure frames on the call stack as belonging to the user program or the OpenMP runtime,
