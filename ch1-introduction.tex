@@ -1474,8 +1474,74 @@ directives.
 
 
 
+\section{Tool Interface}
+\label{subsec:Tool Support}
 
+To facilitate development of high-quality, first-party\footnote{A {\em first-party}
+tool runs within the address space of an application process. This
+differs from a {\em third-party} tool, e.g., a debugger, which runs
+as a separate process.} tools that support monitoring and performance
+analysis of OpenMP programs developed using any implementation of 
+the OpenMP API, the OpenMP API includes an interface for tools 
+known as OMPT.
 
+\begin{comment}
+The design of OMPT was influenced by two prior efforts to define a
+standard interface for OpenMP tools: POMP~\cite{Mohr:EWOMP02} and
+the Sun/Oracle Collector~\cite{SunCollector,Jost:2005:AND:1892830.1892858}.
+POMP provides support for instrumentation-based measurement. A
+drawback of POMP is that its overhead can be significant because
+an operation, e.g., an iteration of an OpenMP worksharing loop, may
+take less time than tool callbacks monitoring its execution.  To avoid this drawback,
+the Sun/Oracle Collector was designed to support
+low-overhead performance measurement using asynchronous sampling.
+Sampling-based tools can measure and attribute execution costs
+without the overhead and intrusion of pervasive instrumentation. However,
+the Collector interface doesn't include 
+capabilities needed to provide full tool support for statically-linked
+executables.  OMPT builds upon ideas from both POMP and Collector.
+\end{comment}
+
+The OMPT interface provides three tiers of feature sets.
+The first tier is a minimal set of features needed to support tools that
+employ asynchronous sampling to measure application performance.
+A second tier of callback interfaces can be used in conjunction with 
+a performance tool that employs asynchronous sampling to help shift 
+blame for runtime costs from symptoms (e.g., idle threads) to causes (e.g., serial work executed by a 
+single thread).
+A third tier of callback interfaces provides support for trace-based monitoring of 
+runtime events.  OMPT can be implemented entirely by a compiler,
+entirely by an OpenMP runtime system, or with a hybrid strategy
+that employs a mixture of compiler and runtime support.
+
+With the exception of one routine for tool control (described in Section~\ref{sec:tconctrol}),
+all functions in the OMPT interface are intended for use only by tools rather than by
+applications.  For that reason, a Fortran binding is provided only 
+for the single application-facing tool control routine;
+all other OMPT functions have only a C binding. 
+
+In some cases, OMPT may enable a tool to observe performance
+implications and infer details about an implementation of the OpenMP
+API.  An implementation of the OpenMP API may differ from the
+abstract execution model described by its specification.  The ability
+of tools using OMPT to observe such differences does not constrain
+implementations of the OpenMP API in any way. 
+
+OMPT has a small set of mandatory features that provide a common foundation for all performance tools. In addition, OMPT defines a set of optional features that can be used tools to gather extra information about a program execution. All optional features in OMPT are explicitly marked. Implementations are encouraged to implement these features where feasible to support richer tools, but are considered compliant if they provide only only the mandatory features.
+
+A minimally compliant implementation of OMPT in the OpenMP API must 
+
+\begin{itemize}
+\item maintain a unique numerical ID per OpenMP thread, parallel region, and task region, 
+% A minimal implementation may reuse the task ID required by OpenMP for nested locks,
+\item maintain pointers into the stack for each OpenMP thread to distinguish frames for user procedures from frames for OpenMP runtime routines,
+\item maintain a state and a wait identifier for each OpenMP thread,
+% . Mandatory states are idle, work serial, work parallel, and undefined,
+\item support callbacks for tools when the following events occur:  thread begin/end, parallel region begin/end, task region begin/end, invocation of the user-level tool control routine, and runtime shutdown,
+\item implement several async signal safe inquiry functions to retrieve information from an OpenMP runtime, and
+\item initiate a callback to a tool initialization routine 
+as directed by the value of an OpenMP environment variable (\verb|OMP_TOOL|) and provide a function to register tool callbacks.
+\end{itemize}
 
 
 \section{OpenMP Compliance}
@@ -1484,7 +1550,10 @@ directives.
 \index{compliance}
 An implementation of the OpenMP API is compliant if and only if it compiles and 
 executes all conforming programs according to the syntax and semantics laid out in 
-Chapters 1, 2, 3 and 4. Appendices A, B, C and D and sections designated as Notes 
+Chapters 1, 2, 3, 4 and 5. Note, though, that \specref{chap:ToolsSupport} contains both
+mandatory and optional features; the OpenMP API is compliant if at least the
+mandatory features are provided.
+Appendices A, B, C and D and sections designated as Notes 
 (see \specref{sec:Organization of this document}) 
 are for information purposes only and are not part of the 
 specification.
@@ -1594,6 +1663,8 @@ The remainder of this document is structured as follows:
 \item Chapter \ref{chap:Directives} ``Directives''
 
 \item Chapter \ref{chap:Runtime Library Routines} ``Runtime Library Routines''
+
+\item Chapter \ref{chap:ToolsSupport} ``Tools Support''
 
 \item Chapter \ref{chap:Environment Variables} ``Environment Variables''
 

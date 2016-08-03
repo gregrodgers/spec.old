@@ -35,7 +35,7 @@
 \chapter{Runtime Library Routines}
 \index{runtime library routines}
 \label{chap:Runtime Library Routines}
-This chapter describes the OpenMP API runtime library routines and is divided into the 
+This chapter describes the OpenMP API runtime library routines and queryable runtime states, and is divided into the 
 following sections:
 
 \begin{itemize}
@@ -54,6 +54,12 @@ execution environment
 
 \item Device memory routines that can be used to allocate memory and 
 to manage pointers on target devices (\specref{sec:Device Memory Routines}).
+
+\item Runtime states 
+(\specref{sec:runtimeStates}).
+
+\item OMPT Query Functions
+(\specref{sec:omptFunctions}).
 
 \item Execution routines to control the application monitoring
 (\specref{sec:tool control for applications})
@@ -3079,6 +3085,348 @@ buffer are invalidated.
 \end{itemize}
 
 \ccppspecificend
+
+\section{Runtime States}
+\label{sec:runtimeStates}
+
+To enable an understanding of what a runtime is currently executing, the runtime 
+will maintain state information for each OpenMP thread that can be queried, e.g., by a tool. 
+The state maintained for each thread by the OpenMP runtime is an
+approximation of the thread's instantaneous state. 
+OpenMP uses the enumeration type \verb|omp_state_t| for states;
+Appendix~\ref{appendix:ompt-types:states} defines this type.
+When the state of a thread not associated with the OpenMP runtime is queried, the runtime returns 
+\verb|omp_state_undefined|.
+
+\begin{comment}
+For each OpenMP thread the runtime maintains not only a state but also an \verb|ompt_wait_id_t|
+identifier.  When a thread is waiting for a lock, critical region,
+ordered, or atomic, and the thread is in a wait
+state, then 
+the thread's \verb|wait_id| field identifies the lock, critical construct, ordered construct, atomic construct, or internal variable
+upon which the
+thread is waiting. The semantics of the values used for a \verb|wait_id| are implementation defined.
+A thread's \verb|wait_id| is undefined if the thread
+is not in a wait state.
+\end{comment}
+
+Some states must be supported by any compliant implementation, e.g., those indicating that a thread is executing parallel or serial work. In other cases, alternatives exist. For instance, one may use a single state to represent all waiting at barriers or use a pair of states to differentiate between waiting at implicit and explicit barriers.
+For some states, OpenMP runtimes have flexibility about whether to report the state early or late.
+For example, consider when a thread acquires a lock. One
+compliant runtime may transition a thread's state to 
+\verb|omp_state_wait_lock|  early before the thread attempts to acquire a
+lock. Another compliant runtime may transition a thread's state to
+\verb|omp_state_wait_lock| late, only if the thread begins to spin or
+block to wait for an unavailable lock. A third compliant runtime
+may transition a thread's state to \verb|omp_state_wait_lock| even later, e.g., only
+after the thread waits for a significant amount of time. 
+
+State values 0 to 127 are reserved for current OMPT states and future extensions.  
+
+\subsection{Idle State}
+
+\begin{description}
+\item \verb|omp_state_idle| 
+
+  The thread is idle, waiting for work.
+\end{description}
+
+\subsection{Work States (Option 1)}
+
+\begin{description}
+
+\item \verb|omp_state_work_serial| 
+
+  The thread is executing code outside all parallel regions. 
+
+\item \verb|omp_state_work_parallel| 
+
+  The thread is executing code within the scope of a parallel region construct.
+
+\sloppy
+\item \verb|omp_state_work_reduction| 
+ 
+  The thread is combining partial reduction results from threads in its team. A compliant
+  runtime might never report a thread in this state; a thread
+  combining partial reduction results may  report its state as
+  \verb|omp_state_work_parallel| or \verb|omp_state_overhead|.
+
+\end{description}
+
+\subsection{Work States (Option 2)}
+
+\subsubsection{\code{omp\_state\_work\_serial}}
+
+The thread is executing code outside all parallel regions. 
+
+\subsubsection{\code{omp\_state\_work\_parallel|}} 
+
+The thread is executing code within the scope of a parallel region construct.
+
+\subsubsection{\code{omp\_state\_work\_reduction}}
+ 
+  The thread is combining partial reduction results from threads in its team. A compliant
+  runtime might never report a thread in this state; a thread
+  combining partial reduction results may  report its state as
+  \verb|omp_state_work_parallel| or \verb|omp_state_overhead|.
+
+
+\subsection{Overhead State}
+
+\begin{description}
+
+\item \verb|omp_state_overhead| 
+
+  A thread may be reported as being in the overhead state at any point while executing within an OpenMP runtime, e.g., while
+    preparing a parallel region, 
+    preparing a new explicit task,
+    preparing a worksharing region, or
+    preparing to execute iterations of a parallel loop.  
+  It is compliant to report some or all OpenMP runtime overhead 
+  as work.
+
+\end{description}
+
+\subsection{Barrier Wait States}
+
+\begin{description}
+
+  \item \verb|omp_state_wait_barrier| 
+  
+  \sloppy
+  The thread is waiting at either an implicit or explicit barrier.
+  A  compliant implementation may have a thread enter this state
+  early, when the thread encounters a barrier, or late, when the
+  thread begins to wait at the barrier. A  compliant implementation may never report a thread in this state; instead, a thread might report its state as \verb|omp_state_wait_barrier_implicit|  or \verb|omp_state_wait_barrier_explicit|, as appropriate.
+  
+  \item \verb|omp_state_wait_barrier_implicit| 
+  
+\sloppy
+  The thread is waiting at an implicit barrier in a parallel region. 
+  A  compliant implementation may have a thread enter this state
+  early, when the thread encounters a barrier, or late, when the
+  thread begins to wait at the barrier.
+  A  compliant runtime implementation may report \verb|omp_state_wait_barrier| for implicit barriers.
+  
+    \item \verb|omp_state_wait_barrier_explicit| 
+
+  The thread is waiting at an explicit barrier  in a parallel region. 
+  A  compliant implementation may have a thread enter this state
+  early, when the thread encounters a barrier, or late, when the
+  thread begins to wait at the barrier.
+  A  compliant runtime implementation may report \verb|omp_state_wait_barrier| for explicit barriers.
+  
+\end{description}
+  
+\subsection{Task Wait States}
+
+\begin{description}
+
+\item \verb|omp_state_wait_taskwait| 
+
+  The thread is waiting at a taskwait construct. A compliant
+  implementation may have a thread enter this state early, when the
+  thread encounters a taskwait construct, or late, when the thread
+  begins to wait for an uncompleted task.
+
+\item \verb|omp_state_wait_taskgroup| 
+
+  The thread is waiting at the end of a taskgroup construct. A compliant
+  implementation may have a thread enter this state early, when the
+  thread encounters the end of a taskgroup construct, or late, when the thread
+  begins to wait for an uncompleted task.
+
+\end{description}
+
+
+\subsection{Mutex Wait States}
+
+OpenMP provides several mechanisms that enforce mutual exclusion: locks, critical, atomic, and ordered. 
+A runtime implementation may report a thread waiting for any type of mutual exclusion using either a state that precisely identifies the type of mutual exclusion, or  a more generic state such as  \verb|omp_state_wait_mutex| or \verb|omp_state_wait_lock|. 
+This flexibility may significantly simplify the maintenance of states associated with mutual exclusion in the runtime when various mechanisms for mutual exclusion rely on a common implementation, e.g., locks.
+
+% Section~\ref{sec:wait-identifier} describes how each thread maintains a wait identifier to identify what a thread is awaiting. Before a thread enters any state indicating that it is awaiting mutual exclusion, the OpenMP runtime will update the thread's wait identifier to indicate what the thread is awaiting. 
+
+\begin{description}
+
+\item \verb|omp_state_wait_mutex|
+
+  The thread is waiting for a mutex of an unspecified type. A compliant implementation
+  may have a thread enter this state early, when a thread encounters a lock acquisition or a region that requires mutual exclusion, or late, when the thread begins to wait.
+
+\item \verb|omp_state_wait_lock|
+
+  The thread is waiting for a  lock  or nest lock. A compliant implementation
+  may have a thread enter this state early, when a thread
+  encounters a lock \verb|set| routine, or late, when the thread
+  begins to wait for a lock.
+
+\item \verb|omp_state_wait_critical| 
+
+  The thread is waiting to enter a critical region. A compliant
+  implementation may have a thread enter this state early, when the
+  thread encounters a critical construct, or late, when the thread
+  begins to wait to enter the critical region. 
+
+
+\item \verb|omp_state_wait_atomic| 
+
+  The thread is waiting to enter an atomic region. A compliant
+  implementation may have a thread enter this state early, when the thread
+  encounters an atomic construct, or late, when the thread begins
+  to wait to enter the atomic region. 
+  A compliant implementation may opt not to report
+  this state, for example, when using atomic hardware instructions that support non-blocking atomic implementations.
+  
+
+\item \verb|omp_state_wait_ordered| 
+
+  The thread is waiting to enter an ordered region. A compliant
+  implementation may have a thread enter this state early, when the thread encounters
+  an ordered construct, or late, when the thread begins
+  to wait to enter the ordered region. 
+  
+\end{description}
+  
+\subsection{Target Wait States}
+
+\begin{description}
+
+\item \verb|omp_state_wait_target| 
+
+  The thread is waiting for a target region to complete.
+  
+\item \verb|omp_state_wait_target_data| 
+
+  The thread is waiting for a target data mapping operation to complete. 
+  A  compliant runtime implementation may report \verb|omp_state_wait_target| for target data constructs.
+
+\item \verb|omp_state_wait_target_update| 
+
+  The thread is waiting for a target  update operation to complete. 
+  A  compliant runtime implementation may report \verb|omp_state_wait_target| for target update constructs.
+
+\end{description}
+
+\subsection{Undefined}
+
+\begin{description}
+
+\item \verb|omp_state_undefined| 
+
+  This state is reserved for threads that are not user threads,
+  initial threads, threads currently in an OpenMP team, or threads
+  waiting to become part of an OpenMP team.
+
+\end{description}
+
+
+\subsection{\code{enum omp\_state\_e}}
+
+This section defines an enumeration type that specifies the set of runtime states. 
+The purpose of these states is described above.
+
+\begin{verbatim}
+typedef enum omp_state_e {
+  /* idle (0..15) */
+  omp_state_idle                   = 0x00, /* waiting for work           */
+
+  /* work states (16..31) */
+  omp_state_work_serial            = 0x10, /* working outside parallel   */
+  omp_state_work_parallel          = 0x11, /* working within parallel    */
+  omp_state_work_reduction         = 0x12, /* performing a reduction     */
+
+  /* overhead states (32..63) */
+  omp_state_overhead               = 0x20, /* non-wait overhead          */
+
+  /* barrier wait states (64..79) */
+  omp_state_wait_barrier           = 0x40, /* generic barrier            */
+  omp_state_wait_barrier_implicit  = 0x41, /* implicit barrier           */
+  omp_state_wait_barrier_explicit  = 0x42, /* explicit barrier           */
+    
+  /* task wait states (80..95) */
+  omp_state_wait_taskwait          = 0x50, /* waiting at a taskwait      */
+  omp_state_wait_taskgroup         = 0x51, /* waiting at a taskgroup     */
+
+  /* mutex wait states (96..111) */
+  omp_state_wait_mutex             = 0x60, /* waiting for any mutex kind */
+  omp_state_wait_lock              = 0x61, /* waiting for lock           */
+  omp_state_wait_critical          = 0x62, /* waiting for critical       */
+  omp_state_wait_atomic            = 0x63, /* waiting for atomic         */
+  omp_state_wait_ordered           = 0x64, /* waiting for ordered        */
+  
+  /* target wait states (112..127) */
+  omp_state_wait_target            = 0x70, /* waiting for target         */ 
+  omp_state_wait_target_data       = 0x71, /* waiting for target data    */ 
+  omp_state_wait_target_update     = 0x72, /* waiting for target update  */ 
+
+  /* misc (128..143) */
+  omp_state_undefined              = 0x80  /* undefined thread state     */
+} omp_state_t;
+\end{verbatim}
+
+
+
+\section{OMPT Inquiry Functions}
+\label{sec:omptFunctions}
+
+
+ Inquiry functions retrieve data from the execution environment for
+ the tools. 
+ All functions in the inquiry API are marked with \verb|OMPT_API|. These functions should not be global symbols in an OpenMP runtime implementation to avoid tempting tool developers to call them directly. Section~\ref{sec:init} describes how a tool should obtain pointers to these inquiry functions.
+ {\em All inquiry functions are async signal safe.} 
+ Note that it is unsafe to call OpenMP Execution Environment Routines within an OMPT callback because doing so may cause deadlock. 
+ Specifically, since OpenMP Execution Library Routines are not guaranteed to be async signal safe, they might acquire a lock that may already be held when an OMPT callback is involved.
+ 
+ \subsection{\code{ompt\_enumerate\_states}}
+ \label{ompt_enumerate_states}
+ \summary
+ 
+ The \code{ompt\_enumerate\_states} function allows tools implemented on top of the OMPT interface to query all runtime states available in the particular runtime implementation.
+
+\format
+\begin{boxedcode}
+OMPT_API _Bool ompt_enumerate_states(
+  omp_state_t current_state, 
+  omp_state_t *next_state, 
+  const char **next_state_name
+);
+\end{boxedcode}
+
+\effect
+
+The OpenMP runtime is allowed to support other states in addition to those described in this document.
+For instance, a particular runtime system may want to 
+provide more detail about the nature of runtime overhead, 
+e.g., to differentiate between  overhead associated with setting up a parallel region
+and  overhead associated with setting up a task. Further, a tool need not report all states defined herein, e.g., if state tracking for a particular state would be too expensive.
+To enable a tool to identify all states that an OpenMP runtime implements, OMPT provides
+the following interface for enumerating all states that may be reported by the runtime that is being used.
+
+
+\constraints
+
+To begin enumerating the states that a runtime system supports,
+the value \verb|omp_state_undefined| should be supplied for \verb|current_state| in the call to \verb|ompt_enumerate_states| that begins the enumeration.
+The argument \verb|next_state| is a pointer to an \verb|omp_state_t| that will be set to the code for the next state in the enumeration.
+The argument \verb|next_state_name| is a pointer to a location that will be filled in with a pointer to the name associated with \verb|next_state|. 
+Subsequent invocations of \verb|ompt_enumerate_states| should pass the code returned in \verb|next_state| by the prior call.
+Whenever one or more states are left in the enumeration, \verb|ompt_enumerate_states| will return \verb|true|.
+When the last state in the enumeration is passed to \verb|ompt_enumerate_states| as \verb|current_state|, the function will return \verb|false| indicating that the enumeration is complete.
+An example of how to enumerate the states supported by an OpenMP runtime is shown below:
+
+\begin{quote}
+\begin{verbatim}
+omp_state_t state = omp_state_undefined;
+const char *state_name;
+while (ompt_enumerate_states(state, &state, &state_name)) {
+  // tool notes that the runtime supports omp_state_t "state" 
+  // associated with "state_name" 
+}
+\end{verbatim}
+\end{quote}
+
+
 
 \section{Tool Control for Applications}
 \index{tool control for applications}
