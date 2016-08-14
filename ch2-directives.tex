@@ -3088,6 +3088,38 @@ unspecified behavior
 \fortranspecificend
 \end{itemize}
 
+\tools
+
+\def\omptTaskEventForTaskOrTarget#1{
+  Upon encountering a \code{#1} construct that causes a \code{task} to be created, the runtime shall trigger the callback \code{ompt\_event\_task\_create}  in the context of the \code{task} that encountered the \code{#1} construct.
+  This callback has type signature \code{ompt\_task\_create\_callback\_t}.
+}
+
+\omptTaskEventForTaskOrTarget{task}
+
+Whenever a \code{task} completes and before scheduling another \code{task}, the runtime shall invoke the
+\code{ompt\_event\_task\_schedule} callback. The callback executes in the context of the newly-scheduled \code{task}.
+This callback has type signature \code{ompt\_task\_schedule\_callback\_t}.
+
+The runtime shall invoke the \code{ompt\_event\_implicit\_task} callback with \code{endpoint = ompt\_scope\_begin} after an
+implicit \code{task} is fully initialized but before the \code{task} begins to work.
+The runtime invokes this callback with the \code{endpoint = ompt\_scope\_end} after the implicit
+\code{task} executes its closing synchronization barrier but before the \code{task} is destroyed.
+This callback executes in the context of the implicit \code{task}.
+This callback has type signature \code{ompt\_scoped\_implicit\_callback\_t}.
+
+If a \code{task} has any dependences with respect to data objects that constrain its ordering with respect to other tasks,
+the runtime may invoke the \code{ompt\_event\_task\_dependences} callback immediately after the callback
+announcing the task's creation to announce its dependences with respect to data objects.
+This callback has type signature \code{ompt\_task\_dependences\_callback\_t}.
+
+The OpenMP runtime may invoke the \code{ompt\_event\_task\_dependence\_pair} callback to report a dependence between a producer (\code{src\_task\_data})
+and a consumer (\code{sink\_task\_data}) that blocked execution of the consumer.
+If the runtime invokes the callback, it will occur before the consumer knows that the dependence is satisfied. This may happen early or late.
+Note: this callback is used only to report blocking dependences between sibling tasks whose lifetimes overlap.
+No callback will occur if a producer \code{task} finishes before a consumer \code{task} is created.
+This callback has type signature \code{ompt\_task\_dependence\_callback\_t}.
+
 \crossreferences
 \begin{itemize}
 \item Task scheduling constraints, see \specref{subsec:Task Scheduling}. 
@@ -3549,6 +3581,11 @@ device pointers to the corresponding list item in the device data environment.
   \item References in the construct to a list item that appears in a
     \code{use\_device\_ptr} clause must be to the address of the list item.
 \end{itemize}
+
+
+\tools
+
+\omptTaskEventForTaskOrTarget{target}
 
 \crossreferences
 \begin{itemize}
