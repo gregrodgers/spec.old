@@ -372,44 +372,168 @@ In the presence of nested parallelism, a tool may observe a sequence of \code{om
       \code{exit\_frame} and \code{enter\_frame} at inconvenient times. 
       Tools must be prepared to observe and handle frame exit and reenter values that have not yet been set or reset as the program enters or leaves the runtime. 
 
+\section{Events without Directives}
+\subsection{\code{ompt\_event\_thread\_begin}}
+The OpenMP runtime invokes this callback in the context of an initial thread just after it initializes the runtime, or in the context of a new thread created by the runtime just after the thread initializes itself. In either case, this callback must be the first callback for a thread
+and must occur before the thread executes any OpenMP tasks. This callback has type signature \code{ompt\_thread\_begin\_callback\_t}.
+The callback argument \code{thread\_type} indicates the type of the thread: initial, worker, or other.
+
+\subsection{\code{ompt\_event\_thread\_end}}
+The OpenMP runtime invokes this callback
+after an OpenMP thread completes all of
+its tasks but before the thread is destroyed. The callback
+executes in the context of the OpenMP thread. This callback must be the last callback event for any worker thread; it is optional for other types of threads.
+This callback has type signature \code{ompt\_thread\_end\_callback\_t}.
+
+\subsection{\code{ompt\_event\_target\_submit}}
+
+The OpenMP runtime invokes this callback prior to submitting a kernel for execution on a target device.
+This callback has type signature \code{ompt\_target\_submit\_callback\_t}.
+The callback argument \code{target\_id} indicates the instance of the target construct associated with this operation.
+The callback argument \code{host\_op\_id} provides a unique host-side identifier that represents the activity on the device.
+The callback arguments \code{requested\_num\_teams}  \code{granted\_num\_teams} indicate, respectively, the number of teams requested by the user and granted by the runtime.
+
+\subsection{\code{ompt\_event\_control}}
+If the user program calls \code{ompt\_control}, the
+OpenMP runtime invokes this callback.
+The callback executes in the context that the call occurs in the user program.
+This callback has type signature \code{ompt\_control\_callback\_t}.
+Arguments passed to the callback are those passed by the user to \code{ompt\_control}.
+
+\subsection{\code{ompt\_event\_runtime\_shutdown}}
+The OpenMP runtime invokes this callback before it shuts down the
+ runtime system.  This callback enables a tool to clean up its
+ state and record or report information gathered. A runtime may later restart and reinitialize the tool by
+calling the tool initializer
+function (described in Section~\ref{sec:init}) again.
+ This callback has type signature \code{ompt\_callback\_t}.
+
+\subsection{\code{ompt\_event\_idle}}
+  The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a thread waits for work outside a parallel region.
+  The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_end} before the thread  begins to execute an implicit task for
+   a parallel region or terminates. The callback executes in the environment of the waiting thread.
+  This callback has type signature \code{ompt\_idle\_callback\_t}.
+
+\subsection{\code{ompt\_event\_sync\_region\_wait}}
+
+  The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a task starts waiting in a barrier region, taskwait region, or taskgroup region.
+   The OpenMP runtime invokes this callback with the \code{endpoint=}\code{ompt\_scope\_end} when the task stops waiting in the region.
+  This callback has type signature \code{ompt\_scoped\_sync\_region\_callback\_t}.
+   The argument \code{kind} indicates the kind of region causing the wait.
+   One region may generate multiple pairs of begin/end callbacks if another task is scheduled on the thread while the task awaiting completion of the region is stalled.
+   The callback argument \code{codeptr\_ra} may be NULL.
+   This callback executes in the context of the task that encountered the barrier, taskwait, or taskgroup construct.
+
+
 \section{Event Callback Signatures}
 \index{event callback signatures}
 \label{sec:ToolsSupport_callback_signatures}
 
-This section describes the signatures of tool callback functions that an OMPT 
+This section describes the signatures of tool callback functions that an OMPT
 tool might register and that are called during runtime of an OpenMP program.
+
+\subsection{\code{ompt\_thread\_begin\_callback\_t}}
+\index{ompt\_thread\_begin\_callback\_t@{\code{ompt\_thread\_begin\_callback\_t}}}
+\label{subsec:ompt_thread_begin_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_thread\_begin\_callback\_t) (
+  ompt\_thread\_type\_t \plc{thread\_type},
+  ompt\_data\_t *\plc{thread\_data}
+);
+\end{boxedcode}
+\descr
+The callback with type signature \code{ompt\_thread\_begin\_callback\_t},
+includes a parameter \plc{thread\_type}
+that indicates the type of the new thread: initial, worker, or other.
+The binding of \plc{thread\_data} is the new thread.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\item \code{ompt\_thread\_type\_t} type signature, see
+\specref{subsec:ompt_thread_type_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_thread\_end\_callback\_t}}
+\index{ompt\_thread\_end\_callback\_t@{\code{ompt\_thread\_end\_callback\_t}}}
+\label{subsec:ompt_thread_end_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_thread\_end\_callback\_t) (
+  ompt\_data\_t *\plc{thread\_data}
+);
+\end{boxedcode}
+\descr
+The binding of \plc{thread\_data} is the finished thread.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_idle\_callback\_t}}
+\index{ompt\_idle\_callback\_t@{\code{ompt\_idle\_callback\_t}}}
+\label{subsec:ompt_idle_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_idle\_callback\_t) (
+  ompt\_scope\_endpoint\_t \plc{endpoint}
+);
+\end{boxedcode}
+\descr
+The callback with type signature \code{ompt\_idle\_callback\_t},
+includes a parameter \plc{endpoint}
+that indicates whether the callback signals the begin or end of the scope.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
+\specref{subsec:ompt_scope_endpoint_t}.
+\end{itemize}
+
+
 
 \subsection{\code{ompt\_parallel\_begin\_callback\_t}}
 \index{ompt\_parallel\_begin\_callback\_t@{\code{ompt\_parallel\_begin\_callback\_t}}}
 \label{subsec:ompt_parallel_begin_callback_t}
 \format
 \begin{boxedcode}
-typedef void (*ompt_parallel_begin_callback_t) (
-               ompt_data_t * \plc{parent_task_data},
-               const ompt_frame_t * \plc{parent_frame},  
-               ompt_data_t * \plc{parallel_data},
-               uint32_t \plc{requested_team_size}, 
-               uint32_t \plc{actual_team_size}, 
-               ompt_invoker_t \plc{invoker}, 
-               const void * \plc{codeptr_ra} 
+typedef void (*ompt\_parallel\_begin\_callback\_t) (
+               ompt\_data\_t * \plc{parent\_task\_data},
+               const ompt\_frame\_t * \plc{parent\_frame},
+               ompt\_data\_t * \plc{parallel\_data},
+               uint32\_t \plc{requested\_team\_size},
+               uint32\_t \plc{actual\_team\_size},
+               ompt\_invoker\_t \plc{invoker},
+               const void * \plc{codeptr\_ra}
 );
 \end{boxedcode}
 
 \descr
-The callbacks with type signature \code{ompt\_parallel\_begin\_callback\_t}, 
-include a parameter \plc{requested\_team\_size} 
+The callbacks with type signature \code{ompt\_parallel\_begin\_callback\_t},
+include a parameter \plc{requested\_team\_size}
 that indicates the number of threads requested by the user, and a parameter
 \plc{actual\_team\_size} that indicates the number of threads in the team.
 The \plc{invoker} argument explains whether the execution of the parallel
 region code is inlined into the application code or started by the runtime.
+The binding of \plc{parent\_task\_data} is the enclosing task, the binding of
+\plc{parallel\_data} is the new team.
+
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_data\_t} type signature, see 
+\item \code{ompt\_data\_t} type signature, see
 \specref{subsec:ompt_data_t}.
-\item \code{ompt\_frame\_t} type signature, see 
+\item \code{ompt\_frame\_t} type signature, see
 \specref{subsec:ompt_frame_t}.
-\item \code{ompt\_invoker\_t} type signature, see 
+\item \code{ompt\_invoker\_t} type signature, see
 \specref{subsec:ompt_invoker_t}.
 \end{itemize}
 
@@ -420,27 +544,28 @@ region code is inlined into the application code or started by the runtime.
 \label{subsec:ompt_parallel_end_callback_t}
 \format
 \begin{boxedcode}
-typedef void (*ompt_parallel_end_callback_t) (
-               ompt_data_t * \plc{parallel_data},
-               ompt_data_t * \plc{task_data},
-               ompt_invoker_t \plc{invoker},
-               const void * \plc{codeptr_ra}
+typedef void (*ompt\_parallel\_end\_callback\_t) (
+               ompt\_data\_t * \plc{parallel\_data},
+               ompt\_data\_t * \plc{task\_data},
+               ompt\_invoker\_t \plc{invoker},
+               const void * \plc{codeptr\_ra}
 );
 \end{boxedcode}
 
 \descr
-The callbacks with type signature \code{ompt\_parallel\_begin\_callback\_t}, 
+The callbacks with type signature \code{ompt\_parallel\_begin\_callback\_t}
 include a parameter \plc{invoker} which explains whether the execution of the parallel
 region code is inlined into the application code or started by the runtime.
+The binding of \plc{parallel\_data} is the finishing team.
 
 %\effect
 % ompt events have no effect
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_data\_t} type signature, see 
+\item \code{ompt\_data\_t} type signature, see
 \specref{subsec:ompt_data_t}.
-\item \code{ompt\_invoker\_t} type signature, see 
+\item \code{ompt\_invoker\_t} type signature, see
 \specref{subsec:ompt_invoker_t}.
 \end{itemize}
 
@@ -449,7 +574,7 @@ region code is inlined into the application code or started by the runtime.
 \label{subsec:ompt_scoped_master_callback_t}
 \format
 \begin{boxedcode}
-typedef void (*\plc{ompt\_scoped\_master\_callback\_t}) ( 
+typedef void (*\plc{ompt\_scoped\_master\_callback\_t}) (
                ompt\_scope\_endpoint\_t \plc{endpoint},
                ompt\_data\_t *\plc{parallel\_data},
                ompt\_data\_t *\plc{task\_data},
@@ -458,19 +583,663 @@ typedef void (*\plc{ompt\_scoped\_master\_callback\_t}) (
 \end{boxedcode}
 
 \descr
-The callbacks with type signature \code{ompt\_scoped\_master\_callback\_t}, 
-include a parameter \plc{codeptr\_ra} which contains the return address of the 
-call to the OpenMP runtime routine, which relates the target construct to the user program. 
+The callbacks with type signature \code{ompt\_scoped\_master\_callback\_t}
+include a parameter \plc{codeptr\_ra} which contains the return address of the
+call to the OpenMP runtime routine and a parameter \plc{endpoint}
+that indicates whether the callback signals the begin or end of the scope.
+The binding of \plc{task\_data} is the innermost enclosing implicit task,
+the binding of \plc{parallel\_data} is the innermost enclosing parallel region.
 
 %\effect
 % ompt events have no effect
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_scope\_endpoint\_t} type signature, see 
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
 \specref{subsec:ompt_scope_endpoint_t}.
-\item \code{ompt\_data\_t} type signature, see 
+\item \code{ompt\_data\_t} type signature, see
 \specref{subsec:ompt_data_t}.
 \end{itemize}
+
+
+
+
+
+\subsection{\code{ompt\_task\_create\_callback\_t}}
+\index{ompt\_task\_create\_callback\_t@{\code{ompt\_task\_create\_callback\_t}}}
+\label{subsec:ompt_task_create_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_task\_create\_callback\_t) (
+  ompt\_data\_t *\plc{parent\_task\_data},
+  const ompt\_frame\_t *\plc{parent\_frame},
+  ompt\_data\_t *\plc{new\_task\_data},
+  ompt\_task\_type\_t \plc{type},
+  \_Bool \plc{has\_dependences},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr
+The callbacks with type signature \code{ompt\_task\_create\_callback\_t},
+include a parameter \plc{parent\_frame}
+that indicates the frame information of the encountering task, and a parameter
+\plc{type} that indicates the kind of the task: initial, explicit or target.
+The binding of \plc{parent\_task\_data} is the encountering task,
+the binding of \plc{new\_task\_data} is the created task.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\item \code{ompt\_frame\_t} type signature, see
+\specref{subsec:ompt_frame_t}.
+\item \code{ompt\_task\_type\_t} type signature, see
+\specref{subsec:ompt_task_type_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_task\_dependences\_callback\_t}}
+\index{ompt\_task\_dependences\_callback\_t@{\code{ompt\_task\_dependences\_callback\_t}}}
+\label{subsec:ompt_task_dependences_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_task\_dependences\_callback\_t) (
+  ompt\_data\_t *\plc{task\_data},
+  const ompt\_task\_dependence\_t *\plc{deps},
+  int \plc{ndeps}
+);
+\end{boxedcode}
+\descr
+The callback with type signature \code{ompt\_task\_dependences\_callback\_t},
+includes a parameter \plc{deps} that lists all dependences of a new task and
+a parameter \plc{ndeps} that specifies the length of the list.
+The memory ownage of \plc{deps} remains at the caller, the tool cannot rely on
+the data after the callback returns.
+The binding of \plc{task\_data} is the created task.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\item \code{ompt\_task\_dependence\_t} type signature, see
+\specref{subsec:ompt_task_dependence_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_task\_dependence\_callback\_t}}
+\index{ompt\_task\_dependence\_callback\_t@{\code{ompt\_task\_dependence\_callback\_t}}}
+\label{subsec:ompt_task_dependence_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_task\_dependence\_callback\_t) (
+  ompt\_data\_t *\plc{src\_task\_data},
+  ompt\_data\_t *\plc{sink\_task\_data}
+);
+\end{boxedcode}
+\descr
+The binding of \plc{src\_task\_data} is a running task with an out dependency.
+The binding of \plc{sink\_task\_data} is a task with a non-satisfied in dependency.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_task\_schedule\_callback\_t}}
+\index{ompt\_task\_schedule\_callback\_t@{\code{ompt\_task\_schedule\_callback\_t}}}
+\label{subsec:ompt_task_schedule_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_task\_schedule\_callback\_t) (
+  ompt\_data\_t *\plc{prior\_task\_data},
+  \_Bool \plc{prior\_completed},
+  ompt\_data\_t *\plc{next\_task\_data}
+);
+\end{boxedcode}
+\descr
+The callback with type signature \code{ompt\_task\_schedule\_callback\_t},
+include a parameter \plc{prior\_completed}
+that indicates whether the task that reached the task scheduling point finished
+execution its task region.
+The binding of \plc{prior\_task\_data} is the task that reached the task scheduling point.
+The binding of \plc{next\_task\_data} is the task to be scheduled.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_scoped\_implicit\_callback\_t}}
+\index{ompt\_scoped\_implicit\_callback\_t@{\code{ompt\_scoped\_implicit\_callback\_t}}}
+\label{subsec:ompt_scoped_implicit_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_scoped\_implicit\_callback\_t) (
+  ompt\_scope\_endpoint\_t \plc{endpoint},
+  ompt\_data\_t *\plc{parallel\_data},
+  ompt\_data\_t *\plc{task\_data},
+  uint32\_t \plc{thread\_num}
+);
+\end{boxedcode}
+\descr
+The callback with type signature \code{ompt\_scoped\_implicit\_callback\_t},
+includes a parameter \plc{endpoint} that indicates whether the callback signals
+the begin or end of the scope and a parameter \plc{thread\_num} that indicates
+the thread number of the calling thread, within the team executing the parallel
+region to which the implicit region binds.
+The binding of \plc{parallel\_data} is the innermost enclosing parallel region.
+The binding of \plc{task\_data} is the implicit task executing the parallel
+region's structured block.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
+\specref{subsec:ompt_scope_endpoint_t}.
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_scoped\_sync\_region\_callback\_t}}
+\index{ompt\_scoped\_sync\_region\_callback\_t@{\code{ompt\_scoped\_sync\_region\_callback\_t}}}
+\label{subsec:ompt_scoped_sync_region_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_scoped\_sync\_region\_callback\_t) (
+  ompt\_sync\_region\_kind\_t \plc{kind},
+  ompt\_scope\_endpoint\_t \plc{endpoint},
+  ompt\_data\_t *\plc{parallel\_data},
+  ompt\_data\_t *\plc{task\_data},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_scoped\_sync\_region\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+include a parameter \plc{codeptr\_ra} which contains the return address of the
+call to the OpenMP runtime routine and a parameter \plc{endpoint}
+that indicates whether the callback signals the begin or end of the scope.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_sync\_region\_kind\_t} type signature, see
+\specref{subsec:ompt_sync_region_kind_t}.
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
+\specref{subsec:ompt_scope_endpoint_t}.
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_lock\_init\_callback\_t}}
+\index{ompt\_lock\_init\_callback\_t@{\code{ompt\_lock\_init\_callback\_t}}}
+\label{subsec:ompt_lock_init_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_lock\_init\_callback\_t) (
+  \_Bool \plc{is\_nest\_lock},
+  ompt\_wait\_id\_t \plc{wait\_id},
+  uint32\_t \plc{hint},
+  uint32\_t \plc{kind},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_lock\_init\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_wait\_id\_t} type signature, see
+\specref{subsec:ompt_wait_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_lock\_destroy\_callback\_t}}
+\index{ompt\_lock\_destroy\_callback\_t@{\code{ompt\_lock\_destroy\_callback\_t}}}
+\label{subsec:ompt_lock_destroy_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_lock\_destroy\_callback\_t) (
+  \_Bool \plc{is\_nest\_lock},
+  ompt\_wait\_id\_t \plc{wait\_id},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_lock\_destroy\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_wait\_id\_t} type signature, see
+\specref{subsec:ompt_wait_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_mutex\_acquire\_callback\_t}}
+\index{ompt\_mutex\_acquire\_callback\_t@{\code{ompt\_mutex\_acquire\_callback\_t}}}
+\label{subsec:ompt_mutex_acquire_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_mutex\_acquire\_callback\_t) (
+  ompt\_mutex\_kind\_t \plc{kind},
+  uint32\_t \plc{hint},
+  uint32\_t \plc{impl},
+  ompt\_wait\_id\_t \plc{wait\_id},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_mutex\_acquire\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_mutex\_kind\_t} type signature, see
+\specref{subsec:ompt_mutex_kind_t}.
+\item \code{ompt\_wait\_id\_t} type signature, see
+\specref{subsec:ompt_wait_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_mutex\_callback\_t}}
+\index{ompt\_mutex\_callback\_t@{\code{ompt\_mutex\_callback\_t}}}
+\label{subsec:ompt_mutex_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_mutex\_callback\_t) (
+  ompt\_mutex\_kind\_t \plc{kind},
+  ompt\_wait\_id\_t \plc{wait\_id},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_mutex\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_mutex\_kind\_t} type signature, see
+\specref{subsec:ompt_mutex_kind_t}.
+\item \code{ompt\_wait\_id\_t} type signature, see
+\specref{subsec:ompt_wait_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_scoped\_nested\_lock\_callback\_t}}
+\index{ompt\_scoped\_nested\_lock\_callback\_t@{\code{ompt\_scoped\_nested\_lock\_callback\_t}}}
+\label{subsec:ompt_scoped_nested_lock_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_scoped\_nested\_lock\_callback\_t) (
+  ompt\_scope\_endpoint\_t \plc{endpoint},
+  ompt\_wait\_id\_t \plc{wait\_id},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_scoped\_nested\_lock\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+include a parameter \plc{codeptr\_ra} which contains the return address of the
+call to the OpenMP runtime routine and a parameter \plc{endpoint}
+that indicates whether the callback signals the begin or end of the scope.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
+\specref{subsec:ompt_scope_endpoint_t}.
+\item \code{ompt\_wait\_id\_t} type signature, see
+\specref{subsec:ompt_wait_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_scoped\_worksharing\_callback\_t}}
+\index{ompt\_scoped\_worksharing\_callback\_t@{\code{ompt\_scoped\_worksharing\_callback\_t}}}
+\label{subsec:ompt_scoped_worksharing_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_scoped\_worksharing\_callback\_t) (
+  ompt\_worksharing\_type\_t \plc{wstype},
+  ompt\_scope\_endpoint\_t \plc{endpoint},
+  ompt\_data\_t *\plc{parallel\_data},
+  ompt\_data\_t *\plc{task\_data},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_scoped\_worksharing\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+include a parameter \plc{codeptr\_ra} which contains the return address of the
+call to the OpenMP runtime routine and a parameter \plc{endpoint}
+that indicates whether the callback signals the begin or end of the scope.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_worksharing\_type\_t} type signature, see
+\specref{subsec:ompt_worksharing_type_t}.
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
+\specref{subsec:ompt_scope_endpoint_t}.
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_flush\_callback\_t}}
+\index{ompt\_flush\_callback\_t@{\code{ompt\_flush\_callback\_t}}}
+\label{subsec:ompt_flush_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_flush\_callback\_t) (
+  ompt\_data\_t *\plc{thread\_data},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_flush\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_scoped\_target\_callback\_t}}
+\index{ompt\_scoped\_target\_callback\_t@{\code{ompt\_scoped\_target\_callback\_t}}}
+\label{subsec:ompt_scoped_target_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_scoped\_target\_callback\_t) (
+  int32\_t \plc{device\_id},
+  ompt\_target\_type\_t \plc{kind},
+  ompt\_data\_t *\plc{task\_data},
+  ompt\_scope\_endpoint\_t \plc{endpoint},
+  ompt\_id\_t \plc{target\_id},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_scoped\_target\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+include a parameter \plc{codeptr\_ra} which contains the return address of the
+call to the OpenMP runtime routine and a parameter \plc{endpoint}
+that indicates whether the callback signals the begin or end of the scope.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_target\_type\_t} type signature, see
+\specref{subsec:ompt_target_type_t}.
+\item \code{ompt\_data\_t} type signature, see
+\specref{subsec:ompt_data_t}.
+\item \code{ompt\_scope\_endpoint\_t} type signature, see
+\specref{subsec:ompt_scope_endpoint_t}.
+\item \code{ompt\_id\_t} type signature, see
+\specref{subsec:ompt_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_target\_data\_callback\_t}}
+\index{ompt\_target\_data\_callback\_t@{\code{ompt\_target\_data\_callback\_t}}}
+\label{subsec:ompt_target_data_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_target\_data\_callback\_t) (
+  ompt\_id\_t \plc{target\_id},
+  ompt\_id\_t \plc{host\_op\_id},
+  ompt\_target\_data\_op\_t \plc{optype},
+  void *\plc{host\_addr},
+  void *\plc{device\_addr},
+  size\_t \plc{bytes}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_target\_data\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_id\_t} type signature, see
+\specref{subsec:ompt_id_t}.
+\item \code{ompt\_target\_data\_op\_t} type signature, see
+\specref{subsec:ompt_target_data_op_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_target\_data\_map\_callback\_t}}
+\index{ompt\_target\_data\_map\_callback\_t@{\code{ompt\_target\_data\_map\_callback\_t}}}
+\label{subsec:ompt_target_data_map_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_target\_data\_map\_callback\_t) (
+  ompt\_id\_t \plc{target\_id},
+  uint32\_t \plc{nitems},
+  void **\plc{host\_addr},
+  void **\plc{device\_addr},
+  size\_t *\plc{bytes},
+  uint32\_t *\plc{mapping\_flags}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_target\_data\_map\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_id\_t} type signature, see
+\specref{subsec:ompt_id_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_target\_submit\_callback\_t}}
+\index{ompt\_target\_submit\_callback\_t@{\code{ompt\_target\_submit\_callback\_t}}}
+\label{subsec:ompt_target_submit_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_target\_submit\_callback\_t) (
+  ompt\_id\_t \plc{target\_id},
+  ompt\_id\_t \plc{host\_op\_id},
+  uint32\_t \plc{requested\_num\_teams},
+  uint32\_t \plc{granted\_num\_teams}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_target\_submit\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_id\_t} type signature, see
+\specref{subsec:ompt_id_t}.
+\end{itemize}
+
+
+\begin{targetRecord}
+\subsection{\code{ompt\_target\_buffer\_request\_callback\_t}}
+\index{ompt\_target\_buffer\_request\_callback\_t@{\code{ompt\_target\_buffer\_request\_callback\_t}}}
+\label{subsec:ompt_target_buffer_request_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_target\_buffer\_request\_callback\_t) (
+  int32\_t \plc{device\_id},
+  ompt\_target\_buffer\_t** \plc{buffer},
+  size\_t *\plc{bytes}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_target\_buffer\_request\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_target\_buffer\_t} type signature, see
+\specref{subsec:ompt_target_buffer_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_target\_buffer\_complete\_callback\_t}}
+\index{ompt\_target\_buffer\_complete\_callback\_t@{\code{ompt\_target\_buffer\_complete\_callback\_t}}}
+\label{subsec:ompt_target_buffer_complete_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_target\_buffer\_complete\_callback\_t) (
+  int32\_t \plc{device\_id},
+  const ompt\_target\_buffer\_t *\plc{buf},
+  size\_t \plc{bytes},
+  ompt\_target\_buffer\_cursor\_t \plc{begin},
+  \_Bool \plc{buffer\_owned}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_target\_buffer\_complete\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_target\_buffer\_t} type signature, see
+\specref{subsec:ompt_target_buffer_t}.
+\item \code{ompt\_target\_buffer\_cursor\_t} type signature, see
+\specref{subsec:ompt_target_buffer_cursor_t}.
+\end{itemize}
+
+
+
+\subsection{\code{ompt\_get\_target\_info\_inquiry\_t}}
+\index{ompt\_get\_target\_info\_inquiry\_t@{\code{ompt\_get\_target\_info\_inquiry\_t}}}
+\label{subsec:ompt_get_target_info_inquiry_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_get\_target\_info\_inquiry\_t) (
+  ompt\_id\_t *\plc{target\_id},
+  ompt\_id\_t *\plc{host\_op\_id}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_get\_target\_info\_inquiry\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_id\_t} type signature, see
+\specref{subsec:ompt_id_t}.
+\end{itemize}
+\end{targetRecord}
+
+
+\subsection{\code{ompt\_control\_callback\_t}}
+\index{ompt\_control\_callback\_t@{\code{ompt\_control\_callback\_t}}}
+\label{subsec:ompt_control_callback_t}
+\format
+\begin{boxedcode}
+typedef void (*ompt\_control\_callback\_t) (
+  uint64\_t \plc{command},
+  uint64\_t \plc{modifier},
+  const void *\plc{codeptr\_ra}
+);
+\end{boxedcode}
+\descr ToDo
+The callbacks with type signature \code{ompt\_control\_callback\_t},
+include a parameter \plc{requested\_team\_size}
+that indicates the number of threads requested by the user, and a parameter
+\plc{actual\_team\_size} that indicates the number of threads in the team.
+The \plc{invoker} argument explains whether the execution of the parallel
+region code is inlined into the application code or started by the runtime.
+
+
+
+
+
+
+
+
+
+
 
 % This is the end of ch5-toolsSupport.tex
