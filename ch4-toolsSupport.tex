@@ -330,32 +330,34 @@ asynchronously
 by invoking the \code{ompt\_get\_task\_info}  function (described in Section~\ref{sec:task-region}) in a signal handler.
 A task's frame object contains two fields: \code{exit\_frame} and \code{enter\_frame}.
 
-The \code{exit\_frame} field of a task's frame object 
-is set just before the task invokes an outlined function to begin execution 
-of user code. 
-The field contains the canonical frame address of the procedure that invoked the outlined function. 
-For compilers that generate code where the master thread for a parallel region invokes an 
-outlined procedure directly, 
-\code{exit\_frame} will contain the canonical frame address of a procedure containing  user code 
+The \code{exit\_frame} field of a task's frame object
+is set just before the task starts executing the structred block of the task region.
+The field contains the canonical frame address of the procedure that invoked the outlined function.
+In cases where the an outlined procedure is invoked directly from a user code frame,
+\code{exit\_frame} will contain the canonical frame address of a procedure containing  user code
 that belongs to the enclosing task.
-The value of \code{exit\_frame} is \code{NULL} in a task's frame object until just 
-before the task calls an outlined function to begin execution. 
+The value of \code{exit\_frame} is \code{NULL} in a task's frame object until just
+before the task calls an outlined function to begin execution. The value of
+\code{exit\_frame} is set to \code{NULL} when the task returns to the runtime,
+whether finished or deferred.
 
-The \code{enter\_frame} field of a task's frame object is set each time the task re-enters the 
+The \code{enter\_frame} field of a task's frame object is set each time the task re-enters the
 runtime to create a new implicit, explicit, or target task. When a task invokes an entry point in the
 OpenMP runtime to create a task,
-the \code{enter\_frame} field of the task's frame object will be set to 
+the \code{enter\_frame} field of the task's frame object will be set to
 the canonical frame address of the user function that invoked the runtime.
-The value of \code{enter\_frame} is set when a task enters the OpenMP runtime 
+The value of \code{enter\_frame} is set when a task enters the OpenMP runtime
 and cleared before the OpenMP runtime returns control to the task.
 
 \begin{table}
 \begin{center}
-\begin{tabular}{|p{1in}|p{2in}|p{2in}|}
+\begin{tabular}{p{1in}p{2in}p{2in}}
 \hline
-\code{exit\_frame} / \code{enter\_frame} 	& \code{enter\_frame} is \code{NULL}										& \code{enter\_frame} is defined \\\hline\hline
-\code{exit\_frame} is \code{NULL} & case 1)  initial task in user code case 2) task that is created but not yet scheduled &  task entered the runtime to schedule an implicit, explicit, or target task \\\hline
-\code{exit\_frame} is defined 	& non-initial task in (or soon to be in) user code							& non-initial task entered the runtime and scheduled an implicit, explicit, or target task\\\hline
+\code{exit\_frame} / \code{enter\_frame} 	& \code{enter\_frame} is \code{NULL}										& \code{enter\_frame} is defined \\
+\hline
+\code{exit\_frame} is \code{NULL} & case 1)  initial task in user code\newline case 2) task that is created but not yet scheduled or already finished & initial task entered the runtime to schedule an implicit, explicit, or target task \\
+\code{exit\_frame} is defined 	& non-initial task in (or soon to be in) user code							& non-initial task entered the runtime and scheduled an implicit, explicit, or target task\\
+\hline
 \end{tabular}
 \vspace{1ex}
 \end{center}
