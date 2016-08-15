@@ -151,53 +151,105 @@ ompt\_interface\_fn\_t \plc{ompt\_get\_thread\_id\_fn} =
 Other functions in the OMPT API may be looked up analogously.
 If a named function is not available in an OpenMP runtime's implementation of OMPT, \code{lookup} will return \code{NULL}.
 
-\subsection{Registering Callbacks.} 
-Tools register callbacks to receive notification of various events that occur as an OpenMP program executes by using the OMPT API function \code{ompt\_set\_callback}.
-The signature for this function is shown below
-{
+\subsection{Registering Callbacks}
+\index{event callback registration}
+\label{sec:ToolsSupport_callback_registration}
+
+Tools register callbacks to receive notification of various events that occur as
+an OpenMP program executes by using the OMPT API function \code{ompt\_set\_callback}.
+The signature for this function is
 \begin{boxedcode}
-OMPT\_API int \plc{ompt\_set\_callback}(
+OMPT\_API int ompt\_set\_callback(
   ompt\_event\_t \plc{event},
   ompt\_callback\_t \plc{callback}
 );
 \end{boxedcode}
-}
+
 
 \begin{table}
 \centering
-\begin{tabular}{|l|l|}
+\begin{tabular}{ll}
 \hline
-return code & meaning \\\hline
-0 & callback registration error (e.g., callbacks cannot be registered at this time).\\\hline
-1 & event may occur; no callback is possible\\\hline
-2 & event will never occur in runtime\\\hline
-3 & event may occur; callback invoked when convenient\\\hline
-4 & event may occur; callback always invoked when event occurs\\\hline
+return code & meaning \\
+\hline
+0 & callback registration error (e.g., callbacks cannot be registered at this time).\\
+1 & event may occur; no callback is possible\\
+2 & event will never occur in runtime\\
+3 & event may occur; callback invoked when convenient\\
+4 & event may occur; callback always invoked when event occurs\\
+\hline
 \end{tabular}
-\vspace{1ex}
 \caption{Meaning of return codes for \code{ompt\_set\_callback}.}
 \label{table:ToolsSupport_set_rc}
 \end{table}
 
-\noindent
-The  function \code{ompt\_set\_callback} may only be called within the implementation of a tool's initializer.
+The  function \code{ompt\_set\_callback}  may only be called within the implementation of a tool's initializer.
 The possible return codes for \code{ompt\_set\_callback} and their meaning is shown in Table~\ref{table:ToolsSupport_set_rc}.
-Registration of supported callbacks may fail if this function is called outside a tool's initializer.
-The \code{ompt\_callback\_t} type for a callback does not reflect the actual signature of the callback; OMPT uses this generic type to avoid the need to declare a separate registration function for each actual callback type.
+Registration of supported callbacks may fail if this function is
+called outside  \code{ompt\_initialize\_fn\_t}.
+The \code{ompt\_callback\_t} type for a callback does not reflect the actual signature of the callback; OMPT uses  this generic type
+ to avoid the need to declare a separate registration function for each actual callback type.
+The valid return codes for each event are listed in Table~\ref{table:valid_rc}.
+Some events always need to invoke the registered callback.
+For other events, its implementation defined whether they invoke the registered
+callback never, sometimes, or always.
+The return code makes this implementation defined behaviour machine readable to
+the connected tool.
 
-The OMPT interface function \code{ompt\_get\_callback} may be called at any time to determine whether a callback has been registered or not. 
+The  OMPT API function \code{ompt\_get\_callback} may be called at any time to determine whether a callback has been registered or not.
 
 \begin{boxedcode}
-OMPT\_API int \plc{ompt\_get\_callback}(
+OMPT\_API int ompt\_get\_callback(
   ompt\_event\_t \plc{event},
   ompt\_callback\_t *\plc{callback}
 );
 \end{boxedcode}
 
-\noindent
-If a callback has been registered, \code{ompt\_get\_callback} will return 1 and set \code{callback} to the address of the callback function; otherwise \code{ompt\_get\_callback} will return 0.
+If a callback has been registered,  \code{ompt\_get\_callback}  will return 1
+and set \code{callback} to the address of the callback function;
+otherwise \code{ompt\_get\_callback} will return 0.
 
-
+\begin{table}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lp{3em}p{3em}p{3em}p{3em}p{3em}}
+                                & \rot{callback registration error}
+                                & \rot{event may occur; no callback is possible}
+                                & \rot{event will never occur in runtime}
+                                & \rot{event may occur; callback invoked when convenient}
+                                & \rot{event may occur; callback always invoked when event occurs}\\
+                                \midrule
+ompt\_event\_thread\_begin          & * &   &   &   & * \\
+ompt\_event\_thread\_end            & * &   &   &   & * \\
+ompt\_event\_parallel\_begin        & * &   &   &   & * \\
+ompt\_event\_parallel\_end          & * &   &   &   & * \\
+ompt\_event\_task\_create           & * &   &   &   & * \\
+ompt\_event\_task\_schedule         & * &   &   &   & * \\
+ompt\_event\_implicit\_task         & * &   &   &   & * \\
+ompt\_event\_target                 & * &   &   &   & * \\
+ompt\_event\_target\_data           & * &   &   &   & * \\
+ompt\_event\_target\_submit         & * &   &   &   & * \\
+ompt\_event\_control                & * &   &   &   & * \\
+ompt\_event\_runtime\_shutdown      & * &   &   &   & * \\
+ompt\_event\_idle                   & * & * & * & * & * \\
+ompt\_event\_sync\_region\_wait     & * & * & * & * & * \\
+ompt\_event\_mutex\_release         & * & * & * & * & * \\
+ompt\_event\_task\_dependences      & * & * & * & * & * \\
+ompt\_event\_task\_dependence\_pair & * & * & * & * & * \\
+ompt\_event\_worksharing            & * & * & * & * & * \\
+ompt\_event\_master                 & * & * & * & * & * \\
+ompt\_event\_target\_data\_map      & * & * & * & * & * \\
+ompt\_event\_sync\_region           & * & * & * & * & * \\
+ompt\_event\_init\_lock             & * & * & * & * & * \\
+ompt\_event\_destroy\_lock          & * & * & * & * & * \\
+ompt\_event\_mutex\_acquire         & * & * & * & * & * \\
+ompt\_event\_mutex\_acquired        & * & * & * & * & * \\
+ompt\_event\_nested\_lock           & * & * & * & * & * \\
+ompt\_event\_flush                  & * & * & * & * & * \\
+\bottomrule
+\end{tabular}
+\caption{Valid return codes of \code{ompt\_set\_callback} for each input event argument.}
+\label{table:valid_rc}
+\end{table}
 
 \section{OMPT Data Types}
 \label{sec:data}
