@@ -86,11 +86,15 @@ If the value of \plc{omp-tool-var} is \code{enabled}, the runtime will attempt t
 \end{comment}
 
 The signature for \code{ompt\_tool} is shown below:
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 extern "C" \{
   ompt\_initialize\_fn\_t ompt\_tool(void);
 \};
 \end{boxedcode}
+\ccppspecificend
+}
 If a tool provides an implementation of \code{ompt\_tool} in the
 application's address space, \code{ompt\_tool} may return \code{NULL}
 indicating that the tool declines to register itself with the
@@ -115,6 +119,8 @@ When an OpenMP runtime receives a non-\code{NULL} pointer to a tool initializer 
 The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
 The signature for the tool initializer callback is shown below:
 
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 typedef void (*\plc{ompt\_initialize\_fn\_t}) (
   ompt\_function\_lookup\_t \plc{lookup},
@@ -122,6 +128,8 @@ typedef void (*\plc{ompt\_initialize\_fn\_t}) (
   unsigned int \plc{ompt\_version}
 );
 \end{boxedcode}
+\ccppspecificend
+}
 
 The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP runtime implementation.
 This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP runtime implementation.
@@ -137,11 +145,15 @@ These two operations are described below.
 The first argument to a tool initializer is \code{lookup}---a callback that a tool must use to interrogate the runtime system to obtain pointers to all OMPT interface functions.
 The type signature for \code{lookup} is:
 
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
   const char *\plc{interface\_function\_name}
 );
 \end{boxedcode}
+\ccppspecificend
+}
 
 The \code{lookup} callback is necessary because, when the OpenMP runtime is dynamically loaded by a shared library, the OMPT interface functions provided by the library may not be visible to a preloaded tool.
 Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
@@ -150,10 +162,14 @@ These functions should not be global symbols in an OpenMP runtime implementation
 
 The following example shows how to use the \code{lookup} function to obtain a pointer to the OMPT interface function \code{ompt\_get\_thread\_id}:
 
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 ompt\_interface\_fn\_t \plc{ompt\_get\_thread\_id\_fn} =
                         \plc{lookup}("ompt\_get\_thread\_id");
 \end{boxedcode}
+\ccppspecificend
+}
 Other functions in the OMPT API may be looked up analogously.
 If a named function is not available in an OpenMP runtime's implementation of OMPT, \code{lookup} will return \code{NULL}.
 
@@ -164,12 +180,16 @@ If a named function is not available in an OpenMP runtime's implementation of OM
 Tools register callbacks to receive notification of various events that occur as
 an OpenMP program executes by using the OMPT API function \code{ompt\_set\_callback}.
 The signature for this function is
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 OMPT\_API int ompt\_set\_callback(
   ompt\_event\_t \plc{event},
   ompt\_callback\_t \plc{callback}
 );
 \end{boxedcode}
+\ccppspecificend
+}
 
 
 \begin{table}
@@ -204,12 +224,16 @@ the connected tool.
 
 The  OMPT API function \code{ompt\_get\_callback} may be called at any time to determine whether a callback has been registered or not.
 
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
 OMPT\_API int ompt\_get\_callback(
   ompt\_event\_t \plc{event},
   ompt\_callback\_t *\plc{callback}
 );
 \end{boxedcode}
+\ccppspecificend
+}
 
 If a callback has been registered,  \code{ompt\_get\_callback}  will return 1
 and set \code{callback} to the address of the callback function;
@@ -256,6 +280,371 @@ ompt\_event\_flush                  & * & * & * & * & * \\
 \caption{Valid return codes of \code{ompt\_set\_callback} for each input event argument.}
 \label{table:valid_rc}
 \end{table}
+
+\clearpage
+\section{Thread States}
+\label{sec:runtimeStates}
+
+To enable a tool to understand the behavior of an executing program, 
+an OpenMP implementation maintains a state for each thread. 
+The state maintained for a thread is an
+approximation of the thread's instantaneous state. 
+
+\vbox{
+\ccppspecificstart
+A thread's state will be one of the values of the  
+enumeration type \verb|omp_state_t| or
+an implementation-defined state value of 0x81 or higher. 
+Thread states in the enumeration fall into several classes: 
+idleness, work, overhead, barrier wait, task wait, mutex wait, target wait, 
+and undefined. 
+
+\begin{boxedcode}
+typedef enum omp_state_t \{
+  omp_state_idle                   = 0x00, 
+
+  omp_state_work_serial            = 0x10,
+  omp_state_work_parallel          = 0x11,
+  omp_state_work_reduction         = 0x12,
+
+  omp_state_overhead               = 0x20, 
+
+  omp_state_wait_barrier           = 0x40,
+  omp_state_wait_barrier_implicit  = 0x41,
+  omp_state_wait_barrier_explicit  = 0x42,
+
+  omp_state_wait_taskwait          = 0x50,
+  omp_state_wait_taskgroup         = 0x51,
+
+  omp_state_wait_mutex             = 0x60,
+  omp_state_wait_lock              = 0x61,
+  omp_state_wait_critical          = 0x62,
+  omp_state_wait_atomic            = 0x63,
+  omp_state_wait_ordered           = 0x64,
+
+  omp_state_wait_target            = 0x70,
+  omp_state_wait_target_data       = 0x71,
+  omp_state_wait_target_update     = 0x72,
+
+  omp_state_undefined              = 0x80
+\} omp_state_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+
+A tool can query the OpenMP state of a thread at any time. 
+If a tool queries the state of a thread that is not associated 
+with OpenMP, the implementation reports the state as \verb|omp_state_undefined|.
+
+\begin{comment}
+For each OpenMP thread the runtime maintains not only a state but also an \verb|ompt_wait_id_t|
+identifier.  When a thread is waiting for a lock, critical region,
+ordered, or atomic, and the thread is in a wait
+state, then 
+the thread's \verb|wait_id| field identifies the lock, critical construct, ordered construct, atomic construct, or internal variable
+upon which the
+thread is waiting. The semantics of the values used for a \verb|wait_id| are implementation defined.
+A thread's \verb|wait_id| is undefined if the thread
+is not in a wait state.
+\end{comment}
+
+Some values of the enumeration type \verb|omp_state_t| are used by all 
+OpenMP implementations, 
+e.g., \verb|omp_state_work_serial|, 
+which indicates that a thread is executing in a serial region, and  
+\verb|omp_state_work_parallel|, 
+which indicates that a thread is executing in a parallel region.
+Other values of the enumeration type describe a thread's state at 
+different levels of specificity. 
+For instance, an OpenMP implementation may use 
+the state \verb|omp_state_wait_barrier|  to represent all 
+waiting at barriers; or it may differentiate between waiting at 
+implicit and explicit barriers by using the pair of states
+\verb|omp_state_wait_barrier_implicit| and 
+\verb|omp_state_wait_barrier_explicit|. 
+
+For states that represent waiting, an OpenMP implementation has the 
+choice of transitioning a thread to such states early or late.
+For instance, when an OpenMP thread is trying to acquire a lock,
+there are several points at which an OpenMP implementation
+transition the thread to the \verb|omp_state_wait_lock| state.
+One implementation may transition the thread to the state 
+early before the thread attempts to acquire a
+lock. Another implementation may transition the thread to the state 
+late, only if the thread begins to spin or
+block to wait for an unavailable lock. A third implementation
+may transition the thread to the state even later, e.g., only
+after the thread waits for a significant amount of time. 
+
+The following describes the classes and the states in each class.
+
+\littleheader{Idleness State}
+
+
+\begin{description}
+\item \verb|omp_state_idle| 
+
+  The thread is idle, waiting for work.
+
+\end{description}
+
+\littleheader{Overhead State}
+
+\begin{description}
+\item \verb|omp_state_overhead| 
+
+  A thread may be reported as being in the overhead state at any point while 
+  executing within an OpenMP runtime, except while waiting indefinitely
+  at a synchronization point.
+%  e.g., while preparing to execute a parallel, task, or worksharing construct. 
+  An OpenMP implementation report a thread's state as a work state for
+  some or all of the time the thread spends in executing in the OpenMP runtime.
+\end{description}
+
+\littleheader{Work States}
+An OpenMP implementation reports a thread in a work state 
+when the thread is performing serial work, parallel work, or a reduction.
+
+\begin{description}
+
+\item \verb|omp_state_work_serial| 
+
+  The thread is executing code outside all parallel regions. 
+
+\item \verb|omp_state_work_parallel| 
+
+  The thread is executing code within the scope of a parallel region construct.
+
+\sloppy
+\item \verb|omp_state_work_reduction| 
+ 
+  The thread is combining partial reduction results from threads in its team. A compliant
+  runtime might never report a thread in this state; a thread
+  combining partial reduction results may  report its state as
+  \verb|omp_state_work_parallel| or \verb|omp_state_overhead|.
+
+\end{description}
+
+
+\littleheader{Barrier Wait States}
+
+An OpenMP implementation reports that a thread is in a barrier wait state 
+when the thread is is awaiting completion of a barrier.
+
+
+\begin{description}
+
+  \item \verb|omp_state_wait_barrier| 
+  
+  \sloppy
+  The thread is waiting at either an implicit or explicit barrier.
+  A  compliant implementation may have a thread enter this state
+  early, when the thread encounters a barrier, or late, when the
+  thread begins to wait at the barrier. A  compliant implementation may never report a thread in this state; instead, a thread might report its state as \verb|omp_state_wait_barrier_implicit|  or \verb|omp_state_wait_barrier_explicit|, as appropriate.
+  
+  \item \verb|omp_state_wait_barrier_implicit| 
+  
+\sloppy
+  The thread is waiting at an implicit barrier in a parallel region. 
+  A  compliant implementation may have a thread enter this state
+  early, when the thread encounters a barrier, or late, when the
+  thread begins to wait at the barrier.
+  A  compliant runtime implementation may report \verb|omp_state_wait_barrier| for implicit barriers.
+  
+    \item \verb|omp_state_wait_barrier_explicit| 
+
+  The thread is waiting at an explicit barrier  in a parallel region. 
+  A  compliant implementation may have a thread enter this state
+  early, when the thread encounters a barrier, or late, when the
+  thread begins to wait at the barrier.
+  A  compliant runtime implementation may report \verb|omp_state_wait_barrier| for explicit barriers.
+  
+\end{description}
+  
+\littleheader{Task Wait States}
+
+\begin{description}
+
+\item \verb|omp_state_wait_taskwait| 
+
+  The thread is waiting at a taskwait construct. A compliant
+  implementation may have a thread enter this state early, when the
+  thread encounters a taskwait construct, or late, when the thread
+  begins to wait for an uncompleted task.
+
+\item \verb|omp_state_wait_taskgroup| 
+
+  The thread is waiting at the end of a taskgroup construct. A compliant
+  implementation may have a thread enter this state early, when the
+  thread encounters the end of a taskgroup construct, or late, when the thread
+  begins to wait for an uncompleted task.
+
+\end{description}
+
+
+\littleheader{Mutex Wait States}
+
+OpenMP provides several mechanisms that enforce mutual exclusion:
+locks as well as critical, atomic, and ordered sections.  This
+grouping contains all states used to indicate that a thread is is
+awaiting exclusive access to a lock, critical section, variable,
+or ordered section.
+
+A runtime implementation may report a thread waiting for any type
+of mutual exclusion using either a state that precisely identifies
+the type of mutual exclusion, or  a more generic state such as
+\verb|omp_state_wait_mutex| or \verb|omp_state_wait_lock|.  This
+flexibility may significantly simplify the maintenance of states
+associated with mutual exclusion in the runtime when various
+mechanisms for mutual exclusion rely on a common implementation,
+e.g., locks.
+
+% Section~\ref{sec:wait-identifier} describes how each thread maintains a wait identifier to identify what a thread is awaiting. Before a thread enters any state indicating that it is awaiting mutual exclusion, the OpenMP runtime will update the thread's wait identifier to indicate what the thread is awaiting. 
+
+\begin{description}
+
+\item \verb|omp_state_wait_mutex|
+
+  The thread is waiting for a mutex of an unspecified type. A compliant implementation
+  may have a thread enter this state early, when a thread encounters a lock acquisition or a region that requires mutual exclusion, or late, when the thread begins to wait.
+
+\item \verb|omp_state_wait_lock|
+
+  The thread is waiting for a  lock  or nest lock. A compliant implementation
+  may have a thread enter this state early, when a thread
+  encounters a lock \verb|set| routine, or late, when the thread
+  begins to wait for a lock.
+
+\item \verb|omp_state_wait_critical| 
+
+  The thread is waiting to enter a critical region. A compliant
+  implementation may have a thread enter this state early, when the
+  thread encounters a critical construct, or late, when the thread
+  begins to wait to enter the critical region. 
+
+
+\item \verb|omp_state_wait_atomic| 
+
+  The thread is waiting to enter an atomic region. A compliant
+  implementation may have a thread enter this state early, when the thread
+  encounters an atomic construct, or late, when the thread begins
+  to wait to enter the atomic region. 
+  A compliant implementation may opt not to report
+  this state, for example, when using atomic hardware instructions that support non-blocking atomic implementations.
+  
+
+\item \verb|omp_state_wait_ordered| 
+
+  The thread is waiting to enter an ordered region. A compliant
+  implementation may have a thread enter this state early, when the thread encounters
+  an ordered construct, or late, when the thread begins
+  to wait to enter the ordered region. 
+  
+\end{description}
+  
+\littleheader{Target Wait States}
+
+\begin{description}
+
+\item \verb|omp_state_wait_target| 
+
+  The thread is waiting for a target region to complete.
+  
+\item \verb|omp_state_wait_target_data| 
+
+  The thread is waiting for a target data mapping operation to complete. 
+  A  compliant runtime implementation may report \verb|omp_state_wait_target| for target data constructs.
+
+\item \verb|omp_state_wait_target_update| 
+
+  The thread is waiting for a target  update operation to complete. 
+  A  compliant runtime implementation may report \verb|omp_state_wait_target| for target update constructs.
+
+\end{description}
+
+
+\littleheader{Undefined State}
+
+\begin{description}
+\item \verb|omp_state_undefined| 
+
+  This state is reserved for threads that are not user threads,
+  initial threads, threads currently in an OpenMP team, or threads
+  waiting to become part of an OpenMP team.
+
+\end{description}
+
+\begin{comment}
+\section{OMPT Inquiry Functions}
+\label{sec:omptFunctions}
+
+
+ Inquiry functions retrieve data from the execution environment for
+ the tools. 
+ All functions in the inquiry API are marked with \verb|OMPT_API|. These functions should not be global symbols in an OpenMP runtime implementation to avoid tempting tool developers to call them directly. Section~\ref{sec:init} describes how a tool should obtain pointers to these inquiry functions.
+ {\em All inquiry functions are async signal safe.} 
+ Note that it is unsafe to call OpenMP Execution Environment Routines within an OMPT callback because doing so may cause deadlock. 
+ Specifically, since OpenMP Execution Library Routines are not guaranteed to be async signal safe, they might acquire a lock that may already be held when an OMPT callback is involved.
+\end{comment}
+ 
+ \subsection{\code{ompt\_enumerate\_states}}
+ \label{ompt_enumerate_states}
+ \summary
+ 
+The \code{ompt\_enumerate\_states} routine enables a tool 
+to determine all thread states supported by a particular OpenMP 
+implementation.
+
+\format
+
+\ccppspecificstart
+\begin{boxedcode}
+OMPT_API int ompt_enumerate_states(
+  int \plc{current_state}, 
+  int *\plc{next_state}, 
+  const char **\plc{next_state_name}
+);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+An OpenMP implementation may support implementation-defined states in 
+addition to those specified in the \verb|ompt_states_t| enumeration.
+For instance, a particular OpenMP implementation may want to 
+provide more detail about the nature of runtime overhead, 
+e.g., to differentiate between overhead associated with setting up 
+parallel regions
+and overhead associated with setting up tasks. 
+% A tool need not report all states defined herein, e.g., if state tracking for a particular state would be too expensive.
+To enable a tool to identify all states that an OpenMP implementation
+supports, the following interface for enumerating all states that may be reported by the runtime that is being used.
+
+
+\constraints
+
+To begin enumerating the states that an OpenMP implementation supports,
+the value \verb|omp_state_undefined| should be supplied for \verb|current_state| in the call to \verb|ompt_enumerate_states| that begins the enumeration.
+The argument \verb|next_state| is a pointer to an \verb|int| that will be set to the code for the next state in the enumeration.
+The argument \verb|next_state_name| is the address of a character pointer
+that will be filled in with a pointer to the name associated with 
+\verb|next_state|. 
+Subsequent invocations of \verb|ompt_enumerate_states| should pass the code returned in \verb|next_state| by the prior call.
+Whenever one or more states are left in the enumeration, \verb|ompt_enumerate_states| will return \verb|true|.
+When the last state in the enumeration is passed to \verb|ompt_enumerate_states| as \verb|current_state|, the function will return \verb|false| indicating that the enumeration is complete.
+An example of how to enumerate the states supported by an OpenMP runtime is shown below:
+
+\ccppspecificstart
+\begin{boxedcode}
+int state = omp_state_undefined;
+const char *state_name;
+while (ompt_enumerate_states(state, &state, &state_name)) \{
+  // tool notes that the runtime supports omp_state_t "state" 
+  // associated with "state_name" 
+\}
+\end{boxedcode}
+\ccppspecificend
 
 \section{OMPT Data Types}
 \label{sec:data}
@@ -411,7 +800,7 @@ and cleared before the OpenMP runtime returns control to the task.
 \hline
 \code{exit\_frame} / \code{enter\_frame} 	& \code{enter\_frame} is \code{NULL}										& \code{enter\_frame} is defined \\
 \hline
-\code{exit\_frame} is \code{NULL} & case 1)  initial task in user code\newline case 2) task that is created but not yet scheduled or already finished & initial task entered the runtime to schedule an implicit, explicit, or target task \\
+\code{exit\_frame} is \code{NULL} & case 1)  initial task in user code\newline case 2) task that is created but not yet scheduled or already finished & initial task entered the runtime to schedule an implicit, explicit, or target task \\\hline
 \code{exit\_frame} is defined 	& non-initial task in (or soon to be in) user code							& non-initial task entered the runtime and scheduled an implicit, explicit, or target task\\
 \hline
 \end{tabular}
