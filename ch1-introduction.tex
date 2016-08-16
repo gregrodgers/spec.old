@@ -1482,8 +1482,11 @@ tool runs within the address space of an application process. This
 differs from a {\em third-party} tool, e.g., a debugger, which runs
 as a separate process.} tools that support monitoring and performance
 analysis of OpenMP programs developed using any implementation of 
-the OpenMP API, the OpenMP API includes an interface for tools 
+the OpenMP API, the OpenMP API includes a tool interface 
 known as OMPT.
+The OMPT interface can be implemented entirely by a compiler,
+entirely by an OpenMP runtime system, or with a hybrid strategy
+that employs a mixture of compiler and runtime support.
 
 \begin{comment}
 The design of OMPT was influenced by two prior efforts to define a
@@ -1502,45 +1505,72 @@ capabilities needed to provide full tool support for statically-linked
 executables.  OMPT builds upon ideas from both POMP and Collector.
 \end{comment}
 
-The OMPT interface provides three tiers of feature sets.
-The first tier is a minimal set of features needed to support tools that
-employ asynchronous sampling to measure application performance.
-A second tier of callback interfaces can be used in conjunction with 
-a performance tool that employs asynchronous sampling to help shift 
-blame for runtime costs from symptoms (e.g., idle threads) to causes (e.g., serial work executed by a 
-single thread).
-A third tier of callback interfaces provides support for trace-based monitoring of 
-runtime events.  OMPT can be implemented entirely by a compiler,
-entirely by an OpenMP runtime system, or with a hybrid strategy
-that employs a mixture of compiler and runtime support.
-
-With the exception of one routine for tool control (described in Section~\ref{sec:tconctrol}),
+With the exception of one routine for tool control (described in Section~\ref{sec:tool_control}),
 all functions in the OMPT interface are intended for use only by tools rather than by
 applications.  For that reason, a Fortran binding is provided only 
-for the single application-facing tool control routine;
+for the application-facing tool control routine;
 all other OMPT functions have only a C binding. 
 
-In some cases, OMPT may enable a tool to observe performance
+In some cases, the OMPT interface may enable a tool to observe performance
 implications and infer details about an implementation of the OpenMP
 API.  An implementation of the OpenMP API may differ from the
 abstract execution model described by its specification.  The ability
-of tools using OMPT to observe such differences does not constrain
+of tools using the OMPT interface to observe such differences does not constrain
 implementations of the OpenMP API in any way. 
 
-OMPT has a small set of mandatory features that provide a common foundation for all performance tools. In addition, OMPT defines a set of optional features that can be used tools to gather extra information about a program execution. All optional features in OMPT are explicitly marked. Implementations are encouraged to implement these features where feasible to support richer tools, but are considered compliant if they provide only only the mandatory features.
+The OMPT interface provides three tiers of support. 
+The first tier is a required, minimal set of features 
+needed to support tools that
+employ asynchronous sampling to measure application performance.
+A second tier of callback interfaces enables 
+performance tools that employ asynchronous sampling to shift 
+blame for runtime costs from symptoms (e.g., idle threads) 
+to apparent causes (e.g., serial work executed by a single thread).
+A third tier of callback interfaces supports comprehensive monitoring of 
+runtime events; such support is needed by correctness tools and desired
+by any tool that supports analysis and/or visualization of event traces.
+Support for features in the second and third tiers is implementation-defined.
+% An OpenMP implementation need not support invocation of all OMPT callbacks described in this document. 
+Table~\ref{table:ToolsSupport_set_rc} specifies the permissible
+return codes by an OpenMP implementation 
+when a tool attempts to register an OMPT callback within the tool's 
+initializer.
+Unless the table indicates that an OpenMP implementation must 
+guarantee that a callback will always occur when its corresponding 
+event occurs, it is implementation-defined whether an OpenMP
+implementation will provide callbacks in some or all circumstances when
+its corresponding event occurs.
+For cases where OMPT callbacks are practical in an OpenMP implementation
+without a significant performance penalty, OpenMP implementations are 
+encouraged to provide callbacks where implementation-defined behaviors
+are permitted.
 
-A minimally compliant implementation of OMPT in the OpenMP API must 
+To support the OMPT interface, an implementation of the OpenMP API 
+must
 
 \begin{itemize}
-\item maintain a unique numerical ID per OpenMP thread, parallel region, and task region, 
+\item provide a mapping from each 
+OpenMP thread, parallel region, and task region concurrently live on the host
+device to a unique 64-bit data word that can be used by a tool,\footnote{\color{red}Does this adequately reflect the data design? Notice that {\em unique} 
+is different for this bullet and next.}
+\item associate a unique numerical ID with each OpenMP thread, 
+parallel region, and task region that executes on any device 
+other than the host, 
 % A minimal implementation may reuse the task ID required by OpenMP for nested locks,
-\item maintain pointers into the stack for each OpenMP thread to distinguish frames for user procedures from frames for OpenMP runtime routines,
+\item maintain pointers into the stack for each OpenMP thread to distinguish frames for user procedures from frames for OpenMP runtime routines,\footnote{\color{red}Do we need frame object in target trace records? I think not.}
 \item maintain a state and a wait identifier for each OpenMP thread,
 % . Mandatory states are idle, work serial, work parallel, and undefined,
-\item support callbacks for tools when the following events occur:  thread begin/end, parallel region begin/end, task region begin/end, invocation of the user-level tool control routine, and runtime shutdown,
+\item support required event callbacks for tools 
+associated with threads, parallel regions, tasks, target regions, 
+invocation of the user-level tool control routine, and runtime 
+shutdown,
+%\footnote{Table~\ref{table:ToolsSupport_set_rc} indicates exactly what event callbacks are required.}
+% , including thread begin/end, parallel region begin/end, task region begin/end, target region begin/end, target region operations, invocation of the user-level tool control routine, and runtime shutdown,
 \item implement several async signal safe inquiry functions to retrieve information from an OpenMP runtime, and
 \item initiate a callback to a tool initialization routine 
-as directed by the value of an OpenMP environment variable (\code{OMP\_TOOL}) and provide a function to register tool callbacks.
+as directed by an internal control variable
+% the value of an OpenMP environment variable (\code{OMP\_TOOL}) 
+and provide a function to register tool callbacks.
 \end{itemize}
 
 
@@ -1549,10 +1579,10 @@ as directed by the value of an OpenMP environment variable (\code{OMP\_TOOL}) an
 \index{OpenMP compliance}
 \index{compliance}
 An implementation of the OpenMP API is compliant if and only if it compiles and 
-executes all conforming programs according to the syntax and semantics laid out in 
-Chapters 1, 2, 3, 4 and 5. Note, though, that \specref{chap:ToolsSupport} contains both
-mandatory and optional features; the OpenMP API is compliant if at least the
-mandatory features are provided.
+executes all conforming programs and supports all required tool interfaces 
+according to the syntax and semantics laid out in 
+Chapters 1, 2, 3, 4 and 5. 
+% Note, though, that \specref{chap:ToolsSupport} contains both mandatory and optional features; the OpenMP API is compliant if at least the mandatory features are provided.
 Appendices A, B, C and D and sections designated as Notes 
 (see \specref{sec:Organization of this document}) 
 are for information purposes only and are not part of the 
