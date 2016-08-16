@@ -40,7 +40,8 @@
 This chapter describes the OMPT interface provided by the OpenMP API
 to support third-party monitoring and performance analysis tools.
 The chapter first explains if and how an implementation of
-the OpenMP API will attempt to register a tool prior to initializing the OpenMP runtime and
+the OpenMP API will attempt to register a tool prior to initializing the 
+OpenMP implementation and
 how a registered tool will use the OMPT interface to initialize tool state maintained by
 an implementation of the OpenMP API.
 It concludes with a description of data types
@@ -51,38 +52,39 @@ call stack of an OpenMP thread.
 \index{tool registration}
 \label{sec:ToolsSupport_Registration}
 
-The \code{OMP\_TOOL} environment variable sets the \plc{omp-tool-var} ICV, which controls whether or not an
+The \code{OMP\_TOOL} environment variable sets the \plc{tool-var} ICV, which controls whether or not an
 implementation of the OpenMP API will attempt to register a tool.
 The value of \code{OMP\_TOOL} is case insensitive and may have leading and trailing white space.
 The only legal values of \code{OMP\_TOOL} are \code{enabled} or \code{disabled}.
-If the value of \plc{omp-tool-var} is \code{enabled},
+If the value of \plc{tool-var} is \code{enabled},
 the OpenMP API implementation will attempt to register a tool by determining if
 an implementation of the function \code{ompt\_tool} exists in a program's address space and, if so,
-calling \code{ompt\_tool} before initializing the OpenMP runtime.
-If the value of \plc{omp-tool-var} is \code{disabled}, the OpenMP API implementation will not
+calling \code{ompt\_tool} before initializing the OpenMP implementation.
+If the value of \plc{tool-var} is \code{disabled}, the OpenMP API implementation will not
 call \code{ompt\_tool}, regardless of whether or not an implementation of \code{ompt\_tool} exists in the
 address space.
 If \code{OMP\_TOOL} is set to any other value, an implementation of the OpenMP API
 will print a fatal error to the standard error file descriptor indicating that an illegal value had been supplied for \code{OMP\_TOOL} and the program's execution will terminate.
-If \code{OMP\_TOOL} is not defined, the default value for \plc{omp-tool-var} is \code{enabled}.
+If \code{OMP\_TOOL} is not defined, the default value for \plc{tool-var} is \code{enabled}.
 
 \begin{comment}
 \begin{table}
 \begin{center}
 \begin{tabular}{|c|p{4in}|}
 \hline
- {\em omp-tool-var} value & action \\\hline
-enabled & the OpenMP runtime will call \code{ompt\_tool} before initializing itself.\\\hline
-disabled & the OpenMP runtime will not call \code{ompt\_tool}, regardless of whether a tool is present or not.\\\hline
+ {\em tool-var} value & action \\\hline
+enabled & an OpenMP implementation will call \code{ompt\_tool} before initializing itself.\\\hline
+disabled & an OpenMP implementation will not call \code{ompt\_tool}, regardless of whether a tool is present or not.\\\hline
 \end{tabular}
 \end{center}
-\caption{OpenMP runtime responses to settings of the {\em omp-tool-var} ICV.}
+\caption{Actions in response to settings of the {\em tool-var} ICV.}
 \label{table:ToolsSupport_env-var}
 \end{table}
 
 \sloppy
-Table~\ref{table:ToolsSupport_env-var} describes the action that an OpenMP runtime will take in response to possible values of \plc{omp-tool-var}.
-If the value of \plc{omp-tool-var} is \code{enabled}, the runtime will attempt to register a tool by calling the function \code{ompt\_tool} before performing runtime initialization.
+Table~\ref{table:ToolsSupport_env-var} describes the action that an OpenMP 
+implementation will take in response to possible values of \plc{tool-var}.
+If the value of \plc{tool-var} is \code{enabled}, the runtime will attempt to register a tool by calling the function \code{ompt\_tool} before performing runtime initialization.
 \end{comment}
 
 The signature for \code{ompt\_tool} is shown below:
@@ -103,7 +105,7 @@ by returning a non-\code{NULL} pointer to a function with type
 signature \code{ompt\_initialize\_fn\_t}, which is in
 Section~\ref{sec:ToolsSupport_init}.
 
-Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP runtime, only one tool may register itself.
+Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP implementation, only one tool may register itself.
 If a tool-supplied implementation of \code{ompt\_tool} returns a non-\code{NULL} initializer,
 an implementation of the OpenMP API will maintain state information for each OpenMP thread and will perform
 any OMPT event callbacks registered during tool initialization.
@@ -115,7 +117,7 @@ under the same conditions as it would for any process.
 \section{Tool Initialization}
 \label{sec:ToolsSupport_init}
 
-When an OpenMP runtime receives a non-\code{NULL} pointer to a tool initializer function with signature \code{ompt\_initialize\_fn\_t} as the return value from a call to a tool-provided implementation of \code{ompt\_tool}, the runtime will call the tool initializer immediately after the runtime fully initializes itself.
+When an OpenMP implementation receives a non-\code{NULL} pointer to a tool initializer function with signature \code{ompt\_initialize\_fn\_t} as the return value from a call to a tool-provided implementation of \code{ompt\_tool}, the runtime will call the tool initializer immediately after the runtime fully initializes itself.
 The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
 The signature for the tool initializer callback is shown below:
 
@@ -131,9 +133,9 @@ typedef void (*\plc{ompt\_initialize\_fn\_t}) (
 \ccppspecificend
 }
 
-The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP runtime implementation.
-This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP runtime implementation.
-Knowing exactly what version of an OpenMP runtime is present in a binary may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
+The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP implementation.
+This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP implementation.
+Knowing exactly what version of an OpenMP implementation is present in a binary may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
 
 The third argument \code{ompt\_version} indicates the version of the OMPT interface supported by a runtime system.
 The version of OMPT described by this document is 2.
@@ -155,10 +157,13 @@ typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
 \ccppspecificend
 }
 
-The \code{lookup} callback is necessary because, when the OpenMP runtime is dynamically loaded by a shared library, the OMPT interface functions provided by the library may not be visible to a preloaded tool.
+The \code{lookup} callback is necessary in the case when an OpenMP runtime 
+is dynamically loaded by a shared library. In this case, 
+OMPT interface functions provided by the library may 
+not be visible to a preloaded tool.
 Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
 All functions in the OMPT interface are marked with \code{OMPT\_API}.
-These functions should not be global symbols in an OpenMP runtime implementation to avoid tempting tool developers to call them directly.
+These functions should not be global symbols in an OpenMP implementation to avoid tempting tool developers to call them directly.
 
 The following example shows how to use the \code{lookup} function to obtain a pointer to the OMPT interface function \code{ompt\_get\_thread\_id}:
 
@@ -171,7 +176,7 @@ ompt\_interface\_fn\_t \plc{ompt\_get\_thread\_id\_fn} =
 \ccppspecificend
 }
 Other functions in the OMPT API may be looked up analogously.
-If a named function is not available in an OpenMP runtime's implementation of OMPT, \code{lookup} will return \code{NULL}.
+If a named function is not available in an OpenMP implementation, \code{lookup} will return \code{NULL}.
 
 \subsection{Registering Callbacks}
 \index{event callback registration}
@@ -450,7 +455,7 @@ when the thread is is awaiting completion of a barrier.
   A  compliant implementation may have a thread enter this state
   early, when the thread encounters a barrier, or late, when the
   thread begins to wait at the barrier.
-  A  compliant runtime implementation may report \verb|omp_state_wait_barrier| for implicit barriers.
+  A  compliant implementation may report \verb|omp_state_wait_barrier| for implicit barriers.
   
     \item \verb|omp_state_wait_barrier_explicit| 
 
@@ -458,7 +463,7 @@ when the thread is is awaiting completion of a barrier.
   A  compliant implementation may have a thread enter this state
   early, when the thread encounters a barrier, or late, when the
   thread begins to wait at the barrier.
-  A  compliant runtime implementation may report \verb|omp_state_wait_barrier| for explicit barriers.
+  A  compliant implementation may report \verb|omp_state_wait_barrier| for explicit barriers.
   
 \end{description}
   
@@ -491,7 +496,7 @@ grouping contains all states used to indicate that a thread is is
 awaiting exclusive access to a lock, critical section, variable,
 or ordered section.
 
-A runtime implementation may report a thread waiting for any type
+An OpenMP implementation may report a thread waiting for any type
 of mutual exclusion using either a state that precisely identifies
 the type of mutual exclusion, or  a more generic state such as
 \verb|omp_state_wait_mutex| or \verb|omp_state_wait_lock|.  This
@@ -554,12 +559,12 @@ e.g., locks.
 \item \verb|omp_state_wait_target_data| 
 
   The thread is waiting for a target data mapping operation to complete. 
-  A  compliant runtime implementation may report \verb|omp_state_wait_target| for target data constructs.
+  A  compliant implementation may report \verb|omp_state_wait_target| for target data constructs.
 
 \item \verb|omp_state_wait_target_update| 
 
   The thread is waiting for a target  update operation to complete. 
-  A  compliant runtime implementation may report \verb|omp_state_wait_target| for target update constructs.
+  A  compliant implementation may report \verb|omp_state_wait_target| for target update constructs.
 
 \end{description}
 
@@ -582,7 +587,7 @@ e.g., locks.
 
  Inquiry functions retrieve data from the execution environment for
  the tools. 
- All functions in the inquiry API are marked with \verb|OMPT_API|. These functions should not be global symbols in an OpenMP runtime implementation to avoid tempting tool developers to call them directly. Section~\ref{sec:init} describes how a tool should obtain pointers to these inquiry functions.
+ All functions in the inquiry API are marked with \verb|OMPT_API|. These functions should not be global symbols in an OpenMP implementation to avoid tempting tool developers to call them directly. Section~\ref{sec:init} describes how a tool should obtain pointers to these inquiry functions.
  {\em All inquiry functions are async signal safe.} 
  Note that it is unsafe to call OpenMP Execution Environment Routines within an OMPT callback because doing so may cause deadlock. 
  Specifically, since OpenMP Execution Library Routines are not guaranteed to be async signal safe, they might acquire a lock that may already be held when an OMPT callback is involved.
@@ -681,7 +686,7 @@ typedef uint64\_t ompt\_thread\_id\_t;
 \end{boxedcode}
 \end{comment}
   A thread's identifier is assigned when the thread is created.
-  Identifiers assigned to threads on each device are unique from the time an OpenMP runtime is initialized until it is shut down.
+  Identifiers assigned to threads on each device are unique from the time an OpenMP implementation is initialized until it is shut down.
   A thread identifier can be retrieved
   on demand by invoking the  \code{ompt\_get\_thread\_id}
   function (described in Section~\ref{sec:thread-inquiry}).
@@ -699,7 +704,7 @@ typedef uint64\_t ompt\_parallel\_id\_t;
 \end{comment}
   A parallel region's identifier is assigned
   when the region is created.  Identifiers assigned to parallel regions on each device are unique from the time an
-  OpenMP runtime is initialized until it is shut down.
+  OpenMP implementation is initialized until it is shut down.
   A parallel region identifer can be retrieved for an enclosing parallel region
   on demand using the function \code{ompt\_get\_parallel\_info}  (described in Section~\ref{sec:parallel-inquiry}).
   Tools should not assume that \code{ompt\_parallel\_id\_t} values are small or densely allocated.
@@ -719,7 +724,7 @@ typedef uint64\_t ompt\_task\_id\_t;
   A task's identifier is assigned
   when the task is created.
   Identifiers assigned to tasks on each device are unique from the time an
-  OpenMP runtime is initialized until it is shut down.
+  OpenMP implementation is initialized until it is shut down.
   A task's identifier can be retrieved
   on demand by invoking the \code{ompt\_get\_task\_info}  function (described in Section~\ref{sec:task-region}).
   Tools should not assume that \code{ompt\_task\_id\_t} values are small or densely allocated.
@@ -732,7 +737,7 @@ A unique target identifier is assigned on the host each time an instance of a ta
 Each operation within a target region, e.g., transferring data to/from a device or launching a kernel launch
 on a device, is also assigned a unique target identifier.
 Identifiers assigned to target regions or operations
-are unique from the time an OpenMP runtime is initialized until it is shut down.
+are unique from the time an OpenMP implementation is initialized until it is shut down.
 The current target region and operation identifiers can be retrieved by invoking the \code{ompt\_get\_target\_info} function (described in Section~\ref{sec:target-region}).
 Tools should not assume that \code{ompt\_target\_id\_t} values are small or densely allocated.
 The value \code{ompt\_target\_id\_none} is reserved to indicate an invalid target identifier.
@@ -743,7 +748,7 @@ The value \code{ompt\_target\_id\_none} will be returned for (a) the target regi
 
 Each thread instance maintains a {\em wait identifier} of type \code{ompt\_wait\_id\_t}.
 When a task executing on a thread is waiting for something, the thread's wait identifer indicates what the thread is awaiting.
-A wait identifier may represent a critical section {\em name}, a lock,  a program variable accessed in an atomic region, or a synchronization object internal to an OpenMP runtime implementation.
+A wait identifier may represent a critical section {\em name}, a lock,  a program variable accessed in an atomic region, or a synchronization object internal to an OpenMP implementation.
 \begin{comment}
 \begin{boxedcode}
 typedef uint64\_t ompt\_wait\_id\_t;
@@ -843,12 +848,12 @@ In the presence of nested parallelism, a tool may observe a sequence of \code{om
 
 \section{Events without Directives}
 \subsection{\code{ompt\_event\_thread\_begin}}
-The OpenMP runtime invokes this callback in the context of an initial thread just after it initializes the runtime, or in the context of a new thread created by the runtime just after the thread initializes itself. In either case, this callback must be the first callback for a thread
+An OpenMP implementation invokes this callback in the context of an initial thread just after it initializes the runtime, or in the context of a new thread created by the runtime just after the thread initializes itself. In either case, this callback must be the first callback for a thread
 and must occur before the thread executes any OpenMP tasks. This callback has type signature \code{ompt\_thread\_begin\_callback\_t}.
 The callback argument \code{thread\_type} indicates the type of the thread: initial, worker, or other.
 
 \subsection{\code{ompt\_event\_thread\_end}}
-The OpenMP runtime invokes this callback
+An OpenMP implementation invokes this callback
 after an OpenMP thread completes all of
 its tasks but before the thread is destroyed. The callback
 executes in the context of the OpenMP thread. This callback must be the last callback event for any worker thread; it is optional for other types of threads.
@@ -856,7 +861,7 @@ This callback has type signature \code{ompt\_thread\_end\_callback\_t}.
 
 \subsection{\code{ompt\_event\_target\_submit}}
 
-The OpenMP runtime invokes this callback prior to submitting a kernel for execution on a target device.
+An OpenMP implementation invokes this callback prior to submitting a kernel for execution on a target device.
 This callback has type signature \code{ompt\_target\_submit\_callback\_t}.
 The callback argument \code{target\_id} indicates the instance of the target construct associated with this operation.
 The callback argument \code{host\_op\_id} provides a unique host-side identifier that represents the activity on the device.
@@ -864,14 +869,14 @@ The callback arguments \code{requested\_num\_teams}  \code{granted\_num\_teams} 
 
 \subsection{\code{ompt\_event\_control}}
 \label{subsec:ompt_event_control}
-If the user program calls \code{ompt\_control}, the
-OpenMP runtime invokes this callback.
+If the user program calls \code{ompt\_control}, an
+OpenMP implementation invokes this callback.
 The callback executes in the context that the call occurs in the user program.
 This callback has type signature \code{ompt\_control\_callback\_t}.
 Arguments passed to the callback are those passed by the user to \code{ompt\_control}.
 
 \subsection{\code{ompt\_event\_runtime\_shutdown}}
-The OpenMP runtime invokes this callback before it shuts down the
+An OpenMP implementation invokes this callback before it shuts down the
  runtime system.  This callback enables a tool to clean up its
  state and record or report information gathered. A runtime may later restart and reinitialize the tool by
 calling the tool initializer
@@ -879,15 +884,15 @@ function (described in Section~\ref{sec:init}) again.
  This callback has type signature \code{ompt\_callback\_t}.
 
 \subsection{\code{ompt\_event\_idle}}
-  The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a thread waits for work outside a parallel region.
+An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a thread waits for work outside a parallel region.
   The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_end} before the thread  begins to execute an implicit task for
    a parallel region or terminates. The callback executes in the environment of the waiting thread.
   This callback has type signature \code{ompt\_idle\_callback\_t}.
 
 \subsection{\code{ompt\_event\_sync\_region\_wait}}
 
-  The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a task starts waiting in a barrier region, taskwait region, or taskgroup region.
-   The OpenMP runtime invokes this callback with the \code{endpoint=}\code{ompt\_scope\_end} when the task stops waiting in the region.
+  An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a task starts waiting in a barrier region, taskwait region, or taskgroup region.
+   An OpenMP implementation invokes this callback with the \code{endpoint=}\code{ompt\_scope\_end} when the task stops waiting in the region.
   This callback has type signature \code{ompt\_scoped\_sync\_region\_callback\_t}.
    The argument \code{kind} indicates the kind of region causing the wait.
    One region may generate multiple pairs of begin/end callbacks if another task is scheduled on the thread while the task awaiting completion of the region is stalled.
