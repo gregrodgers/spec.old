@@ -48,46 +48,28 @@ It concludes with a description of data types
 used to identify entities managed by an OpenMP runtime and to interpret the
 call stack of an OpenMP thread.
 
-\section{Tool Registration}
+\section{Activating a Tool}
+Activating a tool requires three steps: registering the tool with an OpenMP
+implementation by supplying the implementation with a
+callback to a tool initializer, executing the tool
+initializer callback, binding pointers to OMPT interface functions 
+in the tool, and registering tool callbacks for OpenMP events. 
+The following subsections explain each step in turn.
+
+\subsection{Registering a Tool}
 \index{tool registration}
 \label{sec:ToolsSupport_Registration}
 
-The \code{OMP\_TOOL} environment variable sets the \plc{tool-var} ICV, which controls whether or not an
-implementation of the OpenMP API will attempt to register a tool.
-The value of \code{OMP\_TOOL} is case insensitive and may have leading and trailing white space.
-The only legal values of \code{OMP\_TOOL} are \code{enabled} or \code{disabled}.
-If the value of \plc{tool-var} is \code{enabled},
-the OpenMP API implementation will attempt to register a tool by determining if
-an implementation of the function \code{ompt\_tool} exists in a program's address space and, if so,
-calling \code{ompt\_tool} before initializing the OpenMP implementation.
-If the value of \plc{tool-var} is \code{disabled}, the OpenMP API implementation will not
-call \code{ompt\_tool}, regardless of whether or not an implementation of \code{ompt\_tool} exists in the
-address space.
-If \code{OMP\_TOOL} is set to any other value, an implementation of the OpenMP API
-will print a fatal error to the standard error file descriptor indicating that an illegal value had been supplied for \code{OMP\_TOOL} and the program's execution will terminate.
-If \code{OMP\_TOOL} is not defined, the default value for \plc{tool-var} is \code{enabled}.
+If the value of the \plc{tool-var} ICV is \code{enabled}
+when an OpenMP implementation begins to initialize itself, 
+the OpenMP implementation will attempt to register a tool by first 
+determining if
+an implementation of the function \code{ompt\_tool} exists in a program's address space and, if so, calling it.
+If the value of \plc{tool-var} is \code{disabled}, an OpenMP 
+implementation will neither check for the existence of an implementation of
+\code{ompt\_tool} in the address space nor try to call any that might exist.
 
-\begin{comment}
-\begin{table}
-\begin{center}
-\begin{tabular}{|c|p{4in}|}
-\hline
- {\em tool-var} value & action \\\hline
-enabled & an OpenMP implementation will call \code{ompt\_tool} before initializing itself.\\\hline
-disabled & an OpenMP implementation will not call \code{ompt\_tool}, regardless of whether a tool is present or not.\\\hline
-\end{tabular}
-\end{center}
-\caption{Actions in response to settings of the {\em tool-var} ICV.}
-\label{table:ToolsSupport_env-var}
-\end{table}
-
-\sloppy
-Table~\ref{table:ToolsSupport_env-var} describes the action that an OpenMP 
-implementation will take in response to possible values of \plc{tool-var}.
-If the value of \plc{tool-var} is \code{enabled}, the runtime will attempt to register a tool by calling the function \code{ompt\_tool} before performing runtime initialization.
-\end{comment}
-
-The signature for \code{ompt\_tool} is shown below:
+The signature for \code{ompt\_tool} is as follows:
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
@@ -97,29 +79,32 @@ extern "C" \{
 \end{boxedcode}
 \ccppspecificend
 }
-If a tool provides an implementation of \code{ompt\_tool} in the
-application's address space, \code{ompt\_tool} may return \code{NULL}
-indicating that the tool declines to register itself with the
-runtime; otherwise, the tool may register itself with the runtime
-by returning a non-\code{NULL} pointer to a function with type
+To register itself with an OpenMP implementation, a tool provides
+an implementation of \code{ompt\_tool} that returns
+a non-\code{NULL} pointer to a function with type
 signature \code{ompt\_initialize\_fn\_t}, which is in
 Section~\ref{sec:ToolsSupport_init}.
+A tool-provided implementation of \code{ompt\_tool} may decline to 
+to register itself with an OpenMP implementation by returning
+\code{NULL}.
+
 
 Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP implementation, only one tool may register itself.
 If a tool-supplied implementation of \code{ompt\_tool} returns a non-\code{NULL} initializer,
 an implementation of the OpenMP API will maintain state information for each OpenMP thread and will perform
-any OMPT event callbacks registered during tool initialization.
+any OMPT event callbacks successfully registered during tool initialization.
 
 After a process fork, if OpenMP is re-initialized in the child process,
 an implementation of the OpenMP API in the child process will call \code{ompt\_tool}
 under the same conditions as it would for any process.
 
-\section{Tool Initialization}
+\subsection{Initializing a Tool}
 \label{sec:ToolsSupport_init}
 
 When an OpenMP implementation receives a non-\code{NULL} pointer to a tool initializer function with signature \code{ompt\_initialize\_fn\_t} as the return value from a call to a tool-provided implementation of \code{ompt\_tool}, the runtime will call the tool initializer immediately after the runtime fully initializes itself.
 The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
-The signature for the tool initializer callback is shown below:
+The type signature \code{ompt\_initialize\_fn\_t} 
+for a tool initializer callback is as follows:
 
 \vbox{
 \ccppspecificstart
@@ -133,18 +118,13 @@ typedef void (*\plc{ompt\_initialize\_fn\_t}) (
 \ccppspecificend
 }
 
-The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP implementation.
-This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP implementation.
-Knowing exactly what version of an OpenMP implementation is present in a binary may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
-
-The third argument \code{ompt\_version} indicates the version of the OMPT interface supported by a runtime system.
-The version of OMPT described by this document is 2.
-
-The two principal duties of a tool initializer are looking up pointers to all OMPT interface functions that the tool uses and registering tool callbacks.
-These two operations are described below.
-
-\subsection{Looking up OMPT Interface Functions}
-The first argument to a tool initializer is \code{lookup}---a callback that a tool must use to interrogate the runtime system to obtain pointers to all OMPT interface functions.
+The first argument to a tool initializer is \plc{lookup}---a callback 
+to that a tool must use to 
+% interrogate the runtime system to 
+obtain a pointer to each OMPT interface function.
+All functions in the OMPT interface are marked with \code{OMPT\_API}, which
+indicates that the only way a tool can obtain bindings for them
+is using the \plc{lookup} callback.
 The type signature for \code{lookup} is:
 
 \vbox{
@@ -157,15 +137,49 @@ typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
 \ccppspecificend
 }
 
+\begin{comment}
+% The language committee prefers to avoid rationale
 The \code{lookup} callback is necessary in the case when an OpenMP runtime 
 is dynamically loaded by a shared library. In this case, 
 OMPT interface functions provided by the library may 
 not be visible to a preloaded tool.
-Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
-All functions in the OMPT interface are marked with \code{OMPT\_API}.
-These functions should not be global symbols in an OpenMP implementation to avoid tempting tool developers to call them directly.
+\end{comment}
+% Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
 
-The following example shows how to use the \code{lookup} function to obtain a pointer to the OMPT interface function \code{ompt\_get\_thread\_id}:
+\needspace{6\baselineskip}\notestart
+\noteheader -- OMPT interface functions should not be global symbols in 
+an OpenMP implementation. A tool developer might be tempted to call a global 
+OMPT interface function directly. Since there exist cases where a global 
+symbol exported by an OpenMP implementation will not be visible to a tool,
+an OpenMP implementation should avoid providing global symbols for OMPT
+interface functions that {\em should not} be used by any tool.
+\noteend
+
+The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP implementation.
+\begin{comment}
+% The language committee prefers to avoid rationale
+This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP implementation.
+Knowing exactly what version of an OpenMP implementation is present 
+may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
+\end{comment}
+
+The third argument to a tool initializer is a version number that
+unambiguously identifies the version of the OMPT interface supported
+by an OpenMP implementation.  
+The version of OMPT described by this document is 2.
+
+The two principal duties of a tool initializer are binding pointers to all OMPT interface functions that the tool uses and registering tool callbacks. These
+two operations are described in the next two sections.
+
+\subsection{Binding OMPT Interface Functions}
+\label{sec:ToolsSupport_bind}
+
+The first duty of a tool initializer is binding pointers to the 
+an OpenMP implementation's OMPT interface functions.
+
+The following example shows how to use the \plc{lookup} callback 
+passed to a tool's initializer to obtain a pointer to the 
+OMPT interface function \code{ompt\_get\_thread\_id}:
 
 \vbox{
 \ccppspecificstart
@@ -175,15 +189,18 @@ ompt\_interface\_fn\_t \plc{ompt\_get\_thread\_id\_fn} =
 \end{boxedcode}
 \ccppspecificend
 }
-Other functions in the OMPT API may be looked up analogously.
-If a named function is not available in an OpenMP implementation, \code{lookup} will return \code{NULL}.
+Other routines in the OMPT interface may be looked up analogously.
+If a particular OMPT interface function is not supported by 
+an OpenMP implementation, \plc{lookup} will return \code{NULL} when 
+invoked with the function's name as an argument. 
 
-\subsection{Registering Callbacks}
+\subsection{Registering Tool Callbacks}
 \index{event callback registration}
 \label{sec:ToolsSupport_callback_registration}
 
-Tools register callbacks to receive notification of various events that occur as
-an OpenMP program executes by using the OMPT API function \code{ompt\_set\_callback}.
+Tools register callbacks to receive notification of events that occur as
+an OpenMP program executes by using the OMPT interface function 
+\code{ompt\_set\_callback}.
 The signature for this function is
 \vbox{
 \ccppspecificstart
@@ -218,8 +235,11 @@ The  function \code{ompt\_set\_callback}  may only be called within the implemen
 The possible return codes for \code{ompt\_set\_callback} and their meaning is shown in Table~\ref{table:ToolsSupport_set_rc}.
 Registration of supported callbacks may fail if this function is
 called outside  \code{ompt\_initialize\_fn\_t}.
-The \code{ompt\_callback\_t} type for a callback does not reflect the actual signature of the callback; OMPT uses  this generic type
- to avoid the need to declare a separate registration function for each actual callback type.
+
+The \code{ompt\_callback\_t} type for a callback to be registered 
+does not reflect the actual signature of the callback; 
+OMPT uses this generic type
+to avoid the need to declare a separate registration function for each actual callback type.
 The valid return codes for each event are listed in Table~\ref{table:valid_rc}.
 Some events always need to invoke the registered callback.
 For other events, its implementation defined whether they invoke the registered
@@ -653,14 +673,15 @@ The first argument passed to a call to \code{ompt\_enumerate\_states} must
 be the numerical code for a valid thread state supported by an OpenMP
 implementation.  
 To begin enumerating the states that an OpenMP implementation supports,
-the value \code{omp\_state\_undefined} should be passed as the
+a tool should pass the value \code{omp\_state\_undefined} as the
 first argument of a call to \code{ompt\_enumerate\_states}.
-Subsequent invocations of \code{ompt\_enumerate\_states},
+Subsequent invocations of \code{ompt\_enumerate\_states} by a tool
 should pass the value 
 assigned to the pointer passed as the second argument to the prior call.
 
-An example that illusrates how a tool can enumerate all states 
-supported by an OpenMP implementation is shown below:
+\needspace{6\baselineskip}\notestart
+\noteheader -- The following example illustrates how a tool can 
+enumerate all states supported by an OpenMP implementation:
 
 \ccppspecificstart
 \begin{boxedcode}
@@ -672,6 +693,7 @@ while (ompt_enumerate_states(_state, &_state, &_state_name)) \{
 \}
 \end{boxedcode}
 \ccppspecificend
+\noteend
 
 \section{OMPT Data Types}
 \label{sec:data}
