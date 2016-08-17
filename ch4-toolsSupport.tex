@@ -54,7 +54,11 @@ implementation by supplying the implementation with a
 callback to a tool initializer, executing the tool
 initializer callback, binding pointers to OMPT interface functions 
 in the tool, and registering tool callbacks for OpenMP events. 
-The following subsections explain each step in turn.
+Finally, to understand what information dynamic measurements might yield
+about thread states and implementations of mutual exclusion, a tool can
+enumerate the thread states and implementations of mutual exclusion 
+that a particular OpenMP implementation implementation employs.
+The following subsections explain each of these steps in turn.
 
 \subsection{Registering a Tool}
 \index{tool registration}
@@ -307,7 +311,179 @@ ompt\_event\_flush                  & * & * & * & * & * \\
 \end{table}
 
 \clearpage
-\section{Thread States}
+
+\subsection{Enumerating States and Implementations}
+Using the OMPT interface, a tool may interrogate an OpenMP implementation to 
+determine what thread states it supports and what mechanisms it employs to 
+implement mutual exclusion for various purposes.
+
+ 
+ \subsubsection{\code{ompt\_enumerate\_states}}
+ \label{ompt_enumerate_states}
+ \summary
+ 
+An OpenMP implementation may support implementation-specific states in 
+addition to those specified in the \code{ompt\_states\_t} enumeration.
+The \code{ompt\_enumerate\_states} routine enables a tool 
+to enumerate all thread states supported by a particular OpenMP 
+implementation.
+
+\format
+
+\ccppspecificstart
+\begin{boxedcode}
+OMPT_API uint32_t ompt_enumerate_states(
+  uint32_t \plc{current_state}, 
+  uint32_t *\plc{next_state}, 
+  const char **\plc{next_state_name}
+);
+\end{boxedcode}
+\ccppspecificend
+
+\effect
+
+When a thread state supported by an OpenMP implementation is passed
+as the first argument of  
+a call to \code{ompt\_enumerate\_states}, the call will 
+assign the next thread state in an enumeration of all thread states
+supported by the implementation to the pointer passed as the second
+argument of the call.
+The third argument of a call to \code{ompt\_enumerate\_states}
+is the address of a character pointer
+that will be assigned a pointer to the name associated with 
+the state value assigned to the pointer passed as the second argument of 
+the call.
+Whenever one or more states are left in the enumeration, 
+\code{ompt\_enumerate\_states} will return $1$.
+When the last state in the enumeration is passed 
+to \code{ompt\_enumerate\_states} the first argument, 
+the function will return $0$ 
+indicating that the enumeration is complete.
+
+
+\begin{comment}
+For instance, a particular OpenMP implementation may want to 
+provide more detail about the nature of runtime overhead, 
+e.g., to differentiate between overhead associated with setting up 
+parallel regions
+and overhead associated with setting up tasks. 
+% A tool need not report all states defined herein, e.g., if state tracking for a particular state would be too expensive.
+To enable a tool to identify all states that an OpenMP implementation
+supports, the following interface for enumerating all states that may be reported by the runtime that is being used.
+\end{comment}
+
+\constraints
+
+The first argument passed to a call to \code{ompt\_enumerate\_states} must
+be the numerical value for a valid thread state supported by an OpenMP
+implementation.  
+To begin enumerating the states that an OpenMP implementation supports,
+a tool should pass the value \code{omp\_state\_undefined} as the
+first argument of a call to \code{ompt\_enumerate\_states}.
+Subsequent invocations of \code{ompt\_enumerate\_states} by a tool
+should pass the value 
+assigned to the pointer passed as the second argument to the prior call.
+
+\needspace{6\baselineskip}\notestart
+\noteheader -- The following example illustrates how a tool can 
+enumerate all states supported by an OpenMP implementation:
+
+\ccppspecificstart
+\begin{boxedcode}
+uint32_t state = omp_state_undefined;
+const char *state_name;
+while (ompt_enumerate_states(state, &state, &state_name)) \{
+  // note that the runtime supports a state value "state" 
+  // associated with the name "state_name" 
+\}
+\end{boxedcode}
+\ccppspecificend
+\noteend
+
+\subsubsection{\code{ompt\_enumerate\_mutex\_kinds}}
+\label{ompt_enumerate_mutex_kinds}
+ 
+\format
+An OpenMP implementation may implement
+locks, nest locks, critical sections, and atomic regions in several
+different ways. 
+\begin{comment}
+For that reason, a user program can provide hints
+to help the runtime system to select appropriate implementations.
+When a lock or nest lock is initialized, the \verb|ompt_event_init_lock|
+callback receives the argument \verb|kind|---a small integer that
+indicates the lock implementation chosen by the OpenMP runtime.
+Similarly, the \verb|ompt_event_mutex_acquire| callback receives
+the argument \verb|kind| to indicate the implementation of a lock,
+critical section, atomic region, or ordered section. 
+\end{comment}
+The \verb|ompt_enumerate_mutex_kinds| routine enables a tool to enumerate
+the different kinds mutual exclusion implementations that 
+an OpenMP implementation employs.
+
+\effect
+
+\ccppspecificstart
+\begin{boxedcode}
+OMPT_API int ompt_enumerate_mutex_kinds(
+  uint32_t current_kind, 
+  uint32_t *next_kind, 
+  const char **next_kind_name
+);
+\end{boxedcode}
+\ccppspecificend
+
+When a mutex kind supported by an OpenMP implementation is passed
+as the first argument of
+a call to \verb|ompt_enumerate_mutex_kinds|, the call will
+assign the next mutex kind in an enumeration of all mutex kinds
+supported by the implementation to the pointer passed as the second
+argument of the call.
+The third argument of a call to \verb|ompt_enumerate_mutex_kinds| 
+is the address of a character pointer
+that will be assigned a pointer to the name associated with
+the mutex kind value assigned to the pointer passed as the second argument of
+the call.
+Whenever one or more mutex kinds are left in the enumeration, 
+\verb|ompt_enumerate_mutex_kinds| will return $1$.
+When the last mutex kind in the enumeration is passed 
+to \verb|ompt_enumerate_mutex_kinds| the first argument, 
+the function will return $0$ 
+indicating that the enumeration is complete.
+
+\constraints
+
+The first argument passed to a call to \verb|ompt_enumerate_mutex_kinds| must
+be the numerical value for a valid mutex implementation kind 
+supported by an OpenMP implementation.
+To begin enumerating the mutex implementation kinds 
+that an OpenMP implementation supports,
+a tool should pass the value \verb|ompt_mutex_kind_unknown| as the
+first argument of a call to \verb|ompt_enumerate_mutex_kinds|.
+Subsequent invocations of \verb|ompt_enumerate_mutex_kinds| by a tool
+should pass the value
+assigned to the pointer passed as the second argument to the prior call.
+
+\needspace{6\baselineskip}\notestart
+\noteheader -- The following example illustrates how a tool can 
+enumerate all types of mutex implementations supported by an OpenMP runtime:
+
+\ccppspecificstart
+\begin{boxedcode}
+uint32_t kind = ompt_mutex_kind_unknown;
+const char *kind_name;
+while (ompt_enumerate_mutex_kinds(kind, &kind, &kind_name)) \{
+  // note that the runtime supports a mutex value "kind" 
+  // associated with the name "kind_name" 
+\}
+\end{boxedcode}
+\ccppspecificend
+\noteend
+
+\section{Data Types}
+\label{sec:data}
+
+\subsection{Thread States}
 \label{sec:runtimeStates}
 
 To enable a tool to understand the behavior of an executing program, 
@@ -319,39 +495,37 @@ approximation of the thread's instantaneous state.
 \ccppspecificstart
 A thread's state will be one of the values of the  
 enumeration type \code{omp\_state\_t} or
-an implementation-defined state value of 0x81 or higher. 
+an implementation-defined state value of 512 or higher. 
 Thread states in the enumeration fall into several classes: 
 idleness, work, overhead, barrier wait, task wait, mutex wait, target wait, 
 and undefined. 
 
 \begin{boxedcode}
 typedef enum omp_state_t \{
-  omp_state_idle                   = 0x00, 
+  omp_state_work_serial            = 0x000,
+  omp_state_work_parallel          = 0x001,
+  omp_state_work_reduction         = 0x002,
 
-  omp_state_work_serial            = 0x10,
-  omp_state_work_parallel          = 0x11,
-  omp_state_work_reduction         = 0x12,
+  omp_state_wait_barrier           = 0x010,
+  omp_state_wait_barrier_implicit  = 0x011,
+  omp_state_wait_barrier_explicit  = 0x012,
 
-  omp_state_overhead               = 0x20, 
+  omp_state_wait_taskwait          = 0x020,
+  omp_state_wait_taskgroup         = 0x021,
 
-  omp_state_wait_barrier           = 0x40,
-  omp_state_wait_barrier_implicit  = 0x41,
-  omp_state_wait_barrier_explicit  = 0x42,
+  omp_state_wait_mutex             = 0x040,
+  omp_state_wait_lock              = 0x041,
+  omp_state_wait_critical          = 0x042,
+  omp_state_wait_atomic            = 0x043,
+  omp_state_wait_ordered           = 0x044,
 
-  omp_state_wait_taskwait          = 0x50,
-  omp_state_wait_taskgroup         = 0x51,
+  omp_state_wait_target            = 0x080,
+  omp_state_wait_target_data       = 0x081,
+  omp_state_wait_target_update     = 0x082,
 
-  omp_state_wait_mutex             = 0x60,
-  omp_state_wait_lock              = 0x61,
-  omp_state_wait_critical          = 0x62,
-  omp_state_wait_atomic            = 0x63,
-  omp_state_wait_ordered           = 0x64,
-
-  omp_state_wait_target            = 0x70,
-  omp_state_wait_target_data       = 0x71,
-  omp_state_wait_target_update     = 0x72,
-
-  omp_state_undefined              = 0x80
+  omp_state_idle                   = 0x100, 
+  omp_state_overhead               = 0x101, 
+  omp_state_undefined              = 0x102
 \} omp_state_t;
 \end{boxedcode}
 \ccppspecificend
@@ -403,31 +577,7 @@ may transition the thread to the state even later, e.g., only
 after the thread waits for a significant amount of time. 
 
 The following describes the classes and the states in each class.
-
-\littleheader{Idleness State}
-
-
-\begin{description}
-\item \code{omp\_state\_idle} 
-
-  The thread is idle, waiting for work.
-
-\end{description}
-
-\littleheader{Overhead State}
-
-\begin{description}
-\item \code{omp\_state\_overhead} 
-
-  A thread may be reported as being in the overhead state at any point while 
-  executing within an OpenMP runtime, except while waiting indefinitely
-  at a synchronization point.
-%  e.g., while preparing to execute a parallel, task, or worksharing construct. 
-  An OpenMP implementation report a thread's state as a work state for
-  some or all of the time the thread spends in executing in the OpenMP runtime.
-\end{description}
-
-\littleheader{Work States}
+\subsubsection{Work States}
 An OpenMP implementation reports a thread in a work state 
 when the thread is performing serial work, parallel work, or a reduction.
 
@@ -452,7 +602,7 @@ when the thread is performing serial work, parallel work, or a reduction.
 \end{description}
 
 
-\littleheader{Barrier Wait States}
+\subsubsection{Barrier Wait States}
 
 An OpenMP implementation reports that a thread is in a barrier wait state 
 when the thread is is awaiting completion of a barrier.
@@ -487,7 +637,7 @@ when the thread is is awaiting completion of a barrier.
   
 \end{description}
   
-\littleheader{Task Wait States}
+\subsubsection{Task Wait States}
 
 \begin{description}
 
@@ -508,7 +658,7 @@ when the thread is is awaiting completion of a barrier.
 \end{description}
 
 
-\littleheader{Mutex Wait States}
+\subsubsection{Mutex Wait States}
 
 OpenMP provides several mechanisms that enforce mutual exclusion:
 locks as well as critical, atomic, and ordered sections.  This
@@ -568,7 +718,7 @@ e.g., locks.
   
 \end{description}
   
-\littleheader{Target Wait States}
+\subsubsection{Target Wait States}
 
 \begin{description}
 
@@ -589,9 +739,22 @@ e.g., locks.
 \end{description}
 
 
-\littleheader{Undefined State}
+\subsubsection{Miscellaneous States}
 
 \begin{description}
+\item \code{omp\_state\_idle} 
+
+  The thread is idle, waiting for work.
+
+\item \code{omp\_state\_overhead} 
+
+  A thread may be reported as being in the overhead state at any point while 
+  executing within an OpenMP runtime, except while waiting indefinitely
+  at a synchronization point.
+%  e.g., while preparing to execute a parallel, task, or worksharing construct. 
+  An OpenMP implementation report a thread's state as a work state for
+  some or all of the time the thread spends in executing in the OpenMP runtime.
+
 \item \code{omp\_state\_undefined} 
 
   This state is reserved for threads that are not user threads,
@@ -612,91 +775,8 @@ e.g., locks.
  Note that it is unsafe to call OpenMP Execution Environment Routines within an OMPT callback because doing so may cause deadlock. 
  Specifically, since OpenMP Execution Library Routines are not guaranteed to be async signal safe, they might acquire a lock that may already be held when an OMPT callback is involved.
 \end{comment}
- 
- \subsection{\code{ompt\_enumerate\_states}}
- \label{ompt_enumerate_states}
- \summary
- 
-An OpenMP implementation may support implementation-specific states in 
-addition to those specified in the \code{ompt\_states\_t} enumeration.
-The \code{ompt\_enumerate\_states} routine enables a tool 
-to determine all thread states supported by a particular OpenMP 
-implementation.
-
-\format
-
-\ccppspecificstart
-\begin{boxedcode}
-OMPT_API int ompt_enumerate_states(
-  int \plc{current_state}, 
-  int *\plc{next_state}, 
-  const char **\plc{next_state_name}
-);
-\end{boxedcode}
-\ccppspecificend
-
-\effect
-
-When a thread state supported by an OpenMP implementation is passed
-as the first argument of  
-a call to \code{ompt\_enumerate\_states}, the call will 
-assign the next thread state in an enumeration of all thread states
-supported by the implementation to the pointer passed as the second
-argument of the call.
-The third argument of a call to \code{ompt\_enumerate\_states}
-is the address of a character pointer
-that will be assigned a pointer to the name associated with 
-the state value assigned to the pointer passed as the second argument of 
-the call.
-Whenever one or more states are left in the enumeration, 
-\code{ompt\_enumerate\_states} will return $1$.
-When the last state in the enumeration is passed 
-to \code{ompt\_enumerate\_states} the first argument, 
-the function will return $0$ 
-indicating that the enumeration is complete.
-
-
-\begin{comment}
-For instance, a particular OpenMP implementation may want to 
-provide more detail about the nature of runtime overhead, 
-e.g., to differentiate between overhead associated with setting up 
-parallel regions
-and overhead associated with setting up tasks. 
-% A tool need not report all states defined herein, e.g., if state tracking for a particular state would be too expensive.
-To enable a tool to identify all states that an OpenMP implementation
-supports, the following interface for enumerating all states that may be reported by the runtime that is being used.
-\end{comment}
-
-\constraints
-
-The first argument passed to a call to \code{ompt\_enumerate\_states} must
-be the numerical code for a valid thread state supported by an OpenMP
-implementation.  
-To begin enumerating the states that an OpenMP implementation supports,
-a tool should pass the value \code{omp\_state\_undefined} as the
-first argument of a call to \code{ompt\_enumerate\_states}.
-Subsequent invocations of \code{ompt\_enumerate\_states} by a tool
-should pass the value 
-assigned to the pointer passed as the second argument to the prior call.
-
-\needspace{6\baselineskip}\notestart
-\noteheader -- The following example illustrates how a tool can 
-enumerate all states supported by an OpenMP implementation:
-
-\ccppspecificstart
-\begin{boxedcode}
-int _state = omp_state_undefined;
-const char *_state_name;
-while (ompt_enumerate_states(_state, &_state, &_state_name)) \{
-  // note that the runtime supports a state value _state 
-  // associated with the name _state_name 
-\}
-\end{boxedcode}
-\ccppspecificend
-\noteend
-
-\section{OMPT Data Types}
-\label{sec:data}
+\subsection{Identifiers}
+\label{sec:runtimeStates}
 
 \littleheader{Thread Identifier}
 \index{Thread Identifier}
