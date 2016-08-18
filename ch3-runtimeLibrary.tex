@@ -3086,66 +3086,112 @@ buffer are invalidated.
 
 \section{Tool Control Routines}
 \index{tool control}
-\label{sec:tool_control}
+\label{sec:tool_tcontrol}
 
-The OMPT API provides only one application-facing routine: \code{ompt\_control}.
-An application may call the function \code{ompt\_control} to control tool operation.
-While tool support for \code{ompt\_control} is optional, the runtime is required to pass a control command to a tool if the tool registered a callback with the \code{ompt\_event\_control} event.
-As an application-facing routine, this function has type signatures for both C and Fortran:
+\summary
+The \code{omp\_tcontrol} routine enables a program to 
+control the operation of a tool. 
 
 \format
+
+\vbox{
 \ccppspecificstart
 \begin{boxedcode}
-void ompt\_control(uint64\_t \plc{command}, uint64\_t \plc{modifier});
+void omp\_tcontrol(uint64\_t \plc{command}, uint64\_t \plc{modifier});
 \end{boxedcode}
 \ccppspecificend
+}
 
 \fortranspecificstart
 \begin{boxedcode}
-subroutine ompt\_control(\plc{command}, \plc{modifier})
+subroutine omp\_tcontrol(\plc{command}, \plc{modifier})
 integer*8 \plc{command}
 integer*8 \plc{modifier}
 \end{boxedcode}
 \fortranspecificend
 
-A classic use case for \code{ompt\_control} is for an application to start and stop data collection by a tool.
-A tool may allow an application to turn monitoring on and off many times during an execution to monitor only code regions of interest.
-To support this common usage, the OMPT standard defines four values for \plc{command}:
+\descr
 
+An OpenMP program may use \code{omp\_tcontrol} to pass commands to 
+a tool, if a tool is present, enabled, and registered a callback to receive
+notification of \code{omp\_tcontrol} calls.
+Using \code{omp\_tcontrol}, an application can request that
+a tool start data collection when a code
+region of interest is encountered, pause data collection when 
+leaving the region of interest, 
+flush any data that it has collected so far, and
+end data collection. 
+A tool may allow an application to turn monitoring on and off many times 
+during an execution to monitor only code regions of interest.
+Additionally, \code{omp\_tcontrol} can be used to pass 
+tool-specific commands to a particular tool.
+
+\constraints
+
+The following enumeration type defines four standard command values 
+to pass as the first argument.  
+
+\vbox{
+\ccppspecificstart
 \begin{boxedcode}
-1: start or restart monitoring
-2: pause monitoring
-3: flush tool buffers
-4: permanently turn off monitoring
+typedef omp_tcontrol_t \{
+  omp_tcontrol_start = 1,
+  omp_tcontrol_pause = 2,
+  omp_tcontrol_flush = 3,
+  omp_tcontrol_end = 4,
+\} omp_tcontrol_t;
 \end{boxedcode}
+\ccppspecificend
+}
 
 \noindent
 %
-A \plc{command} code of 1 asks a tool to start or restart monitoring if it is off. If monitoring is already on, this command is idempotent. If monitoring has already been turned off permanently, this command will have no effect.
+A command of \verb|omp_tcontrol_start| asks a tool to start or 
+restart monitoring if it is off. If monitoring is already on, this 
+command is idempotent. If monitoring has already been turned off 
+permanently, this command will have no effect.
 %
-A \plc{command} code of 2 asks a tool to temporarily turn monitoring off. If monitoring is already off, it is idempotent.
+A command of \verb|omp_tcontrol_pause| asks a tool to temporarily 
+turn monitoring off. If monitoring is already off, it is idempotent.
 %
-A \plc{command} code of 3 asks a tool to flush any performance data that it has buffered. This command may be applied whether monitoring is on or off.
+A command of \verb|omp_tcontrol_flush| asks a tool to flush any data that 
+it has buffered. This command may be applied whether monitoring is on or off.
 %
-A \plc{command} code of 4 turns monitoring off permanently;  the tool may perform finalization at this point and write all of its outputs.
-
-Other values of \plc{command} and \plc{modifier} appropriate for any tool will be tool specific.
+A command of \verb|omp_tcontrol_end| turns monitoring off permanently;  
+the tool may perform finalization at this point and write all of its outputs.
+Other values of \code{omp\_tcontrol} command and modifier arguments
+appropriate for any tool will be tool specific.  
 Tool-specific commands codes must be $\geq$ 64.
-Tools must ignore \plc{command} codes that they are not explicitly designed to handle and implement callbacks for such codes as no-ops.
+Tools must ignore command codes that they are not explicitly 
+designed to handle. 
 
 \tools
 
-If the user program calls \code{ompt\_control}, the runtime shall invoke the \code{ompt\_event\_control} callback.
+Tool support for \code{omp\_tcontrol} is optional. 
+If a tool wishes to receive notification of 
+\code{omp\_tcontrol} calls, 
+the tool can register a callback for the \code{ompt\_event\_tcontrol} event.
+
+While tool support for \code{omp\_tcontrol} is optional, an OpenMP implementation
+is required to notify a tool \code{omp\_tcontrol} call if the tool registered a 
+callback for the \code{ompt\_event\_tcontrol} event.
+
+If the user program calls \code{omp\_tcontrol}, the runtime shall invoke the 
+\code{ompt\_event\_tcontrol} callback.
 The callback executes in the context of the call that occurs in the user program.
-This callback has type signature \code{ompt\_control\_callback\_t}.
-Arguments passed to the callback are those passed by the user to \code{ompt\_control}.
+This callback has type signature \code{ompt\_tcontrol\_callback\_t}.
+
+Arguments passed to the callback are those passed by the user to
+\code{omp\_tcontrol}.  If any of the four standard commands is
+presented to a tool, the tool will ignore the modifier value.
+
 
 \crossreferences
 \begin{itemize}
 \item Tool Interface, see
 \specchapterref{chap:ToolsSupport}
-\item \code{ompt\_event\_control} callback, see
-\specref{subsec:ompt_event_control}
+\item \code{ompt\_event\_tcontrol} callback, see
+\specref{subsec:ompt_event_tcontrol}
 \end{itemize}
 
 
