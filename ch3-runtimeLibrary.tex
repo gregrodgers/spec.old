@@ -3090,14 +3090,14 @@ buffer are invalidated.
 
 \summary
 The \code{omp\_tcontrol} routine enables a program to 
-control the operation of a tool. 
+pass commands to an attached tool.
 
 \format
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-void omp\_tcontrol(uint64\_t \plc{command}, uint64\_t \plc{modifier});
+void omp\_tcontrol(long long int \plc{command}, long long int \plc{modifier});
 \end{boxedcode}
 \ccppspecificend
 }
@@ -3105,8 +3105,8 @@ void omp\_tcontrol(uint64\_t \plc{command}, uint64\_t \plc{modifier});
 \fortranspecificstart
 \begin{boxedcode}
 subroutine omp\_tcontrol(\plc{command}, \plc{modifier})
-integer*8 \plc{command}
-integer*8 \plc{modifier}
+integer (kind=omp\_tcontrol\_kind) \plc{command}
+integer (kind=omp\_tcontrol\_kind) \plc{modifier}
 \end{boxedcode}
 \fortranspecificend
 
@@ -3116,22 +3116,20 @@ An OpenMP program may use \code{omp\_tcontrol} to pass commands to
 a tool, if a tool is present, enabled, and registered a callback to receive
 notification of \code{omp\_tcontrol} calls.
 Using \code{omp\_tcontrol}, an application can request that
-a tool start data collection when a code
+a tool start or restart data collection when a code
 region of interest is encountered, pause data collection when 
 leaving the region of interest, 
 flush any data that it has collected so far, and
 end data collection. 
-A tool may allow an application to turn monitoring on and off many times 
-during an execution to monitor only code regions of interest.
+% A tool may allow an application using this interface to turn monitoring on and off many times during an execution to monitor only code regions of interest.
 Additionally, \code{omp\_tcontrol} can be used to pass 
 tool-specific commands to a particular tool.
 
 \constraints
 
-The following enumeration type defines four standard command values 
-to pass as the first argument.  
+The following enumeration type defines four standard commands.
 
-\vbox{
+\begin{samepage}
 \ccppspecificstart
 \begin{boxedcode}
 typedef omp_tcontrol_t \{
@@ -3142,7 +3140,24 @@ typedef omp_tcontrol_t \{
 \} omp_tcontrol_t;
 \end{boxedcode}
 \ccppspecificend
-}
+\end{samepage}
+
+\begin{samepage}
+\fortranspecificstart
+\begin{boxedcode}
+integer(kind=omp\_tcontrol\_kind), &
+        parameter :: omp\_tcontrol\_start = 1
+integer(kind=omp\_tcontrol\_kind), & 
+        parameter :: omp\_tcontrol\_pause = 2
+integer(kind=omp\_tcontrol\_kind), & 
+        parameter :: omp\_tcontrol\_flush = 3
+integer(kind=omp\_tcontrol\_kind), &
+        parameter :: omp\_tcontrol\_end = 4
+\end{boxedcode}
+\fortranspecificend
+\end{samepage}
+
+
 
 \noindent
 %
@@ -3159,25 +3174,22 @@ it has buffered. This command may be applied whether monitoring is on or off.
 %
 A command of \verb|omp_tcontrol_end| turns monitoring off permanently;  
 the tool may perform finalization at this point and write all of its outputs.
-Other values of \code{omp\_tcontrol} command and modifier arguments
-appropriate for any tool will be tool specific.  
-Tool-specific commands codes must be $\geq$ 64.
-Tools must ignore command codes that they are not explicitly 
-designed to handle. 
+
+The \code{omp\_tcontrol} routine also allows tool-specific 
+values for \plc{command} and \plc{modifier}. 
+Tool-specific values for \plc{command} must be $\geq$ 64.
+Tools must ignore \plc{command} values that they are not
+explicitly designed to handle.
 
 \tools
 
 Tool support for \code{omp\_tcontrol} is optional. 
-If a tool wishes to receive notification of 
+If a tool wants notification of 
 \code{omp\_tcontrol} calls, 
-the tool can register a callback for the \code{ompt\_event\_tcontrol} event.
+the tool must register a callback for the \code{ompt\_event\_tcontrol} event.
 
-While tool support for \code{omp\_tcontrol} is optional, an OpenMP implementation
-is required to notify a tool \code{omp\_tcontrol} call if the tool registered a 
-callback for the \code{ompt\_event\_tcontrol} event.
-
-If the user program calls \code{omp\_tcontrol}, the runtime shall invoke the 
-\code{ompt\_event\_tcontrol} callback.
+If the user program calls \code{omp\_tcontrol}, an OpenMP implementation 
+shall invoke a registered \code{ompt\_event\_tcontrol} callback.
 The callback executes in the context of the call that occurs in the user program.
 This callback has type signature \code{ompt\_tcontrol\_callback\_t}.
 
@@ -3192,6 +3204,8 @@ presented to a tool, the tool will ignore the modifier value.
 \specchapterref{chap:ToolsSupport}
 \item \code{ompt\_event\_tcontrol} callback, see
 \specref{subsec:ompt_event_tcontrol}
+\item \code{ompt\_tcontrol\_callback\_t} callback signature, see
+\specref{subsec:ompt_tcontrol_callback_t}
 \end{itemize}
 
 

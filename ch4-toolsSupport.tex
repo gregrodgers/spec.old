@@ -223,7 +223,7 @@ OMPT\_API int ompt\_set\_callback(
 \hline
 return code & meaning \\
 \hline
-0 & callback registration error (e.g., callbacks cannot be registered at this time).\\
+0 & callback registration error\\
 1 & event may occur; no callback is possible\\
 2 & event will never occur in runtime\\
 3 & event may occur; callback invoked when convenient\\
@@ -234,10 +234,12 @@ return code & meaning \\
 \label{table:ToolsSupport_set_rc}
 \end{table}
 
-The  function \code{ompt\_set\_callback}  may only be called within the implementation of a tool's initializer.
-The possible return codes for \code{ompt\_set\_callback} and their meaning is shown in Table~\ref{table:ToolsSupport_set_rc}.
-Registration of supported callbacks may fail if this function is
-called outside  \code{ompt\_initialize\_fn\_t}.
+The \code{ompt\_set\_callback} routine may only be called within
+the implementation of a tool's initializer.  The possible return
+codes for \code{ompt\_set\_callback} and their meaning is shown in
+Table~\ref{table:ToolsSupport_set_rc}.  Registration of supported
+callbacks may fail, returning 0, if this routine is called outside
+a tool's initializer.  
 
 The \code{ompt\_callback\_t} type for a callback to be registered 
 does not reflect the actual signature of the callback; 
@@ -285,7 +287,7 @@ ompt\_event\_implicit\_task         &   &   &   & * \\
 ompt\_event\_target                 &   &   &   & * \\
 ompt\_event\_target\_data           &   &   &   & * \\
 ompt\_event\_target\_submit         &   &   &   & * \\
-ompt\_event\_control                &   &   &   & * \\
+ompt\_event\_tcontrol               &   &   &   & * \\
 ompt\_event\_runtime\_shutdown      &   &   &   & * \\
 ompt\_event\_idle                   & * & * & * & * \\
 ompt\_event\_sync\_region\_wait     & * & * & * & * \\
@@ -337,7 +339,7 @@ implementation.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-OMPT_API uint32_t ompt_enumerate_states(
+OMPT_API int ompt_enumerate_states(
   uint32_t \plc{current_state}, 
   uint32_t *\plc{next_state}, 
   const char **\plc{next_state_name}
@@ -814,7 +816,7 @@ typedef enum ompt_event_t \{
   ompt_event_target                   = 8,
   ompt_event_target_data              = 9,
   ompt_event_target_submit            = 10,
-  ompt_event_control                  = 11,
+  ompt_event_tcontrol                 = 11,
   ompt_event_runtime_shutdown         = 12,
   ompt_event_idle                     = 13,
   ompt_event_sync_region_wait         = 14,
@@ -1030,13 +1032,13 @@ The callback argument \code{target\_id} indicates the instance of the target con
 The callback argument \code{host\_op\_id} provides a unique host-side identifier that represents the activity on the device.
 The callback arguments \code{requested\_num\_teams}  \code{granted\_num\_teams} indicate, respectively, the number of teams requested by the user and granted by the runtime.
 
-\subsection{\code{ompt\_event\_control}}
-\label{subsec:ompt_event_control}
-If the user program calls \code{ompt\_control}, an
+\subsection{\code{ompt\_event\_tcontrol}}
+\label{subsec:ompt_event_tcontrol}
+If the user program calls \code{omp\_tcontrol}, an
 OpenMP implementation invokes this callback.
 The callback executes in the context that the call occurs in the user program.
-This callback has type signature \code{ompt\_control\_callback\_t}.
-Arguments passed to the callback are those passed by the user to \code{ompt\_control}.
+This callback has type signature \code{ompt\_tcontrol\_callback\_t}.
+Arguments passed to the callback are those passed by the user to \code{omp\_tcontrol}.
 
 \subsection{\code{ompt\_event\_runtime\_shutdown}}
 An OpenMP implementation invokes this callback before it shuts down the
@@ -1955,37 +1957,28 @@ region code is inlined into the application code or started by the runtime.
 \end{itemize}
 
 
-\subsection{\code{ompt\_control\_callback\_t}}
-\index{ompt\_control\_callback\_t@{\code{ompt\_control\_callback\_t}}}
-\label{subsec:ompt_control_callback_t}
+\subsection{\code{ompt\_tcontrol\_callback\_t}}
+\index{ompt\_tcontrol\_callback\_t@{\code{ompt\_tcontrol\_callback\_t}}}
+\label{subsec:ompt_tcontrol_callback_t}
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_control\_callback\_t) (
-  uint64\_t \plc{command},
-  uint64\_t \plc{modifier},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt\_tcontrol\_callback\_t) (
+  long long int \plc{command},
+  long long int \plc{modifier}
 );
 \end{boxedcode}
 \ccppspecificend
 }
-\descr ToDo
-The callbacks with type signature \code{ompt\_control\_callback\_t},
-include a parameter \plc{requested\_team\_size}
-that indicates the number of threads requested by the user, and a parameter
-\plc{actual\_team\_size} that indicates the number of threads in the team.
-The \plc{invoker} argument explains whether the execution of the parallel
-region code is inlined into the application code or started by the runtime.
+\descr 
+The callback with type signature \code{ompt\_tcontrol\_callback\_t},
+includes parameters \plc{command} and \plc{modifier}. Standard values for
+\plc{command} are defined by \verb|omp_tcontrol_t| 
+defined in \specref{sec:tool_tcontrol}.
+The callback also allows tool-specific values for \plc{command} and \plc{modifier}.
+Tool-specific values for \plc{command} must be $\geq$ 64.
+Tools must ignore \plc{command} values that they are not 
+explicitly designed to handle.
 
-
-
-
-
-
-
-
-
-
-
-% This is the end of ch5-toolsSupport.tex
+% This is the end of ch4-toolsSupport.tex
