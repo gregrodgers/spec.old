@@ -943,8 +943,8 @@ Each initial, implicit, explicit, or target task maintains an
 \ccppspecificstart
 \begin{boxedcode}
 typedef struct ompt_frame_s \{\\
-  void * \plc{exit_frame};  /* runtime frame that calls user code */
-  void * \plc{enter_frame}; /* user frame that calls the runtime  */
+  void * \plc{exit_frame};
+  void * \plc{enter_frame};
 \} ompt_frame_t;
 \end{boxedcode}
 \ccppspecificend
@@ -2183,71 +2183,6 @@ region code is inlined into the application code or started by the runtime.
 \end{itemize}
 
 
-\subsection{\code{ompt\_target\_buffer\_request\_callback\_t}}
-\index{ompt\_target\_buffer\_request\_callback\_t@{\code{ompt\_target\_buffer\_request\_callback\_t}}}
-\label{subsec:ompt_target_buffer_request_callback_t}
-\format
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef void (*ompt\_target\_buffer\_request\_callback\_t) (
-  int32\_t \plc{device\_id},
-  ompt\_target\_buffer\_t** \plc{buffer},
-  size\_t *\plc{bytes}
-);
-\end{boxedcode}
-\ccppspecificend
-}
-\descr ToDo
-The callbacks with type signature \code{ompt\_target\_buffer\_request\_callback\_t},
-include a parameter \plc{requested\_team\_size}
-that indicates the number of threads requested by the user, and a parameter
-\plc{actual\_team\_size} that indicates the number of threads in the team.
-The \plc{invoker} argument explains whether the execution of the parallel
-region code is inlined into the application code or started by the runtime.
-
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_target\_buffer\_t} type signature, see
-\specref{subsec:ompt_target_buffer_t}.
-\end{itemize}
-
-
-
-\subsection{\code{ompt\_target\_buffer\_complete\_callback\_t}}
-\index{ompt\_target\_buffer\_complete\_callback\_t@{\code{ompt\_target\_buffer\_complete\_callback\_t}}}
-\label{subsec:ompt_target_buffer_complete_callback_t}
-\format
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef void (*ompt\_target\_buffer\_complete\_callback\_t) (
-  int32\_t \plc{device\_id},
-  const ompt\_target\_buffer\_t *\plc{buf},
-  size\_t \plc{bytes},
-  ompt\_target\_buffer\_cursor\_t \plc{begin},
-  \_Bool \plc{buffer\_owned}
-);
-\end{boxedcode}
-\ccppspecificend
-}
-\descr ToDo
-The callbacks with type signature \code{ompt\_target\_buffer\_complete\_callback\_t},
-include a parameter \plc{requested\_team\_size}
-that indicates the number of threads requested by the user, and a parameter
-\plc{actual\_team\_size} that indicates the number of threads in the team.
-The \plc{invoker} argument explains whether the execution of the parallel
-region code is inlined into the application code or started by the runtime.
-
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_target\_buffer\_t} type signature, see
-\specref{subsec:ompt_target_buffer_t}.
-\item \code{ompt\_target\_buffer\_cursor\_t} type signature, see
-\specref{subsec:ompt_target_buffer_cursor_t}.
-\end{itemize}
-
-
 
 \subsection{\code{ompt\_get\_target\_info\_inquiry\_t}}
 \index{ompt\_get\_target\_info\_inquiry\_t@{\code{ompt\_get\_target\_info\_inquiry\_t}}}
@@ -2278,6 +2213,111 @@ region code is inlined into the application code or started by the runtime.
 \end{itemize}
 
 
+
+\subsection{\code{ompt\_target\_buffer\_request\_callback\_t}}
+\index{ompt\_target\_buffer\_request\_callback\_t@{\code{ompt\_target\_buffer\_request\_callback\_t}}}
+\label{subsec:ompt_target_buffer_request_callback_t}
+
+\summary
+The OpenMP runtime will invoke a callback with type signature  
+\code{ompt\_target\_buffer\_request\_callback\_t} to request a
+buffer to store event records for a device.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt\_target\_buffer\_request\_callback\_t) (
+  int32\_t \plc{device\_id},
+  ompt\_target\_buffer\_t** \plc{buffer},
+  size\_t *\plc{bytes}
+);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\constraints 
+The callback requests a buffer to store trace records for device \plc{device\_id}.  
+A tool should set \plc{*buffer} to point to a buffer where device events
+may be recorded and \plc{*bytes} to the length of that buffer.  A
+buffer request callback  may set \plc{*bytes} to 0 if it does not
+want to provide a buffer for any reason. If a callback sets
+\plc{*bytes} to 0, further recording of events for the device will
+be disabled until the next invocation of \code{ompt\_target\_start\_trace}.
+This will cause the target device to drop future trace records until
+recording is restarted.
+
+Note: {\em buffer request and completion callbacks are not 
+required to be async-signal safe.}
+
+To start recording, a tool needs to register a \emph{buffer request}
+callback that will supply a device with a buffer to deposit events
+and a \emph{buffer complete} callback that will be invoked by the
+OpenMP runtime to empty a buffer containing event records. A device's
+offloading runtime library is responsible for invoking these callbacks
+on a thread that is not an OpenMP master or worker. 
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_target\_buffer\_t} type signature, see
+\specref{subsec:ompt_target_buffer_t}.
+\end{itemize}
+
+\subsection{\code{ompt\_target\_buffer\_complete\_callback\_t}}
+\index{ompt\_target\_buffer\_complete\_callback\_t@{\code{ompt\_target\_buffer\_complete\_callback\_t}}}
+\label{subsec:ompt_target_buffer_complete_callback_t}
+\summary
+A target device triggers a call to \verb|ompt_target_buffer_complete_callback_t| when no further records will be recorded in an event buffer and all records written to the buffer are valid. 
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt\_target\_buffer\_complete\_callback\_t) (
+  int32\_t \plc{device\_id},
+  const ompt\_target\_buffer\_t *\plc{buf},
+  size\_t \plc{bytes},
+  ompt\_target\_buffer\_cursor\_t \plc{begin},
+  \_Bool \plc{buffer\_owned}
+);
+\end{boxedcode}
+\ccppspecificend
+}
+\descr ToDo
+The callbacks with type signature \code{ompt\_target\_buffer\_complete\_callback\_t},
+
+\constraints
+
+The argument \plc{device\_id} indicates the device whose events the
+buffer contains. The argument \plc{buffer} is the address of a
+buffer previously allocated by a \emph{buffer request} callback.
+The argument \plc{bytes} indicates the full size of the buffer.
+The argument \plc{begin} is an opaque cursor that indicates the
+position at the beginning of the first record in the buffer. The
+argument \plc{buffer\_owned} indicates whether or not the data
+pointed to by buffer was allocated by a call to the buffer request
+callback for that device. If multiple devices accumulate trace
+events into a single buffer (as is the case for NVIDIA's CUPTI API),
+this callback might be invoked with a pointer to one or more trace
+records in a shared buffer with \plc{buffer\_owned} = \code{false}. In this
+case, the callback may not delete the buffer.
+
+Under normal operating conditions, every event buffer provided to
+a device by a \emph{buffer request} callback will receive a
+\emph{buffer complete} callback before the OpenMP runtime shuts
+down. If an exceptional condition terminates  execution of an OpenMP
+program, the OpenMP runtime may choose not to provide a \emph{buffer
+complete} callback for buffers provided to any device.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_target\_buffer\_t} type signature, see
+\specref{subsec:ompt_target_buffer_t}.
+\item \code{ompt\_target\_buffer\_cursor\_t} type signature, see
+\specref{subsec:ompt_target_buffer_cursor_t}.
+\end{itemize}
+
 \subsection{\code{ompt\_tcontrol\_callback\_t}}
 \index{ompt\_tcontrol\_callback\_t@{\code{ompt\_tcontrol\_callback\_t}}}
 \label{subsec:ompt_tcontrol_callback_t}
@@ -2301,5 +2341,293 @@ The callback also allows tool-specific values for \plc{command} and \plc{modifie
 Tool-specific values for \plc{command} must be $\geq$ 64.
 Tools must ignore \plc{command} values that they are not 
 explicitly designed to handle.
+
+\section{Runtime Callbacks}
+
+This section contains type signatures for callback interfaces to routines
+in the OpenMP runtime that are present exclusively for use by tools.
+
+\subsection{Target Device Trace Control Callbacks}
+\label{sec:target-device-records}
+
+Target devices typically operate asynchronously with respect to a
+host. It may not be practical or possible to make event callbacks
+on a target device. These characteristics motivate the design of a
+performance monitoring interface for target devices where:
+
+\begin{itemize}
+\item a target device may execute asynchronously from the host,
+\item the target device records events that occur during its execution in a trace buffer,
+\item when a trace buffer fills on a device (or it is otherwise useful to flush the buffer),  the device provides it to a tool on the host, by invoking a tool-supplied callback function to process and empty the buffer,
+\item when the target device needs a new trace buffer, it invokes a tool-supplied callback function to request a new buffer,
+\end{itemize}
+
+
+Section~\ref{sec:trace-event}  describes how to enable or disable
+tracing on a target device for specific OMPT events.
+Section~\ref{sec:trace-event-native}  describes how to enable or
+disable tracing on a target device for specific native events.
+Section~\ref{sec:start-stop-recording} describes how to start and
+stop event tracing on a device.
+
+Some functions in the target device tracing control API described
+in this section are marked with \verb|OMPT_TARG_API|. These represent
+function pointers that should be obtained from a target device by
+invoking the \verb|lookup| function (provided by the target  as a
+return value to function \verb|ompt_target_get_device_info|) and
+passing it the name of the function of interest.
+
+\subsection{Enabling and Disabling Tracing for OMPT Record Types}
+\label{sec:trace-event}
+
+A tool uses the function \verb|ompt_target_set_trace_ompt| to enable or disable the recording of trace records for one or more types of OMPT events:
+
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API int ompt_target_set_trace_ompt(
+  ompt_target_device_t *device,
+  _Bool enable,
+  ompt_event_t etype
+);
+\end{boxedcode}
+\ccppspecificend}
+The argument \verb|device| is a handle to identify the target device whose performance monitoring may be altered by invoking this function. 
+The boolean \verb|enable| indicates whether recording of events of type \verb|rtype| should be enabled or disabled by this invocation.
+Actual record types are specified using positive numbers; an \verb|rtype| of 0 indicates that all record types will be enabled or disabled.
+Table~\ref{table:record_set} shows the possible return codes for \verb|ompt_target_set_trace_ompt|. 
+If a single invocation of \verb|ompt_target_set_trace_ompt| is used to enable or disable more than one event (i.e., \verb|rtype|=0), the return code will be 3 if tracing is possible for one or more events but not for others.
+
+\begin{table}
+\centering
+\begin{tabular}{|l|l|}
+\hline
+return code & meaning \\\hline
+0 & error\\\hline
+1 & event may occur but no tracing is possible\\\hline
+2 & event will never occur in runtime\\\hline
+3 & event may occur and will be traced  when convenient\\\hline
+4 & event may occur and will always be traced if event occurs\\\hline
+\end{tabular}
+\caption{Meaning of return codes for {\tt ompt\_trace\_set\_ompt} and {\tt ompt\_target\_set\_trace\_native}.}
+\label{table:record_set}
+\end{table}
+
+
+\subsection{Enabling and Disabling Tracing for Native Record Types}
+\label{sec:trace-event-native}
+
+A tool uses the function \verb|ompt_target_set_trace_native| to
+enable or disable the recording of native trace records for a device.
+This interface is designed for use by a tool with no knowledge about
+an attached device. If a tool knows how to program a particular
+attached device, it may opt to invoke native control functions
+directly using pointers obtained through the \verb|lookup| function
+associated with the device and described in the \verb|documentation|
+string that is returned by \verb|ompt_target_get_device_info|.
+
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API int ompt_target_set_trace_native(
+  ompt_target_device_t *device,
+  _Bool enable,
+  uint32_t  flags
+);
+\end{boxedcode}
+\ccppspecificend}
+
+The argument \verb|device| is a handle to idenitfy the target device
+whose performance monitoring may be altered by invoking this function.
+The boolean \verb|enable| indicates whether recording of events
+should be enabled or disabled by this invocation.  The kinds of
+native device monitoring to enable or disable are specified by
+\verb|flags|. Each kind of monitoring is specified by a flag bit.
+Flags can be composed by using logical {\tt or}  to combine enumeration
+values from type \verb|ompt_native_mon_flags_t|.
+Table~\ref{table:record_set} shows the possible return codes for
+\verb|ompt_target_set_trace_native|.  If a single invocation of
+\verb|ompt_target_set_trace_ompt| is used to enable/disable more
+than one kind of monitoring, the return code will be 3 if tracing
+is possible for one or more kinds of monitoring but not for others.
+
+To start, pause, or stop tracing for a specific target device associated with the handle \verb|device|, 
+a tool calls the functions \verb|ompt_target_start_trace|, \verb|ompt_target_pause_trace|, or \verb|ompt_target_stop_trace| with the following type signatures:
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API _Bool ompt_target_start_trace(
+  ompt_target_device_t *device,
+  ompt_target_buffer_request_callback_t request,
+  ompt_target_buffer_complete_callback_t complete,
+  ompt_get_target_info_inquiry_t get_info
+);
+\end{boxedcode}
+\ccppspecificend}
+
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API _Bool ompt_target_pause_trace(
+  ompt_target_device_t *device,
+  _Bool begin_pause
+);
+\end{boxedcode}
+\ccppspecificend}
+
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API _Bool ompt_target_stop_trace(
+  ompt_target_device_t *device
+);
+\end{boxedcode}
+\ccppspecificend}
+
+\descr
+Each invocation returns \verb|true| if the command succeeded and \verb|false| otherwise.
+A call to \verb|ompt_target_stop_trace| also implicitly requests that the device flush any buffers that it owns.
+
+%%? johnmc says: we should export one more function from a target device: ompt_target_scope(begin/end, host_id)
+%% this function will be used by the OpenMP runtime when a target device is being monitored to signal the target device when 
+%% (1) entering and leaving a target region
+%% (2) before and after launching a kernel
+%% (3) before and after performing a data operation: copy, allocation, release, ...
+%% this function will enable the target device to associate device_activity_ids with some host_id that either represents a 
+%% target region, target data operation, or target kernel submission
+
+\subsection{Processing Trace Records in a Buffer}
+\label{sec:record-data}
+
+There are several routines that need to be used together to process %target 
+event records deposited in a buffer by a device. Function \verb|ompt_target_advance_buffer_cursor|, with the type signature shown below, returns a cursor for the next record in the specified buffer given a cursor for the current record.
+
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API _Bool ompt_target_advance_buffer_cursor(
+  ompt_target_buffer_t *buffer,
+  size_t size, 
+  ompt_target_buffer_cursor_t current, 
+  ompt_target_buffer_cursor_t *next
+); 
+\end{boxedcode}
+\ccppspecificend}
+
+\descr
+It returns \verb|true| if the advance is successful and the returned value \verb|*next| is valid.
+
+The function \verb|ompt_target_buffer_get_record_type| allows a tool to inspect the type of a record to determine whether it is a known type  worth processing further. 
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API ompt_record_type_t ompt_target_buffer_get_record_type(
+  ompt_target_buffer_t *buffer, 
+  ompt_target_buffer_cursor_t current
+);
+\end{boxedcode}
+\ccppspecificend}
+
+\descr
+
+\verb|ompt_target_buffer_get_record_type| returns either \verb|ompt_record_ompt| if the record represents a OMPT event,  
+%\verb|ompt_record_correlation| if the purpose of the record is to associate the identifier for a device activity with a host target task id, 
+\verb|ompt_record_native| if the record represents a device native record type that does not represent an OMPT event record, or \verb|ompt_record_invalid| if the cursor is out of bounds. 
+
+Appendix~\ref{appendix:ompt-records} defines the corresponding enumeration type for \verb|ompt_record_type_t|. 
+Section~\ref{sec:native-record-data} describes the interface to use for accessing native record types.
+ 
+
+To inspect the information for an OMPT record, a tool invokes the following function:
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API ompt_record_ompt_t *ompt_target_buffer_get_record_ompt(
+  ompt_target_buffer_t *buffer, 
+  ompt_target_buffer_cursor_t current
+);
+\end{boxedcode}
+\ccppspecificend}
+
+This function returns a pointer that may point into the record
+buffer, or it may point into thread local storage where the information
+extracted from a record was assembled. The information available
+for an event depends upon its type. For this purpose,
+Appendix~\ref{appendix:ompt-records} defines a union type that will
+be used to return information for different OMPT event record types.
+A subsequent call to \verb|ompt_record_get| may overwrite the
+contents of the fields in a record returned by a prior invocation.
+
+\subsection{Processing Native Trace Records in a Buffer}
+\label{sec:native-record-data}
+
+To inspect a native trace record for a device, a tool invokes the following function to obtain a pointer to a trace record in the native format for the device associated with a buffer. \vbox{\ccppspecificstart
+
+\format
+\begin{boxedcode}
+OMPT_TARG_API void *ompt_target_buffer_get_record_native(
+  ompt_target_buffer_t *buffer, 
+  ompt_target_buffer_cursor_t current,
+  ompt_id_t *host_op_id
+);
+\end{boxedcode}
+\ccppspecificend}
+
+\descr
+
+The pointer returned  may point into the trace buffer, or into
+thread local storage where the information extracted from a trace
+record was assembled. The information available for a native event
+depends upon its type. If the function returns a non-NULL result,
+it will also set \verb|*host_op_id| to identify host-side identifier
+for the operation associated with the record.  A subsequent call
+to \verb|ompt_target_buffer_get_record_native| may overwrite the
+contents of the fields in a record returned by a prior invocation.
+
+Function  \verb|ompt_target_buffer_get_record_native_abstract| can be
+used by a tool to acquire basic information about a native record 
+so that a tool can process native records for a device even if the
+tool lacks native support for the device. 
+
+\format
+
+\vbox{\ccppspecificstart
+\begin{boxedcode}
+OMPT_TARG_API ompt_record_native_abstract_t *
+ompt_target_buffer_get_record_native_abstract(
+  void *native_record 
+);
+\end{boxedcode}
+\ccppspecificend}
+
+\descr
+
+A  \verb|ompt_record_native_abstract_t| record contains several
+pieces of information that a tool can use to process a native record
+that it may not fully understand. The record \verb|rclass| field
+indicates whether the record is informational
+(\verb|ompt_record_native_class_info|) or represents an event
+(\verb|ompt_record_native_class_event|). Knowing whether a record
+is informational or represents an event can help a tool determine
+how to present the record. The record  \verb|type| field points to
+a statically-allocated, immutable character string that provides
+a meaningful name  a tool might want to use to describe the event
+to a user. The \verb|start_time| and \verb|end_time| fields are
+used to place an event in time. The times are relative to the device
+clock. If an event has no associated \verb|start_time| and/or
+\verb|end_time|, the value of an unavailable field will be the
+distinguished value \verb|ompt_time_none|. The hardware id field,
+\verb|hwid|,  is used to indicate the location on the device where
+the event occurred. A \verb|hwid| may represent a hardware abstraction
+such as a core or a hardware thread id. The meaning of a \verb|hwid|
+value for a device is defined by the implementer of the software
+stack for the device. If there is no \verb|hwid| associated with a
+record, the value of \verb|hwid| shall be \verb|ompt_hwid_none|.
+
+\subsection{Identifiers in Trace Records}
+Since a tool receives trace records for devices asynchronously, a
+tool cannot store data in an \verb|ompt_data_t| field when device
+events happen.  For that reason, trace records for OpenMP threads,
+parallel regions, task regions use an identifier of type \verb|ompt_id_t|
+rather than providing a tool access to a data field in their runtime
+representation.  A thread or region's identifier is assigned when
+the thread or region is created.  On each device, such identifiers
+are unique from the time an OpenMP runtime is initialized until it
+is shut down.  Tools should not assume that \verb|ompt_id_t| values
+are small or densely allocated. The value \verb|ompt_id_none| is
+reserved to indicate an invalid id.
+
 
 % This is the end of ch4-toolsSupport.tex
