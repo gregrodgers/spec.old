@@ -92,10 +92,14 @@ an implementation of the OpenMP API in the child process will call \code{ompt\_t
 under the same conditions as it would for any process.
 
 \subsection{Initializing a Tool}
-\label{sec:ToolsSupport_init}
+\label{sec:tool-initialize}
 
 When an OpenMP implementation receives a non-\code{NULL} pointer to a tool initializer function with signature \code{ompt\_initialize\_fn\_t} as the return value from a call to a tool-provided implementation of \code{ompt\_tool}, the runtime will call the tool initializer immediately after the runtime fully initializes itself.
 The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
+
+The two principal duties of a tool initializer are binding pointers to all OMPT interface functions that the tool uses and registering tool callbacks. These
+two operations are described in the next two sections.
+
 \subsection{Binding OMPT Interface Functions}
 \label{sec:ToolsSupport_bind}
 
@@ -114,6 +118,7 @@ ompt\_interface\_fn\_t \plc{ompt\_get\_thread\_id\_fn} =
 \end{boxedcode}
 \ccppspecificend
 }
+
 Other routines in the OMPT interface may be looked up analogously.
 If a particular OMPT interface function is not supported by 
 an OpenMP implementation, \plc{lookup} will return \code{NULL} when 
@@ -809,28 +814,63 @@ An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_
    This callback executes in the context of the task that encountered the barrier, taskwait, or taskgroup construct.
 
 
-\section{Tool Interface Routines}
+\section{Tool Interface Routine}
 
 \subsubsection{\code{ompt\_tool}}
 \label{sec:ompt_tool}
+
+\summary
+A tool implements \code{ompt\_tool} to announce its interest in using 
+an OpenMP implementation's OMPT interface.
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
 extern "C" \{
-  ompt\_initialize\_fn\_t ompt\_tool(void);
+  ompt_initialize_fn_t ompt_tool(void);
 \};
 \end{boxedcode}
 \ccppspecificend
 }
+
+\descr
+For a tool to use an OpenMP implementation's OMPT interface,
+the tool must define a globally-visible implementation of the
+function \code{ompt\_tool}.
+
+A tool may indicate its intent to use the OMPT interface provided
+by an OpenMP implementation by having
+\code{ompt\_tool} return a non-\code{NULL} pointer to a tool
+initializer routine with type signature \code{ompt\_initialize\_fn\_t}.
+
+\begin{comment}
+If a tool so indicates its interest in OMPT, the OpenMP implementation
+will maintain state information for each OpenMP thread and will
+perform any OMPT event callbacks registered by the tool.
+\end{comment}
+
+If a tool implements \code{ompt\_tool} but has no interest in using
+an OpenMP implementation's OMPT interface, \code{ompt\_tool} 
+should return \code{NULL}. 
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_initialize\_fn\_t}, see \specref{sec:ompt_initialize_fn_t}
+\end{itemize}
+
 
 \section{Tool Callback Signatures}
 \subsection{Initializer Callback Signatures}
 
 \subsubsection{\code{ompt\_initialize\_fn\_t}}
 \label{sec:ompt_initialize_fn_t}
+
 \summary
+A tool implements an initializer with the type signature
+\code{ompt\_initialize\_fn\_t} to initialize the tool's use of
+an OpenMP implementation's OMPT interface.
+
 \format
 \vbox{
 \ccppspecificstart
@@ -845,32 +885,31 @@ typedef void (*\plc{ompt\_initialize\_fn\_t}) (
 }
 
 \descr
+For a tool to initialize an OpenMP implementation's OMPT interface,
+the tool's implementation of \code{ompt\_tool} must return a 
+pointer to a tool initializer with type signature \code{ompt\_initialize\_fn\_t}.
+The runtime will call the tool initializer
+after the runtime fully initializes itself and before 
+beginning execution of any OpenMP construct
+or completing any execution environment routine invocation.  
 
+\argdesc
 The first argument to a tool initializer is \plc{lookup}---a callback 
-to that a tool must use to 
-% interrogate the runtime system to 
-obtain a pointer to each OMPT interface function.
+to an OpenMP runtime that a tool must use to 
+obtain a pointer to each function in the runtime's OMPT interface.
+
+\begin{comment}
 All functions in the OMPT interface are marked with \code{OMPT\_API}, which
 indicates that the only way a tool can obtain bindings for them
 is using the \plc{lookup} callback.
 
-\begin{comment}
 % The language committee prefers to avoid rationale
 The \code{lookup} callback is necessary in the case when an OpenMP runtime 
 is dynamically loaded by a shared library. In this case, 
 OMPT interface functions provided by the library may 
 not be visible to a preloaded tool.
-\end{comment}
 % Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
-
-\needspace{6\baselineskip}\notestart
-\noteheader -- OMPT interface functions should not be global symbols in 
-an OpenMP implementation. A tool developer might be tempted to call a global 
-OMPT interface function directly. Since there exist cases where a global 
-symbol exported by an OpenMP implementation will not be visible to a tool,
-an OpenMP implementation should avoid providing global symbols for OMPT
-interface functions that {\em should not} be used by any tool.
-\noteend
+\end{comment}
 
 The second argument to a tool initializer is a version string that unambiguously identifies an OpenMP implementation.
 
@@ -886,8 +925,13 @@ unambiguously identifies the version of the OMPT interface supported
 by an OpenMP implementation.  
 The version of OMPT described by this document is 2.
 
-The two principal duties of a tool initializer are binding pointers to all OMPT interface functions that the tool uses and registering tool callbacks. These
-two operations are described in the next two sections.
+\crossreferences
+\begin{itemize}
+\item The actions of a tool initializer are described in 
+\specref{sec:tool-initialize}.
+\item \code{ompt\_tool}, see \specref{sec:ompt_tool}
+\item \code{ompt\_function\_lookup\_t}, see \specref{sec:ompt_function_lookup_t}
+\end{itemize}
 
 
 \subsection{Event Callback Signatures}
