@@ -256,7 +256,7 @@ Some functions in the target device tracing control API described
 in this section are marked with \verb|OMPT_TARG_API|. These represent
 function pointers that should be obtained from a target device by
 invoking the \verb|lookup| function (provided by the target  as a
-return value to function \verb|ompt_target_get_device_info|) and
+return value to function \verb|ompt_get_device_info|) and
 passing it the name of the function of interest.
 
 
@@ -881,6 +881,14 @@ If a tool implements \code{ompt\_tool} but has no interest in using
 an OpenMP implementation's OMPT interface in a particular execution,
 \code{ompt\_tool} should return \code{NULL}. 
 
+\effect
+If a tool returns a non-\code{NULL} pointer to a tool
+initializer routine, an OpenMP implementation will 
+call the tool initializer
+after fully initializing itself but before
+beginning execution of any OpenMP construct
+or completing execution of any environment routine invocation. 
+
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_initialize\_fn\_t} type signature, see \specref{sec:ompt_initialize_fn_t}
@@ -915,13 +923,13 @@ typedef void (*\plc{ompt\_initialize\_fn\_t}) (
 For a tool to initialize an OpenMP implementation's OMPT interface,
 the tool's implementation of \code{ompt\_tool} must return a 
 pointer to a tool initializer with type signature \code{ompt\_initialize\_fn\_t}.
-An OpenMP implementation will call the tool initializer
-after fully initializing itself and before 
+An OpenMP implementation will call the tool initializer returned by
+\code{ompt\_tool} after fully initializing itself but before 
 beginning execution of any OpenMP construct
 or completing execution of any environment routine invocation.  
 
 \argdesc
-The first argument an OpenMP implementation passes to a tool initializer 
+The first argument passed to a tool initializer 
 is \plc{lookup}---a callback 
 to an OpenMP runtime routine that a tool must use to 
 obtain a pointer to each function in the runtime's OMPT interface.
@@ -939,7 +947,7 @@ not be visible to a preloaded tool.
 % Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
 \end{comment}
 
-The second argument an OpenMP implementation passes to a tool initializer 
+The second argument passed to a tool initializer 
 is a version string that unambiguously identifies the OpenMP implementation.
 
 \begin{comment}
@@ -949,10 +957,32 @@ Knowing exactly what version of an OpenMP implementation is present
 may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
 \end{comment}
 
-The second argument an OpenMP implementation passes to a tool initializer 
+The third argument an OpenMP implementation passed to a tool initializer 
 is a version number that unambiguously identifies the version of the 
 OMPT interface supported by the OpenMP implementation.  
 The version of OMPT described by this document is 2.
+
+\effect
+A tool's initializer has several duties.  First, it should use
+\plc{ompt\_version} to determine whether it is compatibile
+with the version of the OMPT interface that the OpenMP implementation
+supports.  Second, it should use \plc{lookup} 
+to look up pointers to OMPT interface callbacks provided by the
+OpenMP runtime on the host. 
+Third, it should use the OMPT interface 
+callback known as \code{ompt\_set\_callback} 
+to register tool callbacks for OpenMP events.  Fourth, the tool
+should use the OMPT interface callback known as \code{ompt\_get\_num\_devices} 
+to identify whether any target devices are present
+and then use the OMPT interface callback known as 
+\code{ompt\_get\_device\_info} to interrogate each device.
+Using information returned by the \code{ompt\_get\_device\_info} callback,
+a tool initializer can then set up tracing for a device, 
+as described in \specref{sec:device-tracing}. 
+Finally, a tool initializer can use OMPT interface callbacks known as 
+\code{ompt\_enumerate\_states} and \code{ompt\_enumerate\_mutex\_kinds} to
+enumerate the thread states and implementations of mutual exclusion
+that a particular OpenMP implementation employs.
 
 \crossreferences
 \begin{itemize}
@@ -960,6 +990,9 @@ The version of OMPT described by this document is 2.
 \specref{sec:tool-initialize}.
 \item \code{ompt\_tool}, see \specref{sec:ompt_tool}
 \item \code{ompt\_function\_lookup\_t} type signature, see \specref{sec:ompt_function_lookup_t}
+\item \code{ompt\_set\_callback\_t} type signature, see \specref{sec:ompt_set_callback_t}
+\item \code{ompt\_get\_num\_devices\_t} type signature, see \specref{sec:ompt_get_num_devices_t}
+\item \code{ompt\_get\_device\_info\_t} type signature, see \specref{sec:ompt_get_device_info_t}
 \end{itemize}
 
 
@@ -1920,10 +1953,12 @@ typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
 \descr
 
 An OpenMP implementation provides a pointer to the host lookup callback 
-implementation as an argument to a tool initializer. 
-This lookup function enables a tool to obtain pointers to 
-OMPT interface functions supported by the OpenMP implementation on the host. 
-A separate target device lookup callback can be obtained from each target device to 
+implementation as an argument to a tool initializer. This lookup callback
+enables a tool to obtain pointers to OMPT interface functions supported by the 
+OpenMP implementation on the host. 
+A separate lookup callback can be obtained from each target device 
+by calling the host callback known as \code{ompt\_get\_device\_info}. One can use the
+target device lookup callback to 
 obtain pointers to OMPT interface functions specific to that target.
 
 \constraints
@@ -2088,7 +2123,7 @@ while (ompt_enumerate_states(state, &state, &state_name)) \{
 The host runtime callback with type signature 
 \code{ompt\_enumerate\_mutex\_kinds\_t} 
 enables a tool to enumerate 
-the different kinds mutual exclusion implementations that 
+the kinds of mutual exclusion implementations that 
 an OpenMP implementation employs.
 
 
@@ -2109,8 +2144,8 @@ typedef int (*ompt_enumerate_mutex_kinds_t)(
 \descr
 An OpenMP implementation may implement mutual exclusion for locks,
 nest locks, critical sections, and atomic regions in several different
-ways.  This callback enables a tool to enumerate all of the different
-kinds mutual exclusion implementations that an OpenMP implementation
+ways.  This host callback known enables a tool to enumerate the 
+kinds of mutual exclusion implementations that an OpenMP implementation
 employs.
 
 \begin{comment}
@@ -2177,9 +2212,9 @@ while (ompt_enumerate_mutex_kinds(kind, &kind, &kind_name)) \{
 \label{sec:ompt_set_callback_t}
 
 \summary
-The host runtime callback with type signature \code{ompt\_set\_callback\_t} is
-used by a tool to register a tool callback to invoke when a host OpenMP
-event occurs.
+The host runtime callback with type signature 
+\code{ompt\_set\_callback\_t} enables a tool to register a tool callback that
+an OpenMP implementation will invoke when a host OpenMP event occurs.
 
 \format
 \vbox{
@@ -2194,6 +2229,13 @@ typedef int (*ompt\_set\_callback_t)(
 }
 
 \descr
+
+To set tool callbacks for OpenMP events, a tool uses host runtime callback 
+with type signature \code{ompt\_set\_callback\_t}.
+
+The host runtime callback with type signature \code{ompt\_get\_callback\_t} is
+used by a tool to obtain a pointer to the tool callback routine that 
+an OpenMP implementation will invoke when a host OpenMP event occurs.
 
 \constraints
 When a tool registers a callback for an event code \plc{event}, the type
@@ -2218,15 +2260,21 @@ return code & meaning \\
 \label{table:ToolsSupport_set_rc}
 \end{table}
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_event\_t} enumeration type, see \specref{sec:ompt_event_t}.
+\item \code{ompt\_callback\_t} type, see \specref{sec:ompt_callback_t}.
+\item \code{ompt\_set\_callback\_t} host callback type signature,
+see \specref{sec:ompt_set_callback_t}.
+\end{itemize}
+
 \subsubsection{\code{ompt\_get\_callback\_t}}
 \label{sec:ompt_get_callback_t}
 
 \summary
-The host runtime callback with type signature \code{ompt\_get\_callback\_t} is
-used by a tool to retrieve a pointer to the tool routine that will
-be invoked when a particular type of OpenMP event occurs during execution
-of an OpenMP program. 
-
+A tool uses the host runtime callback with type signature 
+\code{ompt\_get\_callback\_t} is to obtain a pointer to the tool callback 
+that an OpenMP implementation will invoke when a host OpenMP event occurs.
 
 \format
 \vbox{
@@ -2241,9 +2289,25 @@ typedef int (*ompt_get_callback_t)(
 }
 
 \descr
-The callback with type signature \code{ompt\_get\_callback\_t} 
-may be invoked at any time to determine whether or not 
-a tool has registered a callback for an OpenMP event.
+The host runtime callback with type signature \code{ompt\_get\_callback\_t} is
+used by a tool to obtain a pointer to the tool callback routine that 
+an OpenMP implementation will invoke when a host OpenMP event occurs. If no
+tool callback is registered for an event, \plc{*callback} will be set to \code{NULL}.
+
+To set tool callbacks for OpenMP events, a tool uses host runtime callback 
+with type signature \code{ompt\_set\_callback\_t}.
+
+\constraints
+The first argument to the get callback routine is an enumeration
+type that specifies an OpenMP execution event.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_event\_t} enumeration type, see \specref{sec:ompt_event_t}.
+\item \code{ompt\_callback\_t} type, see \specref{sec:ompt_callback_t}.
+\item \code{ompt\_set\_callback\_t} type signature, 
+see \specref{sec:ompt_set_callback_t}. 
+\end{itemize}
 
 \subsubsection{\code{ompt\_get\_thread\_data\_t}}
 \label{sec:thread-inquiry}
@@ -2446,7 +2510,7 @@ returns information about a specified device.
 \format
 \vbox{\ccppspecificstart
 \begin{boxedcode}
-typedef int (*ompt_target_get_device_info_t)(
+typedef int (*ompt_get_device_info_t)(
   int32_t device_id, 
   const char **type, 
   ompt_target_device_t **device,
@@ -2487,16 +2551,16 @@ also necessary descriptive text for how to use the device-specific
 API or pointers to external documentation.
 
 \subsubsection{\code{ompt\_target\_get\_device\_id\_t}}
-\label{sec:ompt_target_get_device_id_t}
+\label{sec:ompt_get_device_id_t}
 
 \summary
-The \verb|ompt_target_get_device_id| routine returns the device
+The \verb|ompt_get_device_id| routine returns the device
 identifier for the active target device.
 
 \format
 \vbox{\ccppspecificstart
 \begin{boxedcode}
-typedef int (*ompt_target_get_device_id_t)(void);
+typedef int (*ompt_get_device_id_t)(void);
 \end{boxedcode}
 \ccppspecificend}
 
@@ -2510,7 +2574,7 @@ then it will return a value of -1.
 
 \subsection{Target Callback Signatures}
 \subsubsection{\code{ompt\_target\_get\_device\_time\_t}}
-\label{sec:ompt_target_get_device_time_t}
+\label{sec:ompt_get_device_time_t}
 
 \summary
 The callback routine with type signature \verb|ompt_target_get_time_t| 
@@ -2635,7 +2699,7 @@ an attached device. If a tool knows how to program a particular
 attached device, it may opt to invoke native control functions
 directly using pointers obtained through the \verb|lookup| function
 associated with the device and described in the \verb|documentation|
-string that is returned by \verb|ompt_target_get_device_info|.
+string that is returned by \verb|ompt_get_device_info|.
 
 \constraints
 The argument \verb|device| is a handle to idenitfy the target device
