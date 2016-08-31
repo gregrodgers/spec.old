@@ -637,7 +637,7 @@ typedef unsigned long long int ompt\_parallel\_id\_t;
   when the region is created.  Identifiers assigned to parallel regions on each device are unique from the time an
   OpenMP implementation is initialized until it is shut down.
   A parallel region identifer can be retrieved for an enclosing parallel region
-  on demand using the function \code{ompt\_get\_parallel\_info}  (described in Section~\ref{sec:parallel-inquiry}).
+  on demand using the function \code{ompt\_get\_parallel\_info}  (described in Section~\ref{sec:ompt_get_parallel_info}).
   Tools should not assume that \code{ompt\_parallel\_id\_t} values are small or densely allocated.
   The value \code{ompt\_parallel\_id\_none} is reserved to indicate an invalid parallel id.
 
@@ -657,7 +657,7 @@ typedef unsigned long long int ompt\_task\_id\_t;
   Identifiers assigned to tasks on each device are unique from the time an
   OpenMP implementation is initialized until it is shut down.
   A task's identifier can be retrieved
-  on demand by invoking the \code{ompt\_get\_task\_info}  function (described in Section~\ref{sec:task-region}).
+  on demand by invoking the \code{ompt\_get\_task\_info}  function (described in Section~\ref{sec:ompt_get_task_info}).
   Tools should not assume that \code{ompt\_task\_id\_t} values are small or densely allocated.
   The value \code{ompt\_task\_id\_none} is reserved to indicate an invalid task identifier.
 
@@ -669,7 +669,7 @@ Each operation within a target region, e.g., transferring data to/from a device 
 on a device, is also assigned a unique target identifier.
 Identifiers assigned to target regions or operations
 are unique from the time an OpenMP implementation is initialized until it is shut down.
-The current target region and operation identifiers can be retrieved by invoking the \code{ompt\_get\_target\_info} function (described in Section~\ref{sec:target-region}).
+The current target region and operation identifiers can be retrieved by invoking the \code{ompt\_get\_target\_info} function (described in Section~\ref{sec:ompt_get_target_info}).
 Tools should not assume that \code{ompt\_target\_id\_t} values are small or densely allocated.
 The value \code{ompt\_target\_id\_none} is reserved to indicate an invalid target identifier.
 The value \code{ompt\_target\_id\_none} will be returned for (a) the target region identifier if \code{ompt\_get\_target\_info} is invoked outside a target region and (b) the target operation identifier if \code{ompt\_get\_target\_info} is invoked while no target operation is in progress.
@@ -685,7 +685,7 @@ A wait identifier may represent a critical section {\em name}, a lock,  a progra
 typedef unsigned long long int ompt\_wait\_id\_t;
 \end{boxedcode}
 \end{comment}
-A thread's wait identifier can be retrieved on demand by invoking the \code{ompt\_get\_state} function (described in Section~\ref{sec:thread-inquiry}).
+A thread's wait identifier can be retrieved on demand by invoking the \code{ompt\_get\_state} function (described in Section~\ref{sec:ompt_get_state}).
 Tools should not assume that \code{ompt\_wait\_id\_t} values are small or densely allocated.
 When a thread is not in a wait state, a thread's wait identifier has an undefined value.
 %%? Does that mean that the value is undefined and cannot sensibley be read, or that it has a specific value which we have
@@ -735,7 +735,7 @@ a frame structure remains at a constant location in memory throughout
 a task's lifetime.  A frame object is passed to some callbacks; it
 can also be retrieved asynchronously by invoking the
 \code{ompt\_get\_task\_info}  function (described in
-Section~\ref{sec:task-region}) in a signal handler.  A task's frame
+Section~\ref{sec:ompt_get_task_info}) in a signal handler.  A task's frame
 object contains two fields: \code{exit\_frame} and \code{enter\_frame}.
 
 The \code{exit\_frame} field of a task's frame object is set just
@@ -1511,11 +1511,13 @@ typedef enum ompt_task_dependence_flag_e \{\\
 
 \section{Events without Directives}
 \subsection{\code{ompt\_event\_thread\_begin}}
+\label{sec:ompt_event_thread_begin}
 An OpenMP implementation invokes this callback in the context of an initial thread just after it initializes the runtime, or in the context of a new thread created by the runtime just after the thread initializes itself. In either case, this callback must be the first callback for a thread
 and must occur before the thread executes any OpenMP tasks. This callback has type signature \code{ompt\_thread\_begin\_callback\_t}.
 The callback argument \code{thread\_type} indicates the type of the thread: initial, worker, or other.
 
 \subsection{\code{ompt\_event\_thread\_end}}
+\label{sec:ompt_event_thread_end}
 An OpenMP implementation invokes this callback
 after an OpenMP thread completes all of
 its tasks but before the thread is destroyed. The callback
@@ -1523,7 +1525,7 @@ executes in the context of the OpenMP thread. This callback must be the last cal
 This callback has type signature \code{ompt\_thread\_end\_callback\_t}.
 
 \subsection{\code{ompt\_event\_target\_submit}}
-
+\label{sec:ompt_event_target_submit}
 An OpenMP implementation invokes this callback prior to submitting a kernel for execution on a target device.
 This callback has type signature \code{ompt\_target\_submit\_callback\_t}.
 The callback argument \code{target\_id} indicates the instance of the target construct associated with this operation.
@@ -1539,20 +1541,23 @@ This callback has type signature \code{ompt\_tcontrol\_callback\_t}.
 Arguments passed to the callback are those passed by the user to \code{omp\_tcontrol}.
 
 \subsection{\code{ompt\_event\_runtime\_shutdown}}
+\label{sec:ompt_event_runtime_shutdown}
 An OpenMP implementation invokes this callback before it shuts down the
  runtime system.  This callback enables a tool to clean up its
  state and record or report information gathered. A runtime may later restart and reinitialize the tool by
 calling the tool initializer
-function (described in Section~\ref{sec:init}) again.
+function (described in Section~\ref{sec:tool-initialize}) again.
  This callback has type signature \code{ompt\_callback\_t}.
 
 \subsection{\code{ompt\_event\_idle}}
+\label{sec:ompt_event_idle}
 An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a thread waits for work outside a parallel region.
   The OpenMP runtime invokes this callback with \code{endpoint=}\code{ompt\_scope\_end} before the thread  begins to execute an implicit task for
    a parallel region or terminates. The callback executes in the environment of the waiting thread.
   This callback has type signature \code{ompt\_idle\_callback\_t}.
 
 \subsection{\code{ompt\_event\_sync\_region\_wait}}
+\label{sec:ompt_event_sync_region_wait}
 
   An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a task starts waiting in a barrier region, taskwait region, or taskgroup region.
    An OpenMP implementation invokes this callback with the \code{endpoint=}\code{ompt\_scope\_end} when the task stops waiting in the region.
@@ -2654,6 +2659,7 @@ explicitly designed to handle.
 
 \subsubsection{\code{ompt\_function\_lookup\_t}}
 \label{sec:ompt_function_lookup_t}
+\label{sec:ompt_function_lookup}
 
 \summary
 The runtime callback with type signature \code{ompt\_function\_lookup\_t}
@@ -2746,6 +2752,7 @@ so may cause deadlock.
 
 \subsubsection{\code{ompt\_enumerate\_states\_t}}
 \label{sec:ompt_enumerate_states_t}
+\label{sec:ompt_enumerate_states}
 
 \summary
 The host runtime callback with type signature \code{ompt\_enumerate\_states\_t} 
@@ -2838,7 +2845,8 @@ while (ompt_enumerate_states(state, &state, &state_name)) \{
 \end{itemize}
 
 \subsubsection{\code{ompt\_enumerate\_mutex\_kinds\_t}}
-\label{ompt_enumerate_mutex_kinds_t}
+\label{sec:ompt_enumerate_mutex_kinds_t}
+\label{sec:ompt_enumerate_mutex_kinds}
  
 \summary
 The host runtime callback with type signature 
@@ -2931,6 +2939,7 @@ while (ompt_enumerate_mutex_kinds(kind, &kind, &kind_name)) \{
 
 \subsubsection{\code{ompt\_set\_callback\_t}}
 \label{sec:ompt_set_callback_t}
+\label{sec:ompt_set_callback}
 
 \summary
 The host runtime callback with type signature 
@@ -2991,6 +3000,7 @@ see \specref{sec:ompt_get_callback_t}.
 
 \subsubsection{\code{ompt\_get\_callback\_t}}
 \label{sec:ompt_get_callback_t}
+\label{sec:ompt_get_callback}
 
 \summary
 A tool uses the host runtime callback with type signature 
@@ -3032,6 +3042,8 @@ see \specref{sec:ompt_set_callback_t}.
 
 \subsubsection{\code{ompt\_get\_thread\_data\_t}}
 \label{sec:thread-inquiry}
+\label{sec:ompt_get_thread_data_t}
+\label{sec:ompt_get_thread_data}
 
 \summary
 The host runtime callback with type signature \code{ompt\_get\_thread\_data\_t} 
@@ -3053,6 +3065,8 @@ may modify the identifier.
 {\em This callback is async signal safe.}
 
 \subsubsection{\code{ompt\_get\_state\_t}}
+\label{sec:ompt_get_state_t}
+\label{sec:ompt_get_state}
 
 \summary
 The \code{ompt\_get\_state\_t} routine returns the state and the wait identifier of the 
@@ -3077,6 +3091,7 @@ with the state.
 
 \subsubsection{\code{ompt\_get\_parallel\_info\_t}} 
 \label{sec:ompt_get_parallel_info_t}
+\label{sec:ompt_get_parallel_info}
 
 \summary
 The \code{ompt\_get\_parallel\_info\_t} routine returns information about
@@ -3112,6 +3127,7 @@ against \verb|ompt_data_none|.  A tool may modify the identifier.
 
 \subsubsection{\code{ompt\_get\_task\_info\_t}}
 \label{sec:ompt_get_task_info_t}
+\label{sec:ompt_get_task_info}
 
 \summary
 The \code{ompt\_get\_task\_info\_t} routine provides information about the
@@ -3168,6 +3184,7 @@ threads and nested parallelism.
 
 \subsubsection{\code{ompt\_get\_target\_info\_t}}
 \label{sec:ompt_get_target_info_t}
+\label{sec:ompt_get_target_info}
 
 \summary
 The \code{ompt\_get\_target\_info\_t} routine returns identifiers that specify a
@@ -3201,6 +3218,7 @@ from an accelerator or launching a kernel).
 
 \subsubsection{\code{ompt\_get\_num\_devices\_t}}
 \label{sec:ompt_get_num_devices_t}
+\label{sec:ompt_get_num_devices}
 
 \summary
 The \code{ompt\_get\_num\_devices\_t} routine returns the number of visible devices.
@@ -3223,6 +3241,7 @@ the return value is undefined.
 
 \subsubsection{\code{ompt\_get\_device\_info\_t}}
 \label{sec:ompt_get_device_info_t}
+\label{sec:ompt_get_device_info}
 
 \summary
 The \code{ompt\_get\_device\_info\_t} routine 
@@ -3273,6 +3292,7 @@ API or pointers to external documentation.
 
 \subsubsection{\code{ompt\_target\_get\_device\_id\_t}}
 \label{sec:ompt_get_device_id_t}
+\label{sec:ompt_get_device_id}
 
 \summary
 The \verb|ompt_get_device_id| routine returns the device
@@ -3295,7 +3315,8 @@ then it will return a value of -1.
 
 \subsection{Target Callback Signatures}
 \subsubsection{\code{ompt\_target\_get\_device\_time\_t}}
-\label{sec:ompt_get_device_time_t}
+\label{sec:ompt_target_get_device_time_t}
+\label{sec:ompt_target_get_device_time}
 
 \summary
 The callback routine with type signature \verb|ompt_target_get_time_t| 
@@ -3349,6 +3370,7 @@ device times to host times is recommended.
 
 \subsubsection{\code{ompt\_target\_set\_trace\_ompt\_t}}
 \label{sec:ompt_target_set_trace_ompt_t}
+\label{sec:ompt_target_set_trace_ompt}
 
 \summary
 A tool uses the function \code{ompt\_target\_set\_trace\_ompt\_t} to
@@ -3397,6 +3419,7 @@ return code & meaning \\\hline
 
 \subsubsection{\code{ompt\_target\_set\_trace\_native\_t}}
 \label{sec:ompt_target_set_trace_native_t}
+\label{sec:ompt_target_set_trace_native}
 
 \summary
 A tool uses the function \verb|ompt_target_set_trace_native| to
@@ -3443,6 +3466,7 @@ a tool calls the functions \verb|ompt_target_start_trace|, \verb|ompt_target_pau
 
 \subsubsection{\code{ompt\_target\_start\_trace\_t}}
 \label{sec:ompt_target_start_trace_t}
+\label{sec:ompt_target_start_trace}
 
 \summary
 The callback with type signature \code{ompt\_target\_start\_trace\_t} is used to 
@@ -3463,6 +3487,7 @@ typedef int (*ompt_target_start_trace_t)(
 
 \subsubsection{\code{ompt\_target\_pause\_trace\_t}}
 \label{sec:ompt_target_pause_trace_t}
+\label{sec:ompt_target_pause_trace}
 
 \summary
 The callback with type signature \code{ompt\_target\_start\_trace\_t} is used to 
