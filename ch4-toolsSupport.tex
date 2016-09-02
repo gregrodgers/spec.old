@@ -112,22 +112,22 @@ type signatures.
 
 \begin{table}
 \begin{tabular}{ll}\hline
-Function name & Type signature\\\hline\hline
-\code{ompt\_enumerate\_states}  & \code{ompt\_enumerate\_states\_t}\\
-\code{ompt\_enumerate\_mutex\_kinds} & \code{ompt\_enumerate\_mutex\_kinds\_t}\\
-\code{ompt\_set\_callback} & \code{ompt\_set\_callback\_t}\\
-\code{ompt\_get\_callback} & \code{ompt\_get\_callback\_t}\\
-\code{ompt\_get\_thread\_data} & \code{ompt\_get\_thread\_data\_t}\\
-\code{ompt\_get\_state} & \code{ompt\_get\_state\_t}\\
-\code{ompt\_get\_parallel\_info} & \code{ompt\_get\_parallel\_info\_t}\\
-\code{ompt\_get\_task\_info} & \code{ompt\_get\_task\_info\_t}\\
-\code{ompt\_get\_num\_devices} & \code{ompt\_get\_num\_devices\_t}\\
-\code{ompt\_get\_device\_info} & \code{ompt\_get\_device\_info\_t}\\
-\code{ompt\_get\_device\_id} & \code{ompt\_get\_device\_id\_t}\\\hline
+Entry Point String Name & Type signature\\\hline\hline
+\code{``ompt\_enumerate\_states''}  & \code{ompt\_enumerate\_states\_t}\\
+\code{``ompt\_enumerate\_mutex\_kinds''} & \code{ompt\_enumerate\_mutex\_kinds\_t}\\
+\code{``ompt\_set\_callback''} & \code{ompt\_set\_callback\_t}\\
+\code{``ompt\_get\_callback''} & \code{ompt\_get\_callback\_t}\\
+\code{``ompt\_get\_thread\_data''} & \code{ompt\_get\_thread\_data\_t}\\
+\code{``ompt\_get\_state''} & \code{ompt\_get\_state\_t}\\
+\code{``ompt\_get\_parallel\_info''} & \code{ompt\_get\_parallel\_info\_t}\\
+\code{``ompt\_get\_task\_info''} & \code{ompt\_get\_task\_info\_t}\\
+\code{``ompt\_get\_num\_devices''} & \code{ompt\_get\_num\_devices\_t}\\
+\code{``ompt\_get\_device\_info''} & \code{ompt\_get\_device\_info\_t}\\
+\code{``ompt\_get\_device\_id''} & \code{ompt\_get\_device\_id\_t}\\\hline
 \end{tabular}
 \vskip 1ex
-\caption{Host OMPT interface function names and their type signatures.}
-\label{table:host-ompt-interface-functions} 
+\caption{OMPT callback interface entry point names and their type signatures.}
+\label{table:ompt-callback-interface} 
 \end{table}
 
 The following example shows how to use the \plc{lookup} callback 
@@ -585,7 +585,8 @@ typedef enum ompt_event_t \{
   ompt_event_mutex_acquire            = 24,
   ompt_event_mutex_acquired           = 25,
   ompt_event_nested_lock              = 26,
-  ompt_event_flush                    = 27
+  ompt_event_flush                    = 27,
+  ompt_event_device_initialize        = 28
 \} ompt_event_t;
 \end{boxedcode}
 \ccppspecificend
@@ -2652,9 +2653,87 @@ explicitly designed to handle.
 \item \verb|omp_tcontrol_t| enumeration type, see \specref{sec:tool_tcontrol}.
 \end{itemize}
 
-\section{Runtime Callback Signatures}
 
-\subsection{General Callback Signatures}
+\subsubsection{\code{ompt\_device\_initialize\_callback\_t}}
+\index{ompt\_flush\_callback\_t@{\code{ompt\_device\_initialize\_callback\_t}}}
+\label{sec:ompt_device_initialize_callback_t}
+
+\summary The tool callback with type signature
+\code{ompt\_device\_initialize\_callback\_t} initializes a
+tool's tracing interface for a device.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt_device_initialize_callback_t) (
+  int device_id,
+  const char *type,
+  ompt_target_device_t *device,
+  ompt_function_lookup_t *lookup,
+  const char *documentation
+);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr 
+
+A tool that wants to asynchronously collect a trace of
+activities on a device should register a callback with type signature
+\code{ompt\_device\_initialize\_callback\_t} for the
+\code{ompt\_event\_device\_initialize} OpenMP event. An OpenMP
+implementation will invoke this callback for a device after OpenMP is
+initialized for the device but before beginning execution of any
+OpenMP construct on the device.
+
+\argdesc
+
+The first argument identifies the logical device being initialized.
+
+The second argument is a character string indicating the type of the
+device. A device type string is a semicolon separated character string
+that includes at a minimum the vendor and model name of the
+device. This may be followed by a semicolon-separated sequence of
+properties that describe a device's hardware or software.  An example
+type string in this format is the following: ``NVIDIA; Tesla M2050;
+compute capability 2.0; CUDA 8.0''.
+
+The third argument is a pointer to an opaque object that represents
+the target device instance. The pointer to the device instance object
+is used by functions in the device tracing interface to identify the
+device being addressed.
+
+The fourth argument is \plc{lookup}---a pointer to a runtime callback
+that a tool must use to obtain pointers to entry points in the
+device's OMPT tracing interface.
+
+The last argument is a string that describes names and type signatures
+of any additional device-specific entry points that can be obtained
+using \plc{lookup}. Ideally, the documentation string should include
+not only the type signature but also descriptive text for how to use
+the device-specific API or pointers to external documentation about
+it.
+
+\effect
+
+A tool's device initializer has several duties.  First, it should use
+\plc{type} to determine whether the tool has any special knowledge
+about a device's hardware and/or software.  Second, it should use
+\plc{lookup} to look up pointers to entry points in the OMPT tracing
+interface for the device.  Finally, using these entry points, it can
+then set up tracing for a device.
+
+\crossreferences
+\begin{itemize}
+\item device tracing, see
+\specref{sec:device-tracing}. 
+\item \code{ompt\_function\_lookup\_t} type signature, see \specref{sec:ompt_function_lookup_t}
+\end{itemize}
+
+\section{Runtime Entry Point Signatures}
+
+\subsection{Miscellaneous Entry Point Signatures}
 
 
 \subsubsection{\code{ompt\_function\_lookup\_t}}
@@ -2662,8 +2741,8 @@ explicitly designed to handle.
 \label{sec:ompt_function_lookup}
 
 \summary
-The runtime callback with type signature \code{ompt\_function\_lookup\_t}
-is used by a tool to obtain pointers to runtime callback routines that are
+The runtime entry point with type signature \code{ompt\_function\_lookup\_t}
+is used by a tool to obtain pointers to runtime entry points that are
 part of an OpenMP implementation's OMPT interface.
 
 \format
@@ -2679,10 +2758,11 @@ typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
 
 \descr
 
-An OpenMP implementation provides a pointer to the host lookup callback 
-implementation as an argument to a tool initializer. This lookup callback
-enables a tool to obtain pointers to OMPT interface functions supported by the 
-OpenMP implementation on the host. 
+An OpenMP implementation provides a pointer to the lookup runtime entry point 
+as an argument to a tool initializer. This lookup callback
+enables a tool to obtain pointers to OMPT runtime entry points 
+supported by the OpenMP implementation on the device where the initializer executes.
+\marginpar{fix this for new initialization.}
 A separate target device lookup callback can be obtained from each target device 
 by calling the host callback known as \code{ompt\_get\_device\_info}. One can use the
 target device lookup callback to 
@@ -2728,7 +2808,7 @@ Function name & Type signature\\\hline\hline
 \label{table:target-ompt-interface-functions} 
 \end{table}
 
-\subsection{Host Callback Signatures}
+\subsection{First-party Callback Entry Points}
 
 Inquiry functions retrieve data from the execution environment for
 the tools.  All functions in the inquiry API are marked with
@@ -3004,7 +3084,7 @@ see \specref{sec:ompt_get_callback_t}.
 
 \summary
 A tool uses the host runtime callback with type signature 
-\code{ompt\_get\_callback\_t} is to obtain a pointer to the tool callback 
+\code{ompt\_get\_callback\_t} to obtain a pointer to the tool callback 
 that an OpenMP implementation will invoke when a host OpenMP event occurs.
 
 \format
@@ -3313,6 +3393,7 @@ then it will return a value of -1.
 
 {\it This callback is async signal safe.}
 
+\subsection{Third-party Tracing Entry Points}
 \subsection{Target Callback Signatures}
 \subsubsection{\code{ompt\_target\_get\_device\_time\_t}}
 \label{sec:ompt_target_get_device_time_t}
