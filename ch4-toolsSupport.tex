@@ -1560,14 +1560,28 @@ An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_
 \subsection{\code{ompt\_event\_sync\_region\_wait}}
 \label{sec:ompt_event_sync_region_wait}
 
-  An OpenMP implementation invokes this callback with \code{endpoint=}\code{ompt\_scope\_begin} when a task starts waiting in a barrier region, taskwait region, or taskgroup region.
-   An OpenMP implementation invokes this callback with the \code{endpoint=}\code{ompt\_scope\_end} when the task stops waiting in the region.
-  This callback has type signature \code{ompt\_scoped\_sync\_region\_callback\_t}.
-   The argument \code{kind} indicates the kind of region causing the wait.
-   One region may generate multiple pairs of begin/end callbacks if another task is scheduled on the thread while the task awaiting completion of the region is stalled.
-   The callback argument \code{codeptr\_ra} may be NULL.
-   This callback executes in the context of the task that encountered the barrier, taskwait, or taskgroup construct.
+If the \code{ompt\_event\_sync\_region\_wait} callback is registered,
+an OpenMP implementation will invoke this callback when a task starts
+and stops waiting in a barrier region, taskwait region, or taskgroup
+region. 
+This callback has
+type signature \code{ompt\_sync\_region\_callback\_t}.  
+One region may
+generate multiple pairs of start/stop callbacks if another task is
+scheduled on the thread while the task awaiting completion of the
+region is stalled. 
+This callback executes in the context of the task
+that encountered the barrier, taskwait, or taskgroup construct.
 
+\subsection{\code{ompt\_event\_device\_initialize}}
+\label{sec:ompt_event_device_initialize}
+
+If the \code{ompt\_event\_device\_initialize} callback is registered,
+an OpenMP implementation will invoke the this callback for a device
+after OpenMP is initialized for the device but before beginning
+execution of any OpenMP construct on the device.
+This callback has
+type signature \code{ompt\_device\_initialize\_callback\_t}.  
 
 \section{Tool Interface Routine}
 
@@ -2109,17 +2123,26 @@ typedef void (*ompt\_scoped\_sync\_region\_callback\_t) (
 \end{boxedcode}
 \ccppspecificend
 }
-\descr ToDo
-The callbacks with type signature \code{ompt\_scoped\_sync\_region\_callback\_t},
-include a parameter \plc{requested\_team\_size}
-that indicates the number of threads requested by the user, and a parameter
-\plc{actual\_team\_size} that indicates the number of threads in the team.
-The \plc{invoker} argument explains whether the execution of the parallel
-region code is inlined into the application code or started by the runtime.
+\descr 
 
-include a parameter \plc{codeptr\_ra} which contains the return address of the
-call to the OpenMP runtime routine and a parameter \plc{endpoint}
-that indicates whether the callback signals the begin or end of the scope.
+A tool executes a callback with type signature
+\code{ompt\_sync\_region\_callback\_t} to receive notification of
+event \code{ompt\_sync\_region\_callback\_t} when an OpenMP
+implementation starts and stops waiting in a barrier region, taskwait
+region, or taskgroup region.
+
+\constraints
+The first argument indicates the kind of region causing the wait.  
+The second argument indicates whether the callback indicates whether the
+task is about to start waiting with value \code{ompt\_scope\_begin}, or about
+to stop waiting, with value \code{ompt\_scope\_end}. 
+The third argument is a pointer to the tool's data area for the
+current parallel region.
+The fourth argument is a pointer to the tool's data area for the
+current task region.
+The last argument, \code{codeptr\_ra}, is the return address following the
+task's call to a routine to implement the waiting or invoke this
+callback; \code{codeptr\_ra} may be NULL.  
 
 \crossreferences
 \begin{itemize}
