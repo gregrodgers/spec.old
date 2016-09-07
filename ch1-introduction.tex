@@ -1488,6 +1488,8 @@ The OMPT interface can be implemented entirely by a compiler,
 entirely by an OpenMP runtime system, or with a hybrid strategy
 that employs a mixture of compiler and runtime support.
 
+The interface covers three aspects: a) the ability to query the state of the OpenMP runtime; b) mechanisms to recreate stack traces as they were written by the users; and c) a series of callbacks that get invoked when matching events occur in the OpenMP runtime. 
+
 \begin{comment}
 The design of OMPT was influenced by two prior efforts to define a
 standard interface for OpenMP tools: POMP~\cite{Mohr:EWOMP02} and
@@ -1509,7 +1511,8 @@ With the exception of one routine for tool control (described in Section~\ref{se
 all functions in the OMPT interface are intended for use only by tools rather than by
 applications.  For that reason, a Fortran binding is provided only 
 for the application-facing tool control routine;
-all other OMPT functions have only a C binding. 
+all other OMPT functionality is described with C syntax only.
+%functions have only a C binding. 
 
 In some cases, the OMPT interface may enable a tool to observe performance
 implications and infer details about an implementation of the OpenMP
@@ -1518,46 +1521,58 @@ abstract execution model described by its specification.  The ability
 of tools using the OMPT interface to observe such differences does not constrain
 implementations of the OpenMP API in any way. 
 
-The OMPT interface provides three tiers of support. 
-The first tier is a required, minimal set of features 
-needed to support tools that
-employ asynchronous sampling to measure application performance.
-A second tier of callback interfaces enables 
-performance tools that employ asynchronous sampling to shift 
-blame for runtime costs from symptoms (e.g., idle threads) 
-to apparent causes (e.g., serial work executed by a single thread).
-A third tier of callback interfaces supports comprehensive monitoring of 
-runtime events; such support is needed by correctness tools and desired
-by any tool that supports analysis and/or visualization of event traces.
-Support for features in the second and third tiers is implementation-defined.
-% An OpenMP implementation need not support invocation of all OMPT callbacks described in this document. 
-Table~\ref{table:ToolsSupport_set_rc} specifies the permissible
-return codes by an OpenMP implementation 
-when a tool attempts to register an OMPT callback within the tool's 
-initializer.
-Unless the table indicates that an OpenMP implementation must 
-guarantee that a callback will always occur when its corresponding 
-event occurs, it is implementation-defined whether an OpenMP
-implementation will provide callbacks in some or all circumstances when
-its corresponding event occurs.
+While the ability to provide state queries and the ability to track stack traces must be implemented in any OpenMP API implementation, an implementation of the OMPT interface can provide a varying set of functionality in terms of supported callbacks. While a core set of callbacks (as described in Section~\ref{tools}) must be guaranteed, i.e., an OpenMP implementation must 
+guarantee that such a callback will always occur when its corresponding 
+event occurs, the support for all other callbacks is implementation defined.
+%
+%
+% three tiers of support. 
+%The first tier is a required, minimal set of features 
+%needed to support tools that
+%employ asynchronous sampling to measure application performance.
+%A second tier of callback interfaces enables 
+%performance tools that employ asynchronous sampling to shift 
+%blame for runtime costs from symptoms (e.g., idle threads) 
+%to apparent causes (e.g., serial work executed by a single thread).
+%A third tier of callback interfaces supports comprehensive monitoring of 
+%runtime events; such support is needed by correctness tools and desired
+%by any tool that supports analysis and/or visualization of event traces.
+%Support for features in the second and third tiers is implementation-defined.
+%% An OpenMP implementation need not support invocation of all OMPT callbacks described in this document. 
+%
+%For all features in the first tier, 
+%
+%Support for any functionality beyond the first tier is implementation
+%defined. 
+%Table~\ref{table:ToolsSupport_set_rc} specifies the permissible
+%return codes by an OpenMP implementation 
+%when a tool attempts to register an OMPT callback within the tool's 
+%initializer.
+%Unless the table indicates that an OpenMP implementation must 
+%guarantee that a callback will always occur when its corresponding 
+%event occurs, it is implementation-defined whether an OpenMP
+%implementation will provide callbacks in some or all circumstances when
+%its corresponding event occurs.
 For cases where OMPT callbacks are practical in an OpenMP implementation
 without a significant performance penalty, OpenMP implementations are 
 encouraged to provide callbacks where implementation-defined behaviors
 are permitted.
 
-To support the OMPT interface, an implementation of the OpenMP API 
+Specifically, to support the OMPT interface, an implementation of the OpenMP API 
 must
 
 \begin{itemize}
 \item provide a mapping from each 
 OpenMP thread, parallel region, and task region concurrently live on the host
-device to a unique 64-bit data word that can be used by a tool,\footnote{\color{red}Does this adequately reflect the data design? Notice that {\em unique} 
-is different for this bullet and next.}
+device to a unique 64-bit data word that can be used by a tool to store its own information
+%,\footnote{\color{red}Does this adequately reflect the data design? Notice that {\em unique} 
+%is different for this bullet and next.}
 \item associate a unique numerical ID with each OpenMP thread, 
 parallel region, and task region that executes on any device 
 other than the host, 
 % A minimal implementation may reuse the task ID required by OpenMP for nested locks,
-\item maintain pointers into the stack for each OpenMP thread to distinguish frames for user procedures from frames for OpenMP runtime routines,\footnote{\color{red}Do we need frame object in target trace records? I think not.}
+\item maintain pointers into the stack for each OpenMP thread to distinguish frames for user procedures from frames for OpenMP runtime routines
+%,\footnote{\color{red}Do we need frame object in target trace records? I think not.}
 \item maintain a state and a wait identifier for each OpenMP thread,
 % . Mandatory states are idle, work serial, work parallel, and undefined,
 \item support required event callbacks for tools 
