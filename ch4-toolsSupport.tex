@@ -695,6 +695,333 @@ When a thread is not in a wait state, a thread's wait identifier has an undefine
 %%johnmc says: a wait_id typically is set to the address of a lock on which you are spinning. If you aren't spinning on a lock, this value is undefined.
 %%             we could zero it out, but that would cost more.
 
+\begin{targetRecord}
+\subsection{Record Types and Buffer Management}
+\label{sec:ompt-records}
+
+\subsubsection{Record Kind}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum ompt\_record\_kind\_e \{
+  ompt\_record\_ompt               = 1,
+  ompt\_record\_native             = 2,
+  ompt\_record\_invalid            = 3
+\} ompt\_record\_kind\_t; 
+\end{boxedcode}
+\ccppspecificend
+}
+
+\subsubsection{Native Record Kind}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum ompt\_record\_native\_kind\_e \{
+  ompt\_record\_native\_info  = 1,
+  ompt\_record\_native\_event = 2
+\} ompt\_record\_native\_kind\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\subsubsection{Native Record Abstract Type}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_native\_abstract\_s \{
+  ompt\_record\_native\_class\_t \plc{rclass};
+  const char *\plc{type};
+  ompt\_target\_time\_t \plc{start\_time};
+  ompt\_target\_time\_t \plc{end\_time};
+  uint64\_t \plc{hwid};
+\} ompt\_record\_native\_abstract\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\subsubsection{Record Types}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_thread\_begin\_s \{
+  ompt\_thread\_type\_t \plc{thread\_type};    /* type of thread */
+\} ompt\_record\_thread\_begin\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_idle\_s \{
+  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end */
+\} ompt\_record\_idle\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_parallel\_begin\_s \{
+  ompt\_id\_t \plc{parent\_task\_id};       /* ID of parent task           */
+  const ompt\_frame\_t *\plc{parent\_frame};/* frame data of parent task   */
+  ompt\_id\_t \plc{parallel\_id};           /* ID of parallel region       */
+  uint32\_t \plc{requested\_team\_size};    /* requested number of threads */
+  ompt\_invoker\_t \plc{invoker};           /* who invokes master task?    */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */
+\} ompt\_record\_parallel\_begin\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_parallel\_end\_s \{
+  ompt\_id\_t \plc{parallel\_id};             /* ID of parallel region       */
+  ompt\_id\_t \plc{task\_id};                 /* ID of task                  */
+  ompt\_invoker\_t \plc{invoker};            /* who invokes master task?    */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */ 
+\} ompt\_record\_parallel\_end\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_task\_create\_s \{
+  ompt\_id\_t \plc{parent\_task\_id};          /* ID of parent task           */
+  const ompt\_frame\_t *\plc{parent\_frame};  /* frame data for parent task  */
+  ompt\_id\_t \plc{new\_task\_id};             /* ID of created task          */
+  ompt\_task\_type\_t \plc{type};             /* type of task being created  */ 
+  \_Bool \plc{has\_dependences};             /* task has data dependences   */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */ 
+\} ompt\_record\_task\_create\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+/* note: not task dependences record since it points to data       */
+/*        rather than containing it                                */
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_task\_dependence\_s \{
+  ompt\_id\_t \plc{src\_task\_id};             /* ID of dependence source     */
+  ompt\_id\_t \plc{sink\_task\_id};            /* ID of dependence sink       */
+\} ompt\_record\_task\_dependence\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_task\_schedule\_s \{
+  ompt\_id\_t \plc{prior\_task\_id};           /* ID of descheduled task      */
+  \_Bool \plc{prior\_completed};             /* true if prior task completed*/
+  ompt\_id\_t \plc{next\_task\_id};            /* ID of scheduled task        */
+\} ompt\_record\_task\_schedule\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_scoped\_implicit\_s \{
+  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end                */
+  ompt\_id\_t \plc{parallel\_id};             /* ID of parallel region       */
+  ompt\_id\_t \plc{task\_id};                 /* ID of task                  */
+  uint32\_t \plc{thread\_num};               /* OMP thread num              */
+\} ompt\_record\_scoped\_implicit\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_scoped\_sync\_region\_s \{
+  ompt\_sync\_region\_kind\_t \plc{kind};      /* barrier, taskwait, taskgroup*/
+  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end                */ 
+  ompt\_id\_t \plc{parallel\_id};             /* ID of parallel region       */
+  ompt\_id\_t  \plc{task\_id};                /* ID of task                  */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */
+\} ompt\_record\_scoped\_sync\_region\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_lock\_init\_s \{
+  \_Bool \plc{is\_nest\_lock};                /* nested lock or not          */
+  ompt\_wait\_id\_t wait\_id,            /* wait ID                     */
+  uint32\_t hint,                     /* OMP lock hint               */
+  uint32\_t kind,                     /* implementation kind         */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */          
+\} ompt\_record\_lock\_init\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_lock\_destroy\_s \{
+  \_Bool \plc{is\_nest\_lock};                /* nested lock or not          */
+  ompt\_wait\_id\_t \plc{wait\_id};            /* ID of mutex being awaited   */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */       
+\} ompt\_record\_lock\_destroy\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_mutex\_acquire\_s \{
+  ompt\_mutex\_kind\_t \plc{kind};            /* kind of mutex               */
+  uint32\_t \plc{hint};                     /* based on OMP lock hint      */
+  uint32\_t \plc{impl};                     /* implementation of mutex     */
+  ompt\_wait\_id\_t \plc{wait\_id};            /* ID of mutex being awaited   */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */          
+\} ompt\_record\_mutex\_acquire\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_mutex\_s \{
+  ompt\_mutex\_kind\_t \plc{kind};            /* type of mutex               */
+  ompt\_wait\_id\_t \plc{wait\_id};            /* ID of mutex being awaited   */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */       
+\} ompt\_record\_mutex\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_scoped\_nested\_lock\_s \{
+  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end                */
+  ompt\_wait\_id\_t \plc{wait\_id};            /* ID of mutex being awaited   */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */       
+\} ompt\_record\_scoped\_nested\_lock\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_target\_data\_s \{
+  ompt\_id\_t \plc{host\_op\_id};              /* host side ID for operation  */
+  ompt\_target\_data\_op\_t \plc{optype};      /* type of operation           */
+  void *\plc{host\_addr};                   /* host address of the data    */
+  void *\plc{device\_addr};                 /* device address of the data  */ 
+  size\_t \plc{bytes};                      /* number of bytes mapped      */
+  ompt\_target\_time\_t \plc{end\_time};       /* end time                    */
+\} ompt\_record\_target\_data\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_target\_kernel\_s \{
+  ompt\_id\_t \plc{host\_op\_id};              /* host side ID for operation  */
+  uint32\_t \plc{granted\_num\_teams};        /* number of teams granted     */
+  ompt\_target\_time\_t \plc{end\_time};       /* end time                    */
+\} ompt\_record\_target\_kernel\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_scoped\_master\_s \{
+  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end                */
+  ompt\_id\_t \plc{parallel\_id};             /* ID of parallel region       */
+  ompt\_id\_t  \plc{task\_id};                /* ID of task                  */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */
+\} ompt\_record\_scoped\_master\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_scoped\_worksharing\_s \{
+  ompt\_worksharing\_type\_t \plc{wstype};    /* loop, sections, single ...  */
+  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end                */
+  ompt\_id\_t \plc{parallel\_id};             /* ID of parallel region       */
+  ompt\_id\_t \plc{task\_id};                 /* ID of task                  */
+  const void *\plc{codeptr\_ra};            /* return address of api call  */
+\} ompt\_record\_scoped\_worksharing\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_flush\_s \{
+  void *\plc{codeptr\_ra};                  /* return address of api call  */
+\} ompt\_record\_flush\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\subsubsection{Record Type}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt\_record\_ompt\_s \{
+  ompt\_event\_t \plc{type};                              /* event type          */
+  ompt\_target\_time\_t \plc{time};                        /* record timestamp    */
+  ompt\_id\_t \plc{thread\_id};                            /* record's thread ID  */
+  ompt\_id\_t \plc{target\_id};                            /* host context        */
+  union \{
+    ompt\_record\_thread\_begin\_t \plc{thread\_begin};      /* for thread begin    */
+    ompt\_record\_idle\_t \plc{idle};                      /* for idle            */
+    ompt\_record\_parallel\_begin\_t \plc{parallel\_begin};  /* for parallel begin  */
+    ompt\_record\_parallel\_end\_t \plc{parallel\_end};      /* for parallel end    */
+    ompt\_record\_task\_create\_t \plc{task\_create};        /* for task create     */
+    ompt\_record\_task\_dependence\_t \plc{task\_dep};       /* for task dependence */
+    ompt\_record\_task\_schedule\_t \plc{task\_sched};       /* for task schedule   */
+    ompt\_record\_scoped\_implicit\_t \plc{implicit};       /* for implicit task   */
+    ompt\_record\_scoped\_sync\_region\_t \plc{sync\_region}; /* for sync            */
+    ompt\_record\_target\_data\_t \plc{data};               /* for target data     */
+    ompt\_record\_target\_data\_map\_t \plc{data\_map};       /* for target data map */
+    ompt\_record\_target\_kernel\_t \plc{kernel};           /* for target kernel   */
+    ompt\_record\_init\_lock\_t \plc{lock\_init};            /* for lock init       */
+    ompt\_record\_lock\_destroy\_t \plc{lock\_destroy};      /* for lock destroy    */
+    ompt\_record\_mutex\_acquire\_t \plc{mutex\_acquire};    /* for mutex acquire   */
+    ompt\_record\_mutex\_t \plc{mutex};                    /* for mutex           */
+    ompt\_record\_scoped\_nested\_lock\_t \plc{nested\_lock}; /* for nested lock     */
+    ompt\_record\_scoped\_master\_t \plc{master};           /* for master          */
+    ompt\_record\_scoped\_worksharing\_t \plc{worksharing}; /* for workshares      */
+    ompt\_record\_flush\_t \plc{flush};                    /* for flush           */
+  \} \plc{record};
+\} ompt\_record\_ompt\_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\end{targetRecord}
+
 \subsection{Frames}
 \index{Frames}
 
@@ -3753,7 +4080,7 @@ typedef ompt_record_type_t (*ompt_buffer_get_record_type_t)(
 \code{ompt\_record\_native} if the record represents a device native record type that does not represent an OMPT event record, or \code{ompt\_record\_invalid} if the cursor is out of bounds. 
 
 \crossreferences
-Appendix~\ref{appendix:ompt-records} defines the corresponding enumeration type for \code{ompt\_record\_type\_t}. 
+Appendix~\ref{appendix:ompt-records} defines the corresponding enumeration type for \code{ompt\_record\_kind\_t}. 
 Section~\ref{sec:native-record-data} describes the interface to use for accessing native record types.
 
 \subsubsection{\code{ompt\_buffer\_get\_record\_ompt\_t}}
@@ -3845,8 +4172,8 @@ A \code{ompt\_record\_native\_abstract\_t} record contains several
 pieces of information that a tool can use to process a native record
 that it may not fully understand. The record \code{rclass} field
 indicates whether the record is informational
-(\code{ompt\_record\_native\_class\_info}) or represents an event
-(\code{ompt\_record\_native\_class\_event}). Knowing whether a record
+(\code{ompt\_record\_native\_info}) or represents an event
+(\code{ompt\_record\_native\_event}). Knowing whether a record
 is informational or represents an event can help a tool determine
 how to present the record. The record  \code{type} field points to
 a statically-allocated, immutable character string that provides
