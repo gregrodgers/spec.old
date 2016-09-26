@@ -33,13 +33,25 @@
 %
 
 
-\chapter{Tool Interface}
+\chapter{Tool Support}
 \index{Tools Support}
 \label{chap:ToolsSupport}
 
-This chapter describes the OMPT interface provided by the OpenMP API
-to support third-party monitoring and performance analysis tools.
-The chapter first explains if and how an implementation of
+The OpenMP API includes support for
+runtime tools running in the same
+address space as the OpenMP program through the OpenMP Tools Interface (OMPT).
+This typically includes, but is not limited to performance analysis and correctness tools.
+The interface is split into two subparts, a tracing interface that can be used to record
+series of events in the system, and a callback interface that can be used to register
+callbacks for specific events.
+
+In addition to the specific events described in previous chapters alongside the OpenMP
+constructs the refer to, this interface also includes dedicated functionality to bootstrap
+tools, as well as for tools to query information from the OpenMP implementation. This
+dedicated functionality is described in the following chapter.
+
+In particular,
+the chapter first explains if and how an implementation of
 the OpenMP API will attempt to register a tool prior to initializing the 
 OpenMP implementation and
 how a registered tool will use the OMPT interface to initialize tool state maintained by
@@ -49,62 +61,153 @@ used to identify entities managed by an OpenMP runtime and to interpret the
 call stack of an OpenMP thread.
 
 \section{Activating a Tool}
-Activating a tool requires three steps: registering the tool with an OpenMP
-implementation by supplying the implementation with a
-callback to a tool initializer, executing the tool
-initializer callback, binding pointers to OMPT interface functions 
-in the tool, and registering tool callbacks for OpenMP events. 
-Finally, to understand what information dynamic measurements might yield
-about thread states and implementations of mutual exclusion, a tool can
-enumerate the thread states and implementations of mutual exclusion 
-that a particular OpenMP implementation implementation employs.
-The following subsections explain each of these steps in turn.
+Activating a tool, that is, the procedure necessary to use a tool during the
+execution of an OpenMP application, is a five step hand-shake process: 
 
-\subsection{Registering a Tool}
-\index{tool registration}
-\label{sec:ToolsSupport_Registration}
+\begin{enumerate}
 
-If the value of the \plc{tool-var} ICV is \code{enabled}
-when an OpenMP implementation begins to initialize itself, 
-the OpenMP implementation will attempt to register a tool by first 
-determining if
-an implementation of the function \code{ompt\_tool} exists in a program's address space and, if so, calling it.
+\item Before
+the initialization of the OpenMP implementation, the tools makes itself available by
+providing an initialization routine using a known-symbol
+
+\item The OpenMP
+implementation during its initialization, detects the tool and activates by calling
+the function with the known symbol
+
+\item The tool registers itself by returning 
+two initialization function, one to register a tracing tool and one to register a tool
+utilizing the callback interface.
+
+\item Immediately after its complete initialization the OpenMP implementation
+executes the tool
+initialization function
+
+\item The tool uses this invocation to initialize
+itself and setup its state as well as register the needed event callbacks. 
+
+\end{enumerate}
+
+After these steps
+are completed, the tool is activated for the rest of the execution of the OpenMP
+application.
+%
+%
+%
+%, binding pointers to OMPT interface functions 
+%in the tool, and registering tool callbacks for OpenMP events. 
+%Finally, to understand what information dynamic measurements might yield
+%about thread states and implementations of mutual exclusion, a tool can
+%enumerate the thread states and implementations of mutual exclusion 
+%that a particular OpenMP implementation implementation employs.
+%The following subsections explain each of these steps in turn.
+
+\subsection{Step 1: Tool Availability}
+\index{tool availability}
+\label{sec:ToolsSupport_Available}
+
+In order to be available during the execution of an application, a tool provides
+an implementation a function using the name \code{ompt\_tool}. The mechanism
+of how this is done is left to the implementation of the tool and can be system
+specific. Typical examples are the static linking of a library containing this
+function or the dynamic preloading of a dynamically linked library containing
+this function.
+
+Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP implementation, only one tool may make itself available.
+
+
+\subsection{Step 2: Tool Detection}
+\index{tool detection}
+\label{sec:ToolsSupport_Detection}
+
+Once an OpenMP implementation initializes itself, it triggers the process to check for and, possibly, include a tool in the execution of an application. For this, it will first check if tool support is enabled by the user by examining the \plc{tool-var} ICV. If the
+If the value of this ICV is \code{enabled} (when an OpenMP implementation begins to initialize itself), the OpenMP implementation 
+searches if a tool is available by checking if 
+%the OpenMP implementation will attempt to register a tool by first 
+%determining if
+%an implementation of the 
+function \code{ompt\_tool} exists in a program's address space or within any of the dynamic libraries specified by the ICV \plc{ompt\_librararies\_list}.
+
+
+
 If the value of \plc{tool-var} is \code{disabled}, an OpenMP 
 implementation will neither check for the existence of an implementation of
 \code{ompt\_tool} in the address space nor try to call any that might exist.
 
-To register itself with an OpenMP implementation, a tool provides
-an implementation of \code{ompt\_tool} that returns
-a non-\code{NULL} pointer to a function with type
-signature \code{ompt\_initialize\_fn\_t}, which is in
-Section~\ref{sec:ompt_initialize_fn_t}.
-A tool-provided implementation of \code{ompt\_tool} may decline to 
-to register itself with an OpenMP implementation by returning
-\code{NULL}.
-
-Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP implementation, only one tool may register itself.
-If a tool-supplied implementation of \code{ompt\_tool} returns a non-\code{NULL} initializer,
-an implementation of the OpenMP API will maintain state information for each OpenMP thread and will perform
-any OMPT event callbacks successfully registered during tool initialization.
-
-After a process fork, if OpenMP is re-initialized in the child process,
-an implementation of the OpenMP API in the child process will call \code{ompt\_tool}
+For any separate OpenMP implementation initialized later, for example, after a process fork or for accelerators that maintain
+their own OpenMP runtime, this process repeats and the OpenMP API in the new process will call \code{ompt\_tool}
 under the same conditions as it would for any process.
 
-\subsection{Initializing a Tool}
+
+\subsection{Step 3: Tool Registration}
+\index{tool registration}
+\label{sec:ToolsSupport_Registration}
+
+As part of the call to a detected code{ompt\_tool} function, the OpenMP runtime passes
+a lookup function of type \code{ompt\_function\_lookup\_t} (described in Section~\ref{ompt_function_lookup_t}),
+which allows a tool to find all entry points into the OMPT interface. A tool should store the pointer for
+future use. Further, the OpenMP implementation provides versioning information.
+
+Once called, the tool can use the function with the known symbol  \code{ompt\_tool} to
+return two pointers to two functions with type signature 
+\code{ompt\_initialize\_fn\_t} (described in  Section~\ref{sec:ompt_initialize_fn_t}) and
+\code{ompt\_initialize\_trace\_fn\_t} (described in  Section~\ref{sec:ompt_initialize_trace_fn_t}).
+Each of the returned function pointers
+can either be \code{NULL}, if the tool (for example, after checking the OpenMP environment
+or after verifying versioning information) 
+decides to not register itself, or be a pointer to the tool's initialization function, either using 
+the tracing interface or the callback interface.
+
+\subsection{Step 4: Tool Invocation}
+\index{tool invocation}
+\label{sec:tool-invocation}
+
+If one of the values returned by the tool is a non-\code{NULL} pointer to a tool initializer function, 
+the runtime will call this function immediately after the runtime fully initializes itself, but
+%The initializer must be called 
+before beginning execution of any OpenMP construct or completing any execution 
+environment routine invocation. If both are returned, the trace interface is preferred.
+
+If both pointers are \code{NULL}, the search continues down the list of libraries identified in Step 2.
+
+\subsection{Step 5: Tool Initialization}
+\index{tool initialization}
 \label{sec:tool-initialize}
 
-When an OpenMP implementation receives a non-\code{NULL} pointer to a tool initializer function with signature \code{ompt\_initialize\_fn\_t} as the return value from a call to a tool-provided implementation of \code{ompt\_tool}, the runtime will call the tool initializer immediately after the runtime fully initializes itself.
-The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
+Once called by the OpenMP implementation, the tool initialization function completes
+the tool's initialization, which has to include the registration of callback to events triggered
+by OpenMP directives, as described in Section~\ref{directives}. Further, tools typically
+query the capabilities of the OpenMP runtime in order to determine the capabilities they can
+rely on and they bind pointers to all OMPT interface functions that the tool uses. Note,
+while the registration of callbacks has to be done during the initialization, the latter two items
+can be done at any time (although doing them during initialization is likely to be the most
+efficient option). 
 
-The two principal duties of a tool initializer are binding pointers to all OMPT interface functions that the tool uses and registering tool callbacks. These
-two operations are described in the next two sections.
+%and registering tool callbacks. These
+%two operations are described in the next two sections.
+
+\section{Initialization Procedure of the Tracing Interfaces}
+\index{tool trace initialization tasks}
+\label{sec:tool-trace-initialize-tasks}
+
+TODO JOHN
+
+\section{Initialization Procedure of the Callback Interfaces}
+\index{tool cb initialization tasks}
+\label{sec:tool-cb-initialize-tasks}
+
+TODO MARTIN
+
+Tools typically execute the following three tasks during their initialization: binding of OMPT interface function, registering callbacks, and determining OMPT capabilities. These tasks are described in more detail below.
 
 \subsection{Binding OMPT Interface Functions}
 \label{sec:ToolsSupport_bind}
 
-The first duty of a tool initializer is binding pointers to the 
-an OpenMP implementation's OMPT interface functions.
+OMPT runtime functions are not directly exposed in the OpenMP runtime API to avoid their usage as application codes. Instead, OpenMP implementation provides a lookup function as part of the invocation of the \code{ompt\_tool} function. This function is of
+type~\code{ompt\_function\_lookup\_t} and allows the translation of an OMPT runtime routine based on its name.
+
+Tools should, during initialization, query all OMPT runtime functions they will use during their runtime and store that information for further use. While this is not required, extracting all these lookups at startup is useful and efficient.
+%The first duty of a tool initializer is binding pointers to the 
+%an OpenMP implementation's OMPT interface functions.
 Table~\ref{table:host-ompt-interface-functions} 
 indicates functions in the host implementation of the 
 OMPT interface of an OpenMP runtime and their
