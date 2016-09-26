@@ -122,12 +122,12 @@ Entry Point String Name & Type signature\\\hline\hline
 \code{``ompt\_get\_parallel\_info''} & \code{ompt\_get\_parallel\_info\_t}\\
 \code{``ompt\_get\_task\_info''} & \code{ompt\_get\_task\_info\_t}\\
 \code{``ompt\_get\_num\_devices''} & \code{ompt\_get\_num\_devices\_t}\\
-\code{``ompt\_get\_device\_info''} & \code{ompt\_get\_device\_info\_t}\\
+% \code{``ompt\_get\_device\_info''} & \code{ompt\_get\_device\_info\_t}\\
 \code{``ompt\_get\_device\_id''} & \code{ompt\_get\_device\_id\_t}\\\hline
 \end{tabular}
 \vskip 1ex
 \caption{OMPT callback interface entry point names and their type signatures.}
-\label{table:host-ompt-interface-functions} 
+\label{table:ompt-callback-interface-functions} 
 \end{table}
 
 The following example shows how to use the \plc{lookup} callback 
@@ -263,6 +263,23 @@ passing it the name of the function of interest.
 
 \section{Data Types}
 \label{sec:data}
+
+\subsection{Dummy Type Signature for Callbacks}
+\label{sec:ompt_callback_t}
+
+Pointers to tool callback functions with many different type
+signatures are passed to the \code{ompt\_set\_callback} entry point and 
+returned by the \code{ompt\_get\_callback} entry point. For convenience,
+these entry points expect all type signatures to be cast to   
+a dummy type \code{ompt\_callback\_t}.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt_callback_t)(void);
+\end{boxedcode}
+\ccppspecificend
+}
 
 \subsection{Thread States}
 \label{sec:thread-states}
@@ -3139,112 +3156,37 @@ then set up tracing for a device.
 
 The OMPT interface supports two principal sets of entry points for tools. One
 set of entry points enables a tool to register callbacks for OpenMP
-events and then to inspect the state of an OpenMP implementation while
-executing any tool callback. The second set of entry points enables a
-tool to arrange to trace activities on a device. The OpenMP
-implementation will then trace activities on the device, collect
+events and to inspect the state of an OpenMP thread while
+executing in a tool callback or a signal handler. The second set of entry points enables a
+tool to trace activities on a device. When directed by the tracing
+interface, an OpenMP implementation will trace activities on the device, collect
 buffers full of trace records, and invoke a callback on the host to
-process these records. A third 
+process these records. 
+Runtime entry points for tools in an OpenMP implementation
+should not be global symbols since tools cannot rely on the visibility
+of such symbols in general.
 
-to arrange for the
-host to receive notification whenever a buffer filled with activity
-records is availabl3 to process tracing activities tracing
-the context of 
-first set of 
-As an OpenMP implementation is initialized for a device, it will
-invoke a callback on the host that enables a tool to set up tracing
-for that device. This initialization callback  
- 
-tracing the host device to
-initialize tracing   
-The first set of entry points enables a tool to register callbacks
-that will be invoked 
-capabilities for tools. A tool can
-register to trace activities on a device or a tool can register to
-receive callbacks
-
-\subsection{Miscellaneous Entry Point Signatures}
-
-
-\subsubsection{\code{ompt\_function\_lookup\_t}}
-\label{sec:ompt_function_lookup_t}
-\label{sec:ompt_function_lookup}
-
-\summary
-A tool uses a lookup routine with type signature 
-\code{ompt\_function\_lookup\_t}
-to obtain pointers to runtime entry points that are
-part of an OpenMP implementation's OMPT interface.
-
-\format
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
-  const char *\plc{interface\_function\_name}
-);
-\end{boxedcode}
-\ccppspecificend
-}
-
-\descr
-
-An OpenMP implementation provides a pointer to a lookup routine 
-as an argument to tool and device initializers. A lookup routine
-enables a tool to obtain pointers to OMPT runtime tool entry points 
-for an OpenMP implementation's callback or tracing tool interfaces.
-
-\constraints
-A lookup routine with type
-signature \code{ompt\_function\_lookup\_t} takes a C string
-representing a routine in the OMPT interface of that device and
-returns a pointer to the corresponding function for that device.
-
-\crossreferences
-\begin{itemize}
-\item Table~\ref{table:host-ompt-interface-functions} 
-lists names and type signatures of
-host OMPT interface functions. 
-\item Table~\ref{table:device-ompt-interface-functions} lists 
-names and type signatures of device OMPT interface functions.
-\item Tool initializer, see \specref{sec:ompt_initialize_fn_t}.
-\end{itemize}
-
-\begin{table}
-{\small
-\begin{tabular}{ll}\hline
-Function name & Type signature\\\hline\hline
-\code{ompt\_get\_device\_time} & \code{ompt\_get\_device\_time\_t}\\
-\code{ompt\_translate\_time} & \code{ompt\_translate\_time\_t}\\
-\code{ompt\_set\_trace\_ompt} & \code{ompt\_set\_trace\_ompt\_t}\\
-\code{ompt\_set\_trace\_native} & \code{ompt\_set\_trace\_native\_t}\\
-\code{ompt\_start\_trace} & \code{ompt\_start\_trace\_t}\\
-\code{ompt\_pause\_trace} & \code{ompt\_pause\_trace\_t}\\
-\code{ompt\_stop\_trace} & \code{ompt\_stop\_trace\_t}\\
-\code{ompt\_advance\_buffer\_cursor} & \code{ompt\_advance\_buffer\_cursor\_t}\\
-\code{ompt\_buffer\_get\_record\_type} & \code{ompt\_buffer\_get\_record\_type\_t}\\
-\code{ompt\_buffer\_get\_record\_ompt} & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
-\code{ompt\_buffer\_get\_record\_native} & \code{ompt\_buffer\_get\_record\_native\_t}\\
-\code{ompt\_buffer\_get\_record\_native\_abstract} & \code{ompt\_buffer\_get\_record\_native\_abstract\_t}\\\hline
-\end{tabular}
-}
-\vskip 1ex
-\caption{Device OMPT interface function names and their type signatures.}
-\label{table:device-ompt-interface-functions} 
-\end{table}
+In addition, the OMPT interface supports
+entry points for two classes of lookup routines. The first
+class of lookup routines contains a single member: a
+routine that returns entry points in the OMPT callback interface. 
+The second class of lookup routines includes 
+a unique lookup routine for each kind of
+device that can return entry points in a device's OMPT tracing interface.
 
 \subsection{Entry Points in the OMPT Callback Interface}
+\label{sec:ompt-callback-entry-points}
 
 Entry points in the OMPT callback interface enable a tool to register
-callbacks for OpenMP events and to retrieve data from the 
-current device's execution environment.
-These functions should not be global symbols in
-an OpenMP implementation so that tool developers cannot call
-them directly.  Section~\ref{sec:ToolsSupport_bind} describes how
-a tool should obtain pointers to these entry points functions.
+callbacks for OpenMP events and to inspect the state of an OpenMP thread while
+executing in a tool callback or a signal handler. 
+A tool obtains pointers to these entry points 
+using the lookup function passed to the tool's initializer for the
+callback interface.
 
-{\em All inquiry functions must be async signal safe} since they 
-are expected to be called from signal handlers. 
+{\em All entry points in the OMPT callback interface that 
+  inspect an OpenMP thread's state must be async signal safe} so
+that tools can call them from a signal handler.
 
 \begin{comment}
 OpenMP Runtime Library Routines are not guaranteed to be async
@@ -3291,12 +3233,9 @@ enumerate the thread states supported by an OpenMP implementation.
 When a thread state supported by an OpenMP implementation is passed
 as the first argument to the entry point,
 the entry point will assign the next thread state in the enumeration to
-the pointer passed as the entry point's second argument.
-
-The third argument passed to the entry point
-is the address of a character pointer that will be assigned a pointer
-to the name associated with the state value assigned to the pointer
-passed as the second argument.
+the variable passed by reference as the entry point's second argument
+and assign the name associated with the next thread state
+to the character pointer passed by reference as the third argument.
  
 Whenever one or more states are left in the enumeration, 
 the enumerate states entry point will return $1$.
@@ -3318,16 +3257,16 @@ supports, the following interface for enumerating all states that may be reporte
 \constraints
 
 The first argument passed to the enumerate states entry point must be
-the value for a valid thread state supported by the OpenMP implementation.  
+a thread state supported by the OpenMP implementation.  
 To begin enumerating the states that an OpenMP implementation supports,
-a tool should pass the value \code{omp\_state\_undefined} as the
+a tool should pass \code{omp\_state\_undefined} as the
 first argument to the enumerate states entry point.
 Subsequent invocations of the entry point by the tool
 should pass the value 
-assigned to the pointer passed as the second argument of the previous call.
+assigned to the variable passed by reference as the second argument to the previous call.
 
-The second and third arguments to the entry point must be non-\code{NULL} 
-pointers of the specified types.
+The second and third arguments to the entry point must be valid
+references to variables of the specified types.
 
 \vspace{2ex}
 
@@ -3336,14 +3275,14 @@ pointers of the specified types.
 enumerate all states supported by an OpenMP implementation.
 The example assumes that a pointer to an OpenMP implementation's enumerate
 states entry point has previously been assigned to a function pointer
-\code{ompt\_enumerate\_states}.
+\code{ompt\_enumerate\_states\_fn}.
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
 int state = omp_state_undefined;
 const char *state_name;
-while (ompt_enumerate_states(state, &state, &state_name)) \{
+while (ompt_enumerate_states_fn(state, &state, &state_name)) \{
   // note that the runtime supports a state value "state" 
   // associated with the name "state_name" 
 \}
@@ -3375,9 +3314,9 @@ an OpenMP implementation employs.
 \ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_enumerate_mutex_kinds_t)(
-  int current_kind, 
-  int *next_kind, 
-  const char **next_kind_name
+  int \plc{current_kind}, 
+  int *\plc{next_kind}, 
+  const char **\plc{next_kind_name}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3401,43 +3340,40 @@ Similarly, the \code{ompt\_event\_mutex\_acquire} callback receives
 the argument \code{kind} to indicate the implementation of a lock,
 critical section, atomic region, or ordered section. 
 \end{comment}
- 
+
 When a mutex kind supported by an OpenMP implementation is passed
-as the first argument to the entry point, the entry point 
-will assign the next mutex kind in the enumeration to
-the pointer passed as the second argument.
+as the first argument to the entry point,
+the entry point will assign the next mutex kind in the enumeration to
+the variable passed by reference as the entry point's second argument
+and assign the name associated with the next mutex kind 
+to the character pointer passed by reference as the third argument.
 
-The third argument passed to the entry point 
-is the address of a character pointer that will be assigned a pointer
-to the name associated with the mutex kind value assigned to the pointer
-passed as the second argument.
-
-Whenever one or more states are left in the enumeration, 
+Whenever one or more mutex kinds are left in the enumeration, 
 the enumerate mutex kinds entry point will return $1$.
-When the last state in the enumeration is passed 
+When the last mutex kind in the enumeration is passed 
 as the first argument, the entry point will return $0$ 
 indicating that the enumeration is complete.
 
 \constraints
 The first argument passed to the enumerate mutex kinds entry point must be
-the value for a valid mutex implementation kind supported
+a mutex implementation kind supported
 by an OpenMP implementation.  To begin enumerating the mutex
 implementation kinds that an OpenMP implementation supports, a tool
-should pass the value \code{ompt\_mutex\_kind\_unknown} as the first
+should pass \code{ompt\_mutex\_kind\_unknown} as the first
 argument of the enumerate mutex kinds entry point.  Subsequent invocations
 of the entry point by the tool should pass the
-value assigned to the pointer passed as the second argument of the
-previous call.
+value assigned to the variable passed by reference as the second
+argument to the previous call.
 
-The second and third arguments to the entry point must be non-\code{NULL} 
-pointers of the specified types.
+The second and third arguments to the entry point must be valid
+references to variables of the specified types.
 
 \needspace{6\baselineskip}\notestart
 \noteheader -- The following example illustrates how a tool can 
 enumerate all types of mutex implementations supported by an OpenMP runtime.
 The example assumes that a pointer to an OpenMP implementation's enumerate
 mutex kinds callback has previously been assigned to a function pointer
-\code{ompt\_enumerate\_mutex\_kinds}.
+\code{ompt\_enumerate\_mutex\_kinds\_fn}.
 
 \vspace{2ex}
 
@@ -3446,7 +3382,7 @@ mutex kinds callback has previously been assigned to a function pointer
 \begin{boxedcode}
 int kind = ompt_mutex_kind_unknown;
 const char *kind_name;
-while (ompt_enumerate_mutex_kinds(kind, &kind, &kind_name)) \{
+while (ompt_enumerate_mutex_kinds_fn(kind, &kind, &kind_name)) \{
   // note that the runtime supports a mutex value "kind" 
   // associated with the name "kind_name" 
 \}
@@ -3482,18 +3418,21 @@ typedef int (*ompt\_set\_callback_t)(
 \descr
 
 To set tool callbacks for OpenMP events, a tool uses 
-an OpenMP implementation's tool entry point known as
-\code{ompt\_set\_callback}. 
+an OpenMP implementation's \code{ompt\_set\_callback} 
+entry point.
 
-The set callback entry point with type signature 
-\code{ompt\_set\_callback\_t} is
-used on the current device by a tool to install a 
-pointer to a tool callback that 
-an OpenMP implementation will invoke when an OpenMP event occurs on
-that device.
+A tool uses set callback entry point to install a 
+pointer to a tool callback that an OpenMP implementation 
+will invoke when an OpenMP event occurs on the current device.
+
+The return value of set callback may indicate several possible
+outcomes. Callback registration may fail if it is called outside the initializer for the
+callback interface. Otherwise, the return value of set callback 
+indicates whether or not the event may occur during execution and
+whether or not the callback will always be invoked or not.
 
 \constraints
-When a tool registers a callback for an event code \plc{event}, the type
+When a tool registers a callback for an event, the type
 signature for the callback must match the type signature appropriate for the
 event. 
 For an event with enumeration value name {\ttfamily\bfseries ompt\_event\_{\em xxx}}, 
@@ -3503,15 +3442,16 @@ the type signature for the event is {\ttfamily\bfseries ompt\_{\em xxx}\_callbac
 \centering
 \begin{tabular}{ll}
 \hline
-return code & meaning \\
+Return code & Meaning \\
 \hline
 0 & callback registration error\\
-1 & event may occur; no callback is possible\\
-2 & event will never occur in runtime\\
+1 & event will never occur\\
+2 & event may occur; no callback is possible\\
 3 & event may occur; callback invoked when convenient\\
 4 & event may occur; callback always invoked when event occurs\\
 \hline
 \end{tabular}
+\vskip 1ex
 \caption{Meaning of return codes for \code{ompt\_set\_callback}.}
 \label{table:ToolsSupport_set_rc}
 \end{table}
@@ -3551,14 +3491,18 @@ typedef int (*ompt_get_callback_t)(
 A tool uses an OpenMP implementation's tool entry point known 
 as \code{ompt\_get\_callback} 
 with type signature \code{ompt\_get\_callback\_t} is
-to obtain a pointer to the tool callback routine that 
+to obtain a pointer to the tool callback that 
 an OpenMP implementation will invoke when a host OpenMP event occurs. 
-If no tool callback is registered for the specified event, 
-\plc{*callback} will be set to \code{NULL}.
+If a non-\code{NULL} tool callback is registered for the specified event, 
+the pointer to the tool callback will be assigned to the variable
+passed by reference as the second argument and the entry
+point will return 1; otherwise, it will return 0. If the entry point
+returns 0, the value of the variable passed by reference as the second
+argument is undefined.
 
 \constraints
-The first argument to the get callback entry point is an enumeration
-type that specifies an OpenMP execution event.
+The second argument passed to the entry point must be a reference
+to a variable of specified type.
 
 \crossreferences
 \begin{itemize}
@@ -3576,7 +3520,7 @@ see \specref{sec:ompt_set_callback_t}.
 \summary
 An OpenMP implementation's tool entry point known as \code{ompt\_get\_thread\_data}
 with type signature \code{ompt\_get\_thread\_data\_t} 
-returns the address of the thread identifier for the current thread.
+returns the address of the thread data object for the current thread.
 
 \format
 \vbox{\ccppspecificstart
@@ -3586,10 +3530,18 @@ typedef ompt_data_t *(*ompt_get_thread_data_t)(void);
 \ccppspecificend}
 
 \descr
-If the current thread is unknown to the OpenMP runtime, the function
-returns NULL.  A tool can check if the thread identifier is in its
-initial state by comparing against \code{ompt\_data\_none}.  A tool
-may modify the identifier.  
+
+Each OpenMP thread has an associated thread data object of type
+\code{ompt\_data\_t}. The \code{ompt\_get\_thread\_data} entry point
+returns a pointer to the thread data object, if any, associated with the
+current thread. If the current thread is unknown to the OpenMP
+runtime, the entry point returns \code{NULL}.
+
+A tool may use a pointer to an OpenMP thread's data object that it
+obtains from this entry point to 
+inspect or modify the value of the data object.
+When an OpenMP thread is created, its data object will be initialized
+with value \code{ompt\_data\_none}.  
 
 {\em This entry point is async signal safe.}
 
@@ -3607,24 +3559,44 @@ current thread.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef omp_state_t (*ompt_get_state_t)(
-  ompt_wait_id_t *wait_id       
+  ompt_wait_id_t *\plc{wait_id}       
 );
 \end{boxedcode}
 \ccppspecificend}
 
 \descr
+
+Each OpenMP thread has an associated state and a wait identifier.  If
+a thread's state indicates that the thread is waiting for mutual
+exclusion, the thread's wait identifier will contain an opaque handle
+that indicates the data object upon which the thread is waiting.
+
+The \code{ompt\_get\_state} entry point with type signature
+\code{ompt\_get\_state\_t} is used to retrieve the state and the wait
+identifier of the current thread.
+
 If the returned state indicates that the thread is waiting for a
-lock, nest lock, critical section, atomic region, or ordered region,
-it will fill in \code{*wait\_id} with the wait identifier associated
-with the state.  
+lock, nest lock, critical section, atomic region, or ordered region
+and the pointer passed as the argument to the
+entry point is not \code{NULL}, 
+the entry point will assign the value of the thread's wait identifier to the
+wait identifier passed by reference.
+If the returned state is not one of the specified wait states,
+the value of a wait identifier passed by reference to the entry
+point is undefined following the call.
 
 {\em This entry point is async signal safe.}
+
+\constraints
+The argument passed to the entry point must be a reference
+to the specified data type or \code{NULL}.
 
 \subsubsection{\code{ompt\_get\_parallel\_info\_t}} 
 \label{sec:ompt_get_parallel_info_t}
 \label{sec:ompt_get_parallel_info}
 
 \summary
+
 An OpenMP implementation's tool entry point known as \code{ompt\_get\_parallel\_info} 
 with type signature \code{ompt\_get\_parallel\_info\_t} 
 returns information about
@@ -3635,28 +3607,51 @@ current execution context.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_get_parallel_info_t)(
-  int ancestor_level,
-  ompt_data_t **parallel_data,
-  int *team_size
+  int \plc{ancestor_level},
+  ompt_data_t **\plc{parallel_data},
+  int *\plc{team_size}
 );
 \end{boxedcode}
 \ccppspecificend}
 
 \descr
-Ancestor level 0 refers to the current parallel region; information
+During execution, an OpenMP program may employ nested parallel
+regions. An OpenMP implementation's \code{ompt\_get\_parallel\_info} entry point
+with type signature \code{ompt\_get\_parallel\_info\_t} 
+can be used to obtain information about the current parallel region,
+if any, and any enclosing parallel regions. 
+
+The first argument to the entry point specifies the ancestor level of the parallel region
+of interest to a tool.
+Ancestor level 0 refers to the innermost parallel region; information
 about enclosing parallel regions may be obtained using higher
-ancestor levels.  Function \code{ompt\_get\_parallel\_info} returns a
-Boolean, which indicates whether there is a parallel region at the
-specified ancestor level.  The function results \code{**parallel\_data}
-and \code{*team\_size} indicate properties of the parallel region
-at the specified ancestor level.  If there is no enclosing parallel
-region at the specified ancestry level, the address of the provided
-parallel region identifier \code{*parallel\_data} equals NULL and
-the value of \code{*team\_size} is undefined.  A tool can check if
-the parallel region identifier is in its initial state by comparing
-against \code{ompt\_data\_none}.  A tool may modify the identifier.
+ancestor levels.  The \code{ompt\_get\_parallel\_info} entry point
+returns 1 if there is a parallel region at the
+specified ancestor level and 0 otherwise. 
+
+If an enclosing parallel region exists at the specified ancestor
+level, a reference to the parallel region's associated data object will be
+assigned to the pointer passed by reference as the second
+argument to the entry point and the number of threads in the team associated with the 
+parallel region will be assigned to the variable passed as the third
+argument to the entry point.
+
+If no enclosing parallel region exists at the specified ancestor
+level, the values of the variables provided by reference as the second
+and third arguments to the entry point are undefined following the
+call.
+
+A tool may use the pointer to a parallel region's data object that it
+obtains from this entry point to inspect or modify the value of the
+data object.
+When a parallel region is created, its data object will be initialized
+with the value \code{ompt\_data\_none}.  
 
 {\em This entry point is async signal safe.}
+
+\constraints
+The second and third arguments to the entry point must be references
+to the specified data types.
 
 \subsubsection{\code{ompt\_get\_task\_info\_t}}
 \label{sec:ompt_get_task_info_t}
@@ -3672,12 +3667,12 @@ context.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_get_task_info_t)(
-  int ancestor_level,
-  ompt_task_type_t *type,
-  ompt_data_t **task_data,
-  ompt_frame_t **task_frame,
-  ompt_data_t **parallel_data,
-  int *thread_num
+  int \plc{ancestor_level},
+  ompt_task_type_t *\plc{type},
+  ompt_data_t **\plc{task_data},
+  ompt_frame_t **\plc{task_frame},
+  ompt_data_t **\plc{parallel_data},
+  int *\plc{thread_num}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -3854,7 +3849,9 @@ then it will return a value of -1.
 
 {\em This entry point is async signal safe.}
 
-\subsection{Entry Points in the OMPT Trace Interface}
+\subsection{Entry Points in the OMPT Tracing Interface}
+\label{sec:ompt-tracing-entry-points}.
+
 \subsubsection{\code{ompt\_get\_device\_time\_t}}
 \label{sec:ompt_get_device_time_t}
 
@@ -4233,5 +4230,105 @@ such as a core or a hardware thread id. The meaning of a \code{hwid}
 value for a device is defined by the implementer of the software
 stack for the device. If there is no \code{hwid} associated with a
 record, the value of \code{hwid} shall be \code{ompt\_hwid\_none}.
+
+
+\subsection{Lookup Entry Point Signature}
+
+\subsubsection{\code{ompt\_function\_lookup\_t}}
+\label{sec:ompt_function_lookup_t}
+\label{sec:ompt_function_lookup}
+
+\summary
+A tool uses a lookup routine with type signature 
+\code{ompt\_function\_lookup\_t}
+to obtain pointers to entry points that are
+part of an OpenMP implementation's OMPT interface.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
+  const char *\plc{interface\_function\_name}
+);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+
+An OpenMP implementation provides a pointer to a lookup routine as an
+argument to tool callbacks used to initialize tool support for
+monitoring an OpenMP device using either tracing or callbacks.
+
+\begin{comment}
+When an OpenMP runtime implementation is initialized for a device,
+if a tool callback to initialize tracing for devices has been provided
+to the OpenMP implementation by \verb|ompt_tool|, 
+it will be invoked on the host. The OpenMP implementation will pass the
+tool's device tracing initializer callback a lookup routine that the tool
+can use to obtain pointers to runtime entry points that implement
+tracing control routines appropriate for that device. 
+
+If a tool callback to initialize monitoring using the OMPT callback
+interface has been provided to the OpenMP implementation by
+\verb|ompt_tool| and it is invoked on a device,
+the initializer will be passed a lookup function to   
+obtain pointers to runtime entry points that implement
+routines used by the OpenMP implementation's callback interface.
+\end{comment}
+
+When an OpenMP implementation invokes a tool initializer to configure
+the OMPT callback interface, the OpenMP implementation will pass the
+initializer a lookup function that the tool can use to obtain 
+pointers to entry points that implement routines that are part of 
+the OpenMP implementation's callback interface.
+
+When an OpenMP implementation invokes a tool initializer to configure
+the OMPT tracing interface for a device, the Open implementation will
+pass the device tracing initializer a lookup function that the tool
+can use to obtain pointers to entry points that implement
+tracing control routines appropriate for that device. 
+
+\constraints
+A lookup routine with type
+signature \code{ompt\_function\_lookup\_t} takes a C string
+that represents the name of an entry point in an interface
+and returns a pointer to the corresponding entry point.
+
+\crossreferences
+\begin{itemize}
+\item Tool initializer for the OMPT callback interface, \specref{sec:ompt_initialize_fn_t}
+\item Entry points in the OMPT callback interface, see
+  \tabref{table:ompt-callback-interface-functions} for a list and
+  \specref{sec:ompt-callback-entry-points} for detailed definitions.
+\item Tool initializer for a device's OMPT tracing interface, \specref{sec:ompt_event_device_initialize}.
+\item Entry points in the OMPT tracing interface, see
+  \tabref{table:ompt-tracing-interface-functions} for a list and
+  \specref{sec:ompt-tracing-entry-points} for detailed definitions.
+\end{itemize}
+
+\begin{table}
+{\small
+\begin{tabular}{ll}\hline
+Function name & Type signature\\\hline\hline
+\code{ompt\_get\_device\_time} & \code{ompt\_get\_device\_time\_t}\\
+\code{ompt\_translate\_time} & \code{ompt\_translate\_time\_t}\\
+\code{ompt\_set\_trace\_ompt} & \code{ompt\_set\_trace\_ompt\_t}\\
+\code{ompt\_set\_trace\_native} & \code{ompt\_set\_trace\_native\_t}\\
+\code{ompt\_start\_trace} & \code{ompt\_start\_trace\_t}\\
+\code{ompt\_pause\_trace} & \code{ompt\_pause\_trace\_t}\\
+\code{ompt\_stop\_trace} & \code{ompt\_stop\_trace\_t}\\
+\code{ompt\_advance\_buffer\_cursor} & \code{ompt\_advance\_buffer\_cursor\_t}\\
+\code{ompt\_buffer\_get\_record\_type} & \code{ompt\_buffer\_get\_record\_type\_t}\\
+\code{ompt\_buffer\_get\_record\_ompt} & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
+\code{ompt\_buffer\_get\_record\_native} & \code{ompt\_buffer\_get\_record\_native\_t}\\
+\code{ompt\_buffer\_get\_record\_native\_abstract} & \code{ompt\_buffer\_get\_record\_native\_abstract\_t}\\\hline
+\end{tabular}
+}
+\vskip 1ex
+\caption{OMPT tracing interface entry point names and their type signatures.}
+\label{table:ompt-tracing-interface-functions} 
+\end{table}
 
 % This is the end of ch4-toolsSupport.tex
