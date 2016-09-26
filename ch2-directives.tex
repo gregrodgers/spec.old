@@ -162,6 +162,19 @@ A \plc{list item} is a variable or array section. An
 A \plc{list item} is a variable, array section or common block name 
 (enclosed in slashes). An \plc{extended list item} is a \plc{list item} 
 or a procedure name.
+
+When a named common block appears in a \plc{list}, it has the same
+meaning as if every explicit member of the common block appeared in
+the list.  An explicit member of a common block is a variable that is
+named in a \code{COMMON} statement that specifies the common block
+name and is declared in the same scoping unit in which the clause
+appears.
+
+Although variables in common blocks can be accessed by use association
+or host association, common block names cannot.  As a result, a common
+block name specified in a data-sharing attribute, a data copying or
+a data-mapping attribute clause must be declared to be a common block in
+the same scoping unit in which the clause appears.
 \fortranspecificend
 
 For all base languages, a \plc{list item}  or an \plc{extended list item}
@@ -1103,17 +1116,8 @@ section. The last example is not contiguous.
 \medskip
 \ccppspecificend
 
-\fortranspecificstart
-Fortran has built-in support for array sections but the following restrictions apply for 
-OpenMP constructs:
-
-\begin{itemize}
-\item A stride expression may not be specified.
-
-\item The upper bound for the last dimension of an assumed-size dummy array must be 
-specified. 
-\end{itemize}
-\fortranspecificend
+Fortran has built-in support for array sections although some
+restrictions apply to their use, as enumerated in the following section.
 
 \restrictions
 Restrictions to array sections are as follows:
@@ -1134,6 +1138,21 @@ Restrictions to array sections are as follows:
 
 \item An array section cannot be used in a C++ user-defined \code{[]}-operator.
 \cppspecificend
+
+\fortranspecificstart
+
+\item A stride expression may not be specified.
+
+\item The upper bound for the last dimension of an assumed-size dummy
+  array must be specified.
+
+\item If a list item is an array section with vector subscripts, the
+  first array element must be the lowest in the array element order of
+  the array section.
+
+\fortranspecificend
+
+
 \end{itemize}
 
 
@@ -1792,15 +1811,14 @@ determined.
 The schedule \plc{kind} can be one of those specified in 
 Table~\ref{tab:Schedule-Values}.
 
-The schedule \plc{modifier} can be one of those specified in Table~\ref{tab:Schedule Clause Modifier Values}. If the \code{static} schedule kind is specified or if the \code{ordered} clause is specified, and if no \code{monotonic} modifier is specified, the effect will be as if the \code{monotonic} modifier was specified. 
-
-\notestart
-\noteheader – The next release of the OpenMP specification will include the following statement:
-
-Otherwise, unless the \code{monotonic} modifier is specified, the effect will be as if the \code{nonmonotonic} modifier was specified.
-
-\noteend
-
+The schedule \plc{modifier} can be one of those specified in 
+Table~\ref{tab:Schedule Clause Modifier Values}. If the 
+\code{static} schedule kind is specified or if the \code{ordered} 
+clause is specified, and if the \code{nonmonotonic} modifier is 
+not specified, the effect is as if the \code{monotonic} modifier 
+is specified. Otherwise, unless the \code{monotonic} modifier is 
+specified, the effect is as if the \code{nonmonotonic} modifier 
+is specified.
 
 The \code{ordered} clause with the parameter may also be used to specify 
 how many loops are associated with the loop construct. The parameter of 
@@ -1958,8 +1976,6 @@ not be specified.
 
 \item The \code{ordered} clause must be present on the loop construct if any \code{ordered} region 
 ever binds to a loop region arising from the loop construct.
-
-\item The \code{nonmonotonic} modifier can only be specified with \code{schedule(dynamic)} or \code{schedule(guided)}.
 
 \item The \code{nonmonotonic} modifier cannot be specified if an \code{ordered} clause is specified.
 
@@ -2983,10 +2999,12 @@ The binding thread set of the \code{task} region is the current team. A \code{ta
 the innermost enclosing \code{parallel} region. 
 
 \descr
-When a thread encounters a \code{task} construct, a task is generated from the code for the 
-associated structured block. The data environment of the task is created according to the 
-data-sharing attribute clauses on the \code{task} construct, per-data environment ICVs, and 
-any defaults that apply.
+
+The \code{task} construct is a \emph{task generating construct}. When a thread
+encounters a \code{task} construct, an explicit task is generated from the code
+for the associated structured block. The data environment of the task is
+created according to the data-sharing attribute clauses on the \code{task}
+construct, per-data environment ICVs, and any defaults that apply.
 
 The encountering thread may immediately execute the task, or defer its execution. In the 
 latter case, any thread in the team may be assigned the task. Completion of the task can 
@@ -3027,7 +3045,7 @@ region includes a task scheduling point at its point of completion.
 When the \code{mergeable} clause is present on a \code{task} construct, the generated task is a \plc{mergeable task}. 
 
 The \code{priority} clause is a hint for the priority of the generated task. The \plc{priority-value} is a
-non-negative numerical scalar expression that provides a hint for task execution order. Among all
+non-negative integer expression that provides a hint for task execution order. Among all
 tasks ready to be executed, higher priority tasks (those with a higher numerical value in the
 \code{priority} clause expression) are recommended to execute before lower priority ones. The default
 \plc{priority-value} when no \code{priority} clause is specified is zero (the lowest priority). If a value is
@@ -3091,7 +3109,7 @@ unspecified behavior
 \index{constructs!taskloop@{\code{taskloop}}}
 \label{subsec:taskloop Construct}
 \summary
-The \code{taskloop} construct specifies that the iterations of one or more associated loops will be executed in parallel using OpenMP tasks. The iterations are distributed across tasks created by the construct and scheduled to be executed.
+The \code{taskloop} construct specifies that the iterations of one or more associated loops will be executed in parallel using explicit tasks. The iterations are distributed across tasks generated by the construct and scheduled to be executed.
 \syntax
 \ccppspecificstart
 The syntax of the \code{taskloop} construct is as follows:
@@ -3159,14 +3177,14 @@ in which several loop statements share a \code{DO}
 termination statement, then the directive can only be specified for the 
 outermost of these \code{DO} statements.
 
-If any of the loop iteration variables would otherwise be shared, they are implicitly made private for the loop-iteration tasks created by the \code{taskloop} construct. Unless the loop iteration variables are specified in a \code{lastprivate} clause on the \code{taskloop} construct, their values after the loop are unspecified.
+If any of the loop iteration variables would otherwise be shared, they are implicitly made private for the loop-iteration tasks generated by the \code{taskloop} construct. Unless the loop iteration variables are specified in a \code{lastprivate} clause on the \code{taskloop} construct, their values after the loop are unspecified.
 \fortranspecificend
 
 \binding
 The binding thread set of the \code{taskloop} region is the current team. A \code{taskloop} region binds to the innermost enclosing \code{parallel} region.
 
 \descr
-When a thread encounters a \code{taskloop} construct, the construct partitions the associated loops into tasks for parallel execution of the loops' iterations. The data environment of the created tasks is created according to the data-sharing attribute clauses on the \code{taskloop} construct, per-data environment ICVs, and any defaults that apply. The order of the creation of the loop tasks is unspecified.
+The \code{taskloop} construct is a \emph{task generating construct}. When a thread encounters a \code{taskloop} construct, the construct partitions the associated loops into explicit tasks for parallel execution of the loops' iterations. The data environment of each generated task is created according to the data-sharing attribute clauses on the \code{taskloop} construct, per-data environment ICVs, and any defaults that apply. The order of the creation of the loop tasks is unspecified.
 Programs that rely on any execution order of the logical loop iterations are non-conforming. 
 
 By default, the \code{taskloop} construct executes as if it was enclosed in a \code{taskgroup} construct with no statements or directives outside of the \code{taskloop} construct. Thus, the \code{taskloop} construct creates an implicit \code{taskgroup} region. If the \code{nogroup} clause is present, no implicit \code{taskgroup} region is created.
@@ -3176,12 +3194,13 @@ Furthermore, the \code{taskloop} construct executes as if each generated task wa
 
 If an \code{in\_reduction} clause is present on the \code{taskloop} construct, the behavior is as if each generated task was defined by a \code{task} construct on which an \code{in\_reduction} clause with the same reduction operator and list items is present. Thus, the generated tasks are participants of a reduction previously defined by a reduction scoping clause.
 
-If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each created task is greater than or equal to the minimum of the value of the \plc{grain-size} expression and the number of logical loop iterations, but less than two times the value of the \plc{grain-size} expression.
+If a \code{grainsize} clause is present on the \code{taskloop} construct, the number of logical loop iterations assigned to each generated task is greater than or equal to the minimum of the value of the \plc{grain-size} expression and the number of logical loop iterations, but less than two times the value of the \plc{grain-size} expression.
+
 The parameter of the \code{grainsize} clause must be a positive integer expression.
 If \code{num\_tasks} is specified, the \code{taskloop} construct creates as many tasks as the minimum of the \plc{num-tasks} expression and the number of logical loop iterations.  
 Each task must have at least one logical loop iteration.
 The parameter of the \code{num\_tasks} clause must evaluate to a positive integer.
-If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks created and the number of logical loop iterations assigned to these tasks is implementation defined.
+If neither a \code{grainsize} nor \code{num\_tasks} clause is present, the number of loop tasks generated and the number of logical loop iterations assigned to these tasks is implementation defined.
 
 The \code{collapse} clause may be used to specify how many loops are associated with the \code{taskloop} construct. The parameter of the \code{collapse} clause must be a constant positive integer expression. If no \code{collapse} clause is present, the only loop that is associated with the \code{taskloop} construct is the one that immediately follows the \code{taskloop} directive.
 
@@ -3202,7 +3221,7 @@ specified for each individual task.
 If the \code{priority} clause is not specified, tasks generated by 
 the \code{taskloop} construct have the default task priority (zero).
 
-If the \code{untied} clause is specified, all tasks created by the \code{taskloop} construct are untied tasks.
+If the \code{untied} clause is specified, all tasks generated by the \code{taskloop} construct are untied tasks.
 
 When the \code{mergeable} clause is present on a \code{taskloop} construct, each generated task is a \plc{mergeable task}. 
 
@@ -3253,7 +3272,7 @@ The restrictions of the \code{taskloop} construct are as follows:
 \summary
 The \code{taskloop}~\code{simd} construct specifies a loop that can be 
 executed concurrently using SIMD instructions and that those iterations 
-will also be executed in parallel using OpenMP tasks. The \code{taskloop}
+will also be executed in parallel using explicit tasks. The \code{taskloop}
 \code{simd} construct is a composite construct.
 
 \syntax
@@ -3514,14 +3533,17 @@ The binding task set for a \code{target}~\code{data} region is the generating ta
 \code{target}~\code{data} region binds to the region of the generating task.
 
 \descr
-When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
+When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
 List items that appear in a \code{use\_device\_ptr} clause are converted into
-device pointers to the corresponding list item in the device data environment.
+device pointers to the corresponding list items in the device data environment.
+If a \code{use\_device\_ptr} clause and one or more \code{map} clauses are
+present on the same construct, this conversion will occur as if performed after
+all variables are mapped according to those \code{map} clauses.
 
 \restrictions
 \begin{itemize}
-  \item A program must not depend on any ordering of the evaluations of the clauses of the
+    \item A program must not depend on any ordering of the evaluations of the clauses of the
     \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
   \item At most one \code{device} clause can appear on the directive. The \code{device} expression
@@ -3530,11 +3552,14 @@ device pointers to the corresponding list item in the device data environment.
 
   \item At most one \code{if} clause can appear on the directive.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item At least one \code{map} clause must appear on the directive.
+  \item At least one \code{map} or \code{use\_device\_ptr} clause must appear on the directive.
 
 
   \item A list item in a \code{use\_device\_ptr} clause must have a
     corresponding list item in the device data environment.
+
+  \item A list item that specifies a given variable may not appear in more than
+	  one \code{use\_device\_ptr} clause.
 
   \item References in the construct to a list item that appears in a
     \code{use\_device\_ptr} clause must be to the address of the list item.
@@ -6996,7 +7021,7 @@ or association status of the \code{POINTER} item is flushed, but the pointer tar
 list item is a Cray pointer, the pointer is flushed, but the object to which it points is not. 
 If the list item is of type \code{C\_PTR}, the variable is flushed, but the storage that corresponds 
 to that address is not flushed. If the list item or the subobject of the list item has the 
-\code{ALLOCATABLE} attribute and has an allocation status of currently allocated, the 
+\code{ALLOCATABLE} attribute and has an allocation status of allocated, the
 allocated variable is flushed; otherwise the allocation status is flushed.
 \fortranspecificend
 
@@ -7352,9 +7377,9 @@ generated task will be a dependent task of that sibling task.
 
 \fortranspecificstart
 If a list item has the \code{ALLOCATABLE} attribute and its allocation
-status is "not currently allocated", the behavior is unspecified. If a
-list item has the \code{POINTER} attribute and its association status
-is disassociated or undefined, the behavior is unspecified.
+status is unallocated, the behavior is unspecified. If a list item has
+the \code{POINTER} attribute and its association status is
+disassociated or undefined, the behavior is unspecified.
 \fortranspecificend
 
 The list items that appear in the \code{depend} clause may include array sections.
@@ -7391,6 +7416,10 @@ identical storage locations or disjoint storage locations.
 
 \item A variable that is part of another variable (such as an element of a structure) but is not an 
 array element or an array section cannot appear in a \code{depend} clause.
+
+\fortranspecificstart
+\item A common block name cannot appear in a \code{depend} clause.
+\fortranspecificend
 
 \item For a \plc{vec} element of \code{sink} \plc{dependence-type} of the form
 x$_{i}$ $+$ d$_{i}$ or x$_{i}$ $-$ d$_{i}$ if the loop iteration variable
@@ -7467,7 +7496,7 @@ taskgroup
 
 and \plc{if-clause} is
 \begin{indentedcodelist}
-if (\plc{scalar-expression})
+if (\plc{[} cancel :\plc{] scalar-expression})
 \end{indentedcodelist}
 \ccppspecificend
 
@@ -7491,7 +7520,7 @@ taskgroup
 and \plc{if-clause} is
 
 \begin{indentedcodelist}
-if (\plc{scalar-logical-expression})
+if (\plc{[} cancel :\plc{] scalar-logical-expression})
 \end{indentedcodelist}
 \fortranspecificend
 
@@ -7633,6 +7662,8 @@ not be encountered elsewhere in its region.
 \item \code{cancellation}~\code{point} construct, see 
 \specref{subsec:cancellation point Construct}.
 
+\item \code{if} Clause, see \specref{sec:if Clause}.
+
 \item \code{omp\_get\_cancellation} routine, see 
 \specref{subsec:omp_get_cancellation}.
 \end{itemize}
@@ -7759,18 +7790,18 @@ an OpenMP construct that matches the type specified in
 \label{sec:Data Environment}
 \index{data environment}
 This section presents a directive and several clauses for controlling the data environment 
-during the execution of \code{target}, \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
+during the execution of \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
 
 \begin{itemize}
 \item \specref{subsec:Data-sharing Attribute Rules} 
 describes how the data-sharing attributes of variables
-referenced in \code{target}, \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
+referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
 
 \item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
 is described in \specref{subsec:threadprivate Directive}.
 
 \item Clauses that may be specified on directives to control the data-sharing attributes of 
-variables referenced in \code{target}, \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
+variables referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
 
 \item Clauses that may be specified on directives to copy data values from private or 
 threadprivate variables on one thread to the corresponding variables on other threads 
@@ -7951,7 +7982,7 @@ determined by the \code{default} clause, if present (see
 \item In a \code{parallel} construct, if no \code{default} clause is present, these variables are 
 shared.
 
-\item For constructs other than task generating constructs or \code{target} constructs, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
+\item For constructs other than task generating constructs, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
 
 \item In a \code{target} construct, variables that are not mapped after applying data-mapping attribute rules (see \specref{subsec:Data-mapping Attribute Rules and Clauses}) are firstprivate.
 \end{itemize}
@@ -8154,7 +8185,7 @@ undefined according to the following rules:
 
 \begin{itemize} % L0 vvvvvvvvvvvvvvvvvvvvvv
 \item If it has the \code{ALLOCATABLE} attribute, each copy created will have an initial 
-allocation status of not currently allocated.
+allocation status of unallocated.
 
 \item If it has the \code{POINTER} attribute:
 \begin{itemize} % L1 vvvvvvvvvvvvvvvvvvvvvv
@@ -8322,18 +8353,6 @@ behavior related to that variable is unspecified.
 \cppspecificend
 
 \fortranspecificstart
-A named common block may be specified in a list by enclosing the name in slashes. 
-When a named common block appears in a list, it has the same meaning as if every 
-explicit member of the common block appeared in the list. An explicit member of a 
-common block is a variable that is named in a \code{COMMON} statement that specifies the 
-common block name and is declared in the same scoping unit in which the clause 
-appears.
-
-Although variables in common blocks can be accessed by use association or host 
-association, common block names cannot. As a result, a common block name specified 
-in a data-sharing attribute clause must be declared to be a common block in the same 
-scoping unit in which the data-sharing attribute clause appears.
-
 When a named common block appears in a \code{private}, \code{firstprivate}, 
 \code{lastprivate}, or \code{shared} clause of a directive, none of its members may be declared 
 in another data-sharing attribute clause in that directive. When individual members of a common block appear in a \code{private}, \code{firstprivate}, 
@@ -8429,8 +8448,8 @@ All references to a list item within a task refer to the storage area of the ori
 at the point the directive was encountered. 
 
 The programmer must ensure, by adding proper synchronization, that 
-storage shared by an explicit \code{task} region does not reach the end of its lifetime before 
-the explicit \code{task} region completes its execution. 
+storage shared by an explicit task region does not reach the end of its lifetime before 
+the explicit task region completes its execution. 
 
 \fortranspecificstart
 The association status of a shared pointer becomes undefined upon entry to and on exit 
@@ -8608,11 +8627,11 @@ pointer is undefined.
 For a list item or the subobject of a list item with the \code{ALLOCATABLE} attribute:
 
 \begin{itemize}
-\item if the allocation status is ``not currently allocated'', the new list item or the subobject 
-of the new list item will have an initial allocation status of "not currently allocated".
+\item if the allocation status is unallocated, the new list item or the subobject
+of the new list item will have an initial allocation status of unallocated.
 
-\item if the allocation status is ``currently allocated'', the new list item or the subobject of 
-the new list item will have an initial allocation status of "currently allocated".
+\item if the allocation status is allocated, the new list item or the subobject of
+the new list item will have an initial allocation status of allocated.
 
 \item If the new list item or the subobject of the new list item is an array, its bounds will be 
 the same as those of the original list item or the subobject of the original list item.
@@ -8756,7 +8775,7 @@ unspecified.
 \fortranspecificstart
 If the original list item does not have the \code{POINTER} attribute, initialization of the new 
 list items occurs as if by intrinsic assignment, unless the original list item has the 
-allocation status of not currently allocated, in which case the new list items will have the 
+allocation status of unallocated, in which case the new list items will have the
 same status.
 
 If the original list item has the \code{POINTER} attribute, the new list items receive the same 
@@ -9045,6 +9064,7 @@ construct has a reference type then it must bind to the same object for all thre
 \item Variables that have the \code{POINTER} attribute and Cray pointers may not appear in a linear clause. 
 \item The list item with the \code{ALLOCATABLE} attribute in the sequentially last iteration must have an allocation status of allocated upon exit from that iteration. 
 \item If the list item is a dummy argument without the \code{VALUE} attribute and the \code{ref} modifier is not specified and if any write to the list item occurs before any read of the list item then the result is unspecified.
+\item A common block name cannot appear in a \code{linear} clause.
 \fortranspecificend
 \end{itemize}
 
@@ -9273,7 +9293,8 @@ The restrictions common to reduction clauses are as follows:
 
 \begin{itemize}
 \item Any number of reduction clauses can be specified on the directive, but a
-list item can appear only once in reduction clauses for that directive.
+list item (or any array element in an array section) can appear only once in
+reduction clauses for that directive.
 
 \item For a \plc{reduction-identifier} declared with the \code{declare}~\code{reduction}
 construct, the directive must appear before its use in a reduction clause.
@@ -9653,7 +9674,7 @@ association status of the master thread’s copy as if by pointer assignment.
 
 \item If the original list item does not have the \code{POINTER} attribute, each copy becomes 
 defined with the value of the master thread's copy as if by intrinsic assignment, 
-unless it has the allocation status of not currently allocated, in which case each copy 
+unless it has the allocation status of unallocated, in which case each copy
 will have the same status.
 \end{itemize}
 \fortranspecificend
@@ -9889,10 +9910,10 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
 \item If a corresponding list item of the original list item is present in the device data environment, then:
 \begin{enumerate}
-\item If the corresponding list item's reference count is greater than zero, then:
+\item If the corresponding list item's reference count is finite, then:
 \begin{enumerate}
 %\item the corresponding list item's reference count is decremented by one.
-\item If the \plc{map-type} is \code{tofrom}, \code{from} or \code{release}, then the corresponding list item's reference count is decremented by one.
+\item If the \plc{map-type} is not \code{delete}, then the corresponding list item's reference count is decremented by one.
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
 \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
@@ -9982,10 +10003,9 @@ initialization and assignment.
   list item must not be changed and must not be reshaped in the
   region.
 
-\item If an array section of an allocatable array is mapped and the
-  size of the section is smaller than that of the whole array, the
-  \code{target} region must not have any reference to the whole
-  array.
+\item If an array section is mapped and the size of the section is
+  smaller than that of the whole array, the behavior of referencing
+  the whole array in the \code{target} region is unspecified.
 
 \fortranspecificend
 \end{itemize}
@@ -10332,18 +10352,18 @@ This section describes a set of restrictions on the nesting of regions. The rest
 nesting are as follows:
 
 \begin{itemize}
-\item A worksharing region may not be closely nested inside a worksharing, explicit \code{task}, \code{taskloop},
+\item A worksharing region may not be closely nested inside a worksharing, \code{task}, \code{taskloop},
 \code{critical}, \code{ordered}, \code{atomic}, or \code{master} region.
 
-\item A \code{barrier} region may not be closely nested inside a worksharing, explicit \code{task}, \code{taskloop},
+\item A \code{barrier} region may not be closely nested inside a worksharing, \code{task}, \code{taskloop},
 \code{critical}, \code{ordered}, \code{atomic}, or \code{master} region.
 
-\item A \code{master} region may not be closely nested inside a worksharing, \code{atomic},  
-explicit \code{task}, or \code{taskloop} region.
+\item A \code{master} region may not be closely nested inside a worksharing,
+\code{atomic}, \code{task}, or \code{taskloop} region.
 
 \item An \code{ordered} region arising from an \code{ordered} construct without
 any clause or with the \code{threads} or \code{depend} clause may not be closely
-nested inside a \code{critical}, \code{ordered}, \code{atomic}, explicit \code{task},
+nested inside a \code{critical}, \code{ordered}, \code{atomic}, \code{task},
 or \code{taskloop} region. 
 
 \item An \code{ordered} region arising from an \code{ordered} construct without
