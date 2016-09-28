@@ -313,6 +313,7 @@ ompt\_event\_destroy\_lock          & * & * & * & * \\
 ompt\_event\_mutex\_acquire         & * & * & * & * \\
 ompt\_event\_mutex\_acquired        & * & * & * & * \\
 ompt\_event\_nested\_lock           & * & * & * & * \\
+ompt\_event\_cancel           & * & * & * & * \\
 ompt\_event\_flush                  & * & * & * & * \\
 \bottomrule
 \end{tabular}
@@ -2008,6 +2009,33 @@ typedef enum ompt_task_dependence_flag_e \{
 \end{itemize}
 \end{comment}
 
+
+% ompt_cancel_flag_t
+
+\subsubsection{\code{ompt\_cancel\_flag\_t}}
+\label{sec:ompt_cancel_flag_t}
+\code{ompt\_cancel\_flag\_t} is an enumeration that defines the valid cancel flag values.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum ompt_cancel_flag_e \{
+  ompt_cancel_parallel     = 0x1,
+  ompt_cancel_sections     = 0x2,
+  ompt_cancel_do           = 0x4,
+  ompt_cancel_taskgroup    = 0x8,
+  ompt_cancel_activated    = 0x10000000,
+  ompt_cancel_detected     = 0x20000000
+\} ompt_cancel_flag_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_cancel\_t} data type, see \specref{sec:ompt_cancel_callback_t}.
+\end{itemize}
+
 % end miscelaneous types
 
 \section{Events without Directives}
@@ -3175,6 +3203,36 @@ explicitly designed to handle.
 \crossreferences
 \begin{itemize}
 \item \code{omp\_tcontrol\_t} enumeration type, see \specref{sec:tool_tcontrol}.
+\end{itemize}
+
+\subsubsection{\code{ompt\_cancell\_callback\_t}}
+\index{ompt\_cancel\_callback\_t@{\code{ompt\_cancel\_callback\_t}}}
+\label{sec:ompt_cancel_callback_t}
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt_cancel_callback_t) (
+  ompt_data_t *\plc{task_data},
+  int \plc{flags},
+  const void *\plc{codeptr_ra}
+  );
+\end{boxedcode}
+\ccppspecificend
+}
+\descr 
+The callback with type signature \code{ompt\_cancel\_callback\_t},
+includes \plc{flags} defined by the enumeration  \code{ompt\_cancel\_flag\_t}, which determines
+whether the cancel is activated by the current task, or detected as being activated by another task. 
+The construct being canceled is also described in the \plc{flags}.
+When several constructs are detected as being concurrently canceled, each corresponding 
+bit in the flags will be set. The \plc{task\_data} and \plc{codeptr\_ra} corresponds to 
+the task encountering the cancel construct, 
+the cancellation point construct, or the construct defined as having an implicit cancellation point construct.
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_cancel\_flag\_t} enumeration type, see \specref{sec:ompt_cancel_flag_t}.
 \end{itemize}
 
 
