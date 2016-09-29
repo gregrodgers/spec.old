@@ -33,13 +33,25 @@
 %
 
 
-\chapter{Tool Interface}
+\chapter{Tool Support}
 \index{Tools Support}
 \label{chap:ToolsSupport}
 
-This chapter describes the OMPT interface provided by the OpenMP API
-to support third-party monitoring and performance analysis tools.
-The chapter first explains if and how an implementation of
+The OpenMP API includes support for
+runtime tools running in the same
+address space as the OpenMP program through the OpenMP Tools Interface (OMPT).
+This typically includes, but is not limited to performance analysis and correctness tools.
+The interface is split into two subparts, a tracing interface that can be used to record
+series of events in the system, and a callback interface that can be used to register
+callbacks for specific events.
+
+In addition to the specific events described in previous chapters alongside the OpenMP
+constructs the refer to, this interface also includes dedicated functionality to bootstrap
+tools, as well as for tools to query information from the OpenMP implementation. This
+dedicated functionality is described in the following chapter.
+
+In particular,
+the chapter first explains if and how an implementation of
 the OpenMP API will attempt to register a tool prior to initializing the 
 OpenMP implementation and
 how a registered tool will use the OMPT interface to initialize tool state maintained by
@@ -49,62 +61,153 @@ used to identify entities managed by an OpenMP runtime and to interpret the
 call stack of an OpenMP thread.
 
 \section{Activating a Tool}
-Activating a tool requires three steps: registering the tool with an OpenMP
-implementation by supplying the implementation with a
-callback to a tool initializer, executing the tool
-initializer callback, binding pointers to OMPT interface functions 
-in the tool, and registering tool callbacks for OpenMP events. 
-Finally, to understand what information dynamic measurements might yield
-about thread states and implementations of mutual exclusion, a tool can
-enumerate the thread states and implementations of mutual exclusion 
-that a particular OpenMP implementation implementation employs.
-The following subsections explain each of these steps in turn.
+Activating a tool, that is, the procedure necessary to use a tool during the
+execution of an OpenMP application, is a five step hand-shake process: 
 
-\subsection{Registering a Tool}
-\index{tool registration}
-\label{sec:ToolsSupport_Registration}
+\begin{enumerate}
 
-If the value of the \plc{tool-var} ICV is \code{enabled}
-when an OpenMP implementation begins to initialize itself, 
-the OpenMP implementation will attempt to register a tool by first 
-determining if
-an implementation of the function \code{ompt\_tool} exists in a program's address space and, if so, calling it.
+\item Before
+the initialization of the OpenMP implementation, the tools makes itself available by
+providing an initialization routine using a known-symbol
+
+\item The OpenMP
+implementation during its initialization, detects the tool and activates by calling
+the function with the known symbol
+
+\item The tool registers itself by returning 
+two initialization function, one to register a tracing tool and one to register a tool
+utilizing the callback interface.
+
+\item Immediately after its complete initialization the OpenMP implementation
+executes the tool
+initialization function
+
+\item The tool uses this invocation to initialize
+itself and setup its state as well as register the needed event callbacks. 
+
+\end{enumerate}
+
+After these steps
+are completed, the tool is activated for the rest of the execution of the OpenMP
+application.
+%
+%
+%
+%, binding pointers to OMPT interface functions 
+%in the tool, and registering tool callbacks for OpenMP events. 
+%Finally, to understand what information dynamic measurements might yield
+%about thread states and implementations of mutual exclusion, a tool can
+%enumerate the thread states and implementations of mutual exclusion 
+%that a particular OpenMP implementation implementation employs.
+%The following subsections explain each of these steps in turn.
+
+\subsection{Step 1: Tool Availability}
+\index{tool availability}
+\label{sec:ToolsSupport_Available}
+
+In order to be available during the execution of an application, a tool provides
+an implementation a function using the name \code{ompt\_tool}. The mechanism
+of how this is done is left to the implementation of the tool and can be system
+specific. Typical examples are the static linking of a library containing this
+function or the dynamic preloading of a dynamically linked library containing
+this function.
+
+Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP implementation, only one tool may make itself available.
+
+
+\subsection{Step 2: Tool Detection}
+\index{tool detection}
+\label{sec:ToolsSupport_Detection}
+
+Once an OpenMP implementation initializes itself, it triggers the process to check for and, possibly, include a tool in the execution of an application. For this, it will first check if tool support is enabled by the user by examining the \plc{tool-var} ICV. If the
+If the value of this ICV is \code{enabled} (when an OpenMP implementation begins to initialize itself), the OpenMP implementation 
+searches if a tool is available by checking if 
+%the OpenMP implementation will attempt to register a tool by first 
+%determining if
+%an implementation of the 
+function \code{ompt\_tool} exists in a program's address space or within any of the dynamic libraries specified by the ICV \plc{ompt\_librararies\_list}.
+
+
+
 If the value of \plc{tool-var} is \code{disabled}, an OpenMP 
 implementation will neither check for the existence of an implementation of
 \code{ompt\_tool} in the address space nor try to call any that might exist.
 
-To register itself with an OpenMP implementation, a tool provides
-an implementation of \code{ompt\_tool} that returns
-a non-\code{NULL} pointer to a function with type
-signature \code{ompt\_initialize\_fn\_t}, which is in
-Section~\ref{sec:ompt_initialize_fn_t}.
-A tool-provided implementation of \code{ompt\_tool} may decline to 
-to register itself with an OpenMP implementation by returning
-\code{NULL}.
-
-Since only one tool-provided definition of \code{ompt\_tool} will be seen by an OpenMP implementation, only one tool may register itself.
-If a tool-supplied implementation of \code{ompt\_tool} returns a non-\code{NULL} initializer,
-an implementation of the OpenMP API will maintain state information for each OpenMP thread and will perform
-any OMPT event callbacks successfully registered during tool initialization.
-
-After a process fork, if OpenMP is re-initialized in the child process,
-an implementation of the OpenMP API in the child process will call \code{ompt\_tool}
+For any separate OpenMP implementation initialized later, for example, after a process fork or for accelerators that maintain
+their own OpenMP runtime, this process repeats and the OpenMP API in the new process will call \code{ompt\_tool}
 under the same conditions as it would for any process.
 
-\subsection{Initializing a Tool}
+
+\subsection{Step 3: Tool Registration}
+\index{tool registration}
+\label{sec:ToolsSupport_Registration}
+
+As part of the call to a detected code{ompt\_tool} function, the OpenMP runtime passes
+a lookup function of type \code{ompt\_function\_lookup\_t} (described in Section~\ref{ompt_function_lookup_t}),
+which allows a tool to find all entry points into the OMPT interface. A tool should store the pointer for
+future use. Further, the OpenMP implementation provides versioning information.
+
+Once called, the tool can use the function with the known symbol  \code{ompt\_tool} to
+return two pointers to two functions with type signature 
+\code{ompt\_initialize\_fn\_t} (described in  Section~\ref{sec:ompt_initialize_fn_t}) and
+\code{ompt\_initialize\_trace\_fn\_t} (described in  Section~\ref{sec:ompt_initialize_trace_fn_t}).
+Each of the returned function pointers
+can either be \code{NULL}, if the tool (for example, after checking the OpenMP environment
+or after verifying versioning information) 
+decides to not register itself, or be a pointer to the tool's initialization function, either using 
+the tracing interface or the callback interface.
+
+\subsection{Step 4: Tool Invocation}
+\index{tool invocation}
+\label{sec:tool-invocation}
+
+If one of the values returned by the tool is a non-\code{NULL} pointer to a tool initializer function, 
+the runtime will call this function immediately after the runtime fully initializes itself, but
+%The initializer must be called 
+before beginning execution of any OpenMP construct or completing any execution 
+environment routine invocation. If both are returned, the trace interface is preferred.
+
+If both pointers are \code{NULL}, the search continues down the list of libraries identified in Step 2.
+
+\subsection{Step 5: Tool Initialization}
+\index{tool initialization}
 \label{sec:tool-initialize}
 
-When an OpenMP implementation receives a non-\code{NULL} pointer to a tool initializer function with signature \code{ompt\_initialize\_fn\_t} as the return value from a call to a tool-provided implementation of \code{ompt\_tool}, the runtime will call the tool initializer immediately after the runtime fully initializes itself.
-The initializer must be called before beginning execution of any OpenMP construct or completing any execution environment routine invocation.
+Once called by the OpenMP implementation, the tool initialization function completes
+the tool's initialization, which has to include the registration of callback to events triggered
+by OpenMP directives, as described in Section~\ref{directives}. Further, tools typically
+query the capabilities of the OpenMP runtime in order to determine the capabilities they can
+rely on and they bind pointers to all OMPT interface functions that the tool uses. Note,
+while the registration of callbacks has to be done during the initialization, the latter two items
+can be done at any time (although doing them during initialization is likely to be the most
+efficient option). 
 
-The two principal duties of a tool initializer are binding pointers to all OMPT interface functions that the tool uses and registering tool callbacks. These
-two operations are described in the next two sections.
+%and registering tool callbacks. These
+%two operations are described in the next two sections.
+
+\section{Initialization Procedure of the Tracing Interfaces}
+\index{tool trace initialization tasks}
+\label{sec:tool-trace-initialize-tasks}
+
+TODO JOHN
+
+\section{Initialization Procedure of the Callback Interfaces}
+\index{tool cb initialization tasks}
+\label{sec:tool-cb-initialize-tasks}
+
+TODO MARTIN
+
+Tools typically execute the following three tasks during their initialization: binding of OMPT interface function, registering callbacks, and determining OMPT capabilities. These tasks are described in more detail below.
 
 \subsection{Binding OMPT Interface Functions}
 \label{sec:ToolsSupport_bind}
 
-The first duty of a tool initializer is binding pointers to the 
-an OpenMP implementation's OMPT interface functions.
+OMPT runtime functions are not directly exposed in the OpenMP runtime API to avoid their usage as application codes. Instead, OpenMP implementation provides a lookup function as part of the invocation of the \code{ompt\_tool} function. This function is of
+type~\code{ompt\_function\_lookup\_t} and allows the translation of an OMPT runtime routine based on its name.
+
+Tools should, during initialization, query all OMPT runtime functions they will use during their runtime and store that information for further use. While this is not required, extracting all these lookups at startup is useful and efficient.
+%The first duty of a tool initializer is binding pointers to the 
+%an OpenMP implementation's OMPT interface functions.
 Table~\ref{table:host-ompt-interface-functions} 
 indicates functions in the host implementation of the 
 OMPT interface of an OpenMP runtime and their
@@ -122,12 +225,12 @@ Entry Point String Name & Type signature\\\hline\hline
 \code{``ompt\_get\_parallel\_info''} & \code{ompt\_get\_parallel\_info\_t}\\
 \code{``ompt\_get\_task\_info''} & \code{ompt\_get\_task\_info\_t}\\
 \code{``ompt\_get\_num\_devices''} & \code{ompt\_get\_num\_devices\_t}\\
-\code{``ompt\_get\_device\_info''} & \code{ompt\_get\_device\_info\_t}\\
+% \code{``ompt\_get\_device\_info''} & \code{ompt\_get\_device\_info\_t}\\
 \code{``ompt\_get\_device\_id''} & \code{ompt\_get\_device\_id\_t}\\\hline
 \end{tabular}
 \vskip 1ex
 \caption{OMPT callback interface entry point names and their type signatures.}
-\label{table:host-ompt-interface-functions} 
+\label{table:ompt-callback-interface-functions} 
 \end{table}
 
 The following example shows how to use the \plc{lookup} callback 
@@ -140,8 +243,8 @@ OMPT interface function \code{ompt\_get\_thread\_id}:
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-ompt\_interface\_fn\_t \plc{ompt\_get\_thread\_id\_fn} =
-                        \plc{lookup}("ompt\_get\_thread\_id");
+ompt_interface_fn_t \plc{ompt_get_thread_id_fn} =
+                        \plc{lookup}("ompt_get_thread_id");
 \end{boxedcode}
 \ccppspecificend
 }
@@ -210,6 +313,7 @@ ompt\_event\_destroy\_lock          & * & * & * & * \\
 ompt\_event\_mutex\_acquire         & * & * & * & * \\
 ompt\_event\_mutex\_acquired        & * & * & * & * \\
 ompt\_event\_nested\_lock           & * & * & * & * \\
+ompt\_event\_cancel           & * & * & * & * \\
 ompt\_event\_flush                  & * & * & * & * \\
 \bottomrule
 \end{tabular}
@@ -263,6 +367,23 @@ passing it the name of the function of interest.
 
 \section{Data Types}
 \label{sec:data}
+
+\subsection{Dummy Type Signature for Callbacks}
+\label{sec:ompt_callback_t}
+
+Pointers to tool callback functions with many different type
+signatures are passed to the \code{ompt\_set\_callback} entry point and 
+returned by the \code{ompt\_get\_callback} entry point. For convenience,
+these entry points expect all type signatures to be cast to   
+a dummy type \code{ompt\_callback\_t}.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt_callback_t)(void);
+\end{boxedcode}
+\ccppspecificend
+}
 
 \subsection{Thread States}
 \label{sec:thread-states}
@@ -615,7 +736,7 @@ reserved to indicate an invalid id.
 Each OpenMP thread  has an associated identifier of type \code{ompt\_thread\_id\_t}.
 \begin{comment}
 \begin{boxedcode}
-typedef unsigned long long int ompt\_thread\_id\_t;
+typedef unsigned long long int ompt_thread_id_t;
 \end{boxedcode}
 \end{comment}
   A thread's identifier is assigned when the thread is created.
@@ -632,7 +753,7 @@ Each OpenMP parallel region has an associated identifier of type
 \code{ompt\_parallel\_id\_t}.
 \begin{comment}
 \begin{boxedcode}
-typedef unsigned long long int ompt\_parallel\_id\_t;
+typedef unsigned long long int ompt_parallel_id_t;
 \end{boxedcode}
 \end{comment}
   A parallel region's identifier is assigned
@@ -651,7 +772,7 @@ Each OpenMP task has an associated identifier of type
 initial, implicit, explicit, and target tasks.
 \begin{comment}
 \begin{boxedcode}
-typedef unsigned long long int ompt\_task\_id\_t;
+typedef unsigned long long int ompt_task_id_t;
 \end{boxedcode}
 \end{comment}
   A task's identifier is assigned
@@ -684,7 +805,7 @@ When a task executing on a thread is waiting for something, the thread's wait id
 A wait identifier may represent a critical section {\em name}, a lock,  a program variable accessed in an atomic region, or a synchronization object internal to an OpenMP implementation.
 \begin{comment}
 \begin{boxedcode}
-typedef unsigned long long int ompt\_wait\_id\_t;
+typedef unsigned long long int ompt_wait_id_t;
 \end{boxedcode}
 \end{comment}
 A thread's wait identifier can be retrieved on demand by invoking the \code{ompt\_get\_state} function (described in Section~\ref{sec:ompt_get_state}).
@@ -703,11 +824,11 @@ When a thread is not in a wait state, a thread's wait identifier has an undefine
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt\_record\_kind\_e \{
-  ompt\_record\_ompt               = 1,
-  ompt\_record\_native             = 2,
-  ompt\_record\_invalid            = 3
-\} ompt\_record\_kind\_t; 
+typedef enum ompt_record_kind_e \{
+  ompt_record_ompt               = 1,
+  ompt_record_native             = 2,
+  ompt_record_invalid            = 3
+\} ompt_record_kind_t; 
 \end{boxedcode}
 \ccppspecificend
 }
@@ -716,10 +837,10 @@ typedef enum ompt\_record\_kind\_e \{
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt\_record\_native\_kind\_e \{
-  ompt\_record\_native\_info  = 1,
-  ompt\_record\_native\_event = 2
-\} ompt\_record\_native\_kind\_t;
+typedef enum ompt_record_native_kind_e \{
+  ompt_record_native_info  = 1,
+  ompt_record_native_event = 2
+\} ompt_record_native_kind_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -728,13 +849,13 @@ typedef enum ompt\_record\_native\_kind\_e \{
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_native\_abstract\_s \{
-  ompt\_record\_native\_class\_t \plc{rclass};
+typedef struct ompt_record_native_abstract_s \{
+  ompt_record_native_class_t \plc{rclass};
   const char *\plc{type};
-  ompt\_target\_time\_t \plc{start\_time};
-  ompt\_target\_time\_t \plc{end\_time};
-  uint64\_t \plc{hwid};
-\} ompt\_record\_native\_abstract\_t;
+  ompt_target_time_t \plc{start\_time};
+  ompt_target_time_t \plc{end\_time};
+  uint64_t \plc{hwid};
+\} ompt_record_native_abstract_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -743,34 +864,34 @@ typedef struct ompt\_record\_native\_abstract\_s \{
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_ompt\_s \{
-  ompt\_event\_t \plc{type};                              /* event type          */
-  ompt\_target\_time\_t \plc{time};                        /* record timestamp    */
-  ompt\_id\_t \plc{thread\_id};                            /* record's thread ID  */
-  ompt\_id\_t \plc{target\_id};                            /* host context        */
+typedef struct ompt_record_ompt_s \{
+  ompt_event_t \plc{type};                              /* event type          */
+  ompt_target_time\_t \plc{time};                        /* record timestamp    */
+  ompt_id_t \plc{thread_id};                            /* record's thread ID  */
+  ompt_id_t \plc{target_id};                            /* host context        */
   union \{
-    ompt\_record\_thread\_begin\_t \plc{thread\_begin};      /* for thread begin    */
-    ompt\_record\_idle\_t \plc{idle};                      /* for idle            */
-    ompt\_record\_parallel\_begin\_t \plc{parallel\_begin};  /* for parallel begin  */
-    ompt\_record\_parallel\_end\_t \plc{parallel\_end};      /* for parallel end    */
-    ompt\_record\_task\_create\_t \plc{task\_create};        /* for task create     */
-    ompt\_record\_task\_dependence\_t \plc{task\_dep};       /* for task dependence */
-    ompt\_record\_task\_schedule\_t \plc{task\_sched};       /* for task schedule   */
-    ompt\_record\_scoped\_implicit\_t \plc{implicit};       /* for implicit task   */
-    ompt\_record\_scoped\_sync\_region\_t \plc{sync\_region}; /* for sync            */
-    ompt\_record\_target\_data\_t \plc{data};               /* for target data     */
-    ompt\_record\_target\_data\_map\_t \plc{data\_map};       /* for target data map */
-    ompt\_record\_target\_kernel\_t \plc{kernel};           /* for target kernel   */
-    ompt\_record\_init\_lock\_t \plc{lock\_init};            /* for lock init       */
-    ompt\_record\_lock\_destroy\_t \plc{lock\_destroy};      /* for lock destroy    */
-    ompt\_record\_mutex\_acquire\_t \plc{mutex\_acquire};    /* for mutex acquire   */
-    ompt\_record\_mutex\_t \plc{mutex};                    /* for mutex           */
-    ompt\_record\_scoped\_nested\_lock\_t \plc{nested\_lock}; /* for nested lock     */
-    ompt\_record\_scoped\_master\_t \plc{master};           /* for master          */
-    ompt\_record\_scoped\_worksharing\_t \plc{worksharing}; /* for workshares      */
-    ompt\_record\_flush\_t \plc{flush};                    /* for flush           */
+    ompt_record_thread_begin_t \plc{thread_begin};      /* for thread begin    */
+    ompt_record_idle_t \plc{idle};                      /* for idle            */
+    ompt_record_parallel_begin_t \plc{parallel_begin};  /* for parallel begin  */
+    ompt_record_parallel_end_t \plc{parallel_end};      /* for parallel end    */
+    ompt_record_task_create_t \plc{task_create};        /* for task create     */
+    ompt_record_task_dependence_t \plc{task_dep};       /* for task dependence */
+    ompt_record_task_schedule_t \plc{task_sched};       /* for task schedule   */
+    ompt_record_scoped_implicit_t \plc{implicit};       /* for implicit task   */
+    ompt_record_scoped_sync_region_t \plc{sync_region}; /* for sync            */
+    ompt_record_target_data_t \plc{data};               /* for target data     */
+    ompt_record_target_data_map_t \plc{data_map};       /* for target data map */
+    ompt_record_target_kernel_t \plc{kernel};           /* for target kernel   */
+    ompt_record_init_lock_t \plc{lock_init};            /* for lock init       */
+    ompt_record_lock_destroy_t \plc{lock_destroy};      /* for lock destroy    */
+    ompt_record_mutex_acquire_t \plc{mutex_acquire};    /* for mutex acquire   */
+    ompt_record_mutex_t \plc{mutex};                    /* for mutex           */
+    ompt_record_scoped_nested_lock_t \plc{nested_lock}; /* for nested lock     */
+    ompt_record_scoped_master_t \plc{master};           /* for master          */
+    ompt_record_scoped_worksharing_t \plc{worksharing}; /* for workshares      */
+    ompt_record_flush_t \plc{flush};                    /* for flush           */
   \} \plc{record};
-\} ompt\_record\_ompt\_t;
+\} ompt_record_ompt_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -901,7 +1022,7 @@ If there is no \code{hwid} associated with a
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-#define ompt\_hwid\_none (-1)
+#define ompt_hwid_none (-1)
 \end{boxedcode}
 \ccppspecificend
 }
@@ -926,7 +1047,7 @@ JP:  I think, there was a device task in some previous version of the tr.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-#define ompt\_dev\_task\_none (~0ULL)
+#define ompt_dev_task_none (~0ULL)
 \end{boxedcode}
 \ccppspecificend
 }
@@ -945,7 +1066,7 @@ the value of an unavailable field will be the value
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-#define ompt\_time\_none (~0ULL)
+#define ompt_time_none (~0ULL)
 \end{boxedcode}
 \ccppspecificend
 }
@@ -967,7 +1088,7 @@ The value \code{ompt\_id\_none} is reserved to indicate an invalid id for any pa
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-#define ompt\_id\_none 0
+#define ompt_id_none 0
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1014,7 +1135,7 @@ kind for any parameter of type \code{ompt\_mutex\_kind\_t}.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-#define ompt\_mutex\_kind\_unknown 0
+#define ompt_mutex_kind_unknown 0
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1311,7 +1432,7 @@ typedef struct ompt_frame_s \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_thread_type_e \{\\
+typedef enum ompt_thread_type_e \{
   ompt_thread_initial                 = 1,
   ompt_thread_worker                  = 2,
   ompt_thread_other                   = 3,
@@ -1338,7 +1459,7 @@ typedef enum ompt_thread_type_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_scope_endpoint_e \{\\
+typedef enum ompt_scope_endpoint_e \{
   ompt_scope_begin                    = 1,
   ompt_scope_end                      = 2
 \} ompt_scope_endpoint_t;
@@ -1374,7 +1495,7 @@ typedef enum ompt_scope_endpoint_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_sync_region_kind_e \{\\
+typedef enum ompt_sync_region_kind_e \{
   ompt_sync_region_barrier            = 1, 
   ompt_sync_region_taskwait           = 2,
   ompt_sync_region_taskgroup          = 3
@@ -1400,7 +1521,7 @@ typedef enum ompt_sync_region_kind_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_target_data_op_e \{\\
+typedef enum ompt_target_data_op_e \{
   ompt_target_data_alloc              = 1,
   ompt_target_data_transfer_to_dev    = 2,
   ompt_target_data_transfer_from_dev  = 3,
@@ -1427,7 +1548,7 @@ typedef enum ompt_target_data_op_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_worksharing_type_e \{\\
+typedef enum ompt_worksharing_type_e \{
   ompt_worksharing_loop               = 1, 
   ompt_worksharing_sections           = 2,
   ompt_worksharing_single_executor    = 3,
@@ -1456,7 +1577,7 @@ typedef enum ompt_worksharing_type_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_mutex_kind_e \{\\
+typedef enum ompt_mutex_kind_e \{
   ompt_mutex                          = 0x10,
   ompt_mutex_lock                     = 0x11,
   ompt_mutex_nest_lock                = 0x12,
@@ -1487,7 +1608,7 @@ typedef enum ompt_mutex_kind_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_native_mon_flags_e \{\\
+typedef enum ompt_native_mon_flags_e \{
   ompt_native_data_motion_explicit    = 1,
   ompt_native_data_motion_implicit    = 2,
   ompt_native_kernel_invocation       = 4,
@@ -1517,7 +1638,7 @@ typedef enum ompt_native_mon_flags_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum  ompt_task_type_e \{\\
+typedef enum  ompt_task_type_e \{
   ompt_task_initial                   = 1,
   ompt_task_implicit                  = 2,
   ompt_task_explicit                  = 3,
@@ -1546,7 +1667,7 @@ typedef enum  ompt_task_type_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_target_type_e \{\\
+typedef enum ompt_target_type_e \{
   ompt_target                         = 1,
   ompt_target_enter_data              = 2,
   ompt_target_exit_data               = 3,
@@ -1572,7 +1693,7 @@ typedef enum ompt_target_type_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_invoker_e \{\\
+typedef enum ompt_invoker_e \{
   ompt_invoker_program = 1, /* program invokes master task */
   ompt_invoker_runtime = 2  /* runtime invokes master task */
 \} ompt_invoker_t;
@@ -1599,7 +1720,7 @@ typedef enum ompt_invoker_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_target_map_flag_e \{\\
+typedef enum ompt_target_map_flag_e \{
   ompt_target_map_flag_to             = 1,
   ompt_target_map_flag_from           = 2,
   ompt_target_map_flag_alloc          = 4,
@@ -1626,7 +1747,7 @@ typedef enum ompt_target_map_flag_e \{\\
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_task_dependence_flag_e \{\\
+typedef enum ompt_task_dependence_flag_e \{
   // a two bit field for the dependence type
   ompt_task_dependence_type_out       = 1,
   ompt_task_dependence_type_in        = 2,
@@ -1642,6 +1763,33 @@ typedef enum ompt_task_dependence_flag_e \{\\
 \item \code{ompt\_task\_dependence\_t} data type, see \specref{sec:ompt_task_dependence_t}.
 \end{itemize}
 \end{comment}
+
+
+% ompt_cancel_flag_t
+
+\subsubsection{\code{ompt\_cancel\_flag\_t}}
+\label{sec:ompt_cancel_flag_t}
+\code{ompt\_cancel\_flag\_t} is an enumeration that defines the valid cancel flag values.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum ompt_cancel_flag_e \{
+  ompt_cancel_parallel     = 0x1,
+  ompt_cancel_sections     = 0x2,
+  ompt_cancel_do           = 0x4,
+  ompt_cancel_taskgroup    = 0x8,
+  ompt_cancel_activated    = 0x10000000,
+  ompt_cancel_detected     = 0x20000000
+\} ompt_cancel_flag_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_cancel\_t} data type, see \specref{sec:ompt_cancel_callback_t}.
+\end{itemize}
 
 % end miscelaneous types
 
@@ -1788,10 +1936,10 @@ an OpenMP implementation's OMPT interface.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*\plc{ompt\_initialize\_fn\_t}) (
-  ompt\_function\_lookup\_t \plc{lookup},
-  const char *\plc{runtime\_version},
-  unsigned int \plc{ompt\_version}
+typedef void (*\plc{ompt_initialize_fn_t}) (
+  ompt_function_lookup_t \plc{lookup},
+  const char *\plc{runtime_version},
+  unsigned int \plc{ompt_version}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -1887,9 +2035,9 @@ tool might register and that are called during runtime of an OpenMP program.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_thread\_begin\_callback\_t) (
-  ompt\_thread\_type\_t \plc{thread\_type},
-  ompt\_data\_t *\plc{thread\_data}
+typedef void (*ompt_thread_begin_callback_t) (
+  ompt_thread_type_t \plc{thread_type},
+  ompt_data_t *\plc{thread_data}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -1900,9 +2048,9 @@ typedef void (*ompt\_thread\_begin\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_thread\_begin\_s \{
-  ompt\_thread\_type\_t \plc{thread\_type};
-\} ompt\_record\_thread\_begin\_t;
+typedef struct ompt_record_thread_begin_s \{
+  ompt_thread_type_t \plc{thread_type};
+\} ompt_record_thread_begin_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1931,8 +2079,8 @@ The binding of \plc{thread\_data} is the new thread.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_thread\_end\_callback\_t) (
-  ompt\_data\_t *\plc{thread\_data}
+typedef void (*ompt_thread_end_callback_t) (
+  ompt_data_t *\plc{thread_data}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -1955,8 +2103,8 @@ The binding of \plc{thread\_data} is the finished thread.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_idle\_callback\_t) (
-  ompt\_scope\_endpoint\_t \plc{endpoint}
+typedef void (*ompt_idle_callback_t) (
+  ompt_scope_endpoint_t \plc{endpoint}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -1967,9 +2115,9 @@ typedef void (*ompt\_idle\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_idle\_s \{
-  ompt\_scope\_endpoint\_t \plc{endpoint};    /* begin or end */
-\} ompt\_record\_idle\_t;
+typedef struct ompt_record_idle_s \{
+  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end */
+\} ompt_record_idle_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1995,14 +2143,14 @@ that indicates whether the callback signals the begin or end of the scope.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_parallel\_begin\_callback\_t) (
-               ompt\_data\_t * \plc{parent\_task\_data},
-               const ompt\_frame\_t * \plc{parent\_frame},
-               ompt\_data\_t * \plc{parallel\_data},
-               unsigned int \plc{requested\_team\_size},
-               unsigned int \plc{actual\_team\_size},
-               ompt\_invoker\_t \plc{invoker},
-               const void * \plc{codeptr\_ra}
+typedef void (*ompt_parallel_begin_callback_t) (
+               ompt_data_t * \plc{parent_task_data},
+               const ompt_frame_t * \plc{parent_frame},
+               ompt_data_t * \plc{parallel_data},
+               unsigned int \plc{requested_team_size},
+               unsigned int \plc{actual_team_size},
+               ompt_invoker_t \plc{invoker},
+               const void * \plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2013,14 +2161,14 @@ typedef void (*ompt\_parallel\_begin\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_parallel\_begin\_s \{
-  ompt\_id\_t \plc{parent\_task\_id};
-  const ompt\_frame\_t *\plc{parent\_frame};
-  ompt\_id\_t \plc{parallel\_id};
-  unsigned int \plc{requested\_team\_size};
-  ompt\_invoker\_t \plc{invoker};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_parallel\_begin\_t;
+typedef struct ompt_record_parallel_begin_s \{
+  ompt_id_t \plc{parent_task_id};
+  const ompt_frame_t *\plc{parent_frame};
+  ompt_id_t \plc{parallel_id};
+  unsigned int \plc{requested_team_size};
+  ompt_invoker_t \plc{invoker};
+  const void *\plc{codeptr_ra};
+\} ompt_record_parallel_begin_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2056,11 +2204,11 @@ The binding of \plc{parent\_task\_data} is the enclosing task, the binding of
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_parallel\_end\_callback\_t) (
-               ompt\_data\_t * \plc{parallel\_data},
-               ompt\_data\_t * \plc{task\_data},
-               ompt\_invoker\_t \plc{invoker},
-               const void * \plc{codeptr\_ra}
+typedef void (*ompt_parallel_end_callback_t) (
+               ompt_data_t *\plc{parallel_data},
+               ompt_data_t *\plc{task_data},
+               ompt_invoker_t \plc{invoker},
+               const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2071,12 +2219,12 @@ typedef void (*ompt\_parallel\_end\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_parallel\_end\_s \{
-  ompt\_id\_t \plc{parallel\_id}; 
-  ompt\_id\_t \plc{task\_id};
-  ompt\_invoker\_t \plc{invoker};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_parallel\_end\_t;
+typedef struct ompt_record_parallel_end_s \{
+  ompt_id_t \plc{parallel_id}; 
+  ompt_id_t \plc{task_id};
+  ompt_invoker_t \plc{invoker};
+  const void *\plc{codeptr_ra};
+\} ompt_record_parallel_end_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2106,11 +2254,11 @@ The binding of \plc{parallel\_data} is the finishing team.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*\plc{ompt\_scoped\_master\_callback\_t}) (
-               ompt\_scope\_endpoint\_t \plc{endpoint},
-               ompt\_data\_t *\plc{parallel\_data},
-               ompt\_data\_t *\plc{task\_data},
-               const void *\plc{codeptr\_ra}
+typedef void (*\plc{ompt_scoped_master_callback_t}) (
+               ompt_scope_endpoint_t \plc{endpoint},
+               ompt_data_t *\plc{parallel_data},
+               ompt_data_t *\plc{task_data},
+               const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2121,12 +2269,12 @@ typedef void (*\plc{ompt\_scoped\_master\_callback\_t}) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_scoped\_master\_s \{
-  ompt\_scope\_endpoint\_t \plc{endpoint};
-  ompt\_id\_t \plc{parallel\_id};
-  ompt\_id\_t  \plc{task\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_scoped\_master\_t;
+typedef struct ompt_record_scoped_master_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t  \plc{task_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_master_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2162,13 +2310,13 @@ the binding of \plc{parallel\_data} is the innermost enclosing parallel region.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_task\_create\_callback\_t) (
-  ompt\_data\_t *\plc{parent\_task\_data},
-  const ompt\_frame\_t *\plc{parent\_frame},
-  ompt\_data\_t *\plc{new\_task\_data},
-  ompt\_task\_type\_t \plc{type},
-  \_Bool \plc{has\_dependences},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_task_create_callback_t) (
+  ompt_data_t *\plc{parent_task_data},
+  const ompt_frame_t *\plc{parent_frame},
+  ompt_data_t *\plc{new_task_data},
+  ompt_task_type_t \plc{type},
+  int \plc{has_dependences},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2179,14 +2327,14 @@ typedef void (*ompt\_task\_create\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_task\_create\_s \{
-  ompt\_id\_t \plc{parent\_task\_id};
-  const ompt\_frame\_t *\plc{parent\_frame};
-  ompt\_id\_t \plc{new\_task\_id};
-  ompt\_task\_type\_t \plc{type};
-  \_Bool \plc{has\_dependences};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_task\_create\_t;
+typedef struct ompt_record_task_create_s \{
+  ompt_id_t \plc{parent_task_id};
+  const ompt_frame_t *\plc{parent_frame};
+  ompt_id_t \plc{new_task_id};
+  ompt_task_type_t \plc{type};
+  _Bool \plc{has_dependences};
+  const void *\plc{codeptr_ra};
+\} ompt_record_task_create_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2219,9 +2367,9 @@ the binding of \plc{new\_task\_data} is the created task.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_task\_dependences\_callback\_t) (
-  ompt\_data\_t *\plc{task\_data},
-  const ompt\_task\_dependence\_t *\plc{deps},
+typedef void (*ompt_task_dependences_callback_t) (
+  ompt_data_t *\plc{task_data},
+  const ompt_task_dependence_t *\plc{deps},
   int \plc{ndeps}
 );
 \end{boxedcode}
@@ -2259,9 +2407,9 @@ The binding of \plc{task\_data} is the created task.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_task\_dependence\_callback\_t) (
-  ompt\_data\_t *\plc{src\_task\_data},
-  ompt\_data\_t *\plc{sink\_task\_data}
+typedef void (*ompt_task_dependence_callback_t) (
+  ompt_data_t *\plc{src_task_data},
+  ompt_data_t *\plc{sink_task_data}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2272,10 +2420,10 @@ typedef void (*ompt\_task\_dependence\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_task\_dependence\_s \{
-  ompt\_id\_t \plc{src\_task\_id};
-  ompt\_id\_t \plc{sink\_task\_id};
-\} ompt\_record\_task\_dependence\_t;
+typedef struct ompt_record_task_dependence_s \{
+  ompt_id_t \plc{src_task_id};
+  ompt_id_t \plc{sink_task_id};
+\} ompt_record_task_dependence_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2300,10 +2448,10 @@ The binding of \plc{sink\_task\_data} is a task with a non-satisfied in dependen
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_task\_schedule\_callback\_t) (
-  ompt\_data\_t *\plc{prior\_task\_data},
-  \_Bool \plc{prior\_completed},
-  ompt\_data\_t *\plc{next\_task\_data}
+typedef void (*ompt_task_schedule_callback_t) (
+  ompt_data_t *\plc{prior_task_data},
+  int \plc{prior_completed},
+  ompt_data_t *\plc{next_task_data}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2314,11 +2462,11 @@ typedef void (*ompt\_task\_schedule\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_task\_schedule\_s \{
-  ompt\_id\_t \plc{prior\_task\_id};
-  \_Bool \plc{prior\_completed};
-  ompt\_id\_t \plc{next\_task\_id};
-\} ompt\_record\_task\_schedule\_t;
+typedef struct ompt_record_task_schedule_s \{
+  ompt_id_t \plc{prior_task_id};
+  _Bool \plc{prior_completed};
+  ompt_id_t \plc{next_task_id};
+\} ompt_record_task_schedule_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2347,11 +2495,11 @@ The binding of \plc{next\_task\_data} is the task to be scheduled.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_scoped\_implicit\_callback\_t) (
-  ompt\_scope\_endpoint\_t \plc{endpoint},
-  ompt\_data\_t *\plc{parallel\_data},
-  ompt\_data\_t *\plc{task\_data},
-  unsigned int \plc{thread\_num}
+typedef void (*ompt_scoped_implicit_callback_t) (
+  ompt_scope_endpoint_t \plc{endpoint},
+  ompt_data_t *\plc{parallel_data},
+  ompt_data_t *\plc{task_data},
+  unsigned int \plc{thread_num}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2362,12 +2510,12 @@ typedef void (*ompt\_scoped\_implicit\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_scoped\_implicit\_s \{
-  ompt\_scope\_endpoint\_t \plc{endpoint};
-  ompt\_id\_t \plc{parallel\_id};
-  ompt\_id\_t \plc{task\_id};
-  unsigned int \plc{thread\_num};
-\} ompt\_record\_scoped\_implicit\_t;
+typedef struct ompt_record_scoped_implicit_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t \plc{task_id};
+  unsigned int \plc{thread_num};
+\} ompt_record_scoped_implicit_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2401,12 +2549,12 @@ region's structured block.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_scoped\_sync\_region\_callback\_t) (
-  ompt\_sync\_region\_kind\_t \plc{kind},
-  ompt\_scope\_endpoint\_t \plc{endpoint},
-  ompt\_data\_t *\plc{parallel\_data},
-  ompt\_data\_t *\plc{task\_data},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_scoped_sync_region_callback_t) (
+  ompt_sync_region_kind_t \plc{kind},
+  ompt_scope_endpoint_t \plc{endpoint},
+  ompt_data_t *\plc{parallel_data},
+  ompt_data_t *\plc{task_data},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2417,13 +2565,13 @@ typedef void (*ompt\_scoped\_sync\_region\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_scoped\_sync\_region\_s \{
-  ompt\_sync\_region\_kind\_t \plc{kind};
-  ompt\_scope\_endpoint\_t \plc{endpoint};
-  ompt\_id\_t \plc{parallel\_id};
-  ompt\_id\_t  \plc{task\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_scoped\_sync\_region\_t;
+typedef struct ompt_record_scoped_sync_region_s \{
+  ompt_sync_region_kind_t \plc{kind};
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t  \plc{task_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_sync_region_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2468,12 +2616,12 @@ callback; \code{codeptr\_ra} may be NULL.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_lock\_init\_callback\_t) (
-  \_Bool \plc{is\_nest\_lock},
-  ompt\_wait\_id\_t \plc{wait\_id},
+typedef void (*ompt_lock_init_callback_t) (
+  int \plc{is_nest_lock},
+  ompt_wait_id_t \plc{wait_id},
   unsigned int \plc{hint},
   unsigned int \plc{kind},
-  const void *\plc{codeptr\_ra}
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2484,13 +2632,13 @@ typedef void (*ompt\_lock\_init\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_lock\_init\_s \{
-  \_Bool \plc{is\_nest\_lock};
-  ompt\_wait\_id\_t wait\_id;
+typedef struct ompt_record_lock_init_s \{
+  _Bool \plc{is_nest_lock};
+  ompt_wait_id_t wait_id;
   unsigned int hint;
   unsigned int kind;
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_lock\_init\_t;
+  const void *\plc{codeptr_ra};
+\} ompt_record_lock_init_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2519,10 +2667,10 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_lock\_destroy\_callback\_t) (
-  \_Bool \plc{is\_nest\_lock},
-  ompt\_wait\_id\_t \plc{wait\_id},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_lock_destroy_callback_t) (
+  int \plc{is_nest_lock},
+  ompt_wait_id_t \plc{wait_id},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2533,11 +2681,11 @@ typedef void (*ompt\_lock\_destroy\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_lock\_destroy\_s \{
-  \_Bool \plc{is\_nest\_lock};
-  ompt\_wait\_id\_t \plc{wait\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_lock\_destroy\_t;
+typedef struct ompt_record_lock_destroy_s \{
+  _Bool \plc{is_nest_lock};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_lock_destroy_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2566,12 +2714,12 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_mutex\_acquire\_callback\_t) (
-  ompt\_mutex\_kind\_t \plc{kind},
+typedef void (*ompt_mutex_acquire_callback_t) (
+  ompt_mutex_kind_t \plc{kind},
   unsigned int \plc{hint},
   unsigned int \plc{impl},
-  ompt\_wait\_id\_t \plc{wait\_id},
-  const void *\plc{codeptr\_ra}
+  ompt_wait_id_t \plc{wait_id},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2582,13 +2730,13 @@ typedef void (*ompt\_mutex\_acquire\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_mutex\_acquire\_s \{
-  ompt\_mutex\_kind\_t \plc{kind};
+typedef struct ompt_record_mutex_acquire_s \{
+  ompt_mutex_kind_t \plc{kind};
   unsigned int \plc{hint};
   unsigned int \plc{impl};
-  ompt\_wait\_id\_t \plc{wait\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_mutex\_acquire\_t;
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_mutex_acquire_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2619,10 +2767,10 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_mutex\_callback\_t) (
-  ompt\_mutex\_kind\_t \plc{kind},
-  ompt\_wait\_id\_t \plc{wait\_id},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_mutex_callback_t) (
+  ompt_mutex_kind_t \plc{kind},
+  ompt_wait_id_t \plc{wait_id},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2633,11 +2781,11 @@ typedef void (*ompt\_mutex\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_mutex\_s \{
-  ompt\_mutex\_kind\_t \plc{kind};
-  ompt\_wait\_id\_t \plc{wait\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_mutex\_t;
+typedef struct ompt_record_mutex_s \{
+  ompt_mutex_kind_t \plc{kind};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_mutex_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2668,10 +2816,10 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_scoped\_nested\_lock\_callback\_t) (
-  ompt\_scope\_endpoint\_t \plc{endpoint},
-  ompt\_wait\_id\_t \plc{wait\_id},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_scoped_nested_lock_callback_t) (
+  ompt_scope_endpoint_t \plc{endpoint},
+  ompt_wait_id_t \plc{wait_id},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2682,11 +2830,11 @@ typedef void (*ompt\_scoped\_nested\_lock\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_scoped\_nested\_lock\_s \{
-  ompt\_scope\_endpoint\_t \plc{endpoint};
-  ompt\_wait\_id\_t \plc{wait\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_scoped\_nested\_lock\_t;
+typedef struct ompt_record_scoped_nested_lock_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_nested_lock_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2721,12 +2869,12 @@ that indicates whether the callback signals the begin or end of the scope.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_scoped\_worksharing\_callback\_t) (
-  ompt\_worksharing\_type\_t \plc{wstype},
-  ompt\_scope\_endpoint\_t \plc{endpoint},
-  ompt\_data\_t *\plc{parallel\_data},
-  ompt\_data\_t *\plc{task\_data},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_scoped_worksharing_callback_t) (
+  ompt_worksharing_type_t \plc{wstype},
+  ompt_scope_endpoint_t \plc{endpoint},
+  ompt_data_t *\plc{parallel_data},
+  ompt_data_t *\plc{task_data},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2737,13 +2885,13 @@ typedef void (*ompt\_scoped\_worksharing\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_scoped\_worksharing\_s \{
-  ompt\_worksharing\_type\_t \plc{wstype};
-  ompt\_scope\_endpoint\_t \plc{endpoint};
-  ompt\_id\_t \plc{parallel\_id};
-  ompt\_id\_t \plc{task\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_scoped\_worksharing\_t;
+typedef struct ompt_record_scoped_worksharing_s \{
+  ompt_worksharing_type_t \plc{wstype};
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t \plc{task_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_worksharing_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2780,9 +2928,9 @@ that indicates whether the callback signals the begin or end of the scope.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_flush\_callback\_t) (
-  ompt\_data\_t *\plc{thread\_data},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_flush_callback_t) (
+  ompt_data_t *\plc{thread_data},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2793,9 +2941,9 @@ typedef void (*ompt\_flush\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_flush\_s \{
-  void *\plc{codeptr\_ra};
-\} ompt\_record\_flush\_t;
+typedef struct ompt_record_flush_s \{
+  void *\plc{codeptr_ra};
+\} ompt_record_flush_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2824,13 +2972,13 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_scoped\_target\_callback\_t) (
-  int \plc{device\_id},
-  ompt\_target\_type\_t \plc{kind},
-  ompt\_data\_t *\plc{task\_data},
-  ompt\_scope\_endpoint\_t \plc{endpoint},
-  ompt\_id\_t \plc{target\_id},
-  const void *\plc{codeptr\_ra}
+typedef void (*ompt_scoped_target_callback_t) (
+  int \plc{device_id},
+  ompt_target_type_t \plc{kind},
+  ompt_data_t *\plc{task_data},
+  ompt_scope_endpoint_t \plc{endpoint},
+  ompt_id_t \plc{target_id},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2841,14 +2989,14 @@ typedef void (*ompt\_scoped\_target\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_scoped\_target\_s \{
-  int \plc{device\_id};
-  ompt\_target\_type\_t \plc{kind};
-  ompt\_data\_t *\plc{task\_data};
-  ompt\_scope\_endpoint\_t \plc{endpoint};
-  ompt\_id\_t \plc{target\_id};
-  const void *\plc{codeptr\_ra};
-\} ompt\_record\_scoped\_target\_t;
+typedef struct ompt_record_scoped_target_s \{
+  int \plc{device_id};
+  ompt_target_type_t \plc{kind};
+  ompt_data_t *\plc{task_data};
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{target_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_target_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2888,13 +3036,13 @@ that indicates whether the callback signals the begin or end of the scope.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_target\_data\_callback\_t) (
-  ompt\_id\_t \plc{target\_id},
-  ompt\_id\_t \plc{host\_op\_id},
-  ompt\_target\_data\_op\_t \plc{optype},
-  void *\plc{host\_addr},
-  void *\plc{device\_addr},
-  size\_t \plc{bytes}
+typedef void (*ompt_target_data_callback_t) (
+  ompt_id_t \plc{target_id},
+  ompt_id_t \plc{host_op_id},
+  ompt_target_data_op_t \plc{optype},
+  void *\plc{host_addr},
+  void *\plc{device_addr},
+  size_t \plc{bytes}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2905,14 +3053,14 @@ typedef void (*ompt\_target\_data\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_target\_data\_s \{
-  ompt\_id\_t \plc{host\_op\_id};
-  ompt\_target\_data\_op\_t \plc{optype};
-  void *\plc{host\_addr};
-  void *\plc{device\_addr};
-  size\_t \plc{bytes};
-  ompt\_target\_time\_t \plc{end\_time};
-\} ompt\_record\_target\_data\_t;
+typedef struct ompt_record_target_data_s \{
+  ompt_id_t \plc{host_op_id};
+  ompt_target_data_op_t \plc{optype};
+  void *\plc{host_addr};
+  void *\plc{device_addr};
+  size_t \plc{bytes};
+  ompt_target_time_t \plc{end_time};
+\} ompt_record_target_data_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2943,13 +3091,13 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_target\_data\_map\_callback\_t) (
-  ompt\_id\_t \plc{target\_id},
+typedef void (*ompt_target_data_map_callback_t) (
+  ompt_id_t \plc{target_id},
   unsigned int \plc{nitems},
-  void **\plc{host\_addr},
-  void **\plc{device\_addr},
-  size\_t *\plc{bytes},
-  unsigned int *\plc{mapping\_flags}
+  void **\plc{host_addr},
+  void **\plc{device_addr},
+  size_t *\plc{bytes},
+  unsigned int *\plc{mapping_flags}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2960,14 +3108,14 @@ typedef void (*ompt\_target\_data\_map\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void ompt\_record\_target\_data\_map\_s \{
-  ompt\_id\_t \plc{target\_id};
+typedef void ompt_record_target_data_map_s \{
+  ompt_id_t \plc{target_id};
   unsigned int \plc{nitems};
-  void **\plc{host\_addr};
-  void **\plc{device\_addr};
-  size\_t *\plc{bytes};
-  unsigned int *\plc{mapping\_flags};
-\} ompt\_record\_target\_data\_map\_t;
+  void **\plc{host_addr};
+  void **\plc{device_addr};
+  size_t *\plc{bytes};
+  unsigned int *\plc{mapping_flags};
+\} ompt_record_target_data_map_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2996,11 +3144,11 @@ region code is inlined into the application code or started by the runtime.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_target\_submit\_callback\_t) (
-  ompt\_id\_t \plc{target\_id},
-  ompt\_id\_t \plc{host\_op\_id},
-  unsigned int \plc{requested\_num\_teams},
-  unsigned int \plc{granted\_num\_teams}
+typedef void (*ompt_target_submit_callback_t) (
+  ompt_id_t \plc{target_id},
+  ompt_id_t \plc{host_op_id},
+  unsigned int \plc{requested_num_teams},
+  unsigned int \plc{granted_num_teams}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3011,11 +3159,11 @@ typedef void (*ompt\_target\_submit\_callback\_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt\_record\_target\_kernel\_s \{
-  ompt\_id\_t \plc{host\_op\_id};
-  unsigned int \plc{granted\_num\_teams};
-  ompt\_target\_time\_t \plc{end\_time};
-\} ompt\_record\_target\_kernel\_t;
+typedef struct ompt_record_target_kernel_s \{
+  ompt_id_t \plc{host_op_id};
+  unsigned int \plc{granted_num_teams};
+  ompt_target_time_t \plc{end_time};
+\} ompt_record_target_kernel_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -3049,10 +3197,10 @@ buffer to store event records for a device.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_buffer\_request\_callback\_t) (
-  int \plc{device\_id},
-  ompt\_buffer\_t** \plc{buffer},
-  size\_t *\plc{bytes}
+typedef void (*ompt_buffer_request_callback_t) (
+  int \plc{device_id},
+  ompt_buffer_t** \plc{buffer},
+  size_t *\plc{bytes}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3095,12 +3243,12 @@ A device triggers a call to \code{ompt\_buffer\_complete\_callback\_t} when no f
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_buffer\_complete\_callback\_t) (
-  int \plc{device\_id},
-  const ompt\_buffer\_t *\plc{buf},
-  size\_t \plc{bytes},
-  ompt\_buffer\_cursor\_t \plc{begin},
-  \_Bool \plc{buffer\_owned}
+typedef void (*ompt_buffer_complete_callback_t) (
+  int \plc{device_id},
+  const ompt_buffer_t *\plc{buf},
+  size_t \plc{bytes},
+  ompt_buffer_cursor_t \plc{begin},
+  int \plc{buffer_owned}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3147,7 +3295,7 @@ complete} callback for buffers provided to any device.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_tcontrol\_callback\_t) (
+typedef void (*ompt_tcontrol_callback_t) (
   long long int \plc{command},
   long long int \plc{modifier}
 );
@@ -3169,6 +3317,36 @@ explicitly designed to handle.
 \item \code{omp\_tcontrol\_t} enumeration type, see \specref{sec:tool_tcontrol}.
 \end{itemize}
 
+\subsubsection{\code{ompt\_cancell\_callback\_t}}
+\index{ompt\_cancel\_callback\_t@{\code{ompt\_cancel\_callback\_t}}}
+\label{sec:ompt_cancel_callback_t}
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*ompt_cancel_callback_t) (
+  ompt_data_t *\plc{task_data},
+  int \plc{flags},
+  const void *\plc{codeptr_ra}
+  );
+\end{boxedcode}
+\ccppspecificend
+}
+\descr 
+The callback with type signature \code{ompt\_cancel\_callback\_t},
+includes \plc{flags} defined by the enumeration  \code{ompt\_cancel\_flag\_t}, which determines
+whether the cancel is activated by the current task, or detected as being activated by another task. 
+The construct being canceled is also described in the \plc{flags}.
+When several constructs are detected as being concurrently canceled, each corresponding 
+bit in the flags will be set. The \plc{task\_data} and \plc{codeptr\_ra} corresponds to 
+the task encountering the cancel construct, 
+the cancellation point construct, or the construct defined as having an implicit cancellation point construct.
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_cancel\_flag\_t} enumeration type, see \specref{sec:ompt_cancel_flag_t}.
+\end{itemize}
+
 
 \subsubsection{\code{ompt\_device\_initialize\_callback\_t}}
 \index{ompt\_flush\_callback\_t@{\code{ompt\_device\_initialize\_callback\_t}}}
@@ -3183,11 +3361,11 @@ tool's tracing interface for a device.
 \ccppspecificstart
 \begin{boxedcode}
 typedef void (*ompt_device_initialize_callback_t) (
-  int device_id,
-  const char *type,
-  ompt_device_t *device,
-  ompt_function_lookup_t *lookup,
-  const char *documentation
+  int \plc{device_id},
+  const char *\plc{type},
+  ompt_device_t *\plc{device},
+  ompt_function_lookup_t *\plc{lookup},
+  const char *\plc{documentation}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3249,87 +3427,39 @@ then set up tracing for a device.
 
 \section{Runtime Entry Points for Tools}
 
-\subsection{Miscellaneous Entry Point Signatures}
+The OMPT interface supports two principal sets of entry points for tools. One
+set of entry points enables a tool to register callbacks for OpenMP
+events and to inspect the state of an OpenMP thread while
+executing in a tool callback or a signal handler. The second set of entry points enables a
+tool to trace activities on a device. When directed by the tracing
+interface, an OpenMP implementation will trace activities on the device, collect
+buffers full of trace records, and invoke a callback on the host to
+process these records. 
+Runtime entry points for tools in an OpenMP implementation
+should not be global symbols since tools cannot rely on the visibility
+of such symbols in general.
 
-
-\subsubsection{\code{ompt\_function\_lookup\_t}}
-\label{sec:ompt_function_lookup_t}
-\label{sec:ompt_function_lookup}
-
-\summary
-A tool uses a lookup routine with type signature 
-\code{ompt\_function\_lookup\_t}
-to obtain pointers to runtime entry points that are
-part of an OpenMP implementation's OMPT interface.
-
-\format
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef ompt\_interface\_fn\_t (*\plc{ompt\_function\_lookup\_t}) (
-  const char *\plc{interface\_function\_name}
-);
-\end{boxedcode}
-\ccppspecificend
-}
-
-\descr
-
-An OpenMP implementation provides a pointer to a lookup routine 
-as an argument to tool and device initializers. A lookup routine
-enables a tool to obtain pointers to OMPT runtime tool entry points 
-for an OpenMP implementation's callback or tracing tool interfaces.
-
-\constraints
-A lookup routine with type
-signature \code{ompt\_function\_lookup\_t} takes a C string
-representing a routine in the OMPT interface of that device and
-returns a pointer to the corresponding function for that device.
-
-\crossreferences
-\begin{itemize}
-\item Table~\ref{table:host-ompt-interface-functions} 
-lists names and type signatures of
-host OMPT interface functions. 
-\item Table~\ref{table:device-ompt-interface-functions} lists 
-names and type signatures of device OMPT interface functions.
-\item Tool initializer, see \specref{sec:ompt_initialize_fn_t}.
-\end{itemize}
-
-\begin{table}
-{\small
-\begin{tabular}{ll}\hline
-Function name & Type signature\\\hline\hline
-\code{ompt\_get\_device\_time} & \code{ompt\_get\_device\_time\_t}\\
-\code{ompt\_translate\_time} & \code{ompt\_translate\_time\_t}\\
-\code{ompt\_set\_trace\_ompt} & \code{ompt\_set\_trace\_ompt\_t}\\
-\code{ompt\_set\_trace\_native} & \code{ompt\_set\_trace\_native\_t}\\
-\code{ompt\_start\_trace} & \code{ompt\_start\_trace\_t}\\
-\code{ompt\_pause\_trace} & \code{ompt\_pause\_trace\_t}\\
-\code{ompt\_stop\_trace} & \code{ompt\_stop\_trace\_t}\\
-\code{ompt\_advance\_buffer\_cursor} & \code{ompt\_advance\_buffer\_cursor\_t}\\
-\code{ompt\_buffer\_get\_record\_type} & \code{ompt\_buffer\_get\_record\_type\_t}\\
-\code{ompt\_buffer\_get\_record\_ompt} & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
-\code{ompt\_buffer\_get\_record\_native} & \code{ompt\_buffer\_get\_record\_native\_t}\\
-\code{ompt\_buffer\_get\_record\_native\_abstract} & \code{ompt\_buffer\_get\_record\_native\_abstract\_t}\\\hline
-\end{tabular}
-}
-\vskip 1ex
-\caption{Device OMPT interface function names and their type signatures.}
-\label{table:device-ompt-interface-functions} 
-\end{table}
+In addition, the OMPT interface supports
+entry points for two classes of lookup routines. The first
+class of lookup routines contains a single member: a
+routine that returns entry points in the OMPT callback interface. 
+The second class of lookup routines includes 
+a unique lookup routine for each kind of
+device that can return entry points in a device's OMPT tracing interface.
 
 \subsection{Entry Points in the OMPT Callback Interface}
+\label{sec:ompt-callback-entry-points}
 
-Inquiry functions enable a tool to retrieve data from the 
-current device's execution environment.
-These functions should not be global symbols in
-an OpenMP implementation so that tool developers cannot call
-them directly.  Section~\ref{sec:ToolsSupport_bind} describes how
-a tool should obtain pointers to these inquiry functions.
+Entry points in the OMPT callback interface enable a tool to register
+callbacks for OpenMP events and to inspect the state of an OpenMP thread while
+executing in a tool callback or a signal handler. 
+A tool obtains pointers to these entry points 
+using the lookup function passed to the tool's initializer for the
+callback interface.
 
-{\em All inquiry functions must be async signal safe} since they 
-are expected to be called from signal handlers. 
+{\em All entry points in the OMPT callback interface that 
+  inspect an OpenMP thread's state must be async signal safe} so
+that tools can call them from a signal handler.
 
 \begin{comment}
 OpenMP Runtime Library Routines are not guaranteed to be async
@@ -3376,12 +3506,9 @@ enumerate the thread states supported by an OpenMP implementation.
 When a thread state supported by an OpenMP implementation is passed
 as the first argument to the entry point,
 the entry point will assign the next thread state in the enumeration to
-the pointer passed as the entry point's second argument.
-
-The third argument passed to the entry point
-is the address of a character pointer that will be assigned a pointer
-to the name associated with the state value assigned to the pointer
-passed as the second argument.
+the variable passed by reference as the entry point's second argument
+and assign the name associated with the next thread state
+to the character pointer passed by reference as the third argument.
  
 Whenever one or more states are left in the enumeration, 
 the enumerate states entry point will return $1$.
@@ -3403,16 +3530,16 @@ supports, the following interface for enumerating all states that may be reporte
 \constraints
 
 The first argument passed to the enumerate states entry point must be
-the value for a valid thread state supported by the OpenMP implementation.  
+a thread state supported by the OpenMP implementation.  
 To begin enumerating the states that an OpenMP implementation supports,
-a tool should pass the value \code{omp\_state\_undefined} as the
+a tool should pass \code{omp\_state\_undefined} as the
 first argument to the enumerate states entry point.
 Subsequent invocations of the entry point by the tool
 should pass the value 
-assigned to the pointer passed as the second argument of the previous call.
+assigned to the variable passed by reference as the second argument to the previous call.
 
-The second and third arguments to the entry point must be non-\code{NULL} 
-pointers of the specified types.
+The second and third arguments to the entry point must be valid
+references to variables of the specified types.
 
 \vspace{2ex}
 
@@ -3421,14 +3548,14 @@ pointers of the specified types.
 enumerate all states supported by an OpenMP implementation.
 The example assumes that a pointer to an OpenMP implementation's enumerate
 states entry point has previously been assigned to a function pointer
-\code{ompt\_enumerate\_states}.
+\code{ompt\_enumerate\_states\_fn}.
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
 int state = omp_state_undefined;
 const char *state_name;
-while (ompt_enumerate_states(state, &state, &state_name)) \{
+while (ompt_enumerate_states_fn(state, &state, &state_name)) \{
   // note that the runtime supports a state value "state" 
   // associated with the name "state_name" 
 \}
@@ -3460,9 +3587,9 @@ an OpenMP implementation employs.
 \ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_enumerate_mutex_kinds_t)(
-  int current_kind, 
-  int *next_kind, 
-  const char **next_kind_name
+  int \plc{current_kind}, 
+  int *\plc{next_kind}, 
+  const char **\plc{next_kind_name}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3486,43 +3613,40 @@ Similarly, the \code{ompt\_event\_mutex\_acquire} callback receives
 the argument \code{kind} to indicate the implementation of a lock,
 critical section, atomic region, or ordered section. 
 \end{comment}
- 
+
 When a mutex kind supported by an OpenMP implementation is passed
-as the first argument to the entry point, the entry point 
-will assign the next mutex kind in the enumeration to
-the pointer passed as the second argument.
+as the first argument to the entry point,
+the entry point will assign the next mutex kind in the enumeration to
+the variable passed by reference as the entry point's second argument
+and assign the name associated with the next mutex kind 
+to the character pointer passed by reference as the third argument.
 
-The third argument passed to the entry point 
-is the address of a character pointer that will be assigned a pointer
-to the name associated with the mutex kind value assigned to the pointer
-passed as the second argument.
-
-Whenever one or more states are left in the enumeration, 
+Whenever one or more mutex kinds are left in the enumeration, 
 the enumerate mutex kinds entry point will return $1$.
-When the last state in the enumeration is passed 
+When the last mutex kind in the enumeration is passed 
 as the first argument, the entry point will return $0$ 
 indicating that the enumeration is complete.
 
 \constraints
 The first argument passed to the enumerate mutex kinds entry point must be
-the value for a valid mutex implementation kind supported
+a mutex implementation kind supported
 by an OpenMP implementation.  To begin enumerating the mutex
 implementation kinds that an OpenMP implementation supports, a tool
-should pass the value \code{ompt\_mutex\_kind\_unknown} as the first
+should pass \code{ompt\_mutex\_kind\_unknown} as the first
 argument of the enumerate mutex kinds entry point.  Subsequent invocations
 of the entry point by the tool should pass the
-value assigned to the pointer passed as the second argument of the
-previous call.
+value assigned to the variable passed by reference as the second
+argument to the previous call.
 
-The second and third arguments to the entry point must be non-\code{NULL} 
-pointers of the specified types.
+The second and third arguments to the entry point must be valid
+references to variables of the specified types.
 
 \needspace{6\baselineskip}\notestart
 \noteheader -- The following example illustrates how a tool can 
 enumerate all types of mutex implementations supported by an OpenMP runtime.
 The example assumes that a pointer to an OpenMP implementation's enumerate
 mutex kinds callback has previously been assigned to a function pointer
-\code{ompt\_enumerate\_mutex\_kinds}.
+\code{ompt\_enumerate\_mutex\_kinds\_fn}.
 
 \vspace{2ex}
 
@@ -3531,7 +3655,7 @@ mutex kinds callback has previously been assigned to a function pointer
 \begin{boxedcode}
 int kind = ompt_mutex_kind_unknown;
 const char *kind_name;
-while (ompt_enumerate_mutex_kinds(kind, &kind, &kind_name)) \{
+while (ompt_enumerate_mutex_kinds_fn(kind, &kind, &kind_name)) \{
   // note that the runtime supports a mutex value "kind" 
   // associated with the name "kind_name" 
 \}
@@ -3556,9 +3680,9 @@ OpenMP event occurs.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef int (*ompt\_set\_callback_t)(
-  ompt\_event\_t \plc{event},
-  ompt\_callback\_t \plc{callback}
+typedef int (*ompt_set_callback_t)(
+  ompt_event_t \plc{event},
+  ompt_callback_t \plc{callback}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -3567,18 +3691,21 @@ typedef int (*ompt\_set\_callback_t)(
 \descr
 
 To set tool callbacks for OpenMP events, a tool uses 
-an OpenMP implementation's tool entry point known as
-\code{ompt\_set\_callback}. 
+an OpenMP implementation's \code{ompt\_set\_callback} 
+entry point.
 
-The set callback entry point with type signature 
-\code{ompt\_set\_callback\_t} is
-used on the current device by a tool to install a 
-pointer to a tool callback that 
-an OpenMP implementation will invoke when an OpenMP event occurs on
-that device.
+A tool uses set callback entry point to install a 
+pointer to a tool callback that an OpenMP implementation 
+will invoke when an OpenMP event occurs on the current device.
+
+The return value of set callback may indicate several possible
+outcomes. Callback registration may fail if it is called outside the initializer for the
+callback interface. Otherwise, the return value of set callback 
+indicates whether or not the event may occur during execution and
+whether or not the callback will always be invoked or not.
 
 \constraints
-When a tool registers a callback for an event code \plc{event}, the type
+When a tool registers a callback for an event, the type
 signature for the callback must match the type signature appropriate for the
 event. 
 For an event with enumeration value name {\ttfamily\bfseries ompt\_event\_{\em xxx}}, 
@@ -3588,15 +3715,16 @@ the type signature for the event is {\ttfamily\bfseries ompt\_{\em xxx}\_callbac
 \centering
 \begin{tabular}{ll}
 \hline
-return code & meaning \\
+Return code & Meaning \\
 \hline
 0 & callback registration error\\
-1 & event may occur; no callback is possible\\
-2 & event will never occur in runtime\\
+1 & event will never occur\\
+2 & event may occur; no callback is possible\\
 3 & event may occur; callback invoked when convenient\\
 4 & event may occur; callback always invoked when event occurs\\
 \hline
 \end{tabular}
+\vskip 1ex
 \caption{Meaning of return codes for \code{ompt\_set\_callback}.}
 \label{table:ToolsSupport_set_rc}
 \end{table}
@@ -3636,14 +3764,18 @@ typedef int (*ompt_get_callback_t)(
 A tool uses an OpenMP implementation's tool entry point known 
 as \code{ompt\_get\_callback} 
 with type signature \code{ompt\_get\_callback\_t} is
-to obtain a pointer to the tool callback routine that 
+to obtain a pointer to the tool callback that 
 an OpenMP implementation will invoke when a host OpenMP event occurs. 
-If no tool callback is registered for the specified event, 
-\plc{*callback} will be set to \code{NULL}.
+If a non-\code{NULL} tool callback is registered for the specified event, 
+the pointer to the tool callback will be assigned to the variable
+passed by reference as the second argument and the entry
+point will return 1; otherwise, it will return 0. If the entry point
+returns 0, the value of the variable passed by reference as the second
+argument is undefined.
 
 \constraints
-The first argument to the get callback entry point is an enumeration
-type that specifies an OpenMP execution event.
+The second argument passed to the entry point must be a reference
+to a variable of specified type.
 
 \crossreferences
 \begin{itemize}
@@ -3661,7 +3793,7 @@ see \specref{sec:ompt_set_callback_t}.
 \summary
 An OpenMP implementation's tool entry point known as \code{ompt\_get\_thread\_data}
 with type signature \code{ompt\_get\_thread\_data\_t} 
-returns the address of the thread identifier for the current thread.
+returns the address of the thread data object for the current thread.
 
 \format
 \vbox{\ccppspecificstart
@@ -3671,12 +3803,20 @@ typedef ompt_data_t *(*ompt_get_thread_data_t)(void);
 \ccppspecificend}
 
 \descr
-If the current thread is unknown to the OpenMP runtime, the function
-returns NULL.  A tool can check if the thread identifier is in its
-initial state by comparing against \code{ompt\_data\_none}.  A tool
-may modify the identifier.  
 
-{\em This callback is async signal safe.}
+Each OpenMP thread has an associated thread data object of type
+\code{ompt\_data\_t}. The \code{ompt\_get\_thread\_data} entry point
+returns a pointer to the thread data object, if any, associated with the
+current thread. If the current thread is unknown to the OpenMP
+runtime, the entry point returns \code{NULL}.
+
+A tool may use a pointer to an OpenMP thread's data object that it
+obtains from this entry point to 
+inspect or modify the value of the data object.
+When an OpenMP thread is created, its data object will be initialized
+with value \code{ompt\_data\_none}.  
+
+{\em This entry point is async signal safe.}
 
 \subsubsection{\code{ompt\_get\_state\_t}}
 \label{sec:ompt_get_state_t}
@@ -3692,24 +3832,44 @@ current thread.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef omp_state_t (*ompt_get_state_t)(
-  ompt_wait_id_t *wait_id       
+  ompt_wait_id_t *\plc{wait_id}       
 );
 \end{boxedcode}
 \ccppspecificend}
 
 \descr
-If the returned state indicates that the thread is waiting for a
-lock, nest lock, critical section, atomic region, or ordered region,
-it will fill in \code{*wait\_id} with the wait identifier associated
-with the state.  
 
-{\em This callback is async signal safe.}
+Each OpenMP thread has an associated state and a wait identifier.  If
+a thread's state indicates that the thread is waiting for mutual
+exclusion, the thread's wait identifier will contain an opaque handle
+that indicates the data object upon which the thread is waiting.
+
+The \code{ompt\_get\_state} entry point with type signature
+\code{ompt\_get\_state\_t} is used to retrieve the state and the wait
+identifier of the current thread.
+
+If the returned state indicates that the thread is waiting for a
+lock, nest lock, critical section, atomic region, or ordered region
+and the pointer passed as the argument to the
+entry point is not \code{NULL}, 
+the entry point will assign the value of the thread's wait identifier to the
+wait identifier passed by reference.
+If the returned state is not one of the specified wait states,
+the value of a wait identifier passed by reference to the entry
+point is undefined following the call.
+
+{\em This entry point is async signal safe.}
+
+\constraints
+The argument passed to the entry point must be a reference
+to the specified data type or \code{NULL}.
 
 \subsubsection{\code{ompt\_get\_parallel\_info\_t}} 
 \label{sec:ompt_get_parallel_info_t}
 \label{sec:ompt_get_parallel_info}
 
 \summary
+
 An OpenMP implementation's tool entry point known as \code{ompt\_get\_parallel\_info} 
 with type signature \code{ompt\_get\_parallel\_info\_t} 
 returns information about
@@ -3720,28 +3880,51 @@ current execution context.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_get_parallel_info_t)(
-  int ancestor_level,
-  ompt_data_t **parallel_data,
-  int *team_size
+  int \plc{ancestor_level},
+  ompt_data_t **\plc{parallel_data},
+  int *\plc{team_size}
 );
 \end{boxedcode}
 \ccppspecificend}
 
 \descr
-Ancestor level 0 refers to the current parallel region; information
-about enclosing parallel regions may be obtained using higher
-ancestor levels.  Function \code{ompt\_get\_parallel\_info} returns a
-Boolean, which indicates whether there is a parallel region at the
-specified ancestor level.  The function results \code{**parallel\_data}
-and \code{*team\_size} indicate properties of the parallel region
-at the specified ancestor level.  If there is no enclosing parallel
-region at the specified ancestry level, the address of the provided
-parallel region identifier \code{*parallel\_data} equals NULL and
-the value of \code{*team\_size} is undefined.  A tool can check if
-the parallel region identifier is in its initial state by comparing
-against \code{ompt\_data\_none}.  A tool may modify the identifier.
+During execution, an OpenMP program may employ nested parallel
+regions. An OpenMP implementation's \code{ompt\_get\_parallel\_info} entry point
+with type signature \code{ompt\_get\_parallel\_info\_t} 
+can be used to obtain information about the current parallel region,
+if any, and any enclosing parallel regions. 
 
-{\em This callback is async signal safe.}
+The first argument to the entry point specifies the ancestor level of the parallel region
+of interest to a tool.
+Ancestor level 0 refers to the innermost parallel region; information
+about enclosing parallel regions may be obtained using higher
+ancestor levels.  The \code{ompt\_get\_parallel\_info} entry point
+returns 1 if there is a parallel region at the
+specified ancestor level and 0 otherwise. 
+
+If an enclosing parallel region exists at the specified ancestor
+level, a reference to the parallel region's associated data object will be
+assigned to the pointer passed by reference as the second
+argument to the entry point and the number of threads in the team associated with the 
+parallel region will be assigned to the variable passed as the third
+argument to the entry point.
+
+If no enclosing parallel region exists at the specified ancestor
+level, the values of the variables provided by reference as the second
+and third arguments to the entry point are undefined following the
+call.
+
+A tool may use the pointer to a parallel region's data object that it
+obtains from this entry point to inspect or modify the value of the
+data object.
+When a parallel region is created, its data object will be initialized
+with the value \code{ompt\_data\_none}.  
+
+{\em This entry point is async signal safe.}
+
+\constraints
+The second and third arguments to the entry point must be references
+to the specified data types.
 
 \subsubsection{\code{ompt\_get\_task\_info\_t}}
 \label{sec:ompt_get_task_info_t}
@@ -3757,12 +3940,12 @@ context.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_get_task_info_t)(
-  int ancestor_level,
-  ompt_task_type_t *type,
-  ompt_data_t **task_data,
-  ompt_frame_t **task_frame,
-  ompt_data_t **parallel_data,
-  int *thread_num
+  int \plc{ancestor_level},
+  ompt_task_type_t *\plc{type},
+  ompt_data_t **\plc{task_data},
+  ompt_frame_t **\plc{task_frame},
+  ompt_data_t **\plc{parallel_data},
+  int *\plc{thread_num}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -3774,7 +3957,7 @@ higher ancestor levels.  Function \code{ompt\_get\_task\_info\_t} returns
 a Boolean, which indicates whether there is a task at the specified
 ancestor level.  
 
-{\em This callback is async signal safe.}
+{\em This entry point is async signal safe.}
 
 A task may be of type initial, implicit, explicit,  target, or
 degenerate.  If the task at the specified level is degenerate, the
@@ -3814,8 +3997,8 @@ thread's current target region and target operation id, if any.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_get_target_info_t)(
-  ompt_id_t *target_id,
-  ompt_id_t *host_op_id
+  ompt_id_t *\plc{target_id},
+  ompt_id_t *\plc{host_op_id}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -3829,7 +4012,7 @@ returns \code{true}, the value for \code{*host\_op\_id} will be
 of initiating an operation on a target (e.g., copying data to or
 from an accelerator or launching a kernel).  
 
-{\em This callback is async signal safe.}
+{\em This entry point is async signal safe.}
 
 \crossreferences
 \begin{itemize}
@@ -3858,7 +4041,7 @@ function is invoked by a thread not executing in the scope of a
 \code{target}, \code{target data}, or \code{target update} construct,
 the return value is undefined. 
 
-{\em This callback is async signal safe.}
+{\em This entry point is async signal safe.}
 
 
 \begin{comment}
@@ -3875,11 +4058,11 @@ returns information about a specified device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_get_device_info_t)(
-  int32_t device_id, 
-  const char **type, 
-  ompt_device_t **device,
-  ompt_function_lookup_t *lookup,
-  const char **documentation
+  int32_t \plc{device_id}, 
+  const char **\plc{type}, 
+  ompt_device_t **\plc{device},
+  ompt_function_lookup_t *\plc{lookup},
+  const char **\plc{documentation}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -3937,10 +4120,11 @@ function is invoked by a thread not executing in the scope of a
 {\ttfamily target}, {\ttfamily target data}, or {\ttfamily target update} construct,
 then it will return a value of -1. 
 
-{\em This callback is async signal safe.}
+{\em This entry point is async signal safe.}
 
-\subsection{Tracing Entry Points}
-\subsection{Tracing Callback Signatures}
+\subsection{Entry Points in the OMPT Tracing Interface}
+\label{sec:ompt-tracing-entry-points}.
+
 \subsubsection{\code{ompt\_get\_device\_time\_t}}
 \label{sec:ompt_get_device_time_t}
 
@@ -3953,7 +4137,7 @@ returns the current time on a specified device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef ompt_device_time_t (*ompt_get_device_time_t)(
-  ompt_device_t *device
+  ompt_device_t *\plc{device}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -3980,8 +4164,8 @@ value on the host device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef double (*ompt_translate_time_t)(
-  ompt_device_t *device,
-  ompt_device_time_t time
+  ompt_device_t *\plc{device},
+  ompt_device_time_t \plc{time}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4009,9 +4193,9 @@ types of OMPT events.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_set_trace_ompt_t)(
-  ompt_device_t *device,
-  _Bool enable,
-  ompt_event_t etype
+  ompt_device_t *\plc{device},
+  int \plc{enable},
+  ompt_event_t \plc{etype}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4058,9 +4242,9 @@ enables or disables the recording of native trace records for a device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_set_trace_native_t)(
-  ompt_device_t *device,
-  int enable,
-  int  flags
+  ompt_device_t *\plc{device},
+  int \plc{enable},
+  int  \plc{flags}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4104,10 +4288,10 @@ starts tracing of activity on a specific device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_start_trace_t)(
-  ompt_device_t *device,
-  ompt_buffer_request_callback_t request,
-  ompt_buffer_complete_callback_t complete,
-  ompt_get_target_info_callback_t get_info
+  ompt_device_t *\plc{device},
+  ompt_buffer_request_callback_t \plc{request},
+  ompt_buffer_complete_callback_t \plc{complete},
+  ompt_get_target_info_callback_t \plc{get_info}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4124,8 +4308,8 @@ pauses or restarts activity tracing on a specific device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_pause_trace_t)(
-  ompt_device_t *device,
-  int begin_pause
+  ompt_device_t *\plc{device},
+  int \plc{begin_pause}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4142,7 +4326,7 @@ stops tracing for a device.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_stop_trace_t)(
-  ompt_device_t *device
+  ompt_device_t *\plc{device}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4173,10 +4357,10 @@ advances a trace buffer cursor to the next record.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_advance_buffer_cursor_t)(
-  ompt_buffer_t *buffer,
-  size_t size, 
-  ompt_buffer_cursor_t current, 
-  ompt_buffer_cursor_t *next
+  ompt_buffer_t *\plc{buffer},
+  size_t \plc{size}, 
+  ompt_buffer_cursor_t \plc{current}, 
+  ompt_buffer_cursor_t *\plc{next}
 ); 
 \end{boxedcode}
 \ccppspecificend}
@@ -4197,8 +4381,8 @@ of a trace record.
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef ompt_record_type_t (*ompt_buffer_get_record_type_t)(
-  ompt_buffer_t *buffer, 
-  ompt_buffer_cursor_t current
+  ompt_buffer_t *\plc{buffer}, 
+  ompt_buffer_cursor_t \plc{current}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4225,8 +4409,8 @@ obtains a pointer to an OMPT trace record from a trace buffer associated with a 
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef ompt_record_ompt_t *(*ompt_buffer_get_record_ompt_t)(
-  ompt_buffer_t *buffer, 
-  ompt_buffer_cursor_t current
+  ompt_buffer_t *\plc{buffer}, 
+  ompt_buffer_cursor_t \plc{current}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4258,9 +4442,9 @@ obtains a pointer to a native trace record from a trace buffer associated with a
 \vbox{\ccppspecificstart
 \begin{boxedcode}
 typedef void *(ompt_buffer_get_record_native_t)(
-  ompt_buffer_t *buffer, 
-  ompt_buffer_cursor_t current,
-  ompt_id_t *host_op_id
+  ompt_buffer_t *\plc{buffer}, 
+  ompt_buffer_cursor_t \plc{current},
+  ompt_id_t *\plc{host_op_id}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4291,7 +4475,7 @@ summarizes the context of a native trace record.
 \begin{boxedcode}
 typedef ompt_record_native_abstract_t *
 (*ompt_buffer_get_record_native_abstract_t)(
-  void *native_record 
+  void *\plc{native_record} 
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -4319,5 +4503,105 @@ such as a core or a hardware thread id. The meaning of a \code{hwid}
 value for a device is defined by the implementer of the software
 stack for the device. If there is no \code{hwid} associated with a
 record, the value of \code{hwid} shall be \code{ompt\_hwid\_none}.
+
+
+\subsection{Lookup Entry Point Signature}
+
+\subsubsection{\code{ompt\_function\_lookup\_t}}
+\label{sec:ompt_function_lookup_t}
+\label{sec:ompt_function_lookup}
+
+\summary
+A tool uses a lookup routine with type signature 
+\code{ompt\_function\_lookup\_t}
+to obtain pointers to entry points that are
+part of an OpenMP implementation's OMPT interface.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef ompt_interface_fn_t (*\plc{ompt_function_lookup_t}) (
+  const char *\plc{interface_function_name}
+);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+
+An OpenMP implementation provides a pointer to a lookup routine as an
+argument to tool callbacks used to initialize tool support for
+monitoring an OpenMP device using either tracing or callbacks.
+
+\begin{comment}
+When an OpenMP runtime implementation is initialized for a device,
+if a tool callback to initialize tracing for devices has been provided
+to the OpenMP implementation by \verb|ompt_tool|, 
+it will be invoked on the host. The OpenMP implementation will pass the
+tool's device tracing initializer callback a lookup routine that the tool
+can use to obtain pointers to runtime entry points that implement
+tracing control routines appropriate for that device. 
+
+If a tool callback to initialize monitoring using the OMPT callback
+interface has been provided to the OpenMP implementation by
+\verb|ompt_tool| and it is invoked on a device,
+the initializer will be passed a lookup function to   
+obtain pointers to runtime entry points that implement
+routines used by the OpenMP implementation's callback interface.
+\end{comment}
+
+When an OpenMP implementation invokes a tool initializer to configure
+the OMPT callback interface, the OpenMP implementation will pass the
+initializer a lookup function that the tool can use to obtain 
+pointers to entry points that implement routines that are part of 
+the OpenMP implementation's callback interface.
+
+When an OpenMP implementation invokes a tool initializer to configure
+the OMPT tracing interface for a device, the Open implementation will
+pass the device tracing initializer a lookup function that the tool
+can use to obtain pointers to entry points that implement
+tracing control routines appropriate for that device. 
+
+\constraints
+A lookup routine with type
+signature \code{ompt\_function\_lookup\_t} takes a C string
+that represents the name of an entry point in an interface
+and returns a pointer to the corresponding entry point.
+
+\crossreferences
+\begin{itemize}
+\item Tool initializer for the OMPT callback interface, \specref{sec:ompt_initialize_fn_t}
+\item Entry points in the OMPT callback interface, see
+  \tabref{table:ompt-callback-interface-functions} for a list and
+  \specref{sec:ompt-callback-entry-points} for detailed definitions.
+\item Tool initializer for a device's OMPT tracing interface, \specref{sec:ompt_event_device_initialize}.
+\item Entry points in the OMPT tracing interface, see
+  \tabref{table:ompt-tracing-interface-functions} for a list and
+  \specref{sec:ompt-tracing-entry-points} for detailed definitions.
+\end{itemize}
+
+\begin{table}
+{\small
+\begin{tabular}{ll}\hline
+Function name & Type signature\\\hline\hline
+\code{ompt\_get\_device\_time} & \code{ompt\_get\_device\_time\_t}\\
+\code{ompt\_translate\_time} & \code{ompt\_translate\_time\_t}\\
+\code{ompt\_set\_trace\_ompt} & \code{ompt\_set\_trace\_ompt\_t}\\
+\code{ompt\_set\_trace\_native} & \code{ompt\_set\_trace\_native\_t}\\
+\code{ompt\_start\_trace} & \code{ompt\_start\_trace\_t}\\
+\code{ompt\_pause\_trace} & \code{ompt\_pause\_trace\_t}\\
+\code{ompt\_stop\_trace} & \code{ompt\_stop\_trace\_t}\\
+\code{ompt\_advance\_buffer\_cursor} & \code{ompt\_advance\_buffer\_cursor\_t}\\
+\code{ompt\_buffer\_get\_record\_type} & \code{ompt\_buffer\_get\_record\_type\_t}\\
+\code{ompt\_buffer\_get\_record\_ompt} & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
+\code{ompt\_buffer\_get\_record\_native} & \code{ompt\_buffer\_get\_record\_native\_t}\\
+\code{ompt\_buffer\_get\_record\_native\_abstract} & \code{ompt\_buffer\_get\_record\_native\_abstract\_t}\\\hline
+\end{tabular}
+}
+\vskip 1ex
+\caption{OMPT tracing interface entry point names and their type signatures.}
+\label{table:ompt-tracing-interface-functions} 
+\end{table}
 
 % This is the end of ch4-toolsSupport.tex
