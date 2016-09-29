@@ -817,7 +817,7 @@ When a thread is not in a wait state, a thread's wait identifier has an undefine
 %%             we could zero it out, but that would cost more.
 
 \begin{targetRecord}
-\subsection{Record Types and Buffer Management}
+\subsection{Tracing Support}
 \label{sec:ompt-records}
 
 \subsubsection{Record Kind}
@@ -856,251 +856,6 @@ typedef struct ompt_record_native_abstract_s \{
   ompt_target_time_t \plc{end\_time};
   uint64_t \plc{hwid};
 \} ompt_record_native_abstract_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\subsubsection{Record Types}
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_thread_begin_s \{
-  ompt_thread_type_t \plc{thread_type};    /* type of thread */
-\} ompt_record_thread_begin_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_idle_s \{
-  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end */
-\} ompt_record_idle_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_parallel_begin_s \{
-  ompt_id_t \plc{parent_task_id};          /* ID of parent task           */
-  const ompt_frame_t *\plc{parent_frame};  /* frame data of parent task   */
-  ompt_id_t \plc{parallel_id};             /* ID of parallel region       */
-  uint32_t \plc{requested_team_size};      /* requested number of threads */
-  ompt_invoker_t \plc{invoker};            /* who invokes master task?    */
-  const void *\plc{codeptr_ra};            /* return address of api call  */
-\} ompt_record_parallel_begin_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_parallel_end_s \{
-  ompt_id_t \plc{parallel_id};             /* ID of parallel region       */
-  ompt_id_t \plc{task_id};                 /* ID of task                  */
-  ompt_invoker_t \plc{invoker};            /* who invokes master task?    */
-  const void *\plc{codeptr_ra};            /* return address of api call  */ 
-\} ompt_record_parallel_end_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_task_create_s \{
-  ompt_id_t \plc{parent_task_id};          /* ID of parent task           */
-  const ompt_frame_t *\plc{parent_frame};  /* frame data for parent task  */
-  ompt_id_t \plc{new_task_id};             /* ID of created task          */
-  ompt_task_type_t \plc{type};             /* type of task being created  */ 
-  int \plc{has_dependences};               /* task has data dependences   */
-  const void *\plc{codeptr_ra};            /* return address of api call  */ 
-\} ompt_record_task_create_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-/* note: not task dependences record since it points to data       */
-/*        rather than containing it                                */
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_task_dependence_s \{
-  ompt_id_t \plc{src_task_id};             /* ID of dependence source     */
-  ompt_id_t \plc{sink_task_id};            /* ID of dependence sink       */
-\} ompt_record_task_dependence_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_task_schedule_s \{
-  ompt_id_t \plc{prior_task_id};           /* ID of descheduled task      */
-  int \plc{prior_completed};               /* true if prior task completed*/
-  ompt_id_t \plc{next_task_id};            /* ID of scheduled task        */
-\} ompt_record_task_schedule_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_scoped_implicit_s \{
-  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end                */
-  ompt_id_t \plc{parallel_id};             /* ID of parallel region       */
-  ompt_id_t \plc{task_id};                 /* ID of task                  */
-  uint32_t \plc{thread_num};               /* OMP thread num              */
-\} ompt_record_scoped_implicit_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_scoped_sync_region_s \{
-  ompt_sync_region_kind_t \plc{kind};      /* barrier, taskwait, taskgroup*/
-  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end                */ 
-  ompt_id_t \plc{parallel_id};             /* ID of parallel region       */
-  ompt_id_t  \plc{task_id};                /* ID of task                  */
-  const void *\plc{codeptr_ra};            /* return address of api call  */
-\} ompt_record_scoped_sync_region_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_lock_init_s \{
-  int \plc{is_nest_lock};                  /* nested lock or not          */
-  ompt_wait_id_t wait_id,                  /* wait ID                     */
-  uint32_t hint,                           /* OMP lock hint               */
-  uint32_t kind,                           /* implementation kind         */
-  const void *\plc{codeptr_ra};            /* return address of api call  */          
-\} ompt_record_lock_init_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_lock_destroy_s \{
-  int \plc{is_nest_lock};                  /* nested lock or not          */
-  ompt_wait_id_t \plc{wait_id};            /* ID of mutex being awaited   */
-  const void *\plc{codeptr_ra};            /* return address of api call  */       
-\} ompt_record_lock_destroy_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_mutex_acquire_s \{
-  ompt_mutex_kind_t \plc{kind};            /* kind of mutex               */
-  uint32_t \plc{hint};                     /* based on OMP lock hint      */
-  uint32_t \plc{impl};                     /* implementation of mutex     */
-  ompt_wait_id_t \plc{wait_id};            /* ID of mutex being awaited   */
-  const void *\plc{codeptr_ra};            /* return address of api call  */          
-\} ompt_record_mutex_acquire_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_mutex_s \{
-  ompt_mutex_kind_t \plc{kind};             /* type of mutex               */
-  ompt_wait_id_t \plc{wait_id};             /* ID of mutex being awaited   */
-  const void *\plc{codeptr_ra};             /* return address of api call  */       
-\} ompt_record_mutex_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_scoped_nested_lock_s \{
-  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end                */
-  ompt_wait_id_t \plc{wait_id};            /* ID of mutex being awaited   */
-  const void *\plc{codeptr_ra};            /* return address of api call  */       
-\} ompt_record_scoped_nested_lock_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_target_data_s \{
-  ompt_id_t \plc{host_op_id};              /* host side ID for operation  */
-  ompt_target_data_op_t \plc{optype};      /* type of operation           */
-  void *\plc{host_addr};                   /* host address of the data    */
-  void *\plc{device_addr};                 /* device address of the data  */ 
-  size_t \plc{bytes};                      /* number of bytes mapped      */
-  ompt_target_time_t \plc{end_time};       /* end time                    */
-\} ompt_record_target_data_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_target_kernel_s \{
-  ompt_id_t \plc{host_op_id};              /* host side ID for operation  */
-  uint32_t \plc{granted_num_teams};        /* number of teams granted     */
-  ompt_target_time_t \plc{end_time};       /* end time                    */
-\} ompt_record_target_kernel_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_scoped_master_s \{
-  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end                */
-  ompt_id_t \plc{parallel_id};             /* ID of parallel region       */
-  ompt_id_t  \plc{task_id};                /* ID of task                  */
-  const void *\plc{codeptr_ra};            /* return address of api call  */
-\} ompt_record_scoped_master_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_scoped_worksharing_s \{
-  ompt_worksharing_type_t \plc{wstype};    /* loop, sections, single ...  */
-  ompt_scope_endpoint_t \plc{endpoint};    /* begin or end                */
-  ompt_id_t \plc{parallel_id};             /* ID of parallel region       */
-  ompt_id_t \plc{task_id};                 /* ID of task                  */
-  const void *\plc{codeptr_ra};            /* return address of api call  */
-\} ompt_record_scoped_worksharing_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_flush_s \{
-  void *\plc{codeptr_ra};                  /* return address of api call  */
-\} ompt_record_flush_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2166,7 +1921,7 @@ or completing execution of any environment routine invocation.
 \end{itemize}
 \end{comment}
 
-\section{Tool Callback Signatures}
+\section{Tool Callback Signatures and Tracing Records}
 \subsection{Initializer Callback Signature}
 
 \subsubsection{\code{ompt\_initialize\_fn\_t}}
@@ -2266,7 +2021,7 @@ that a particular OpenMP implementation employs.
 \end{itemize}
 
 
-\subsection{Event Callback Signatures}
+\subsection{Event Callback Signatures and Tracing Records}
 \index{event callback signatures}
 \label{sec:ToolsSupport_callback_signatures}
 
@@ -2287,6 +2042,20 @@ typedef void (*ompt_thread_begin_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_thread_begin_s \{
+  ompt_thread_type_t \plc{thread_type};
+\} ompt_record_thread_begin_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The callback with type signature \code{ompt\_thread\_begin\_callback\_t},
 includes a parameter \plc{thread\_type}
@@ -2310,7 +2079,7 @@ The binding of \plc{thread\_data} is the new thread.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_thread\_end\_callback\_t) (
+typedef void (*ompt_thread_end_callback_t) (
   ompt_data_t *\plc{thread_data}
 );
 \end{boxedcode}
@@ -2334,12 +2103,26 @@ The binding of \plc{thread\_data} is the finished thread.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt\_idle\_callback\_t) (
+typedef void (*ompt_idle_callback_t) (
   ompt_scope_endpoint_t \plc{endpoint}
 );
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_idle_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+\} ompt_record_idle_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The callback with type signature \code{ompt\_idle\_callback\_t},
 includes a parameter \plc{endpoint}
@@ -2362,7 +2145,7 @@ that indicates whether the callback signals the begin or end of the scope.
 \begin{boxedcode}
 typedef void (*ompt_parallel_begin_callback_t) (
                ompt_data_t * \plc{parent_task_data},
-               const ompt_frame\_t * \plc{parent_frame},
+               const ompt_frame_t * \plc{parent_frame},
                ompt_data_t * \plc{parallel_data},
                unsigned int \plc{requested_team_size},
                unsigned int \plc{actual_team_size},
@@ -2372,6 +2155,24 @@ typedef void (*ompt_parallel_begin_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_parallel_begin_s \{
+  ompt_id_t \plc{parent_task_id};
+  const ompt_frame_t *\plc{parent_frame};
+  ompt_id_t \plc{parallel_id};
+  unsigned int \plc{requested_team_size};
+  ompt_invoker_t \plc{invoker};
+  const void *\plc{codeptr_ra};
+\} ompt_record_parallel_begin_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
 
 \descr
 The callbacks with type signature \code{ompt\_parallel\_begin\_callback\_t},
@@ -2410,6 +2211,22 @@ typedef void (*ompt_parallel_end_callback_t) (
 \ccppspecificend
 }
 
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_parallel_end_s \{
+  ompt_id_t \plc{parallel_id}; 
+  ompt_id_t \plc{task_id};
+  ompt_invoker_t \plc{invoker};
+  const void *\plc{codeptr_ra};
+\} ompt_record_parallel_end_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The callbacks with type signature \code{ompt\_parallel\_begin\_callback\_t}
 include a parameter \plc{invoker} which explains whether the execution of the parallel
@@ -2443,6 +2260,22 @@ typedef void (*\plc{ompt_scoped_master_callback_t}) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_scoped_master_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t  \plc{task_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_master_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
 
 \descr
 The callbacks with type signature \code{ompt\_scoped\_master\_callback\_t}
@@ -2485,6 +2318,25 @@ typedef void (*ompt_task_create_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_task_create_s \{
+  ompt_id_t \plc{parent_task_id};
+  const ompt_frame_t *\plc{parent_frame};
+  ompt_id_t \plc{new_task_id};
+  ompt_task_type_t \plc{type};
+  _Bool \plc{has_dependences};
+  const void *\plc{codeptr_ra};
+\} ompt_record_task_create_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The callbacks with type signature \code{ompt\_task\_create\_callback\_t},
 include a parameter \plc{parent\_frame}
@@ -2520,6 +2372,13 @@ typedef void (*ompt_task_dependences_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+/* note: not task dependences record since it points to data       */
+/*        rather than containing it                                */
+\end{targetRecord}
+
 \descr
 The callback with type signature \code{ompt\_task\_dependences\_callback\_t},
 includes a parameter \plc{deps} that lists all dependences of a new task and
@@ -2552,6 +2411,21 @@ typedef void (*ompt_task_dependence_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_task_dependence_s \{
+  ompt_id_t \plc{src_task_id};
+  ompt_id_t \plc{sink_task_id};
+\} ompt_record_task_dependence_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The binding of \plc{src\_task\_data} is a running task with an out dependency.
 The binding of \plc{sink\_task\_data} is a task with a non-satisfied in dependency.
@@ -2579,6 +2453,22 @@ typedef void (*ompt_task_schedule_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_task_schedule_s \{
+  ompt_id_t \plc{prior_task_id};
+  _Bool \plc{prior_completed};
+  ompt_id_t \plc{next_task_id};
+\} ompt_record_task_schedule_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The callback with type signature \code{ompt\_task\_schedule\_callback\_t},
 include a parameter \plc{prior\_completed}
@@ -2611,6 +2501,23 @@ typedef void (*ompt_scoped_implicit_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_scoped_implicit_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t \plc{task_id};
+  unsigned int \plc{thread_num};
+\} ompt_record_scoped_implicit_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr
 The callback with type signature \code{ompt\_scoped\_implicit\_callback\_t},
 includes a parameter \plc{endpoint} that indicates whether the callback signals
@@ -2649,8 +2556,25 @@ typedef void (*ompt_scoped_sync_region_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
-\descr 
 
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_scoped_sync_region_s \{
+  ompt_sync_region_kind_t \plc{kind};
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t  \plc{task_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_sync_region_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
+\descr 
 A tool executes a callback with type signature
 \code{ompt\_sync\_region\_callback\_t} to receive notification of
 event \code{ompt\_sync\_region\_callback\_t} when an OpenMP
@@ -2699,6 +2623,24 @@ typedef void (*ompt_lock_init_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_lock_init_s \{
+  _Bool \plc{is_nest_lock};
+  ompt_wait_id_t wait_id;
+  unsigned int hint;
+  unsigned int kind;
+  const void *\plc{codeptr_ra};
+\} ompt_record_lock_init_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_lock\_init\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2730,6 +2672,22 @@ typedef void (*ompt_lock_destroy_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_lock_destroy_s \{
+  _Bool \plc{is_nest_lock};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_lock_destroy_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_lock\_destroy\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2763,6 +2721,24 @@ typedef void (*ompt_mutex_acquire_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_mutex_acquire_s \{
+  ompt_mutex_kind_t \plc{kind};
+  unsigned int \plc{hint};
+  unsigned int \plc{impl};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_mutex_acquire_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_mutex\_acquire\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2796,6 +2772,22 @@ typedef void (*ompt_mutex_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_mutex_s \{
+  ompt_mutex_kind_t \plc{kind};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_mutex_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_mutex\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2829,6 +2821,22 @@ typedef void (*ompt_scoped_nested_lock_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_scoped_nested_lock_s \{
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_wait_id_t \plc{wait_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_nested_lock_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_scoped\_nested\_lock\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2868,6 +2876,24 @@ typedef void (*ompt_scoped_worksharing_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_scoped_worksharing_s \{
+  ompt_worksharing_type_t \plc{wstype};
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t \plc{task_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_worksharing_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_scoped\_worksharing\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2906,6 +2932,20 @@ typedef void (*ompt_flush_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_flush_s \{
+  void *\plc{codeptr_ra};
+\} ompt_record_flush_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_flush\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2930,7 +2970,7 @@ region code is inlined into the application code or started by the runtime.
 \ccppspecificstart
 \begin{boxedcode}
 typedef void (*ompt_scoped_target_callback_t) (
-  int32_t \plc{device_id},
+  int \plc{device_id},
   ompt_target_type_t \plc{kind},
   ompt_data_t *\plc{task_data},
   ompt_scope_endpoint_t \plc{endpoint},
@@ -2940,6 +2980,25 @@ typedef void (*ompt_scoped_target_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_scoped_target_s \{
+  int \plc{device_id};
+  ompt_target_type_t \plc{kind};
+  ompt_data_t *\plc{task_data};
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{target_id};
+  const void *\plc{codeptr_ra};
+\} ompt_record_scoped_target_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_scoped\_target\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -2986,6 +3045,24 @@ typedef void (*ompt_target_data_callback_t) (
 \ccppspecificend
 }
 
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_target_data_s \{
+  ompt_id_t \plc{host_op_id};
+  ompt_target_data_op_t \plc{optype};
+  void *\plc{host_addr};
+  void *\plc{device_addr};
+  size_t \plc{bytes};
+  ompt_target_time_t \plc{end_time};
+\} ompt_record_target_data_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_target\_data\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -3022,6 +3099,25 @@ typedef void (*ompt_target_data_map_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void ompt_record_target_data_map_s \{
+  ompt_id_t \plc{target_id};
+  unsigned int \plc{nitems};
+  void **\plc{host_addr};
+  void **\plc{device_addr};
+  size_t *\plc{bytes};
+  unsigned int *\plc{mapping_flags};
+\} ompt_record_target_data_map_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_target\_data\_map\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -3054,6 +3150,34 @@ typedef void (*ompt_target_submit_callback_t) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_target_submit_s \{
+  ompt_id_t \plc{target_id};
+  ompt_id_t \plc{host_op_id};
+  unsigned int \plc{requested_num_teams};
+  unsigned int \plc{granted_num_teams};
+\} ompt_record_target_submit_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_target_kernel_s \{
+  ompt_id_t \plc{host_op_id};
+  unsigned int \plc{granted_num_teams};
+  ompt_target_time_t \plc{end_time};
+\} ompt_record_target_kernel_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
+
 \descr ToDo
 The callbacks with type signature \code{ompt\_target\_submit\_callback\_t},
 include a parameter \plc{requested\_team\_size}
@@ -3083,7 +3207,7 @@ buffer to store event records for a device.
 \ccppspecificstart
 \begin{boxedcode}
 typedef void (*ompt_buffer_request_callback_t) (
-  int32_t \plc{device_id},
+  int \plc{device_id},
   ompt_buffer_t** \plc{buffer},
   size_t *\plc{bytes}
 );
@@ -3129,7 +3253,7 @@ A device triggers a call to \code{ompt\_buffer\_complete\_callback\_t} when no f
 \ccppspecificstart
 \begin{boxedcode}
 typedef void (*ompt_buffer_complete_callback_t) (
-  int32_t \plc{device_id},
+  int \plc{device_id},
   const ompt_buffer_t *\plc{buf},
   size_t \plc{bytes},
   ompt_buffer_cursor_t \plc{begin},
