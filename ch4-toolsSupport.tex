@@ -696,89 +696,6 @@ typedef enum ompt_event_t \{
 \end{boxedcode}
 \ccppspecificend
 }
-
-\subsection{Identifiers for Tracing}
-\label{sec:identifiers}
-
-Since a tool receives trace records for devices asynchronously, a
-tool cannot store data in an \code{ompt\_data\_t} field when device
-events happen.  For that reason, trace records for OpenMP threads,
-parallel regions, task regions use an identifier of type \code{ompt\_id\_t}
-rather than providing a tool access to a data field in their runtime
-representation.  A thread or region's identifier is assigned when
-the thread or region is created.  On each device, such identifiers
-are unique from the time an OpenMP runtime is initialized until it
-is shut down.  Tools should not assume that \code{ompt\_id\_t} values
-are small or densely allocated. The value \code{ompt\_id\_none} is
-reserved to indicate an invalid id.
-
-
-\littleheader{Thread Identifier}
-\index{Thread Identifier}
-
-Each OpenMP thread  has an associated identifier of type \code{ompt\_thread\_id\_t}.
-\begin{comment}
-\begin{boxedcode}
-typedef unsigned long long int ompt_thread_id_t;
-\end{boxedcode}
-\end{comment}
-  A thread's identifier is assigned when the thread is created.
-  Identifiers assigned to threads on each device are unique from the time an OpenMP implementation is initialized until it is shut down.
-  A thread identifier can be retrieved
-  on demand by invoking the  \code{ompt\_get\_thread\_id}
-  function (described in Section~\ref{sec:thread-inquiry}).
-  Tools should not assume that \code{ompt\_thread\_id\_t} values are small or densely allocated.
-  The value \code{ompt\_thread\_id\_none} is reserved to indicate an invalid thread id.
-
-\littleheader{Parallel Region Identifiers}
-\index{Parallel Region Identifiers}
-Each OpenMP parallel region has an associated identifier of type
-\code{ompt\_parallel\_id\_t}.
-\begin{comment}
-\begin{boxedcode}
-typedef unsigned long long int ompt_parallel_id_t;
-\end{boxedcode}
-\end{comment}
-  A parallel region's identifier is assigned
-  when the region is created.  Identifiers assigned to parallel regions on each device are unique from the time an
-  OpenMP implementation is initialized until it is shut down.
-  A parallel region identifer can be retrieved for an enclosing parallel region
-  on demand using the function \code{ompt\_get\_parallel\_info}  (described in Section~\ref{sec:ompt_get_parallel_info}).
-  Tools should not assume that \code{ompt\_parallel\_id\_t} values are small or densely allocated.
-  The value \code{ompt\_parallel\_id\_none} is reserved to indicate an invalid parallel id.
-
-
-\littleheader{Task Region Identifiers}
-\index{Task Region Identifiers}
-Each OpenMP task has an associated identifier of type
-\code{ompt\_task\_id\_t}. Task identifiers are assigned to
-initial, implicit, explicit, and target tasks.
-\begin{comment}
-\begin{boxedcode}
-typedef unsigned long long int ompt_task_id_t;
-\end{boxedcode}
-\end{comment}
-  A task's identifier is assigned
-  when the task is created.
-  Identifiers assigned to tasks on each device are unique from the time an
-  OpenMP implementation is initialized until it is shut down.
-  A task's identifier can be retrieved
-  on demand by invoking the \code{ompt\_get\_task\_info}  function (described in Section~\ref{sec:ompt_get_task_info}).
-  Tools should not assume that \code{ompt\_task\_id\_t} values are small or densely allocated.
-  The value \code{ompt\_task\_id\_none} is reserved to indicate an invalid task identifier.
-
-\littleheader{Target Region and Operation Identifiers}
-\index{Target Region and Operation Identifiers}
-Each OpenMP target region and target operation has an associated identifier of type \code{ompt\_target\_id\_t}.
-A unique target identifier is assigned on the host each time an instance of a target construct is encountered.
-Each operation within a target region, e.g., transferring data to/from a device or launching a kernel launch
-on a device, is also assigned a unique target identifier.
-Identifiers assigned to target regions or operations
-are unique from the time an OpenMP implementation is initialized until it is shut down.
-The current target region and operation identifiers can be retrieved by invoking the \code{ompt\_get\_target\_info} function (described in Section~\ref{sec:ompt_get_target_info}).
-Tools should not assume that \code{ompt\_target\_id\_t} values are small or densely allocated.
-The value \code{ompt\_target\_id\_none} is reserved to indicate an invalid target identifier.
-The value \code{ompt\_target\_id\_none} will be returned for (a) the target region identifier if \code{ompt\_get\_target\_info} is invoked outside a target region and (b) the target operation identifier if \code{ompt\_get\_target\_info} is invoked while no target operation is in progress.
 \begin{targetRecord}
 \subsection{Tracing Support}
 \label{sec:ompt-records}
@@ -985,7 +902,6 @@ or leaves the runtime.
 \subsection{Miscellaneous Type Definitions}
 \label{sec:ompt-types:misc}
 This section describes miscellaneous types and enumerations used by the tool interface.
-% ompt_id_t
 
 \subsubsection{\code{ompt\_callback\_t}}
 \label{sec:ompt_callback_t}
@@ -1004,10 +920,13 @@ typedef void (*ompt_callback_t)(void);
 \ccppspecificend
 }
 
+% ompt_id_t
+
 \subsubsection{\code{ompt\_id\_t}}
 \label{sec:ompt_id_t} 
-Each OpenMP target region and target operation has an associated identifier of
-type \code{ompt\_id\_t}.
+When tracing asynchronous activity on OpenMP devices, tools need identifiers to correlate target regions and operations initiated by the host with 
+associated activities on a target device. In addition, tools need identifiers to refer to parallel regions and tasks that execute on a device.
+OpenMP implementations use identifiers of type \code{ompt\_id\_t} type for each of these purposes. 
 
 \vbox{
 \ccppspecificstart
@@ -1017,30 +936,13 @@ typedef unsigned long long int ompt_id_t;
 \ccppspecificend
 }
 
-\begin{comment}
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_scoped\_target\_callback\_t} callback type, see \specref{sec:ompt_scoped_target_callback_t}.
-\item \code{ompt\_target\_data\_callback\_t} callback type, see \specref{sec:ompt_target_data_callback_t}.
-\item \code{ompt\_target\_data\_map\_callback\_t} callback type, see \specref{sec:ompt_target_data_map_callback_t}.
-\item \code{ompt\_target\_submit\_callback\_t} callback type, see \specref{sec:ompt_target_submit_callback_t}.
-\item \code{ompt\_get\_target\_info\_inquiry\_t} callback type, see \specref{sec:ompt_get_target_info_inquiry_t}.
-\item \code{ompt\_get\_target\_info} function, see \specref{sec:ompt_get_target_info}.
-\item \code{ompt\_buffer\_get\_record\_native} inquiry function, see \specref{sec:ompt_buffer_get_record_native}.
-\item \code{ompt\_record\_parallel\_begin\_t} data type, see \specref{sec:ompt_record_parallel_begin_t}.
-\item \code{ompt\_record\_parallel\_end\_t} data type, see \specref{sec:ompt_record_parallel_end_t}.
-\item \code{ompt\_record\_task\_create\_t} data type, see \specref{sec:ompt_record_task_create_t}.
-\item \code{ompt\_record\_task\_dependence\_t} data type, see \specref{sec:ompt_record_task_dependence_t}.
-\item \code{ompt\_record\_task\_schedule\_t} data type, see \specref{sec:ompt_record_task_schedule_t}.
-\item \code{ompt\_record\_scoped\_implicit\_t} data type, see \specref{sec:ompt_record_scoped_implicit_t}.
-\item \code{ompt\_record\_scoped\_sync\_region\_t} data type, see \specref{sec:ompt_record_scoped_sync_region_t}.
-\item \code{ompt\_record\_target\_data\_t} data type, see \specref{sec:ompt_record_target_data_t}.
-\item \code{ompt\_record\_target\_kernel\_t} data type, see \specref{sec:ompt_record_target_kernel_t}.
-\item \code{ompt\_record\_scoped\_master\_t} data type, see \specref{sec:ompt_record_scoped_master_t}.
-\item \code{ompt\_record\_scoped\_worksharing\_t} data type, see \specref{sec:ompt_record_scoped_worksharing_t}.
-\item \code{ompt\_record\_ompt\_t} data type, see \specref{sec:ompt_record_ompt_t}.
-\end{itemize}
-\end{comment}
+Identifiers created on each device must be unique from the time an OpenMP implementation is initialized until it is shut down.  
+Specifically, this means that (1) identifiers for each target region and target operation instance initiated by the host device must be unique over time on the host,
+and (2) identifiers for parallel and task region instances that execute on a device must be unique over time within that device.
+
+Tools should not assume that \code{ompt\_id\_t} values
+are small or densely allocated. The value \code{ompt\_id\_none} is
+reserved to indicate an invalid id.
 
 % ompt_data_t
 
