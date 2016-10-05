@@ -834,6 +834,8 @@ typedef enum ompt_record_kind_e \{
 }
 
 \subsubsection{Native Record Kind}
+\label{sec:ompt_record_native_kind_t}
+
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
@@ -846,6 +848,8 @@ typedef enum ompt_record_native_kind_e \{
 }
 
 \subsubsection{Native Record Abstract Type}
+\label{sec:ompt_record_native_abstract_t}
+
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
@@ -859,6 +863,29 @@ typedef struct ompt_record_native_abstract_s \{
 \end{boxedcode}
 \ccppspecificend
 }
+
+\descr
+
+A \code{ompt\_record\_native\_abstract\_t} record contains several
+pieces of information that a tool can use to process a native record
+that it may not fully understand. The record \code{rclass} field
+indicates whether the record is informational
+or represents an event; knowing this can help a tool determine
+how to present the record. The record \code{type} field points to
+a statically-allocated, immutable character string that provides
+a meaningful name that a tool might want to use to describe the event
+to a user. The \code{start\_time} and \code{end\_time} fields are
+used to place an event in time. The times are relative to the device
+clock. If an event has no associated \code{start\_time} and/or
+\code{end\_time}, its value will be 
+\code{ompt\_time\_none}. The hardware id field,
+\code{hwid},  is used to indicate the location on the device where
+the event occurred. A \code{hwid} may represent a hardware abstraction
+such as a core or a hardware thread id. The meaning of a \code{hwid}
+value for a device is defined by the implementer of the software
+stack for the device. If there is no hardware abstraction associated 
+with the record, the value of \code{hwid} 
+will be \code{ompt\_hwid\_none}.
 
 \subsubsection{Record Type}
 \vbox{
@@ -1998,7 +2025,7 @@ OpenMP runtime on the host.
 Third, it should use the OMPT interface 
 callback known as \code{ompt\_set\_callback} 
 to register tool callbacks for OpenMP events.  Fourth, the tool
-should use the OMPT interface callback known as \code{ompt\_get\_num\_devices} 
+should use the OMPT interface callback known as \code{ompt\_num\_devices} 
 to identify whether any target devices are present
 and then use the OMPT interface callback known as 
 \code{ompt\_get\_device\_info} to interrogate each device.
@@ -4233,16 +4260,17 @@ then it will return a value of -1.
 {\em This entry point is async signal safe.}
 \end{comment}
 
-\subsection{Entry Points in the OMPT Tracing Interface}
+\subsection{Entry Points in the OMPT Device Tracing Interface}
 \label{sec:ompt-tracing-entry-points}.
 
 \subsubsection{\code{ompt\_get\_device\_time\_t}}
 \label{sec:ompt_get_device_time_t}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_device\_time} 
+An OpenMP implementation's tool entry point for a device known 
+as \code{ompt\_get\_device\_time} 
 with type signature \code{ompt\_get\_device\_time\_t} 
-returns the current time on a specified device.
+returns the current time on the specified device.
 
 \format
 \vbox{\ccppspecificstart
@@ -4259,16 +4287,28 @@ If host and target devices are different hardware components, they
 may use different clock generators. For this reason,  there may be
 no common time base for ordering host-side and device-side events.
 
-This inquiry function can be used to acquire information that can
-be used to align time stamps from the target device with time stamps
-from the host or other devices.
+An OpenMP implementation's tool entry point for a device known 
+as \code{ompt\_get\_device\_time} with type signature 
+\code{ompt\_get\_device\_time\_t} 
+returns the current time on the specified device.
+A tool can use this information 
+to align time stamps from different devices.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\item \code{ompt\_device\_time\_t},
+see \specref{sec:ompt_device_time_t}.
+\end{itemize}
 
 \subsubsection{\code{ompt\_translate\_time\_t}}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_translate\_time} 
+An OpenMP implementation's tool entry point for a device known 
+as \code{ompt\_translate\_time} 
 with type signature \code{ompt\_translate\_time\_t} translates
-a time value obtained from a target device to a corresponding time
+a time value obtained from the specified device to a corresponding time
 value on the host device. 
 
 \format
@@ -4282,20 +4322,33 @@ typedef double (*ompt_translate_time_t)(
 \ccppspecificend}
 
 \descr
-The {\ttfamily double} result for the host time has
-the same meaning as the {\ttfamily double} returned from \code{omp\_get\_wtime}.
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_translate\_time} 
+with type signature \code{ompt\_translate\_time\_t} translates
+a time value obtained from the specified device to a corresponding time
+value on the host device. The returned value for the host time has
+the same meaning as the value returned from \code{omp\_get\_wtime}.
 
-\littleheader{Advice to tool implementers:} 
+\needspace{6\baselineskip}\notestart
+\noteheader -- 
 The accuracy of time translations may degrade if they are not
 performed promptly after a device time value is received if either
 the host or device vary their clock speeds. Prompt translation of
 device times to host times is recommended.
+\noteend
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\item \code{ompt\_device\_time\_t},
+see \specref{sec:ompt_device_time_t}.
+\end{itemize}
 
 \subsubsection{\code{ompt\_set\_trace\_ompt\_t}}
 \label{sec:ompt_set_trace_ompt_t}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_set\_trace\_ompt} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_set\_trace\_ompt} 
 with type signature \code{ompt\_set\_trace\_ompt\_t} 
 enables or disables the recording of trace records for one or more
 types of OMPT events.
@@ -4305,24 +4358,26 @@ types of OMPT events.
 \begin{boxedcode}
 typedef int (*ompt_set_trace_ompt_t)(
   ompt_device_t *\plc{device},
-  int \plc{enable},
-  ompt_event_t \plc{etype}
+  unsigned int \plc{enable},
+  unsigned int \plc{etype}
 );
 \end{boxedcode}
 \ccppspecificend}
 
 \constraints
-The argument \code{device} is a handle to identify the target device
-whose performance monitoring may be altered by invoking this function.
+The argument \code{device} identifies the device
+whose tracing may be altered by invoking this function.
 
-Valid values for \code{enable} are 0 and 1.  A value of 1 for
-\code{enable} indicates that recording of events of type \code{rtype}
+A positive value for
+\code{enable} indicates that recording of one or more events specified 
+by \code{etype}
 should be enabled; a value of 0 for \code{enable} indicates that
 recording of events should be disabled by this invocation.
 
 An \code{etype} value 0 indicates that traces for all event types will be enabled or disabled.  
 Passing a positive value for \code{etype} inidicates that recording
-should be enabled or disabled for a specific event type.
+should be enabled or disabled for the event in \code{ompt\_event\_t}
+that matches \code{etype}.
 
 Table~\ref{table:record_set} shows the possible return
 codes for \code{ompt\_set\_trace\_ompt}.  If a single invocation
@@ -4337,20 +4392,31 @@ others.
 \hline
 return code & meaning \\\hline
 0 & error\\\hline
-1 & event may occur but no tracing is possible\\\hline
-2 & event will never occur in runtime\\\hline
-3 & event may occur and will be traced  when convenient\\\hline
+1 & event will never occur\\\hline
+2 & event may occur but no tracing is possible\\\hline
+3 & event may occur and will be traced when convenient\\\hline
 4 & event may occur and will always be traced if event occurs\\\hline
 \end{tabular}
-\caption{Meaning of return codes for {\ttfamily ompt\_trace\_set\_ompt} and {\ttfamily ompt\_set\_trace\_native}.}
+\vskip 1ex
+\caption{Meaning of return codes for \code{ompt\_trace\_set\_ompt} and
+  \code{ompt\_set\_trace\_native}.}
 \label{table:record_set}
 \end{table}
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\item \code{ompt\_event\_t},
+see \specref{sec:ompt_event_t}.
+\end{itemize}
 
 \subsubsection{\code{ompt\_set\_trace\_native\_t}}
 \label{sec:ompt_set_trace_native_t}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_set\_trace\_native} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_set\_trace\_native} 
 with type signature \code{ompt\_set\_trace\_native\_t} 
 enables or disables the recording of native trace records for a device.
 
@@ -4393,11 +4459,18 @@ is possible for one or more kinds of monitoring but not for others.
 To start, pause, or stop tracing for a specific target device associated with the handle \code{device}, 
 a tool calls the functions \code{ompt\_start\_trace}, \code{ompt\_pause\_trace}, or \code{ompt\_stop\_trace}.
 
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\end{itemize}
+
 \subsubsection{\code{ompt\_start\_trace\_t}}
 \label{sec:ompt_start_trace_t}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_start\_trace} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_start\_trace} 
 with type signature \code{ompt\_start\_trace\_t} 
 starts tracing of activity on a specific device.
 
@@ -4413,12 +4486,21 @@ typedef int (*ompt_start_trace_t)(
 \end{boxedcode}
 \ccppspecificend}
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\item \code{ompt\_buffer\_request\_callback\_t},
+see \specref{sec:ompt_buffer_request_callback_t}.
+\item \code{ompt\_buffer\_complete\_callback\_t},
+see \specref{sec:ompt_buffer_complete_callback_t}.
+\end{itemize}
 
 \subsubsection{\code{ompt\_pause\_trace\_t}}
 \label{sec:ompt_pause_trace_t}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_pause\_trace} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_pause\_trace} 
 with type signature \code{ompt\_pause\_trace\_t} 
 pauses or restarts activity tracing on a specific device.
 
@@ -4431,12 +4513,17 @@ typedef int (*ompt_pause_trace_t)(
 \end{boxedcode}
 \ccppspecificend}
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\end{itemize}
 
 \subsubsection{\code{ompt\_stop\_trace\_t}}
 \label{sec:ompt_stop_trace_t}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_stop\_trace} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_stop\_trace} 
 with type signature \code{ompt\_stop\_trace\_t} 
 stops tracing for a device.
 
@@ -4460,13 +4547,19 @@ A call to \code{ompt\_stop\_trace} also implicitly requests that the device flus
 %% this function will enable the target device to associate device_activity_ids with some host_id that either represents a 
 %% target region, target data operation, or target kernel submission
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\end{itemize}
+
 \subsubsection{\code{ompt\_advance\_buffer\_cursor\_t}}
 \label{sec:ompt_advance_buffer_cursor_t}
 
 %There are several routines that need to be used together to process %target event records deposited in a buffer by a device. 
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_advance\_buffer\_cursor} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_advance\_buffer\_cursor} 
 with type signature \code{ompt\_advance\_buffer\_cursor\_t}
 advances a trace buffer cursor to the next record.
 
@@ -4485,14 +4578,22 @@ typedef int (*ompt_advance_buffer_cursor_t)(
 \descr
 It returns \code{true} if the advance is successful and the returned value \code{*next} is valid.
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\item \code{ompt\_buffer\_cursor\_t},
+see \specref{sec:ompt_buffer_cursor_t}.
+\end{itemize}
+
 \subsubsection{\code{ompt\_buffer\_get\_record\_type\_t}}
 \label{sec:ompt_buffer_get_record_type_t}
 
 \summary
-An OpenMP implementation's tool entry point known as
+An OpenMP implementation's tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_type} with type signature
 \code{ompt\_buffer\_get\_record\_type\_t} inspects the type
-of a trace record.
+of a trace record for a device.
 
 \format
 \vbox{\ccppspecificstart
@@ -4506,19 +4607,43 @@ typedef ompt_record_type_t (*ompt_buffer_get_record_type_t)(
 
 \descr
 
-\code{ompt\_buffer\_get\_record\_type} returns either \code{ompt\_record\_ompt} if the record represents a OMPT event,  
-%\code{ompt\_record\_correlation} if the purpose of the record is to associate the identifier for a device activity with a host target task id, 
-\code{ompt\_record\_native} if the record represents a device native record type that does not represent an OMPT event record, or \code{ompt\_record\_invalid} if the cursor is out of bounds. 
+Trace records for a device may be in one of two forms: a
+\emph{native} record format, which may be device-specific,
+or an \emph{OMPT} record format, where each trace record 
+corresponds to an OpenMP \emph{event} and fields in the record
+structure are mostly the arguments that would be passed to the
+OMPT callback for the event. 
 
+An OpenMP implementation's tool entry point for a device known as
+\code{ompt\_buffer\_get\_record\_type} with type signature
+\code{ompt\_buffer\_get\_record\_type\_t} inspects the type
+of a trace record and indicates whether the record at the current
+position in the provided trace buffer is an OMPT record, 
+a native record, or an invalid record. An invalid record type
+is returned if the cursor is out of bounds.
+
+\begin{comment}
 \crossreferences
 Appendix~\ref{appendix:ompt-records} defines the corresponding enumeration type for \code{ompt\_record\_kind\_t}. 
 Section~\ref{sec:native-record-data} describes the interface to use for accessing native record types.
+\end{comment}
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_buffer\_t},
+see \specref{sec:ompt_buffer_t}.
+\item \code{ompt\_buffer\_cursor\_t},
+see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt\_record\_type\_t},
+see \specref{sec:ompt_record_type_t}.
+\end{itemize}
 
 \subsubsection{\code{ompt\_buffer\_get\_record\_ompt\_t}}
 \label{sec:ompt_buffer_get_record_ompt_t}
  
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_buffer\_get\_record\_ompt} 
+An OpenMP implementation's tool entry point for a device known as \code{ompt\_buffer\_get\_record\_ompt} 
 with type signature \code{ompt\_buffer\_get\_record\_ompt\_t} 
 obtains a pointer to an OMPT trace record from a trace buffer associated with a device.
 
@@ -4534,23 +4659,33 @@ typedef ompt_record_ompt_t *(*ompt_buffer_get_record_ompt_t)(
 
 \descr
 
-This function returns a pointer that may point into the record
-buffer, or it may point into thread local storage where the information
+This function returns a pointer that may point to a record in the trace
+buffer, or it may point to a record in thread local storage where the information
 extracted from a record was assembled. The information available
 for an event depends upon its type. 
 
-\crossreferences
-Appendix~\ref{appendix:ompt-records} defines a union type that will
-be used to return information for different OMPT event record types.
-A subsequent call to \code{ompt\_record\_get} may overwrite the
+The return value of type \code{ompt\_record\_ompt\_t} 
+defines a union type that can represent
+information for any OMPT event record type.
+Another call to the entry point may overwrite the
 contents of the fields in a record returned by a prior invocation.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\item \code{ompt\_buffer\_cursor\_t},
+see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt\_record\_ompt\_t},
+see \specref{sec:ompt_record_ompt_t}. 
+\end{itemize}
 
 \subsubsection{\code{ompt\_buffer\_get\_record\_native\_t}}
 \label{sec:ompt_buffer_get_record_native_t}
 
 \summary
 
-An OpenMP implementation's tool entry point known as
+An OpenMP implementation's tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_native} with type signature
 \code{ompt\_buffer\_get\_record\_native\_t} 
 obtains a pointer to a native trace record from a trace buffer associated with a device.
@@ -4568,7 +4703,7 @@ typedef void *(ompt_buffer_get_record_native_t)(
 
 \descr
 
-The pointer returned  may point into the trace buffer, or into
+The pointer returned  may point into the specified trace buffer, or into
 thread local storage where the information extracted from a trace
 record was assembled. The information available for a native event
 depends upon its type. If the function returns a non-NULL result,
@@ -4577,15 +4712,26 @@ for the operation associated with the record.  A subsequent call
 to \code{ompt\_buffer\_get\_record\_native} may overwrite the
 contents of the fields in a record returned by a prior invocation.
 
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_buffer\_t},
+see \specref{sec:ompt_buffer_t}.
+\item \code{ompt\_buffer\_cursor\_t},
+see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt\_id\_t},
+see \specref{sec:ompt_id_t}.
+\end{itemize}
+
 \subsubsection{\code{ompt\_buffer\_get\_record\_native\_abstract\_t}}
 \label{sec:ompt_buffer_get_record_native_abstract_t}
 
 \summary
-An OpenMP implementation's tool entry point known as
+An OpenMP implementation's tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_native\_abstract} 
 with type signature
 \code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
-summarizes the context of a native trace record.
+summarizes the context of a native (device-specific) trace record.  
 
 \format
 \vbox{\ccppspecificstart
@@ -4598,31 +4744,23 @@ typedef ompt_record_native_abstract_t *
 \ccppspecificend}
 
 \descr
+An OpenMP implementation may execute on a device that logs 
+trace records in a native (device-specific) format unknown to a tool.
+A tool can use an OpenMP implementation's tool entry point for the
+device known as
+\code{ompt\_buffer\_get\_record\_native\_abstract} 
+with type signature
+\code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
+to decode a native trace record that it
+does not understand into a standard form that it can interpret. 
 
-A \code{ompt\_record\_native\_abstract\_t} record contains several
-pieces of information that a tool can use to process a native record
-that it may not fully understand. The record \code{rclass} field
-indicates whether the record is informational
-(\code{ompt\_record\_native\_info}) or represents an event
-(\code{ompt\_record\_native\_event}). Knowing whether a record
-is informational or represents an event can help a tool determine
-how to present the record. The record  \code{type} field points to
-a statically-allocated, immutable character string that provides
-a meaningful name  a tool might want to use to describe the event
-to a user. The \code{start\_time} and \code{end\_time} fields are
-used to place an event in time. The times are relative to the device
-clock. If an event has no associated \code{start\_time} and/or
-\code{end\_time}, the value of an unavailable field will be the
-distinguished value \code{ompt\_time\_none}. The hardware id field,
-\code{hwid},  is used to indicate the location on the device where
-the event occurred. A \code{hwid} may represent a hardware abstraction
-such as a core or a hardware thread id. The meaning of a \code{hwid}
-value for a device is defined by the implementer of the software
-stack for the device. If there is no \code{hwid} associated with a
-record, the value of \code{hwid} shall be \code{ompt\_hwid\_none}.
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_record\_native\_abstract\_t},
+see \specref{sec:ompt_record_native_abstract_t}.
+\end{itemize}
 
-
-\subsection{Lookup Entry Point Signature}
+\subsection{Lookup Entry Point}
 
 \subsubsection{\code{ompt\_function\_lookup\_t}}
 \label{sec:ompt_function_lookup_t}
