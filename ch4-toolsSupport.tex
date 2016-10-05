@@ -32,10 +32,10 @@
 %             This is a \plc{var-name}.
 %
 
-\newcommand{\ompttype}[1]{\subsection*{#1}}
-\newcommand{\omptcallbacksignature}[1]{\subsubsection*{#1}}
-\newcommand{\omptruntimeentrypoint}[1]{\subsubsection*{#1}}
-\newcommand{\ompteventswithoutdirectives}[1]{\subsection*{#1}}
+\newcommand{\ompttype}[1]{\subsection*{#1}}  % section 4.5.7
+\newcommand{\omptcallbacksignature}[1]{\subsubsection*{#1}}  % section 4.8.2
+\newcommand{\omptruntimeentrypoint}[1]{\subsubsection*{#1}}  % sections 4.9.*
+\newcommand{\ompteventswithoutdirectives}[1]{\subsection*{#1}} % section 4.6
 
 \chapter{Tool Support}
 \index{Tools Support}
@@ -842,9 +842,9 @@ typedef enum ompt_record_native_kind_e \{
 typedef struct ompt_record_native_abstract_s \{
   ompt_record_native_class_t \plc{rclass};
   const char *\plc{type};
-  ompt_target_time_t \plc{start\_time};
-  ompt_target_time_t \plc{end\_time};
-  uint64_t \plc{hwid};
+  ompt_device_time_t \plc{start\_time};
+  ompt_device_time_t \plc{end\_time};
+  ompt_hwid_t \plc{hwid};
 \} ompt_record_native_abstract_t;
 \end{boxedcode}
 \ccppspecificend
@@ -1031,11 +1031,14 @@ typedef void (*ompt_callback_t)(void);
 \label{sec:ompt_id_t} 
 Each OpenMP target region and target operation has an associated identifier of
 type \code{ompt\_id\_t}.
+The value \code{ompt\_id\_none} is reserved to indicate an invalid id for any
+parameter of type \code{ompt\_id\_t}.
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
 typedef unsigned long long int ompt_id_t;
+#define ompt_id_none 0
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1071,6 +1074,9 @@ typedef unsigned long long int ompt_id_t;
 \label{sec:ompt_data_t} 
 Threads, parallel regions, task regions, target regions, and target operations
 are represented by unique identifiers of type \code{ompt\_data\_t}.
+The initial value of an \code{ompt\_data\_t} identifier is
+\code{ompt\_data\_none}. This allows tools to detect if the identifier has
+already been initialzed.
 
 \vbox{
 \ccppspecificstart
@@ -1079,6 +1085,9 @@ typedef union ompt_data_u \{\\
   ompt_id_t id; /* integer ID under tool control */
   void *ptr;    /* pointer under tool control    */
 \} ompt_data_t;
+/* initial value of ompt_data_t instances *
+ * provided by the runtime                */
+ompt_data_t ompt_data_none = \{.id=0\};         
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1173,11 +1182,14 @@ typedef void ompt_device_t;
 \ompttype{\code{ompt\_device\_time\_t}}
 \label{sec:ompt_device_time_t} 
 \code{ompt\_device\_time\_t} is an opaque object representing a raw time value from a device.
+\label{sec:ompt_time_none} 
+\code{ompt\_time\_none} refers to an uknown or unspecified time.
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
 typedef unsigned long long int ompt_device_time_t;
+#define ompt_time_none (~0ULL)
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1669,15 +1681,11 @@ typedef enum ompt_cancel_flag_e \{
 \item \code{ompt\_cancel\_t} data type, see \specref{sec:ompt_cancel_callback_t}.
 \end{itemize}
 
-% end miscellaneous types
+% ompt_hwid_t
 
-
-\subsection{Miscellaneous Constants}
-This section describes miscellaneous constants used by the tool interface.
-
-% ompt_hwid_none
-
-\subsubsection{\code{ompt\_hwid\_none}}
+\ompttype{\code{ompt\_hwid\_t}}
+\label{sec:ompt_hwid_t}
+\code{ompt\_hwid\_t} is an opaque object representing a hardware identifier for a target device.
 \label{sec:ompt_hwid_none} 
 \code{ompt\_hwid\_none} refers to an uknown or unspecified hardware id.
 If there is no \code{hwid} associated with a
@@ -1687,132 +1695,29 @@ If there is no \code{hwid} associated with a
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
+typedef unsigned long long int ompt_hwid_t;
 #define ompt_hwid_none (-1)
 \end{boxedcode}
 \ccppspecificend
 }
 
-\begin{comment}
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_record\_native\_abstract\_t} enumeration type, see
-\specref{sec:ompt_buffer_get_record_native_abstract_t}.
-\end{itemize}
-\end{comment}
 
+
+% end miscellaneous types
+
+\begin{comment}
+% These "none" objects have been integrated into the relevant sections,
+% rather than have a seperate section.
+\subsection{Miscellaneous Constants}
+This section describes miscellaneous constants used by the tool interface.
+% ompt_hwid_none
 % ompt_dev_task_none
-
-\begin{comment}
-KAH: What does this do?  Is it supposed to be ompt_dep_task_none? i.e. no task dependency?
-JP:  I think, there was a device task in some previous version of the tr.
-
-\subsubsection{\code{ompt\_dev\_task\_none}}
-\label{sec:ompt_dev_task_none} 
-\code{ompt\_dev\_task\_none} is ...?
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-#define ompt_dev_task_none (~0ULL)
-\end{boxedcode}
-\ccppspecificend
-}
-\end{comment}
-
 % ompt_time_none 
-
-\subsubsection{\code{ompt\_time\_none}}
-\label{sec:ompt_time_none} 
-\code{ompt\_time\_none} refers to an uknown or unspecified time.
-If there is no \code{start\_time} and/or \code{end\_time} associated with a
-\code{ompt\_record\_native\_abstract\_t}, 
-the value of an unavailable field will be the value
-\code{ompt\_time\_none}.
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-#define ompt_time_none (~0ULL)
-\end{boxedcode}
-\ccppspecificend
-}
-
-\begin{comment}
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_record\_native\_abstract\_t} enumeration type, see
-\specref{sec:ompt_buffer_get_record_native_abstract_t}.
-\end{itemize}
-\end{comment}
-
 % ompt_id_none
-
-\subsubsection{\code{ompt\_id\_none}}
-\label{sec:ompt_id_none} 
-The value \code{ompt\_id\_none} is reserved to indicate an invalid id for any parameter of type \code{ompt\_id\_t}.
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-#define ompt_id_none 0
-\end{boxedcode}
-\ccppspecificend
-}
-
-\begin{comment}
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_id\_t} type, see \specref{sec:ompt_id_t}.
-\end{itemize}
-\end{comment}
-
 % ompt_data_none
-
-\subsubsection{\code{ompt\_data\_none}}
-\label{sec:ompt_data_none} 
-The initial value of an \code{ompt\_data\_t} identifier is
-\code{ompt\_data\_none}. This allows tools to detect if the identifier has
-already been initialzed.
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-/* initial value of ompt_data_t instances *
- * provided by the runtime                */
-ompt_data_t ompt_data_none = \{.id=0\};         
-\end{boxedcode}
-\ccppspecificend
-}
-
-\begin{comment}
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_data\_t} type, see \specref{sec:ompt_data_t}.
-\end{itemize}
-\end{comment}
-
 % ompt_mutex_kind_none
-
-\subsubsection{\code{ompt\_mutex\_kind\_none}}
-\label{sec:ompt_mutex_kind_none} 
-The value \code{ompt\_mutex\_kind\_none} is reserved to indicate an invalid
-kind for any parameter of type \code{ompt\_mutex\_kind\_t}.
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-#define ompt_mutex_kind_unknown 0
-\end{boxedcode}
-\ccppspecificend
-}
-
-\begin{comment}
-\crossreferences
-\begin{itemize}
-\item \code{ompt\_mutex\_kind\_t} type, see \specref{sec:ompt_mutex_kind_t}.
-\end{itemize}
-\end{comment}
-
 % end miscellaneous constants
+\end{comment}
 
 \section{Events without Directives}
 \ompteventswithoutdirectives{\code{ompt\_event\_thread\_begin}}
@@ -3077,7 +2982,7 @@ typedef struct ompt_record_target_data_s \{
   void *\plc{host_addr};
   void *\plc{device_addr};
   size_t \plc{bytes};
-  ompt_target_time_t \plc{end_time};
+  ompt_device_time_t \plc{end_time};
 \} ompt_record_target_data_t;
 \end{boxedcode}
 \ccppspecificend
@@ -3192,7 +3097,7 @@ typedef struct ompt_record_target_submit_s \{
 typedef struct ompt_record_target_kernel_s \{
   ompt_id_t \plc{host_op_id};
   unsigned int \plc{granted_num_teams};
-  ompt_target_time_t \plc{end_time};
+  ompt_device_time_t \plc{end_time};
 \} ompt_record_target_kernel_t;
 \end{boxedcode}
 \ccppspecificend
@@ -3599,14 +3504,15 @@ while (ompt_enumerate_states_fn(state, &state, &state_name)) \{
 \item \code{omp\_state\_t}, see \specref{sec:thread-states}.
 \end{itemize}
 
-\omptruntimeentrypoint{\code{ompt\_enumerate\_mutex\_kinds\_t}}
-\label{sec:ompt_enumerate_mutex_kinds_t}
-\label{sec:ompt_enumerate_mutex_kinds}
+\omptruntimeentrypoint{\code{ompt\_enumerate\_mutex\_impls\_t}}
+\label{sec:ompt_enumerate_mutex_impls_t}
+\label{sec:ompt_enumerate_mutex_impls}
+\label{sec:ompt_mutex_impl_unknown}
  
 \summary
 
-An OpenMP implementation's tool entry point known as \code{ompt\_enumerate\_mutex\_kinds} 
-with type signature \code{ompt\_enumerate\_mutex\_kinds\_t} 
+An OpenMP implementation's tool entry point known as \code{ompt\_enumerate\_mutex\_impls} 
+with type signature \code{ompt\_enumerate\_mutex\_impls\_t} 
 enumerates the kinds of mutual exclusion implementations that
 an OpenMP implementation employs.
 
@@ -3616,11 +3522,13 @@ an OpenMP implementation employs.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef int (*ompt_enumerate_mutex_kinds_t)(
-  int \plc{current_kind}, 
-  int *\plc{next_kind}, 
-  const char **\plc{next_kind_name}
+typedef int (*ompt_enumerate_mutex_impls_t)(
+  int \plc{current_impl}, 
+  int *\plc{next_impl}, 
+  const char **\plc{next_impl_name}
 );
+
+#define ompt_mutex_impl_unknown 0
 \end{boxedcode}
 \ccppspecificend
 }
@@ -3628,10 +3536,12 @@ typedef int (*ompt_enumerate_mutex_kinds_t)(
 \descr
 An OpenMP implementation may implement mutual exclusion for locks,
 nest locks, critical sections, and atomic regions in several different
-ways.  The \code{ompt\_enumerate\_mutex\_kinds} entry point
+ways.  The \code{ompt\_enumerate\_mutex\_impls} entry point
 enables a tool to enumerate the 
 kinds of mutual exclusion implementations that an OpenMP implementation
 employs.
+The value \code{ompt\_mutex\_impl\_unknown} is reserved to indicate an invalid
+implementation.
 
 \begin{comment}
 For that reason, a user program can provide hints
@@ -3662,7 +3572,7 @@ The first argument passed to the enumerate mutex kinds entry point must be
 a mutex implementation kind supported
 by an OpenMP implementation.  To begin enumerating the mutex
 implementation kinds that an OpenMP implementation supports, a tool
-should pass \code{ompt\_mutex\_kind\_unknown} as the first
+should pass \code{ompt\_mutex\_impl\_unknown} as the first
 argument of the enumerate mutex kinds entry point.  Subsequent invocations
 of the entry point by the tool should pass the
 value assigned to the variable passed by reference as the second
@@ -3676,18 +3586,18 @@ references to variables of the specified types.
 enumerate all types of mutex implementations supported by an OpenMP runtime.
 The example assumes that a pointer to an OpenMP implementation's enumerate
 mutex kinds callback has previously been assigned to a function pointer
-\code{ompt\_enumerate\_mutex\_kinds\_fn}.
+\code{ompt\_enumerate\_mutex\_impls\_fn}.
 
 \vspace{2ex}
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-int kind = ompt_mutex_kind_unknown;
-const char *kind_name;
-while (ompt_enumerate_mutex_kinds_fn(kind, &kind, &kind_name)) \{
-  // note that the runtime supports a mutex value "kind" 
-  // associated with the name "kind_name" 
+int kind = ompt_mutex_impl_unknown;
+const char *impl_name;
+while (ompt_enumerate_mutex_impls_fn(impl, &impl, &impl_name)) \{
+  // note that the runtime supports a mutex value "impl" 
+  // associated with the name "impl_name" 
 \}
 \end{boxedcode}
 \ccppspecificend
