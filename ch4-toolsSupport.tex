@@ -331,7 +331,7 @@ Using the OMPT interface, a tool may interrogate an OpenMP implementation to
 determine what thread states it supports and what mechanisms it employs to 
 implement mutual exclusion for various purposes.
 
-\subsection{Initializing the OMPT Callback Interface}
+\subsection{Monitoring Activity on the Host}
 \index{tool cb initialization tasks}
 \label{sec:tool-cb-initialize-tasks}
 
@@ -339,25 +339,40 @@ TODO MARTIN
 
 Tools typically execute the following three tasks during their initialization: binding of OMPT interface function, registering callbacks, and determining OMPT capabilities. These tasks are described in more detail below.
 
-
-\subsection{Initializing the OMPT Tracing Interface}
-\index{tool trace initialization tasks}
-\label{sec:tool-trace-initialize-tasks}
-
-\subsection{Tracing Device Activity}
+\subsection{Tracing Activity on Target Devices}
+\index{tracing device activity}
 \label{sec:tracing-device-activity}
 
 Target devices typically operate asynchronously with respect to a
 host. It may not be practical or possible to make event callbacks
 on a target device. These characteristics motivate the design of a
-performance monitoring interface for target devices where:
+performance monitoring interface for tracing activity on target
+devices. Trace activity on a target device involves the following
+steps:
 
 \begin{itemize}
-\item a target device records events that occur during its execution in a trace buffer,
-\item when a trace buffer fills on a device (or it is otherwise useful to flush the buffer),  the device provides it to a tool on the host, by invoking a tool-supplied callback function to process and empty the buffer,
-\item when the target device needs a new trace buffer, it invokes a tool-supplied callback function to request a new buffer,
+\item When an OpenMP implementation initializes itself, it will invoke
+  a tool initializer.
+\item The tool initializer should register a device initialization
+  callback for the \code{ompt\_event\_device\_initialize} event.
+\item When an OpenMP implementation initializes a target device, the
+  OpenMP implementation will invoke the tool's device initialization
+  callback.
+\item when the target device needs a trace buffer, it invokes a
+  tool-supplied callback function to request a new buffer,
+\item a target device records events that occur during its execution
+  in a trace buffer,
+\item when a trace buffer fills on a device (or it is otherwise useful
+  to flush the buffer), the device provides it to a tool on the host,
+  by invoking a tool-supplied callback function to process and empty
+  the buffer.
 \end{itemize}
 
+
+When a tool receives this callback for a device, it will have an
+opportunity to look up entry points for the tracing interface for the
+by invoking the \code{lookup} function provided as a parameter to the
+device initialization callback.
 
 Section~\ref{sec:ompt_set_trace_ompt_t}  describes how to enable or disable
 tracing on a target device for specific OMPT events.
@@ -367,12 +382,7 @@ The Sections~\ref{sec:ompt_start_trace_t}, \ref{sec:ompt_pause_trace_t}
 and \ref{sec:ompt_stop_trace_t}  describe how to start, pause and
 stop event tracing on a device.
 
-Some functions in the target device tracing control API described
-in this section are marked with \code{OMPT\_TARG\_API}. These represent
-function pointers that should be obtained from a target device by
-invoking the \code{lookup} function (provided by the target  as a
-return value to function \code{ompt\_get\_device\_info}) and
-passing it the name of the function of interest.
+
 
 
 \section{Data Types}
