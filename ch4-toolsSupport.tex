@@ -41,28 +41,35 @@
 \index{Tools Support}
 \label{chap:ToolsSupport}
 
-The OpenMP API includes support for
-runtime tools running in the same
-address space as the OpenMP program through the OpenMP Tools Interface (OMPT).
-This typically includes, but is not limited to performance analysis and correctness tools.
-The interface is split into two subparts, a tracing interface that can be used to record
-series of events in the system, and a callback interface that can be used to register
-callbacks for specific events.
+To enable development of high-quality, \emph{first-party} tools
+that support monitoring and performance analysis of OpenMP programs
+developed using any implementation of the OpenMP API, the OpenMP API
+includes a tool interface known as OMPT. The OMPT interface can be
+implemented entirely by an OpenMP runtime system, entirely by a
+compiler, or with a hybrid strategy that employs a mixture of compiler
+and runtime support. This chapter describes the OMPT interface.
 
-In addition to the specific events described in previous chapters alongside the OpenMP
-constructs the refer to, this interface also includes dedicated functionality to bootstrap
-tools, as well as for tools to query information from the OpenMP implementation. This
-dedicated functionality is described in the following chapter.
+This chapter begins with an overview of the OMPT tool interface in
+Section~\ref{sec:ompt-overview}. Next,
+Section~\ref{sec:ompt-initialization} describes how a tool can register itself to use the OMPT
+interface. Subsequent sections describe details of the interface, including
+data types shared between an OpenMP implementation and a tool
+(Section~\ref{sec:data-types}), 
+type signatures for tool callbacks 
+that an OpenMP implementation may invoke for OpenMP events
+(Section~\ref{sec:ompt-tool-callbacks}), and 
+tool \emph{entry points}---function interfaces
+provided by an OpenMP implementation for use by a tool
+(Section~\ref{sec:entry-points}). 
 
-In particular,
-the chapter first explains if and how an implementation of
-the OpenMP API will attempt to register a tool prior to initializing the 
-OpenMP implementation and
-how a registered tool will use the OMPT interface to initialize tool state maintained by
-an implementation of the OpenMP API.
-It concludes with a description of data types
-used to identify entities managed by an OpenMP runtime and to interpret the
-call stack of an OpenMP thread.
+\section{Overview}
+\label{sec:ompt-overview}
+
+The OMPT interface defines mechanisms for initializing a tool,
+exploring the details of an OpenMP implementation, examining OpenMP state
+associated with an OpenMP thread, interpreting an OpenMP thread's call stack,
+receiving notification about OpenMP \emph{events}, tracing activity on 
+OpenMP target devices, and controlling a tool from an OpenMP application.
 
 \section{Activating a Tool}
 Activating a tool, that is, the procedure necessary to use a tool during the
@@ -1644,14 +1651,6 @@ The callback argument \code{target\_id} indicates the instance of the target con
 The callback argument \code{host\_op\_id} provides a unique host-side identifier that represents the activity on the device.
 The callback arguments \code{requested\_num\_teams}  \code{granted\_num\_teams} indicate, respectively, the number of teams requested by the user and granted by the runtime.
 
-\ompteventswithoutdirectives{\code{ompt\_event\_tcontrol}}
-\label{sec:ompt_event_tcontrol}
-If the user program calls \code{omp\_tcontrol}, an
-OpenMP implementation invokes this callback.
-The callback executes in the context that the call occurs in the user program.
-This callback has type signature \code{ompt\_tcontrol\_callback\_t}.
-Arguments passed to the callback are those passed by the user to \code{omp\_tcontrol}.
-
 \ompteventswithoutdirectives{\code{ompt\_event\_runtime\_shutdown}}
 \label{sec:ompt_event_runtime_shutdown}
 An OpenMP implementation invokes this callback before it shuts down the
@@ -1750,6 +1749,7 @@ or completing execution of any environment routine invocation.
 \end{comment}
 
 \section{Tool Callback Signatures and Trace Records}
+\label{sec:ompt-tool-callbacks}
 \subsection{Initializer Callback Signature}
 
 \omptcallbacksignature{\code{ompt\_initialize\_fn\_t}}
@@ -3263,6 +3263,7 @@ then set up tracing for a device.
 \end{itemize}
 
 \section{Runtime Entry Points for Tools}
+\label{sec:entry-points}
 
 The OMPT interface supports two principal sets of entry points for tools. One
 set of entry points enables a tool to register callbacks for OpenMP
