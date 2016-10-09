@@ -317,7 +317,7 @@ that has an implementation-defined behavior.
 \code{ompt\_event\_mutex\_release}         & * & * & * & * \\
 \code{ompt\_event\_task\_dependences}      & * & * & * & * \\
 \code{ompt\_event\_task\_dependence\_pair} & * & * & * & * \\
-\code{ompt\_event\_worksharing}            & * & * & * & * \\
+\code{ompt\_event\_work}                   & * & * & * & * \\
 \code{ompt\_event\_master}                 & * & * & * & * \\
 \code{ompt\_event\_target\_data\_map}      & * & * & * & * \\
 \code{ompt\_event\_sync\_region}           & * & * & * & * \\
@@ -860,7 +860,7 @@ typedef enum ompt_event_t \{
   ompt_event_mutex_release            = 15,
   ompt_event_task_dependences         = 16,
   ompt_event_task_dependence_pair     = 17,
-  ompt_event_worksharing              = 18,
+  ompt_event_work                     = 18,
   ompt_event_master                   = 19,
   ompt_event_target_data_map          = 20,
   ompt_event_sync_region              = 21,
@@ -1040,7 +1040,7 @@ typedef struct ompt_record_ompt_s \{
     ompt_record_mutex_t \plc{mutex};
     ompt_record_nested_lock_t \plc{nested_lock};
     ompt_record_master_t \plc{master};
-    ompt_record_worksharing_t \plc{worksharing};
+    ompt_record_work_t \plc{work};
     ompt_record_flush_t \plc{flush};
   \} \plc{record};
 \} ompt_record_ompt_t;
@@ -1247,7 +1247,7 @@ ompt_data_t ompt_data_none = \{.value=0\};
 \item \code{ompt\_task\_implicit\_callback\_t} callback type, see \specref{sec:ompt_task_implicit_callback_t}.
 \item \code{ompt\_task\_sync\_region\_callback\_t} callback type, see \specref{sec:ompt_task_sync_region_callback_t}.
 \item \code{ompt\_task\_master\_callback\_t} callback type, see \specref{sec:ompt_task_master_callback_t}.
-\item \code{ompt\_task\_worksharing\_callback\_t} callback type, see \specref{sec:ompt_task_worksharing_callback_t}.
+\item \code{ompt\_task\_work\_callback\_t} callback type, see \specref{sec:ompt_task_work_callback_t}.
 \item \code{ompt\_task\_target\_callback\_t} callback type, see \specref{sec:ompt_task_target_callback_t}.
 \item \code{ompt\_flush\_callback\_t} callback type, see \specref{sec:ompt_flush_callback_t}.
 \end{itemize}
@@ -1508,14 +1508,14 @@ typedef enum ompt_scope_endpoint_e \{
 \item \code{ompt\_sync\_region\_callback\_t} callback type, see \specref{sec:ompt_sync_region_callback_t}.
 \item \code{ompt\_nested\_lock\_callback\_t} callback type, see \specref{sec:ompt_nested_lock_callback_t}.
 \item \code{ompt\_master\_callback\_t} callback type, see \specref{sec:ompt_master_callback_t}.
-\item \code{ompt\_worksharing\_callback\_t} callback type, see \specref{sec:ompt_worksharing_callback_t}.
+\item \code{ompt\_work\_callback\_t} callback type, see \specref{sec:ompt_work_callback_t}.
 \item \code{ompt\_target\_callback\_t} callback type, see \specref{sec:ompt_target_callback_t}.
 \item \code{ompt\_record\_idle\_t} data type, see \specref{sec:ompt_record_idle_t}.
 \item \code{ompt\_record\_implicit\_t} data type, see \specref{sec:ompt_record_implicit_t}.
 \item \code{ompt\_sync\_region\_t} data type, see \specref{sec:ompt_sync_region_t}.
 \item \code{ompt\_nested\_lock\_t} data type, see \specref{sec:ompt_nested_lock_t}.
 \item \code{ompt\_master\_t} data type, see \specref{sec:ompt_master_t}.
-\item \code{ompt\_worksharing\_t} data type, see \specref{sec:ompt_worksharing_t}.
+\item \code{ompt\_work\_t} data type, see \specref{sec:ompt_work_t}.
 \end{itemize}
 \end{comment}
 
@@ -1572,23 +1572,24 @@ typedef enum ompt_target_data_op_e \{
 \end{itemize}
 \end{comment}
 
-% ompt_worksharing_type_t
+% ompt_work_type_t
 
-\ompttype{\code{ompt\_worksharing\_type\_t}}
-\label{sec:ompt_worksharing_type_t} 
-\code{ompt\_worksharing\_type\_t} is an enumeration that defines the valid worksharing type values.
+\ompttype{\code{ompt\_work\_type\_t}}
+\label{sec:ompt_work_type_t} 
+\code{ompt\_work\_type\_t} is an enumeration that defines the valid work type values.
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_worksharing_type_e \{
-  ompt_worksharing_loop               = 1, 
-  ompt_worksharing_sections           = 2,
-  ompt_worksharing_single_executor    = 3,
-  ompt_worksharing_single_other       = 4,
-  ompt_worksharing_workshare          = 5,
-  ompt_worksharing_distribute         = 6
-\} ompt_worksharing_type_t;
+typedef enum ompt_work_type_e \{
+  ompt_work_loop               = 1, 
+  ompt_work_sections           = 2,
+  ompt_work_single_executor    = 3,
+  ompt_work_single_other       = 4,
+  ompt_work_workshare          = 5,
+  ompt_work_distribute         = 6,
+  ompt_work_taskloop          = 7
+\} ompt_work_type_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -1596,8 +1597,8 @@ typedef enum ompt_worksharing_type_e \{
 \begin{comment}
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_worksharing\_callback\_t} callback type, see \specref{sec:ompt_worksharing_callback_t}.
-\item \code{ompt\_record\_worksharing\_t} data type, see \specref{sec:ompt_record_worksharing_t}.
+\item \code{ompt\_work\_callback\_t} callback type, see \specref{sec:ompt_work_callback_t}.
+\item \code{ompt\_record\_work\_t} data type, see \specref{sec:ompt_record_work_t}.
 \end{itemize}
 \end{comment}
 
@@ -2831,15 +2832,15 @@ that indicates whether the callback signals the begin or end of the scope.
 
 
 
-\omptcallbacksignature{\code{ompt\_worksharing\_callback\_t}}
-\index{ompt\_worksharing\_callback\_t@{\code{ompt\_worksharing\_callback\_t}}}
-\label{sec:ompt_worksharing_callback_t}
+\omptcallbacksignature{\code{ompt\_work\_callback\_t}}
+\index{ompt\_work\_callback\_t@{\code{ompt\_work\_callback\_t}}}
+\label{sec:ompt_work_callback_t}
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_worksharing_callback_t) (
-  ompt_worksharing_type_t \plc{wstype},
+typedef void (*ompt_work_callback_t) (
+  ompt_work_type_t \plc{wstype},
   ompt_scope_endpoint_t \plc{endpoint},
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{task_data},
@@ -2854,20 +2855,20 @@ typedef void (*ompt_worksharing_callback_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt_record_worksharing_s \{
-  ompt_worksharing_type_t \plc{wstype};
+typedef struct ompt_record_work_s \{
+  ompt_work_type_t \plc{wstype};
   ompt_scope_endpoint_t \plc{endpoint};
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{task_id};
   const void *\plc{codeptr_ra};
-\} ompt_record_worksharing_t;
+\} ompt_record_work_t;
 \end{boxedcode}
 \ccppspecificend
 }
 \end{targetRecord}
 
 \descr ToDo
-The callbacks with type signature \code{ompt\_worksharing\_callback\_t},
+The callbacks with type signature \code{ompt\_work\_callback\_t},
 include a parameter \plc{requested\_team\_size}
 that indicates the number of threads requested by the user, and a parameter
 \plc{actual\_team\_size} that indicates the number of threads in the team.
@@ -2880,8 +2881,8 @@ that indicates whether the callback signals the begin or end of the scope.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_worksharing\_type\_t} type signature, see
-\specref{sec:ompt_worksharing_type_t}.
+\item \code{ompt\_work\_type\_t} type signature, see
+\specref{sec:ompt_work_type_t}.
 \item \code{ompt\_scope\_endpoint\_t} type signature, see
 \specref{sec:ompt_scope_endpoint_t}.
 \item \code{ompt\_data\_t} type signature, see
