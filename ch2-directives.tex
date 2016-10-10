@@ -3223,9 +3223,7 @@ programmer must ensure, by adding proper synchronization, that the storage does 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
 
-\tools
-
-\def\omptTaskCreate#1#2{
+\def\omptTaskCreateEvents#1#2{
   Upon encountering a \code{#1} construct that causes a \code{task} to be created, 
   the encountering thread shall invoke the callback \code{ompt\_event\_task\_create}, if registered,
   with \code{type=#2}
@@ -3233,6 +3231,20 @@ reach the end of its lifetime before the explicit \code{task} region completes i
   This callback has type signature \code{ompt\_task\_create\_callback\_t}.
 }
 
+\def\omptTaskCreateTools#1#2{
+  Upon encountering a \code{#1} construct that causes a \code{task} to be created, 
+  the encountering thread shall invoke the callback \code{ompt\_event\_task\_create}, if registered,
+  with \code{type=#2}
+  in the context of the \code{task} that encountered the \code{#1} construct.
+  This callback has type signature \code{ompt\_task\_create\_callback\_t}.
+}
+
+\def\omptTaskCreate#1#2{
+  \events
+  \omptTaskCreateEvents{#1}{#2}
+  \tools
+  \omptTaskCreateTools{#1}{#2}  
+  }
 \omptTaskCreate{task}{ompt\_explicit\_task}
 
 Whenever a \code{task} completes and before scheduling another \code{task}, 
@@ -3770,9 +3782,7 @@ When a \code{target}~\code{data} construct is encountered, the encountering task
 List items that appear in a \code{use\_device\_ptr} clause are converted into
 device pointers to the corresponding list item in the device data environment.
 
-\tools
-
-\def\omptTargetRegion#1#2
+\def\omptTargetRegionEvents#1#2
 {
 On entry to the \code{#1} region, the executing thread
 shall invoke the callback \code{ompt\_event\_target}, if registered, with
@@ -3782,6 +3792,26 @@ This callback has type signature \code{ompt\_target\_callback\_t}.
 On exit from the \code{#1} region, the executing thread
 shall invoke the callback \code{ompt\_event\_target}, if registered, with
 \code{endpoint=ompt\_scope\_end} and \code{kind=#2}.
+}
+
+\def\omptTargetRegionTools#1#2
+{
+On entry to the \code{#1} region, the executing thread
+shall invoke the callback \code{ompt\_event\_target}, if registered, with
+\code{endpoint=ompt\_scope\_begin} and \code{kind=#2}.
+This callback has type signature \code{ompt\_target\_callback\_t}.
+
+On exit from the \code{#1} region, the executing thread
+shall invoke the callback \code{ompt\_event\_target}, if registered, with
+\code{endpoint=ompt\_scope\_end} and \code{kind=#2}.
+}
+
+\def\omptTargetRegion#1#2
+{
+\events
+\omptTargetRegionEvents{#1}{#2}
+\tools
+\omptTargetRegionTools{#1}{#2}
 }
 \omptTargetRegion{\code{target}~\code{data}}{ompt\_target}
 
@@ -3892,12 +3922,18 @@ If there is no \code{device} clause, the default device is determined by the \pl
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
 
-\tools
+%\tools
 \def\omptTarget#1#2
 {
-\omptTaskCreate{#1}{ompt\_task\_target}
+\events
 
-\omptTargetRegion{#1}{#2}
+\omptTaskCreateEvents{#1}{ompt\_task\_target}
+\omptTargetRegionEvents{#1}{#2}
+
+\tools
+
+\omptTaskCreateTools{#1}{ompt\_task\_target}
+\omptTargetRegionTools{#1}{#2}
 }
 \omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}
 
@@ -4007,7 +4043,7 @@ If a \code{depend} clause is present, it is associated with the \plc{target task
 If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
-\tools
+%\tools
 \omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}
 
 \restrictions
@@ -4152,7 +4188,7 @@ If an array section is a list item in a \code{map} clause and the array section 
 If a zero-length array section is a list item in a \code{map} clause, and the array section is derived from a variable for the which the type is pointer then that variable is initialized with the address of the corresponding storage location in the device data environment.  If the corresponding storage location is not present in the device data environment then the private variable is initialized to NULL.  
 \ccppspecificend
 
-\tools
+%\tools
 
 \omptTarget{\code{target}}{ompt\_target}
 
@@ -4341,7 +4377,7 @@ The device is specified in the \code{device} clause. If there is no \code{device
 is determined by the \plc{default-device-var} ICV. When an \code{if} clause is present and the \code{if} 
 clause expression evaluates to \plc{false} then no assignments occur.
 
-\tools
+%\tools
 \omptTarget{\code{target}~\code{update}}{ompt\_target\_update}
 
 \restrictions
