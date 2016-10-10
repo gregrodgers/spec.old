@@ -1294,10 +1294,9 @@ If the parallel region activates an idle thread, an \plc{idle-end}
 event occurs in the newly activated thread.
 
 If the parallel region creates a thread, a \plc{thread-begin}
-event occurs in the context of the new thread as the first event in
-that thread.
+event occurs as the first event in the context of the new thread.
 
-On creation of the implicit task, an \plc{implicit-task-begin} event
+Upon creation of each implicit task, an \plc{implicit-task-begin} event
 occurs in the thread executing the implicit task after the implicit
 task is fully initialized but before the task begins to execute the
 structured block of the \code{parallel} construct.
@@ -1306,17 +1305,18 @@ An \plc{implicit-task-begin} event in a thread for a parallel region
 occurs after an \plc{idle-end} or \plc{thread-begin} event in the
 thread for the parallel region. 
 
-When finishing an implicit task, an \plc{implicit-task-end} event
-occurs in the executing thread after the implicit task executes its
+When a thread is finishing an implicit task, an \plc{implicit-task-end} event
+occurs in the thread after the implicit task executes its
 closing synchronization barrier but before the task is destroyed.
 
 The \plc{parallel-end} event occurs in the thread encountering the
-\code{parallel} construct but before any implicit task starts to
-execute the parallel region's work.
+\code{parallel} construct after the \code{parallel} region 
+executes its closing synchronization barrier 
+but before resuming execution of the parent task.  
 
 If a thread is destroyed at the end of a parallel region, a
-\plc{thread-end} event occurs in the context of the thread as the last
-event in the thread prior to its destruction.
+\plc{thread-end} event occurs in the thread as the last
+event prior to the thread's destruction.
 
 If a non-master thread is not destroyed at the end of a parallel
 region, an \plc{idle-begin} event occurs after the thread's
@@ -1338,26 +1338,30 @@ context of the implicit task.  The callback has type signature
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
 as its \plc{endpoint} argument, as appropriate.
 
-On creation of the implicit task, each thread shall invoke the 
-\code{ompt\_event\_implicit\_task} callback, if registered, with 
-\code{endpoint = ompt\_scope\_begin} after an
-implicit \code{task} is fully initialized but before the \code{task} begins 
-to execute the structured block of the \code{parallel} construct.
+A thread invokes a registered \code{ompt\_callback\_parallel\_end}
+callback for each occurrence of a \plc{parallel-end} event in that
+thread.  The callback occurs in the task encountering
+the parallel construct.  This callback has the type signature
+\code{ompt\_callback\_parallel\_end\_t}.
 
-When finishing an implicit task, the executing thread shall invoke the 
-\code{ompt\_event\_implicit\_task} callback, if registered, 
-with the \code{endpoint = ompt\_scope\_end} after the implicit
-\code{task} executes its closing synchronization barrier but before the 
-\code{task} is destroyed.
-The binding region of the \code{ompt\_event\_implicit\_task} callback is the 
-implicit \code{task}. The callback has type signature \code{ompt\_scoped\_implicit\_callback\_t}.
+A thread invokes a registered \code{ompt\_callback\_idle}
+callback for each occurrence of a \plc{idle-begin} and
+\plc{idle-end} event in that thread. The callback occurs in the
+context of the idling thread.  The callback has type signature
+\code{ompt\_callback\_idle\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
 
-On exit from the \code{parallel} region, the master thread
-shall invoke the callback \code{ompt\_event\_parallel\_end} if registered.
-The encountering thread invokes this callback 
-after a \code{parallel} region executes its closing synchronization barrier 
-but before resuming execution of the parent task.  
-The callback has type signature \code{ompt\_parallel\_end\_callback\_t}. 
+A thread invokes a registered \code{ompt\_callback\_thread\_begin}
+callback for the \plc{thread-begin} event in that thread. 
+The callback occurs in the
+context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread_begin\_t}. 
+
+A thread invokes a registered \code{ompt\_callback\_thread\_end}
+callback for the \plc{thread-end} event in that thread. 
+The callback occurs in the context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread_end\_t}. 
 
 \restrictions
 Restrictions to the \code{parallel} construct are as follows:
