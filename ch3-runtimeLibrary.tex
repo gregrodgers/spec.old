@@ -678,7 +678,6 @@ This routine returns \plc{true} if cancellation is enabled. It returns \plc{fals
 
 
 
-
 \subsection{\code{omp\_set\_nested}}
 \index{omp\_set\_nested@{\code{omp\_set\_nested}}}
 \label{subsec:omp_set_nested}
@@ -3097,33 +3096,78 @@ pass commands to an attached tool.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-void omp\_tcontrol(long long int \plc{command}, long long int \plc{modifier});
+int omp\_tcontrol(
+  long long int \plc{command}, 
+  long long int \plc{modifier},
+  void *arg);
 \end{boxedcode}
 \ccppspecificend
 }
 
 \fortranspecificstart
 \begin{boxedcode}
-subroutine omp\_tcontrol(\plc{command}, \plc{modifier})
+subroutine omp\_tcontrol(\plc{command}, \plc{modifier}, \plc{error\_code})
 integer (kind=omp\_tcontrol\_kind) \plc{command}
 integer (kind=omp\_tcontrol\_kind) \plc{modifier}
+integer (kind=omp\_tcontrol\_kind) \plc{error\_code}
 \end{boxedcode}
 \fortranspecificend
 
 \descr
 
 An OpenMP program may use \code{omp\_tcontrol} to pass commands to 
-a tool, if a tool is present, enabled, and registered a callback to receive
-notification of \code{omp\_tcontrol} calls.
+a tool. 
 Using \code{omp\_tcontrol}, an application can request that
 a tool start or restart data collection when a code
 region of interest is encountered, pause data collection when 
 leaving the region of interest, 
 flush any data that it has collected so far, and
 end data collection. 
-% A tool may allow an application using this interface to turn monitoring on and off many times during an execution to monitor only code regions of interest.
 Additionally, \code{omp\_tcontrol} can be used to pass 
 tool-specific commands to a particular tool.
+
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+  #define OMP_TRESULT_NOTOOL     (-2)
+  #define OMP_TRESULT_NOCALLBACK (-1)
+  #define OMP_TRESULT_SUCCESS      0
+  #define OMP_TRESULT_IGNORED      1
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\fortranspecificstart
+\begin{boxedcode}
+integer(kind=omp\_tcontrol\_kind), &
+        parameter :: OMP\_TRESULT\_NOTOOL =     -2 
+integer(kind=omp\_tcontrol\_kind), &
+        parameter :: OMP\_TRESULT\_NOCALLBACK = -1
+integer(kind=omp\_tcontrol\_kind), &
+        parameter :: OMP\_TRESULT\_SUCCESS =     0
+integer(kind=omp\_tcontrol\_kind), &
+        parameter :: OMP\_TRESULT\_IGNORED =     1
+\end{boxedcode}
+\fortranspecificend
+}
+
+If no tool is active, the OpenMP implementation will return
+\code{OMP\_TRESULT\_NOTOOL}. If a tool is active, but it has not
+registered a callback for the \plc{tool-control} event, the OpenMP
+implementation will return \code{OMP\_TRESULT\_NOCALLBACK}.  
+An OpenMP implementation may return other implementation-defined negative
+values; an application may assume that any negative return value
+indicates that a tool has not received the command.  A return value of
+\code{OMP\_TRESULT\_SUCCESS} indicates that the tool has performed the
+specified command.  A return value of \code{OMP\_TRESULT\_IGNORED}
+indicates that the tool has ignored the specified command.
+A tool may return other positive values that are tool-defined. 
+When \code{omp\_tcontrol} is called from C/C++, the tool return value will be
+returned from \code{omp\_tcontrol}. 
+When \code{omp\_tcontrol} is called from Fortran, the tool return value will be
+returned in \plc{error\_code}. 
 
 \constraints
 
@@ -3131,20 +3175,20 @@ The following enumeration type defines four standard commands.
 Table~\ref{table:std-tool-cmds} describes the 
 actions that these commands request from a tool.
 
-\begin{samepage}
+\vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef omp_tcontrol_t \{
+typedef enum omp_tcontrol_t \{
   omp_tcontrol_start = 1,
   omp_tcontrol_pause = 2,
   omp_tcontrol_flush = 3,
-  omp_tcontrol_end = 4,
+  omp_tcontrol_end = 4
 \} omp_tcontrol_t;
 \end{boxedcode}
 \ccppspecificend
-\end{samepage}
+}
 
-\begin{samepage}
+\vbox{
 \fortranspecificstart
 \begin{boxedcode}
 integer(kind=omp\_tcontrol\_kind), &
@@ -3157,33 +3201,13 @@ integer(kind=omp\_tcontrol\_kind), &
         parameter :: omp\_tcontrol\_end = 4
 \end{boxedcode}
 \fortranspecificend
-\end{samepage}
+}
 
-
-
-\begin{comment}
-\noindent
-%
-A command of \code{omp\_tcontrol\_start} asks a tool to start or 
-restart monitoring if it is off. If monitoring is already on, this 
-command is idempotent. If monitoring has already been turned off 
-permanently, this command will have no effect.
-%
-A command of \code{omp\_tcontrol\_pause} asks a tool to temporarily 
-turn monitoring off. If monitoring is already off, it is idempotent.
-%
-A command of \code{omp\_tcontrol\_flush} asks a tool to flush any data that 
-it has buffered. This command may be applied whether monitoring is on or off.
-%
-A command of \code{omp\_tcontrol\_end} turns monitoring off permanently;  
-the tool may perform finalization at this point and write all of its outputs.
-\end{comment}
-
-The \code{omp\_tcontrol} routine also allows tool-specific 
-values for \plc{command} and \plc{modifier}. 
 Tool-specific values for \plc{command} must be $\geq$ 64.
 Tools must ignore \plc{command} values that they are not
 explicitly designed to handle.
+Other values accepted by a tool for \plc{command}, 
+and any values for \plc{modifier} and \plc{arg} are tool-defined.
 
 \begin{table}
 \begin{center}
@@ -3198,7 +3222,7 @@ turn monitoring off. If monitoring is already off, it is idempotent.\\\hline
 \code{omp\_tcontrol\_flush} & Flush any data buffered by a tool.
 This command may be applied whether monitoring is on or off.\\\hline
 \code{omp\_tcontrol\_end} & Turn monitoring off permanently; 
-the tool finalize itself and flush all output.\\\hline
+the tool finalizes itself and flushes all output.\\\hline
 \end{tabular}
 \vskip 1ex
 \caption{Standard tool control commands.}
@@ -3206,31 +3230,36 @@ the tool finalize itself and flush all output.\\\hline
 \end{center}
 \end{table}
 
+\events
+
+The \plc{tool-control} event occurs in the thread encountering a call
+to \code{omp\_tcontrol} at a point inside its associated OpenMP region.
+
 \tools
 
-Tool support for \code{omp\_tcontrol} is optional. 
-If a tool wants notification of 
-\code{omp\_tcontrol} calls, 
-the tool must register a callback for the \code{ompt\_event\_tcontrol} event.
+An OpenMP implementation invokes a registered
+\code{ompt\_callback\_tcontrol} callback for each occurrence of a
+\plc{tool-control} event.  The callback executes in the context of the
+call that occurs in the user program.  This callback has type
+signature \code{ompt\_callback\_tcontrol\_t}.The callback may return
+any non-negative value, which will be returned to the application by
+the OpenMP implementation as the return value of the
+\code{omp\_tcontrol} call that triggered the callback.
 
-If the user program calls \code{omp\_tcontrol}, an OpenMP implementation 
-shall invoke a registered \code{ompt\_event\_tcontrol} callback.
-The callback executes in the context of the call that occurs in the user program.
-This callback has type signature \code{ompt\_tcontrol\_callback\_t}.
 
 Arguments passed to the callback are those passed by the user to
-\code{omp\_tcontrol}.  If any of the four standard commands is
-presented to a tool, the tool will ignore the modifier value.
+\code{omp\_tcontrol}. If the call is made in Fortran, the tool will be
+passed a \code{NULL} as the third argument to the callback. If any of the four standard commands is
+presented to a tool, the tool will ignore the \plc{modifier} and \plc{arg} values.
+
 
 
 \crossreferences
 \begin{itemize}
 \item Tool Interface, see
 \specchapterref{chap:ToolsSupport}
-\item \code{ompt\_event\_tcontrol} callback, see
-\specref{sec:ompt_event_tcontrol}
-\item \code{ompt\_tcontrol\_callback\_t} callback signature, see
-\specref{sec:ompt_tcontrol_callback_t}
+\item \code{ompt\_callback\_tcontrol}, see \specref{sec:ompt_callback_tcontrol}
+\item \code{ompt\_tcontrol\_callback\_t}, see \specref{sec:ompt_callback_tcontrol_t}
 \end{itemize}
 
 
