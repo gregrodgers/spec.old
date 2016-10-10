@@ -2043,23 +2043,29 @@ in any order and the behavior of an application that depends on any execution or
 \code{simd} & When the \code{simd} modifier is specified and the loop is associated with a SIMD construct, the \plc{chunk\_size} for all chunks except the first and last chunks  is  $new\_chunk\_size = \blceil chunk\_size / simd\_width \brceil * simd\_width $ where \plc{simd\_width} is an implementation-defined value. The first chunk will have at least \plc{new\_chunk\_size} iterations except if it is also the last chunk. The last chunk may have fewer iterations than \plc{new\_chunk\_size}. If the \code{simd} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
 \end{supertabular}
 
-\tools
+
 \def\omptWorksharing#1#2
 {
-On entry to the \code{#1} region, the executing thread
-may invoke the callback \code{ompt\_event\_work}, if registered, with
-\code{endpoint=ompt\_scope\_begin} and \code{wstype=#2}.
-The encountering thread invokes this callback after an \code{implicit task} encounters a 
+\events
+
+The \plc{#1{-begin}} event occurs after an implicit task encounters a 
 \code{#1} construct but before the task starts the execution of the structured 
 block of the \code{#1} region.
-This callback has type signature \code{ompt\_work\_callback\_t}.
 
-On exit from the \code{#1} region, the executing thread
-may invoke the callback \code{ompt\_event\_work}, if registered, with
-\code{endpoint=ompt\_scope\_end} and \code{wstype=#2}.
-The encountering thread invokes this callback 
-after a \code{#1} region finished execution of the structured block 
-but before resuming execution of the encountering implcit task.
+The \plc{#1{-end}} event occurs after a \code{#1} region finished execution of 
+the structured block but before resuming execution of the encountering implicit 
+task.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_work}
+callback for each occurrence of a \plc{#1{-begin}} and
+\plc{#1{-end}} event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_work\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate, and the
+\code{#2} as its \plc{wstype} argument.
 }
 \omptWorksharing{loop}{ompt\_work\_loop}
 
@@ -2292,7 +2298,7 @@ implementation defined.
 There is an implicit barrier at the end of a \code{sections} construct unless a \code{nowait} 
 clause is specified.
 
-\tools
+%\tools
 \omptWorksharing{sections}{ompt\_work\_sections}
 
 \restrictions
@@ -2593,7 +2599,7 @@ assignment assigns to a private variable in the block, the result is unspecified
 The \code{workshare} directive causes the sharing of work to occur only in the \code{workshare} 
 construct, and not in the remainder of the \code{workshare} region.
 
-\tools
+%\tools
 \omptWorksharing{workshare}{ompt\_work\_workshare}
 
 \begin{samepage}
@@ -3221,9 +3227,7 @@ programmer must ensure, by adding proper synchronization, that the storage does 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
 
-\tools
-
-\def\omptTaskCreate#1#2{
+\def\omptTaskCreateEvents#1#2{
   Upon encountering a \code{#1} construct that causes a \code{task} to be created, 
   the encountering thread shall invoke the callback \code{ompt\_event\_task\_create}, if registered,
   with \code{type=#2}
@@ -3231,6 +3235,20 @@ reach the end of its lifetime before the explicit \code{task} region completes i
   This callback has type signature \code{ompt\_task\_create\_callback\_t}.
 }
 
+\def\omptTaskCreateTools#1#2{
+  Upon encountering a \code{#1} construct that causes a \code{task} to be created, 
+  the encountering thread shall invoke the callback \code{ompt\_event\_task\_create}, if registered,
+  with \code{type=#2}
+  in the context of the \code{task} that encountered the \code{#1} construct.
+  This callback has type signature \code{ompt\_task\_create\_callback\_t}.
+}
+
+\def\omptTaskCreate#1#2{
+  \events
+  \omptTaskCreateEvents{#1}{#2}
+  \tools
+  \omptTaskCreateTools{#1}{#2}  
+  }
 \omptTaskCreate{task}{ompt\_explicit\_task}
 
 Whenever a \code{task} completes and before scheduling another \code{task}, 
@@ -3768,9 +3786,7 @@ When a \code{target}~\code{data} construct is encountered, the encountering task
 List items that appear in a \code{use\_device\_ptr} clause are converted into
 device pointers to the corresponding list item in the device data environment.
 
-\tools
-
-\def\omptTargetRegion#1#2
+\def\omptTargetRegionEvents#1#2
 {
 On entry to the \code{#1} region, the executing thread
 shall invoke the callback \code{ompt\_event\_target}, if registered, with
@@ -3780,6 +3796,26 @@ This callback has type signature \code{ompt\_target\_callback\_t}.
 On exit from the \code{#1} region, the executing thread
 shall invoke the callback \code{ompt\_event\_target}, if registered, with
 \code{endpoint=ompt\_scope\_end} and \code{kind=#2}.
+}
+
+\def\omptTargetRegionTools#1#2
+{
+On entry to the \code{#1} region, the executing thread
+shall invoke the callback \code{ompt\_event\_target}, if registered, with
+\code{endpoint=ompt\_scope\_begin} and \code{kind=#2}.
+This callback has type signature \code{ompt\_target\_callback\_t}.
+
+On exit from the \code{#1} region, the executing thread
+shall invoke the callback \code{ompt\_event\_target}, if registered, with
+\code{endpoint=ompt\_scope\_end} and \code{kind=#2}.
+}
+
+\def\omptTargetRegion#1#2
+{
+\events
+\omptTargetRegionEvents{#1}{#2}
+\tools
+\omptTargetRegionTools{#1}{#2}
 }
 \omptTargetRegion{\code{target}~\code{data}}{ompt\_target}
 
@@ -3890,12 +3926,18 @@ If there is no \code{device} clause, the default device is determined by the \pl
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
 
-\tools
+%\tools
 \def\omptTarget#1#2
 {
-\omptTaskCreate{#1}{ompt\_task\_target}
+\events
 
-\omptTargetRegion{#1}{#2}
+\omptTaskCreateEvents{#1}{ompt\_task\_target}
+\omptTargetRegionEvents{#1}{#2}
+
+\tools
+
+\omptTaskCreateTools{#1}{ompt\_task\_target}
+\omptTargetRegionTools{#1}{#2}
 }
 \omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}
 
@@ -4005,7 +4047,7 @@ If a \code{depend} clause is present, it is associated with the \plc{target task
 If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
-\tools
+%\tools
 \omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}
 
 \restrictions
@@ -4150,7 +4192,7 @@ If an array section is a list item in a \code{map} clause and the array section 
 If a zero-length array section is a list item in a \code{map} clause, and the array section is derived from a variable for the which the type is pointer then that variable is initialized with the address of the corresponding storage location in the device data environment.  If the corresponding storage location is not present in the device data environment then the private variable is initialized to NULL.  
 \ccppspecificend
 
-\tools
+%\tools
 
 \omptTarget{\code{target}}{ompt\_target}
 
@@ -4339,7 +4381,7 @@ The device is specified in the \code{device} clause. If there is no \code{device
 is determined by the \plc{default-device-var} ICV. When an \code{if} clause is present and the \code{if} 
 clause expression evaluates to \plc{false} then no assignments occur.
 
-\tools
+%\tools
 \omptTarget{\code{target}~\code{update}}{ompt\_target\_update}
 
 \restrictions
@@ -4862,7 +4904,7 @@ chunks is unspecified in this case.
 
 When no \code{dist\_schedule} clause is specified, the schedule is implementation defined.
 
-\tools
+%\tools
 \omptWorksharing{distribute}{ompt\_work\_distribute}
 
 \restrictions
@@ -6652,28 +6694,36 @@ had been specified.
 % \code{hint} clause is specified, the effect is as if \code{hint(none)}
 % has been specified.
 
-\tools
 \def\omptMutex#1{
-On entry to the \code{#1} region, the encountering thread
-may invoke the callback \code{ompt\_event\_mutex\_acquire}, if registered, with
-\code{kind=ompt\_mutex\_#1}.
-The encountering thread invokes this callback after an \code{implicit task} encounters a 
-\code{#1} construct but before the associated lock is requested.
-This callback has type signature \code{ompt\_mutex\_acquire\_callback\_t}.
+\events
 
-Before executing the \code{#1} region's structured block, but after acquiring
-the lock, the executing threads may invoke the callback 
-\code{ompt\_event\_mutex\_acquired}, if registered, with \code{kind=ompt\_mutex\_#1}.
-This callback has type signature \code{ompt\_mutex\_callback\_t}.
+The following events only occurs, if a lock is acquired for the \code{#1} region.
 
-On exit from the \code{#1} region, the encountering thread may invoke the 
-callback \code{ompt\_event\_mutex\_release}, if registered, with
-\code{kind=ompt\_mutex\_#1}.
-The encountering thread invokes this callback 
-after a \code{#1} region finished execution of the structured block and released
-the associated lock
-but before resuming execution of the task.
-This callback has type signature \code{ompt\_mutex\_callback\_t}.
+The \plc{#1-acquire} event occurs in the thread encountering the
+\code{#1} construct on entry to the #1 region before an associated lock
+is requested.
+
+The \plc{#1-acquired} event occurs in the thread encountering the
+\code{#1} construct after acquiring an associated lock, but before executing the
+structured block of the \code{#1} region.
+
+The \plc{#1-release} event occurs in the thread encountering the
+\code{#1} construct after an associated lock was released.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_mutex\_acquire}
+callback for each occurrence of a \plc{#1-acquire} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_acquire\_t}.
+A thread invokes a registered \code{ompt\_callback\_mutex\_acquired}
+callback for each occurrence of a \plc{#1-acquired} event 
+in that thread.  This callback has the type signature \code{ompt\_mutex\_callback\_t}.
+A thread invokes a registered \code{ompt\_callback\_mutex\_release}
+callback for each occurrence of a \plc{#1-release} event 
+in that thread.  This callback has the type signature \code{ompt\_mutex\_callback\_t}.
+The callbacks occur in the task encountering
+the #1 construct.  The callbacks receive \code{ompt\_mutex\_#1}
+as their \plc{kind} argument.
 }
 
 \omptMutex{critical}
@@ -6770,22 +6820,27 @@ region before any are allowed to continue execution beyond the barrier.
 The \code{barrier} region includes an implicit task scheduling point in the current task 
 region.
 
-\tools
 \def\omptSyncRegion#1{
-On entry to the \code{#1} region, the encountering thread
-may invoke the callback \code{ompt\_event\_sync\_region}, if registered, with
-\code{endpoint=ompt\_scope\_begin}.
-The encountering thread invokes this callback after a \code{task} encounters a 
-\code{#1} construct but before the task starts the execution of the 
-\code{#1} region.
-This callback has type signature \code{ompt\_sync\_region\_callback\_t}.
+\events
 
-On exit from the \code{#1} region, the encountering thread
-may invoke the callback \code{ompt\_event\_sync\_region}, if registered, with
-\code{endpoint=ompt\_scope\_end}.
-The encountering thread invokes this callback 
-after a \code{#1} region finished the synchronization
-but before resuming execution of the encountering task.}
+The \plc{#1-begin} event occurs in the thread encountering the
+\code{#1} construct on entry to the #1 region.
+
+The \plc{#1-end} event occurs in the thread encountering the
+\code{#1} construct after the #1 synchronization on exit from the #1 region.
+
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_sync\_region}
+callback for each occurrence of a \plc{#1-begin} and \plc{#1-end} event 
+in that thread.  The callback occurs in the task encountering
+the #1 construct.  This callback has the type signature
+\code{ompt\_callback\_sync\_region\_t}. The callback receives
+\code{ompt\_sync\_region\_#1} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+}
 \omptSyncRegion{barrier}
 
 \restrictions
@@ -6849,7 +6904,6 @@ The \code{taskwait} region includes an implicit task scheduling point in the cur
 region. The current task region is suspended at the task scheduling point until all child 
 tasks that it generated before the \code{taskwait} region complete execution.
 
-\tools
 \omptSyncRegion{taskwait}
 
 \crossreferences
@@ -6911,7 +6965,6 @@ There is an implicit task scheduling point at the end of the \code{taskgroup}
 region. The current task is suspended at the task scheduling point until all 
 tasks in the \plc{taskgroup set} complete execution.
 
-\tools
 \omptSyncRegion{taskgroup}
 
 \crossreferences
@@ -7305,7 +7358,7 @@ of \plc{x} is not a multiple of the size of \plc{x}), then the behavior of the \
 implementation defined.
 
 \needspace{16\baselineskip}\begin{samepage}
-\tools
+
 \omptMutex{atomic}
 
 The invokation of callbacks is only intended for cases where an \code{atomic}
@@ -7659,7 +7712,6 @@ are satisfied before it completes execution of the \code{ordered} region.
 A specific dependence is satisfied when a thread executing the corresponding
 iteration encounters an \code{ordered} construct with a \code{depend(source)} clause.
 
-\tools
 \omptMutex{ordered}
 
 
