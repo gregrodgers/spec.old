@@ -1284,13 +1284,59 @@ work done by a team prior to any barrier that the team has passed in the program
 guaranteed to be complete. The amount of work done by each thread after the last 
 barrier that it passed and before it terminates is unspecified.
 
+\events
+
+The \plc{parallel-begin} event occurs in the thread encountering the
+\code{parallel} construct before any implicit task starts to execute
+the parallel region's work.
+
+If the parallel region activates an idle thread, an \plc{idle-end}
+event occurs in the newly activated thread.
+
+If the parallel region creates a thread, a \plc{thread-begin}
+event occurs in the context of the new thread as the first event in
+that thread.
+
+On creation of the implicit task, an \plc{implicit-task-begin} event
+occurs in the thread executing the implicit task after the implicit
+task is fully initialized but before the task begins to execute the
+structured block of the \code{parallel} construct.
+
+An \plc{implicit-task-begin} event in a thread for a parallel region 
+occurs after an \plc{idle-end} or \plc{thread-begin} event in the
+thread for the parallel region. 
+
+When finishing an implicit task, an \plc{implicit-task-end} event
+occurs in the executing thread after the implicit task executes its
+closing synchronization barrier but before the task is destroyed.
+
+The \plc{parallel-end} event occurs in the thread encountering the
+\code{parallel} construct but before any implicit task starts to
+execute the parallel region's work.
+
+If a thread is destroyed at the end of a parallel region, a
+\plc{thread-end} event occurs in the context of the thread as the last
+event in the thread prior to its destruction.
+
+If a non-master thread is not destroyed at the end of a parallel
+region, an \plc{idle-begin} event occurs after the thread's
+\plc{implicit-task-end} event for the parallel region.
+
 \tools
-On entry to the \code{parallel} region, the master thread
-shall invoke the callback \code{ompt\_event\_parallel\_begin} if registered.
-The encountering thread invokes this callback after a \code{task} encounters a 
-\code{parallel} construct but before any implicit task starts to execute the
-parallel region's work. 
-This callback has type signature \code{ompt\_parallel\_begin\_callback\_t}.
+
+A thread invokes a registered \code{ompt\_callback\_parallel\_begin}
+callback for each occurrence of a \plc{parallel-begin} event in that
+thread.  The callback occurs in the task encountering
+the parallel construct.  This callback has the type signature
+\code{ompt\_callback\_parallel\_begin\_t}.
+
+A thread invokes a registered \code{ompt\_callback\_implicit\_task}
+callback for each occurrence of a \plc{implicit-begin} and
+\plc{implicit-end} event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_implicit\_task\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
 
 On creation of the implicit task, each thread shall invoke the 
 \code{ompt\_event\_implicit\_task} callback, if registered, with 
