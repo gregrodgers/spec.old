@@ -312,7 +312,7 @@ that has an implementation-defined behavior.
 \code{ompt\_callback\_task\_schedule}         &   &   & * \\
 \code{ompt\_callback\_implicit\_task}         &   &   & * \\
 \code{ompt\_callback\_target}                 &   &   & * \\
-\code{ompt\_callback\_target\_data}           &   &   & * \\
+\code{ompt\_callback\_target\_transfer}       &   &   & * \\
 \code{ompt\_callback\_target\_submit}         &   &   & * \\
 \code{ompt\_callback\_tcontrol}               &   &   & * \\
 \code{ompt\_callback\_runtime\_shutdown}      &   &   & * \\
@@ -323,7 +323,7 @@ that has an implementation-defined behavior.
 \code{ompt\_callback\_task\_dependence\_pair} & * & * & * \\
 \code{ompt\_callback\_work}                   & * & * & * \\
 \code{ompt\_callback\_master}                 & * & * & * \\
-\code{ompt\_callback\_target\_data\_map}      & * & * & * \\
+\code{ompt\_callback\_target\_map}            & * & * & * \\
 \code{ompt\_callback\_sync\_region}           & * & * & * \\
 \code{ompt\_callback\_init\_lock}             & * & * & * \\
 \code{ompt\_callback\_destroy\_lock}          & * & * & * \\
@@ -588,7 +588,7 @@ typedef enum omp_state_t \{
   omp_state_wait_ordered           = 0x044,
 
   omp_state_wait_target            = 0x080,
-  omp_state_wait_target_data       = 0x081,
+  omp_state_wait_target_map        = 0x081,
   omp_state_wait_target_update     = 0x082,
 
   omp_state_idle                   = 0x100, 
@@ -798,7 +798,7 @@ e.g., locks.
 
   The thread is waiting for a target region to complete.
   
-\item \code{omp\_state\_wait\_target\_data} 
+\item \code{omp\_state\_wait\_target\_map} 
 
   The thread is waiting for a target data mapping operation to complete. 
   An implementation may report \code{omp\_state\_wait\_target} 
@@ -855,7 +855,7 @@ typedef enum ompt_callback_t \{
   ompt_callback_task_schedule            = 6,
   ompt_callback_implicit_task            = 7,
   ompt_callback_target                   = 8,
-  ompt_callback_target_data              = 9,
+  ompt_callback_target_transfer          = 9,
   ompt_callback_target_submit            = 10,
   ompt_callback_tcontrol                 = 11,
   ompt_callback_runtime_shutdown         = 12,
@@ -866,7 +866,7 @@ typedef enum ompt_callback_t \{
   ompt_callback_task_dependence_pair     = 17,
   ompt_callback_work                     = 18,
   ompt_callback_master                   = 19,
-  ompt_callback_target_data_map          = 20,
+  ompt_callback_target_map               = 20,
   ompt_callback_sync_region              = 21,
   ompt_callback_init_lock                = 22,
   ompt_callback_destroy_lock             = 23,
@@ -1038,8 +1038,8 @@ typedef struct ompt_record_ompt_s \{
     ompt_implicit_record_t \plc{implicit};
     ompt_sync_region_record_t \plc{sync_region};
     ompt_target_record_t \plc{target_record};
-    ompt_target_data_record_t \plc{data};
-    ompt_target_data_map_record_t \plc{data_map};
+    ompt_target_transfer_record_t \plc{target_transfer};
+    ompt_target_map_record_t \plc{target_map};
     ompt_target_kernel_record_t \plc{kernel};
     ompt_lock_init_record_t \plc{lock_init};
     ompt_lock_destroy_record_t \plc{lock_destroy};
@@ -3010,15 +3010,15 @@ that indicates whether the callback signals the begin or end of the scope.
 
 
 
-\omptcallbacksignature{\code{ompt\_callback\_target\_data\_t}}
-\index{ompt\_callback\_target\_data\_t@{\code{ompt\_callback\_target\_data\_t}}}
-\label{sec:ompt_callback_target_data_t}
+\omptcallbacksignature{\code{ompt\_callback\_target\_transfer\_t}}
+\index{ompt\_callback\_target\_transfer\_t@{\code{ompt\_callback\_target\_transfer\_t}}}
+\label{sec:ompt_callback_target_transfer_t}
 \format
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_callback_target_data_t) (
+typedef void (*ompt_callback_target_transfer_t) (
   ompt_id_t \plc{target_id},
   ompt_id_t \plc{host_op_id},
   ompt_target_data_op_t \plc{optype},
@@ -3049,7 +3049,7 @@ typedef struct ompt_target_data_record_s \{
 \end{targetRecord}
 
 \descr
-The callbacks with type signature \code{ompt\_callback\_target\_data\_t},
+The callbacks with type signature \code{ompt\_callback\_target\_transfer\_t},
 include a parameter \plc{requested\_team\_size}
 that indicates the number of threads requested by the user, and a parameter
 \plc{actual\_team\_size} that indicates the number of threads in the team.
@@ -3066,14 +3066,14 @@ that indicates the number of threads requested by the user, and a parameter
 
 
 
-\omptcallbacksignature{\code{ompt\_callback\_target\_data\_map\_t}}
-\index{ompt\_callback\_target\_data\_map\_t@{\code{ompt\_callback\_target\_data\_map\_t}}}
-\label{sec:ompt_callback_target_data_map_t}
+\omptcallbacksignature{\code{ompt\_callback\_target\_map\_t}}
+\index{ompt\_callback\_target\_map\_t@{\code{ompt\_callback\_target\_map\_t}}}
+\label{sec:ompt_callback_target_map_t}
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_callback_target_data_map_t) (
+typedef void (*ompt_callback_target_map_t) (
   ompt_id_t \plc{target_id},
   unsigned int \plc{nitems},
   void **\plc{host_addr},
@@ -3090,21 +3090,21 @@ typedef void (*ompt_callback_target_data_map_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void ompt_target_data_map_record_s \{
+typedef void ompt_target_map_record_s \{
   ompt_id_t \plc{target_id};
   unsigned int \plc{nitems};
   void **\plc{host_addr};
   void **\plc{device_addr};
   size_t *\plc{bytes};
   unsigned int *\plc{mapping_flags};
-\} ompt_target_data_map_record_t;
+\} ompt_target_map_record_t;
 \end{boxedcode}
 \ccppspecificend
 }
 \end{targetRecord}
 
 \descr
-The callbacks with type signature \code{ompt\_callback\_target\_data\_map\_t},
+The callbacks with type signature \code{ompt\_callback\_target\_map\_t},
 include a parameter \plc{requested\_team\_size}
 that indicates the number of threads requested by the user, and a parameter
 \plc{actual\_team\_size} that indicates the number of threads in the team.
