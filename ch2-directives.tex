@@ -3234,26 +3234,26 @@ programmer must ensure, by adding proper synchronization, that the storage does 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
 
-\def\omptTaskCreateEvents#1#2{
-  The \plc{#1} event  occurs when the executing thread encounters a \code{#1} construct 
+\def\omptTaskCreateEvents#1#2#3{
+  The \plc{#3} event  occurs when the executing thread encounters a \code{#1} construct 
   that causes a \code{task} to be created.
 }
 
-\def\omptTaskCreateTools#1#2{
+\def\omptTaskCreateTools#1#2#3{
 A thread invokes a registered \code{ompt\_callback\_task\_create}
-callback for each occurrence of a \plc{#1} event in that
+callback for each occurrence of a \plc{#3} event in that
 thread.  The callback occurs in the task encountering
 the \code{#1} construct. This callback has the type signature
 \code{ompt\_callback\_task\_create\_t}.
 }
 
-\def\omptTaskCreate#1#2{
+\def\omptTaskCreate#1#2#3{
   \events
-  \omptTaskCreateEvents{#1}{#2}
+  \omptTaskCreateEvents{#1}{#2}{#3}
   \tools
-  \omptTaskCreateTools{#1}{#2}  
+  \omptTaskCreateTools{#1}{#2}{#3}  
   }
-\omptTaskCreate{task}{ompt\_explicit\_task}
+\omptTaskCreate{task}{ompt\_explicit\_task}{task}
 
 Whenever a \code{task} completes and before scheduling another \code{task}, 
 the encountering thread shall invoke the \code{ompt\_event\_task\_schedule} 
@@ -3790,34 +3790,34 @@ When a \code{target}~\code{data} construct is encountered, the encountering task
 List items that appear in a \code{use\_device\_ptr} clause are converted into
 device pointers to the corresponding list item in the device data environment.
 
-\def\omptTargetRegionEvents#1#2
+\def\omptTargetRegionEvents#1#2#3
 {
-The \plc{#1{-begin}} event occurs after a thread enters a
+The \plc{#3{-begin}} event occurs after a thread enters a
 \code{#1} region.
 
-The \plc{#1{-end}} event occurs when a thread exits a
+The \plc{#3{-end}} event occurs when a thread exits a
 \code{#1} region.
 }
 
-\def\omptTargetRegionTools#1#2
+\def\omptTargetRegionTools#1#2#3
 {
 A thread invokes a registered \code{ompt\_callback\_target}
-callback for each occurrence of a \plc{#1{-begin}} and
-\plc{#1{-end}} event in that thread. The callback has type signature
+callback for each occurrence of a \plc{#3{-begin}} and
+\plc{#3{-end}} event in that thread. The callback has type signature
 \code{ompt\_callback\_target\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
 as its \plc{endpoint} argument, as appropriate, and the
 \code{#2} as its \plc{kind} argument.
 }
 
-\def\omptTargetRegion#1#2
+\def\omptTargetRegion#1#2#3
 {
 \events
-\omptTargetRegionEvents{#1}{#2}
+\omptTargetRegionEvents{#1}{#2}{#3}
 \tools
-\omptTargetRegionTools{#1}{#2}
+\omptTargetRegionTools{#1}{#2}{#3}
 }
-\omptTargetRegion{\code{target}~\code{data}}{ompt\_target}
+\omptTargetRegion{\code{target}~\code{data}}{ompt\_target}{target-data}
 
 \restrictions
 \begin{itemize}
@@ -3927,19 +3927,19 @@ If there is no \code{device} clause, the default device is determined by the \pl
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
 
 %\tools
-\def\omptTarget#1#2
+\def\omptTarget#1#2#3
 {
 \events
 
-\omptTaskCreateEvents{#1}{ompt\_task\_target}
-\omptTargetRegionEvents{#1}{#2}
+\omptTaskCreateEvents{#1}{ompt\_task\_target}{#3}
+\omptTargetRegionEvents{#1}{#2}{#3}
 
 \tools
 
-\omptTaskCreateTools{#1}{ompt\_task\_target}
-\omptTargetRegionTools{#1}{#2}
+\omptTaskCreateTools{#1}{ompt\_task\_target}{#3}
+\omptTargetRegionTools{#1}{#2}{#3}
 }
-\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}
+\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}{target-enter-data}
 
 
 
@@ -4048,7 +4048,7 @@ If there is no \code{device} clause, the default device is determined by the \pl
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
 %\tools
-\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}
+\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}{target-exit}
 
 \restrictions
 \begin{itemize}
@@ -4194,7 +4194,7 @@ If a zero-length array section is a list item in a \code{map} clause, and the ar
 
 %\tools
 
-\omptTarget{\code{target}}{ompt\_target}
+\omptTarget{\code{target}}{ompt\_target}{target}
 
 Prior to submitting a kernel for execution on a target device, 
 an OpenMP implementation invokes callback 
@@ -4382,7 +4382,7 @@ is determined by the \plc{default-device-var} ICV. When an \code{if} clause is p
 clause expression evaluates to \plc{false} then no assignments occur.
 
 %\tools
-\omptTarget{\code{target}~\code{update}}{ompt\_target\_update}
+\omptTarget{\code{target}~\code{update}}{ompt\_target\_update}{target-update}
 
 \restrictions
 \begin{itemize}
@@ -6579,21 +6579,26 @@ block of the \code{master} region.
 Other threads in the team do not execute the associated structured block. There is no 
 implied barrier either on entry to, or exit from, the \code{master} construct.
 
-\tools
-On entry to the \code{master} region, the master thread
-may invoke the callback \code{ompt\_event\_master} with
-\code{endpoint=ompt\_scope\_begin} if registered.
-The master thread invokes this callback after an \code{implicit task} encounters a 
-\code{master} construct but before the task starts the execution of the structured 
-block of the \code{master} region.
-This callback has type signature \code{ompt\_callback\_master\_t}.
+\events
 
-On exit from the \code{master} region, the master thread
-may invoke the callback \code{ompt\_event\_master} with
-\code{endpoint=ompt\_scope\_end} if registered.
-The master thread invokes this callback 
-after a \code{master} region finished execution of the structured block 
-but before resuming execution of the task.
+The \plc{master-begin} event occurs in the master thread of the
+current team encountering the \code{master} construct on entry to the
+\code{master} region.
+
+The \plc{master-end} event occurs in the master thread of the current
+team encountering the \code{master} construct on exit from the
+\code{master} region.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_master}
+callback for each occurrence of a \plc{master-begin} and a
+\plc{master-end} event in that thread.  The callback occurs in the
+master thread of the current team encountering
+the \code{master} construct.  This callback has the type signature
+\code{ompt\_callback\_master\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
 
 \restrictions
 \cppspecificstart
@@ -7591,11 +7596,16 @@ the \code{atomic} construct in
 \end{itemize}
 \noteend
 
+\events
+
+The \plc{flush} event occurs in the thread encountering the
+\code{flush} construct.
+
 \tools
-A thread that encounters a \code{flush} construct
-may invoke the callback \code{ompt\_event\_flush} if registered just after
-the flush operation is executed.
-This callback has type signature \code{ompt\_callback\_flush\_t}.
+
+A thread invokes a registered \code{ompt\_callback\_flush} callback
+for each occurrence of a \plc{flush} event in that thread. This
+callback has the type signature \code{ompt\_callback\_flush\_t}.
 
 \crossreferences
 \begin{itemize}
