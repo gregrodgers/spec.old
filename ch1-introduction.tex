@@ -1138,6 +1138,11 @@ A tool that executes in the address space of the program it is monitoring.
 A tool that executes in an address space distinct from the program it is monitoring.
 \glossarydefend
 
+\glossaryterm{activated tool} 
+\glossarydefstart
+A first-party tool is considered activated if its initialization is successful.
+\glossarydefend
+
 \glossaryterm{event} 
 \glossarydefstart
 A point of interest in the execution of a thread where the condition
@@ -1229,12 +1234,14 @@ A function called asynchronously when a \emph{signal} is delivered to a thread.
 Guaranteed not to interfere with operations that are being interrupted by \emph{signal} delivery. 
 An async signal safe \emph{entry point} is safe to call from a \emph{signal handler}.
 \glossarydefend
+
 \begin{comment}
 \glossaryterm{type signature} 
 \glossarydefstart
 Definition of a function interface that specifies the type of each function argument and the function's return value.
 \glossarydefend
 \end{comment}
+
 \section{Execution Model}
 \label{sec:Execution Model}
 \index{execution model}
@@ -1584,18 +1591,18 @@ tools that support monitoring and performance
 analysis of OpenMP programs developed using any implementation of 
 the OpenMP API, the OpenMP API includes a tool interface 
 known as OMPT.
-The OMPT interface can be implemented entirely by an OpenMP runtime system, 
-entirely by a compiler, or with a hybrid strategy
-that employs a mixture of compiler and runtime support.
+% The OMPT interface can be implemented entirely by an OpenMP runtime system, entirely by a compiler, or with a hybrid strategy that employs a mixture of compiler and runtime support.
 
 The OMPT interface provides the following: 
 \begin{itemize}
-\item a mechanism to invoke a tool-provided initializer, 
-\item routines that enable a tool to determine what OpenMP thread states and mutual exclusion mechanisms an OpenMP API implementation employs,
-\item routines that enable a tool to examine OpenMP state information 
-associated with an OpenMP thread,
-\item mechanisms that help a tool to reconstruct user-level call stacks for OpenMP work,
-\item a callback interface that enables a tool to receive notification of OpenMP \emph{events}, 
+\item a mechanism to intialize a first-party tool,
+\item routines that enable a tool to determine the capabilities of an
+  OpenMP implementation,
+\item routines that enable a tool to examine OpenMP state information associated with a thread,
+\item mechanisms that enable a tool to map implementation-level calling
+  contexts back to their source-level representations,
+\item a callback interface that enables a tool to receive notification
+  of OpenMP \emph{events},
 \item a tracing interface that enables a tool to trace activity on OpenMP target devices, and
 \item a runtime library routine that an application can use to control a tool.
 \end{itemize}
@@ -1617,19 +1624,15 @@ capabilities needed to provide full tool support for statically-linked
 executables.  OMPT builds upon ideas from both POMP and Collector.
 \end{comment}
 
-OpenMP implementations may differ with respect to which
-OpenMP events support tool callbacks. For some OpenMP events, an
-OpenMP implementation must allow a tool to register a tool callback
-and guarantee that it will be invoked for each occurrence of the
-event. For other OpenMP events, support for callbacks is
-implementation-defined; namely, when a tool attempts to register a
-callback for such an event, an OpenMP implementation may indicate
-that the event never occurs or that although the event may occur,
-callbacks are possible only sometimes or never.
-For OpenMP events where tool callbacks are practical 
-without a significant performance penalty, OpenMP implementations are 
-encouraged to support tool callbacks where implementation-defined behaviors
-are permitted.
+OpenMP implementations may differ with respect the thread states that
+they support, the mutual exclusion implementations they employ, 
+and the OpenMP events for which tool callbacks are invoked. For some OpenMP events,
+OpenMP implementations must guarantee that a registered callback will be invoked for each occurrence of the
+event. For other OpenMP events, OpenMP implementations may invoke a registered callback for some
+or no occurrences of an event; for such
+OpenMP events,  
+OpenMP implementations are encouraged to support tool callbacks if it
+is practical to do so.
 
 In some cases, the OMPT interface may enable a tool to observe performance
 implications and infer details about an implementation of the OpenMP
@@ -1638,8 +1641,8 @@ abstract execution model described by its specification.  The ability
 of tools using the OMPT interface to observe such differences does not constrain
 implementations of the OpenMP API in any way. 
 
-With the exception of the runtime library routine for tool control, 
-all other routines in the OMPT interface are only intended for use only by tools and
+With the exception of a runtime library routine for tool control, 
+all other routines in the OMPT interface are intended for use only by tools and
 are not visible to applications.
 For that reason, a Fortran binding is provided only 
 for the application-facing tool control routine;
