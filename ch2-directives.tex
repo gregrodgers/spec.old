@@ -2063,9 +2063,8 @@ The \plc{#1{-begin}} event occurs after an implicit task encounters a
 \code{#1} construct but before the task starts the execution of the structured 
 block of the \code{#1} region.
 
-The \plc{#1{-end}} event occurs after a \code{#1} region finished execution of 
-the structured block but before resuming execution of the encountering implicit 
-task.
+The \plc{#1{-end}} event occurs after a \code{#1} region finished execution 
+but before resuming execution of the encountering task.
 
 \tools
 
@@ -3240,7 +3239,6 @@ reach the end of its lifetime before the explicit \code{task} region completes i
 The \plc{task-create} event  occurs when a thread encounters a \code{task} construct 
 that causes a new explicit task to be created after it is initialized but before it begins execution or is deferred. 
 
-The \plc{task-schedule} event occurs in a thread when it switches tasks at a task scheduling point.
 
 \tools
 
@@ -3249,18 +3247,7 @@ callback for each occurrence of a \plc{task-create} event
 in the context of the encountering task.  This callback has the type signature
 \code{ompt\_callback\_task\_create\_t}.
 
-A thread invokes a registered \code{ompt\_callback\_task\_schedule}
-callback for each occurrence of a \plc{task-schedule} event in 
-the context of the task that is resumed. This callback has the type signature
-\code{ompt\_callback\_task\_schedule\_t}. 
-The argument  \plc{prior\_task\_status} is used to indicate the cause for suspending the prior task. 
-This cause may be the completion of the prior task region, the encountering of a 
-\code{taskyield} construct, or the encountering of an active cancellation point.
 
-\notestart
-\noteheader -- For convenience of implementation, the task schedule might switch
-to the task bond to the scheduling point, before the next task is scheduled.
-\noteend
 
 \restrictions
 Restrictions to the \code{task} construct are as follows:
@@ -3454,6 +3441,7 @@ For \code{firstprivate} variables of class type, the number of invocations of co
 % as its \plc{endpoint} argument, as appropriate, and the
 % \code{#2} as its \plc{wstype} argument.
 % }
+
 \omptWorksharing{taskloop}{ompt\_work\_taskloop}
 
 \restrictions
@@ -3579,8 +3567,6 @@ A \code{taskyield} region binds to the current task region. The binding thread s
 The \code{taskyield} region includes an explicit task scheduling point in the current task 
 region.
 
-\toolsToDo{No tools paragraph needed for \code{taskyield}?}
-
 \crossreferences
 \begin{itemize}
 \item Task scheduling, see 
@@ -3697,13 +3683,19 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 \plc{false}, the task is executed immediately, without regard to \emph{Task Scheduling Constraint}~2.
 \noteend
 
+\events
+
+The \plc{task-schedule} event occurs in a thread when it switches tasks at a task scheduling point.
+
 \tools
 
-When scheduling a new \code{task} at a scheduling point, 
-the scheduling thread shall invoke the \code{ompt\_callback\_task\_schedule} 
-callback if registered. 
-The callback executes in the context of the newly-scheduled \code{task}.
-This callback has type signature \code{ompt\_callback\_task\_schedule\_t}.
+A thread invokes a registered \code{ompt\_callback\_task\_schedule}
+callback for each occurrence of a \plc{task-schedule} event in 
+the context of the task that is resumed. This callback has the type signature
+\code{ompt\_callback\_task\_schedule\_t}. 
+The argument  \plc{prior\_task\_status} is used to indicate the cause for suspending the prior task. 
+This cause may be the completion of the prior task region, the encountering of a 
+\code{taskyield} construct, or the encountering of an active cancellation point.
 
 \crossreferences
 \begin{itemize}
@@ -3724,8 +3716,9 @@ callback, see
 The \plc{device-initialize} event occurs in a thread that encounters
 the first \code{target}, \code{target data}, or \code{target enter
 data} construct associated with a particular target device 
-after OpenMP is initialized for the device but before
-beginning execution of any OpenMP construct on the device.
+after the thread initiates initialization of OpenMP on the device and the
+device's OpenMP initialization, which may include device-side tool
+initialization, completes. 
 
 \tools 
 
@@ -3733,6 +3726,10 @@ A thread invokes a registered \code{ompt\_callback\_device\_initialize}
 callback for each occurrence of a \plc{device-initialize} event in
 that thread.  This callback has type signature
 \code{ompt\_callback\_device\_initialize\_t}.
+
+\restrictions
+No thread may offload execution of an OpenMP construct to a device until any  
+callback associated with a \plc{device-initialize} event completes.
 
 \crossreferences
 \begin{itemize}
@@ -3824,6 +3821,9 @@ as its \plc{endpoint} argument, as appropriate, and
 {
 \events
 \omptTargetRegionEvents{#1}{#2}{#3}
+
+The \plc{target-data} event occurs when a thread initiates a data transfer to or from a target device.
+
 \tools
 \omptTargetRegionTools{#1}{#2}{#3}
 }
@@ -3947,7 +3947,7 @@ Events associated with a \plc{target task} are the same as for the \code{task} c
 \omptTargetRegionEvents{#1}{#2}{#3}
 
 \tools
-Callbacks associated with a \plc{target task} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
+Callbacks associated with events for \plc{target tasks} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
 
 \omptTargetRegionTools{#1}{#2}{#3}
 }
@@ -4206,12 +4206,19 @@ If a zero-length array section is a list item in a \code{map} clause, and the ar
 
 %\tools
 
-\omptTarget{\code{target}}{ompt\_target}{target}
+\events
+\omptTargetRegionEvents{\code{target}}{ompt\_target}{target}
 
-Prior to submitting a kernel for execution on a target device, 
-an OpenMP implementation invokes callback 
-\code{ompt\_callback\_target\_submit}. This callback has type
-signature \code{ompt\_callback\_target\_submit\_t}.  
+The \plc{target-submit} event occurs prior to creating an initial task on a target device for a target
+region. 
+
+\tools
+\omptTargetRegionTools{\code{target}}{ompt\_target}{target}
+
+A thread invokes a registered \code{ompt\_callback\_target\_submit}
+callback for each occurrence of a \plc{target-submit} event
+in that thread. The callback has type signature
+\code{ompt\_callback\_target\_submit\_t}. 
 
 \restrictions
 \begin{itemize}
