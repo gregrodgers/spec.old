@@ -50,9 +50,9 @@ into the following sections:
 \item How to specify and to use array sections for all base languages 
 (\specref{sec:Array Sections}) 
 
-\item Details of each OpenMP directive 
+\item Details of each OpenMP directive, including events and tool callbacks associated
 (\specref{sec:parallel Construct} to 
-\specref{sec:Nesting of Regions})
+\specref{sec:Nesting of Regions}) 
 \end{itemize}
 
 \ccppspecificstart
@@ -1287,23 +1287,27 @@ barrier that it passed and before it terminates is unspecified.
 \events
 
 The \plc{parallel-begin} event occurs in the thread encountering the
-\code{parallel} construct before any implicit task starts to execute
-the parallel region's work.
+\code{parallel} construct before any implicit task is created by the
+region.
 
-If the parallel region activates an idle thread, an \plc{idle-end}
-event occurs in the newly activated thread.
 
-If the parallel region creates a thread, a \plc{thread-begin}
-event occurs as the first event in the context of the new thread.
+
+
 
 Upon creation of each implicit task, an \plc{implicit-task-begin} event
 occurs in the thread executing the implicit task after the implicit
 task is fully initialized but before the task begins to execute the
 structured block of the \code{parallel} construct.
 
-An \plc{implicit-task-begin} event in a thread for a parallel region 
-occurs after an \plc{idle-end} or \plc{thread-begin} event in the
-thread for the parallel region. 
+If the parallel region creates a thread, a \plc{thread-begin}
+event occurs as the first event in the context of the new thread
+prior to the
+\plc{implicit-task-begin}. 
+
+If the parallel region activates an idle thread to create the implicit
+task, an \plc{idle-end}
+event occurs in the newly activated thread prior to the
+\plc{implicit-task-begin}. 
 
 When a thread is finishing an implicit task, an \plc{implicit-task-end} event
 occurs in the thread after the implicit task executes its
@@ -2071,7 +2075,7 @@ callback for each occurrence of a \plc{#1{-begin}} and
 context of the implicit task.  The callback has type signature
 \code{ompt\_callback\_work\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
-as its \plc{endpoint} argument, as appropriate, and the
+as its \plc{endpoint} argument, as appropriate, and 
 \code{#2} as its \plc{wstype} argument.
 }
 \omptWorksharing{loop}{ompt\_work\_loop}
@@ -2414,27 +2418,25 @@ The method of choosing a thread to execute the structured block is implementatio
 defined. There is an implicit barrier at the end of the \code{single} construct unless a 
 \code{nowait} clause is specified. 
 
-\tools
-On entry to the \code{single} region, the executing thread
-may invoke the callback \code{ompt\_event\_work}, if registered, with
-\code{endpoint=ompt\_scope\_begin} and \code{wstype=ompt\_work\_single\_executor}.
-The threads of the team which do not execute the \code{single} region may invoke 
-the callback \code{ompt\_event\_work}, if registered, with
-\code{wstype=ompt\_work\_single\_other}.
-The encountering thread invokes this callback after an \code{implicit task} encounters a 
+\events
+
+The \plc{single-begin} event occurs after an \code{implicit task} encounters a 
 \code{single} construct but before the task starts the execution of the structured 
 block of the \code{single} region.
-This callback has type signature \code{ompt\_callback\_work\_t}.
 
-On exit from the \code{single} region, the executing thread
-may invoke the callback \code{ompt\_event\_work}, if registered, with
-\code{endpoint=ompt\_scope\_end} and \code{wstype=ompt\_work\_single\_executor}.
-The threads of the team which do not execute the \code{single} region may invoke 
-the callback \code{ompt\_event\_work}, if registered, with
-\code{wstype=ompt\_work\_single\_other}.
-The encountering thread invokes this callback 
-after a \code{single} region finished execution of the structured block 
-but before resuming execution of the encountering implcit task.
+The \plc{single-end} event occurs after a \code{single} region finished execution of the structured block 
+but before resuming execution of the encountering implicit task.
+
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_work}
+callback for each occurrence of a \plc{single-begin} and
+\plc{single-end} events in that thread. The callback has type signature
+\code{ompt\_callback\_work\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate, and
+\code{ompt\_work\_single\_executor} as its \plc{wstype} argument.
 
 \restrictions
 Restrictions to the \code{single} construct are as follows: 
@@ -3247,6 +3249,7 @@ callback for each occurrence of a \plc{task-create} event
 in the context of the encountering task.  This callback has the type signature
 \code{ompt\_callback\_task\_create\_t}.
 
+<<<<<<< HEAD
 A thread invokes a registered \code{ompt\_callback\_task\_schedule}
 callback for each occurrence of a \plc{task-schedule} event in 
 the context of the task that is resumed. This callback has the type signature
@@ -3255,6 +3258,21 @@ The argument  \plc{prior\_task\_status} is used to indicate the cause for suspen
 This cause may be the completion of the prior task region, the encountering of a 
 \code{taskyield} construct, or the encountering of an active cancellation point.
 
+=======
+\def\omptTaskCreate#1#2#3{
+  \events
+  \omptTaskCreateEvents{#1}{#2}{#3}
+  \tools
+  \omptTaskCreateTools{#1}{#2}{#3}  
+  }
+\omptTaskCreate{task}{ompt\_explicit\_task}{task}
+
+Whenever a \code{task} completes and before scheduling another \code{task}, 
+the encountering thread shall invoke the \code{ompt\_callback\_task\_schedule} 
+callback if registered, with \code{prior\_completed=true}. 
+The callback executes in the context of the newly-scheduled \code{task}.
+This callback has type signature \code{ompt\_callback\_task\_schedule\_t}.
+>>>>>>> 0efb324fed3a9b30b18d573e101a464c14fb6437
 \notestart
 \noteheader -- For convenience of implementation, the task schedule might switch
 to the task bond to the scheduling point, before the next task is scheduled.
@@ -3429,24 +3447,30 @@ For \code{firstprivate} variables of class type, the number of invocations of co
 \noteheader – When storage is shared by a \code{taskloop} region, the programmer must ensure, by adding proper synchronization, that the storage does not reach the end of its lifetime before the \code{taskloop} region and its descendant tasks complete their execution.
 \noteend
 
-\tools
-\def\omptWorkTaskloop#1#2
-{
-On entry to the \code{#1} region, the executing thread
-may invoke the callback \code{ompt\_event\_work}, if registered, with
-\code{endpoint=ompt\_scope\_begin} and \code{wstype=#2}.
-The encountering thread invokes this callback after a \code{task} encounters a 
-\code{#1} construct but before the task starts the execution of any taskloop iterations.
-This callback has type signature \code{ompt\_callback\_scoped\_work\_t}.
-
-On exit from the \code{#1} region, the executing thread
-may invoke the callback \code{ompt\_event\_work}, if registered, with
-\code{endpoint=ompt\_scope\_end} and \code{wstype=#2}.
-The encountering thread invokes this callback 
-after a \code{#1} region finished execution of the all taskloop iterations 
-but before resuming execution of the encountering task.
-}
-\omptWorkTaskloop{taskloop}{ompt\_work\_taskloop}
+% \def\omptWorksharing#1#2
+% {
+% \events
+% 
+% The \plc{#1{-begin}} event occurs after an implicit task encounters a 
+% \code{#1} construct but before the task starts the execution of the structured 
+% block of the \code{#1} region.
+% 
+% The \plc{#1{-end}} event occurs after a \code{#1} region finished execution of 
+% the structured block but before resuming execution of the encountering implicit 
+% task.
+% 
+% \tools
+% 
+% A thread invokes a registered \code{ompt\_callback\_work}
+% callback for each occurrence of a \plc{#1{-begin}} and
+% \plc{#1{-end}} event in that thread. The callback occurs in the
+% context of the implicit task.  The callback has type signature
+% \code{ompt\_callback\_work\_t}. The callback receives
+% \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+% as its \plc{endpoint} argument, as appropriate, and the
+% \code{#2} as its \plc{wstype} argument.
+% }
+\omptWorksharing{taskloop}{ompt\_work\_taskloop}
 
 \restrictions
 The restrictions of the \code{taskloop} construct are as follows:
@@ -3692,7 +3716,7 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 \tools
 
 When scheduling a new \code{task} at a scheduling point, 
-the scheduling thread shall invoke the \code{ompt\_event\_task\_schedule} 
+the scheduling thread shall invoke the \code{ompt\_callback\_task\_schedule} 
 callback if registered. 
 The callback executes in the context of the newly-scheduled \code{task}.
 This callback has type signature \code{ompt\_callback\_task\_schedule\_t}.
@@ -3711,13 +3735,20 @@ callback, see
 \index{constructs!device constructs}
 \index{device constructs!device constructs}
 
+\events
+
+The \plc{device-initialize} event occurs in a thread that encounters
+the first \code{target}, \code{target data}, or \code{target enter
+data} construct associated with a particular target device 
+after OpenMP is initialized for the device but before
+beginning execution of any OpenMP construct on the device.
+
 \tools 
 
-If the \code{ompt\_event\_device\_initialize} callback is registered,
-an OpenMP implementation will invoke the this callback for a target device
-after OpenMP is initialized for the device but before beginning
-execution of any OpenMP construct on the device.  This callback has
-type signature \code{ompt\_callback\_device\_initialize\_t}.
+A thread invokes a registered \code{ompt\_event\_device\_initialize}
+callback for each occurrence of a \plc{device-initialize} event in
+that thread.  This callback has type signature
+\code{ompt\_callback\_device\_initialize\_t}.
 
 \crossreferences
 \begin{itemize}
@@ -3801,7 +3832,7 @@ callback for each occurrence of a \plc{#3{-begin}} and
 \plc{#3{-end}} event in that thread. The callback has type signature
 \code{ompt\_callback\_target\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
-as its \plc{endpoint} argument, as appropriate, and the
+as its \plc{endpoint} argument, as appropriate, and 
 \code{#2} as its \plc{kind} argument.
 }
 
@@ -4217,7 +4248,7 @@ If a zero-length array section is a list item in a \code{map} clause, and the ar
 
 Prior to submitting a kernel for execution on a target device, 
 an OpenMP implementation invokes callback 
-\code{ompt\_event\_target\_submit}. This callback has type
+\code{ompt\_callback\_target\_submit}. This callback has type
 signature \code{ompt\_callback\_target\_submit\_t}.  
 
 \restrictions
@@ -7925,12 +7956,12 @@ The \plc{task\_dependence} event occurs immediately after a
 \tools
 
 If a \code{depend} clause enforces additional constraints on the scheduling of a
-\code{task}, the encountering thread may invoke the \code{ompt\_event\_task\_dependences} 
+\code{task}, the encountering thread may invoke the \code{ompt\_callback\_task\_dependences} 
 callback immediately after the callback announcing the task's creation to 
 announce its dependences with respect to the list items in the \code{depend} clause.
 This callback has type signature \code{ompt\_callback\_task\_dependences\_t}.
 
-The OpenMP encountering thread may invoke the \code{ompt\_event\_task\_dependence\_pair} callback 
+The OpenMP encountering thread may invoke the \code{ompt\_callback\_task\_dependence\_pair} callback 
 to report a dependence between a producer (\code{src\_task\_data})
 and a consumer (\code{sink\_task\_data}) that blocked execution of the consumer.
 If the encountering thread invokes the callback, it will occur before the consumer knows 
@@ -8167,11 +8198,18 @@ synchronizations to avoid deadlocks that might arise from cancellation
 of OpenMP regions that contain OpenMP synchronization constructs.
 \noteend
 
+\events
+
+The \plc{cancel} event occurs after an implicit task encounters a 
+\code{cancel} construct.
+
 \tools
-The encountering thread may invoke the \code{ompt\_event\_cancel} callback. 
-This callback occurs after encountering the cancel construct and before initiating the requested cancellation.
-The callback parameter \code{flags} indicates that a cancelation occurred by setting the \code{ompt\_cancel\_activated} bit. 
-The type of construct being canceled is also indicated by setting the corresponding bit defined by the \code{ompt\_cancel\_flag\_t} enumeration.
+
+A thread invokes a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancel} event in that thread. 
+The callback occurs in the context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_activated} as its \plc{flags} argument. 
 
 \restrictions
 The restrictions to the \code{cancel} construct are as follows:
@@ -8295,11 +8333,19 @@ encountering task belongs and continues execution at the end of the current
 task region if cancellation has been activated for any of them.
 \end{itemize}
 
+
+\events
+
+The \plc{cancellation} event occurs if a thread encounters a 
+\code{cancellation point} and detected the activation of cancellation.
+
 \tools
-When the encountering thread has detected the activation of a cancellation, it may invoke the \code{ompt\_event\_cancel} callback.
-This callback occurs after detecting the activation of a cancelation and before initiating the requested cancellation.
-The callback parameter \code{flags} indicates that a cancelation is detected by setting the \code{ompt\_cancel\_detected} bit. 
-The type of construct being canceled is also indicated by setting the corresponding bit defined by the \code{ompt\_cancel\_flag\_t} enumeration.
+
+A thread invokes a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancel} event in that thread. 
+The callback occurs in the context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_detected} as its \plc{flags} argument. 
 
 \restrictions
 \begin{itemize}
