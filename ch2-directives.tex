@@ -3231,39 +3231,34 @@ implementation will use the value of that ICV. A program that relies on task exe
 being determined by this \plc{priority-value} may have unspecified behavior.
 
 \notestart
-\noteheader – When storage is shared by an explicit \code{task} region, the 
+\noteheader -- When storage is shared by an explicit \code{task} region, the 
 programmer must ensure, by adding proper synchronization, that the storage does not 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
 
-\def\omptTaskCreateEvents#1#2#3{
-  The \plc{#3} event  occurs when the executing thread encounters a \code{#1} construct 
-  that causes a \code{task} to be created.
-}
+\events
+The \plc{task-create} event  occurs when a thread encounters a \code{task} construct 
+that causes a new explicit task to be created after it is initialized but before it begins execution or is deferred. 
 
-\def\omptTaskCreateTools#1#2#3{
+The \plc{task-schedule} event occurs in a thread when it switches tasks at a task scheduling point.
+
+\tools
+
 A thread invokes a registered \code{ompt\_callback\_task\_create}
-callback for each occurrence of a \plc{#3} event in that
-thread.  The callback occurs in the task encountering
-the \code{#1} construct. This callback has the type signature
+callback for each occurrence of a \plc{task-create} event
+in the context of the encountering task.  This callback has the type signature
 \code{ompt\_callback\_task\_create\_t}.
-}
 
-\def\omptTaskCreate#1#2#3{
-  \events
-  \omptTaskCreateEvents{#1}{#2}{#3}
-  \tools
-  \omptTaskCreateTools{#1}{#2}{#3}  
-  }
-\omptTaskCreate{task}{ompt\_explicit\_task}{task}
+A thread invokes a registered \code{ompt\_callback\_task\_schedule}
+callback for each occurrence of a \plc{task-schedule} event in 
+the context of the task that is resumed. This callback has the type signature
+\code{ompt\_callback\_task\_schedule\_t}. 
+The argument  \plc{prior\_task\_status} is used to indicate the cause for suspending the prior task. 
+This cause may be the completion of the prior task region, the encountering of a 
+\code{taskyield} construct, or the encountering of an active cancellation point.
 
-Whenever a \code{task} completes and before scheduling another \code{task}, 
-the encountering thread shall invoke the \code{ompt\_callback\_task\_schedule} 
-callback if registered, with \code{prior\_completed=true}. 
-The callback executes in the context of the newly-scheduled \code{task}.
-This callback has type signature \code{ompt\_callback\_task\_schedule\_t}.
 \notestart
-\noteheader – For convenience of implementation, the task schedule might switch
+\noteheader -- For convenience of implementation, the task schedule might switch
 to the task bond to the scheduling point, before the next task is scheduled.
 \noteend
 
@@ -3941,17 +3936,19 @@ If there is no \code{device} clause, the default device is determined by the \pl
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
 
+
 %\tools
 \def\omptTarget#1#2#3
 {
-\events
 
-\omptTaskCreateEvents{#1}{ompt\_task\_target}{#3}
+\events
+Events associated with a \plc{target task} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
+
 \omptTargetRegionEvents{#1}{#2}{#3}
 
 \tools
+Callbacks associated with a \plc{target task} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
 
-\omptTaskCreateTools{#1}{ompt\_task\_target}{#3}
 \omptTargetRegionTools{#1}{#2}{#3}
 }
 \omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}{target-enter-data}
@@ -7910,6 +7907,13 @@ the \code{depend} clause is ignored.  If all \code{depend} clauses on an
 \notestart
 \noteheader – If the iteration vector \plc{vec} does not indicate a lexicographically earlier iteration, it can cause a deadlock.
 \noteend
+
+\events
+
+There are two events associated with a depend clause. First, a \plc{task\_dependence} event  
+announce the dependences with respect to the list items in the \code{depend} clause.
+Second, a \plc{task dependence pair} event indicates the presence of a potentially blocking dependence between two sibling tasks. 
+The \plc{task\_dependence} event occurs immediately after a 
 
 \tools
 
