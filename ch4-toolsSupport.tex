@@ -547,8 +547,48 @@ is in progress.
 \item \code{ompt\_buffer\_get\_record\_native\_abstract}, see \specref{sec:ompt_buffer_get_record_native_abstract_t}.
 \end{itemize}
 
+
+\section{Finalizing a Tool}
+\label{sec:ompt-finalization}
+
+If \code{ompt\_tool} returned a non-\code{NULL} pointer when an OpenMP
+implementation was initialized, the tool finalizer specified by the
+\plc{finalize} field in this structure will be called as the OpenMP
+implementation shuts down.
+
 \section{Data Types}
 \label{sec:ompt-data-types}
+
+\subsection{Tool Initialization and Finalization}
+\label{sec:ompt_fns_t}
+
+\summary
+A tool's implementation of \code{ompt\_tool} returns a pointer to an
+\code{ompt\_fns\_t} structure that contains pointers to the tool's 
+initializer and finalizer functions.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_fns_t \{
+  ompt_initialize_fn_t \plc{initialize};
+  ompt_finalize_fn_t \plc{finalize};
+\} ompt_fns_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\restrictions
+
+Both the \plc{initialize} and \plc{finalize} function pointers in an
+\code{ompt\_fns\_t} structure must be non-\code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_tool}, see \specref{sec:ompt_tool}.
+\end{itemize}
+
+
 \subsection{Thread States}
 \label{sec:thread-states}
 
@@ -1914,7 +1954,7 @@ the tool must implement \code{ompt\_tool} to announce its interest.
 \ccppspecificstart
 \begin{boxedcode}
 extern "C" \{
-  ompt_initialize_fn_t ompt_tool(void);
+  ompt_fns_t *ompt_tool(void);
 \};
 \end{boxedcode}
 \ccppspecificend
@@ -1927,26 +1967,22 @@ function \code{ompt\_tool}.
 
 A tool may indicate its intent to use the OMPT interface provided
 by an OpenMP implementation by having
-\code{ompt\_tool} return a non-\code{NULL} pointer to a tool
-initializer routine with type signature \code{ompt\_initialize\_fn\_t}.
-
-\begin{comment}
-If a tool so indicates its interest in OMPT, the OpenMP implementation
-will maintain state information for each OpenMP thread and will
-perform any OMPT event callbacks registered by the tool.
-\end{comment}
+\code{ompt\_tool} return a non-\code{NULL} pointer to an
+\code{ompt\_control\_t} structure, which contains pointers to
+a tool's initializer and finalizer functions.
 
 If a tool implements \code{ompt\_tool} but has no interest in using
 an OpenMP implementation's OMPT interface in a particular execution,
 \code{ompt\_tool} should return \code{NULL}. 
 
 \effect
-If a tool returns a non-\code{NULL} pointer to a tool
-initializer routine, an OpenMP implementation will 
-call the tool initializer
-after fully initializing itself but before
+If a tool returns a non-\code{NULL} pointer,
+an OpenMP implementation will call the tool initializer specified by the
+\plc{finalize} field in this structure but before
 beginning execution of any OpenMP construct
-or completing execution of any environment routine invocation. 
+or completing execution of any environment routine invocation; the
+OpenMP implementation will call the tool finializer when the OpenMP
+implementation shuts down.
 
 \begin{comment}
 \crossreferences
@@ -1957,7 +1993,7 @@ or completing execution of any environment routine invocation.
 
 \section{Tool Callback Signatures and Trace Records}
 \label{sec:ompt-tool-callbacks}
-\subsection{Initializer Callback Signature}
+\subsection{Initialation and Finalization Callback Signature}
 
 \omptcallbacksignature{\code{ompt\_initialize\_fn\_t}}
 \label{sec:ompt_initialize_fn_t}
@@ -1995,28 +2031,8 @@ is \plc{lookup}---a callback
 to an OpenMP runtime routine that a tool must use to 
 obtain a pointer to each function in the runtime's OMPT interface.
 
-\begin{comment}
-All functions in the OMPT interface are marked with \code{OMPT\_API}, which
-indicates that the only way a tool can obtain bindings for them
-is using the \plc{lookup} callback.
-
-% The language committee prefers to avoid rationale
-The \code{lookup} callback is necessary in the case when an OpenMP runtime 
-is dynamically loaded by a shared library. In this case, 
-OMPT interface functions provided by the library may 
-not be visible to a preloaded tool.
-% Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
-\end{comment}
-
 The second argument passed to a tool initializer 
 is a version string that unambiguously identifies the OpenMP implementation.
-
-\begin{comment}
-% The language committee prefers to avoid rationale
-This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP implementation.
-Knowing exactly what version of an OpenMP implementation is present 
-may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
-\end{comment}
 
 The third argument an OpenMP implementation passed to a tool initializer 
 is a version number that unambiguously identifies the version of the 
@@ -2029,6 +2045,40 @@ The actions of a tool initializer are described in \specref{sec:tool-initialize}
 \begin{itemize}
 \item \code{ompt\_function\_lookup\_t}, see
   \specref{sec:ompt_function_lookup_t}.
+\end{itemize}
+
+
+\omptcallbacksignature{\code{ompt\_finalize\_fn\_t}}
+\label{sec:ompt_finalize_fn_t}
+
+\summary
+A tool implements an finalizer with the type signature
+\code{ompt\_finalize\_fn\_t} to finalize the tool's use of
+an OpenMP implementation's OMPT interface.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*\plc{ompt_finalize_fn_t}) (
+  ompt_fns_t *\plc{fns};
+);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+The finalizer for an OpenMP implememtation is invoked by an OpenMP
+implementation as it shuts down.
+
+\argdesc
+The argument passed to a tool finalizer 
+is the value returned by \code{ompt\_tool}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_fns\_t}, see
+  \specref{sec:ompt_fns_t}.
 \end{itemize}
 
 
