@@ -2235,6 +2235,23 @@ is non-conforming.
 The effect of these routines is to initialize the lock to the unlocked state; that is, no task 
 owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
+\events
+
+The \plc{lock-init} or \plc{nest-lock-init} event occurs in the thread 
+executing a \code{omp\_init\_lock} or \code{omp\_init\_nest\_lock} function
+after initialization of the lock, but before returning from the function call.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_init}
+callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_init\_t}.
+The callbacks occur in the task encountering
+the lock init function.  The callback receives  \code{omp\_lock\_hint\_none} as
+\plc{hint} argument and
+\code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
+
 
 
 
@@ -2339,6 +2356,23 @@ with other OpenMP implementations.
 The effect of these routines is to initialize the lock to the unlocked state and, optionally, to choose a specific lock implementation based on the hint. 
 After initialization no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
+\events
+
+The \plc{lock-init} or \plc{nest-lock-init} event occurs in the thread 
+executing a \code{omp\_init\_lock} or \code{omp\_init\_nest\_lock} function
+after initialization of the lock, but before returning from the function call.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_init}
+callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_init\_t}.
+The callbacks occur in the task encountering
+the lock init function.  The callback receives the function's \plc{hint} argument as
+\plc{hint} argument and
+\code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
+
 
 
 
@@ -2374,6 +2408,20 @@ non-conforming.
 \effect
 The effect of these routines is to change the state of the lock to uninitialized.
 
+\events
+
+The \plc{lock-destroy} or \plc{nest-lock-destroy} event occurs in the thread 
+executing a \code{omp\_init\_destroy} or \code{omp\_init\_nest\_destroy} function
+before returning from the function call.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_destroy}
+callback for each occurrence of a \plc{lock-destroy} or \plc{nest-lock-destroy} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_lock\_destroy\_t}.
+The callbacks occur in the task encountering
+the lock destroy function.  The callbacks receive \code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument as appropriate.
 
 
 
@@ -2444,25 +2492,39 @@ incremented.
 
 \events
 
-The \plc{lock-acquire} or \plc{nested-lock-acquire} event occurs in the thread 
-executing a \code{omp\_set\_lock} or \code{omp\_set\_nest\_lock} function
+The \plc{lock-acquire} or \plc{nest-lock-acquire} event occurs in the thread 
+executing a \code{omp\_set\_lock} or \code{omp\_set\_nest\_lock} region
 before the associated lock is requested.
 
-The \plc{lock-acquired} or \plc{nested-lock-acquired} event occurs in the thread 
-executing a \code{omp\_set\_lock} or \code{omp\_set\_nest\_lock} function
-after acquiring the associated lock, but before returning from the function call.
+The \plc{lock-acquired} or \plc{nest-lock-acquired} event occurs in the thread 
+executing a \code{omp\_set\_lock} or \code{omp\_set\_nest\_lock} region
+after acquiring the associated lock, if the thread did not already own the lock, 
+but before finishing the region.
+
+The \plc{nest-lock-owned} event occurs in the thread 
+executing a \code{omp\_set\_nest\_lock} function
+when the thread already owned the lock, 
+before finishing the region.
+
 
 \tools
 
-A thread invokes a registered \code{ompt\_callback\_mutex\_acquire}
-callback for each occurrence of a \plc{lock-acquire} or \plc{nested-lock-acquire} event 
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquire}
+callback for each occurrence of a \plc{lock-acquire} or \plc{nest-lock-acquire} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_acquire\_t}.
-A thread invokes a registered \code{ompt\_callback\_mutex\_acquired}
-callback for each occurrence of a \plc{lock-acquired} or \plc{nested-lock-acquired} event 
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquired}
+callback for each occurrence of a \plc{lock-acquired} or \plc{nest-lock-acquired} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_nest\_lock}
+callback for each occurrence of a \plc{nest-lock-owned} event 
+in that thread. This callback has the type signature \code{ompt\_callback\_nest\_lock\_t}.
+The callback receives \code{ompt\_scope\_begin} as its \plc{endpoint} argument.
+
 The callbacks occur in the task encountering
 the lock function.  The callbacks receive \code{ompt\_mutex\_lock} or 
- \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument as appropriate.
+ \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument, as appropriate.
 
 
 
@@ -2513,18 +2575,29 @@ effect is that one task is chosen and given ownership of the lock.
 
 \events
 
-The \plc{lock-release} or \plc{nested-lock-release} event occurs in the thread 
+The \plc{lock-release} or \plc{nest-lock-release} event occurs in the thread 
 executing a \code{omp\_unset\_lock} or \code{omp\_unset\_nest\_lock} function
 after releasing the associated lock, but before returning from the function call.
 
+The \plc{nest-lock-kept} event occurs in the thread 
+executing a \code{omp\_unset\_nest\_lock} function
+when the thread still ownes the lock, 
+before returning from the function call.
+
+
 \tools
 
-A thread invokes a registered \code{ompt\_callback\_mutex\_release}
-callback for each occurrence of a \plc{lock-release} or \plc{nested-lock-release} event 
+A thread dispatches a registered \code{ompt\_callback\_mutex\_release}
+callback for each occurrence of a \plc{lock-release} or \plc{nest-lock-release} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
-The callbacks occur in the task encountering
-the lock function.  The callbacks receive \code{ompt\_mutex\_lock} or 
- \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument as appropriate.
+The callback occurs in the task encountering
+the lock function.  The callback receives \code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_nested\_lock}
+callback for each occurrence of a \plc{nest-lock-kept} event 
+in that thread. This callback has the type signature \code{ompt\_callback\_nested\_lock\_t}.
+The callback receives \code{ompt\_scope\_end} as its \plc{endpoint} argument.
 
 
 
@@ -3365,7 +3438,7 @@ to \code{omp\_tcontrol} at a point inside its associated OpenMP region.
 
 \tools
 
-An OpenMP implementation invokes a registered
+An OpenMP implementation dispatches a registered
 \code{ompt\_callback\_tcontrol} callback for each occurrence of a
 \plc{tool-control} event.  The callback executes in the context of the
 call that occurs in the user program.  This callback has type
