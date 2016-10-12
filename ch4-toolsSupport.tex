@@ -49,7 +49,7 @@ implemented entirely by an OpenMP runtime system, entirely by a
 compiler, or with a hybrid strategy that employs a mixture of compiler
 and runtime support. This chapter describes the OMPT interface.
 
-This chapter begins with an overview of the OMPT tool interface in
+This chapter begins with an overview of the OMPT interface in
 Section~\ref{sec:ompt-overview}. Next,
 Section~\ref{sec:ompt-initialization} describes how a tool can register itself to use the OMPT
 interface. Subsequent sections describe details of the interface, including
@@ -86,8 +86,9 @@ OpenMP implementation interact to accomplish accomplish these tasks.
 \label{sec:ompt-check-tool}
 
 A tool indicates its interest in using an OpenMP implementation's OMPT interface 
-by providing a definition of the function symbol
-\code{ompt\_tool} to the OpenMP implementation. There are three ways
+by providing a non-\code{NULL} pointer to an \code{ompt\_fns\_t}
+structure to the OpenMP implementation as a return value from 
+\code{ompt\_tool}. There are three ways
 that a tool can provide a definition of \code{ompt\_tool} to an
 OpenMP implementation:
 
@@ -102,7 +103,7 @@ OpenMP implementation:
 \end{itemize}
 
 Immediately before an OpenMP implementation initializes itself, it
-checks to see if it should to check for the presence of a tool
+determines whether it should check for the presence of a tool
 interested in using the OMPT interface by examining the \plc{tool-var}
 ICV.  If value of \plc{tool-var} is \plc{disabled}, the OpenMP
 implementation will initialize itself without even checking whether a
@@ -115,32 +116,33 @@ implmentation of \code{ompt\_tool}.  The OpenMP implementation first
 checks if a tool-provided implementation of \code{ompt\_tool} is
 available in the address space, either statically-linked into the
 application or in a dynamically-linked library loaded in the address
-space.
+space. If multiple implementations of \code{ompt\_tool} are available,
+the OpenMP implementation will use the first tool-provided
+implementation of \code{ompt\_tool} found.
 
 If no tool-provided implementation of \code{ompt\_tool} is found in
 the address space, the OpenMP implementation will consult the
 \plc{tool-libraries-var} ICV, which contains a (possibly empty) list
 of dynamically-linked libraries.  As described in detail in
-Section~\ref{ompt-libraries}, the libraries in
+Section~\ref{sec:OMP_TOOL_LIBRARIES}, the libraries in
 \plc{tool-libraries-var}, will be searched for the first usable
 implementation of \code{ompt\_tool} provided by one of the libraries
 in the list.
 
 If a tool-provided definition of \code{ompt\_tool} is found using
 either method, the OpenMP implementation will invoke it; if it returns
-a non-\code{NULL} pointer to a tool initializer, with type signature
-\code{ompt\_initialize\_fn\_t}, the OpenMP implementation will know
+a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure, 
+the OpenMP implementation will know
 that a tool is present that wants to use the OMPT interface.
 
 Next, the OpenMP implementation will initialize itself. If a tool
-provided a pointer to a tool initializer to the OpenMP implementation
-as described above by returning one from \code{ompt\_tool}, the OpenMP
-runtime will prepare itself for use of the OMPT interface by a tool. 
+provided a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
+the OpenMP runtime will prepare itself for use of the OMPT interface by a tool. 
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_tool}, see \specref{sec:ompt_tool}.
-\item \code{ompt\_initialize\_fn\_t}, see \specref{sec:ompt_initialize_fn_t}.
+\item \code{ompt\_fns\_t}, see \specref{sec:ompt_fns_t}.
 \item \code{OMP\_TOOL\_LIBRARIES}, see \specref{sec:OMP_TOOL_LIBRARIES}.
 \item \plc{tool-libraries-var} ICV, see \specref{sec:Internal Control Variables}.
 \item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
@@ -151,13 +153,12 @@ runtime will prepare itself for use of the OMPT interface by a tool.
 \label{sec:tool-initialize}
 
 If a tool-provided implementation of \code{ompt\_tool} returns a
-pointer to a tool initializer with type signature
-\code{ompt\_initialize\_fn\_t},
-the OpenMP implementation will invoke the tool initializer prior to
-the occurrence of any OpenMP \emph{event}. 
+non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
+the OpenMP implementation will invoke the tool initializer specified
+in this structure prior to the occurrence of any OpenMP \emph{event}. 
 
 A tool's initializer, described in \specref{sec:ompt_initialize_fn_t}
-has several duties.  First, it should use its third argument
+has several duties.  First, the tool initializer should use its third argument
 \plc{ompt\_version} to determine whether it is compatibile with the
 version of the OMPT interface that the OpenMP implementation supports.
 Next, it must use its second argument \plc{lookup} to look up pointers
@@ -205,13 +206,17 @@ implementations that
 will fail in certain circumstances when functions defined as part of
 the OpenMP runtime are not visible to a tool, even though the tool and
 the OpenMP runtime are both present in the same address space.
+It also prevents inadvertant use of a tool support routine by
+applications.
  
-A tool's initializer receives a function pointer to a
-\plc{lookup} runtime entry point with type signature
-\code{ompt\_function\_lookup\_t}  as its first argument. Using this
-function, a tool initializer may obtain a pointer to
-each of the runtime entry points that an OpenMP implementation provides to support
-the OMPT interface.
+A tool's initializer receives a function pointer to a \plc{lookup}
+runtime entry point with type signature
+\code{ompt\_function\_lookup\_t} as its first argument. Using this
+function, a tool initializer may obtain a pointer to each of the
+runtime entry points that an OpenMP implementation provides to support
+the OMPT interface. A tool may use an OpenMP implementation's
+\plc{lookup} function at any time and the function will return the
+same result given the same input.
 
 For each runtime entry point in the OMPT interface for the host device, 
 Table~\ref{table:ompt-callback-interface-functions} provides the string
@@ -300,9 +305,9 @@ that has an implementation-defined behavior.
 \begin{table}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lp{3em}p{3em}p{3em}p{3em}}
-                                & \rot{event may occur; no callback is possible}
-                                & \rot{event may occur; callback invoked when convenient}
-                                & \rot{event may occur; callback always invoked when event occurs}\\
+                                & \rot{\code{ompt\_set\_none}}
+                                & \rot{\code{ompt\_set\_sometimes}}
+                                & \rot{\code{ompt\_set\_always}}\\
                                 \midrule
 \code{ompt\_callback\_thread\_begin}          &   &   & * \\
 \code{ompt\_callback\_thread\_end}            &   &   & * \\
@@ -357,6 +362,7 @@ regions. Some events involve both kinds of collapsing: the aforementioned
 a callback that will be invoked at each endpoint for different kinds
 of synchronization regions.
 
+\begin{comment}
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_callbacks\_t} enumeration type, see
@@ -366,8 +372,6 @@ of synchronization regions.
 
 \item \code{ompt\_callback\_thread\_begin\_t}, see \specref{sec:ompt_callback_thread_begin}. 
 \item \code{ompt\_callback\_thread\_end}, see \specref{sec:ompt_callback_thread_end}. 
-\item {\em incomplete cross references stubbed out} 
-\begin{comment}
 \item \code{ompt\_callback\_parallel\_begin}, see \specref
 \item \code{ompt\_callback\_parallel\_end}, see \specrefdependences
 \item \code{ompt\_callback\_task\_create}, see \specref
@@ -377,11 +381,8 @@ of synchronization regions.
 \item \code{ompt\_callback\_target\_data}, see \specref
 \item \code{ompt\_callback\_target\_submit}, see \specref
 \item \code{ompt\_callback\_tcontrol}, see \specref
-\end{comment}
 \item \code{ompt\_callback\_idle}, see \specref{sec:ompt_callback_idle}. 
 \item \code{ompt\_callback\_sync\_region\_wait}, see \specref{sec:ompt_callback_runtime_shutdown}.
-\item {\em incomplete cross references stubbed out} 
-\begin{comment}
 \item \code{ompt\_callback\_mutex\_release}, see \specref
 \item \code{ompt\_callback\_task\_dependences}, see \specref
 \item \code{ompt\_callback\_task\_dependence}, see \specref
@@ -394,11 +395,11 @@ of synchronization regions.
 \item \code{ompt\_callback\_mutex\_acquire}, see \specref
 \item \code{ompt\_callback\_mutex\_acquired}, see \specref
 \item \code{ompt\_callback\_nested\_lock}, see ...
-\end{comment}
 \item \code{ompt\_callback\_flush}, see \specref{subsec:flush Construct}.
 \item \code{ompt\_callback\_device\_initialize}, see \specref{sec:Device Constructs}.
 \item \code{ompt\_callback\_cancel}, see \specref{sec:Cancellation Constructs}.
 \end{itemize}
+\end{comment}
 
 
 \subsection{Tracing Activity on Target Devices}
@@ -2037,7 +2038,9 @@ is a version string that unambiguously identifies the OpenMP implementation.
 The third argument an OpenMP implementation passed to a tool initializer 
 is a version number that unambiguously identifies the version of the 
 OMPT interface supported by the OpenMP implementation.  
-The version of OMPT described by this document is 2.
+The version of OMPT described by this document is 1, and available
+through the constant \code{OMPT\_VERSION} defined in the
+\code{ompt.h} header file.
 
 The actions of a tool initializer are described in \specref{sec:tool-initialize}.
 
@@ -3754,7 +3757,7 @@ OpenMP event occurs.
 \ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_callback_set_t)(
-  ompt_callbacks_t \plc{event},
+  ompt_callbacks_t \plc{which},
   ompt_callback_t \plc{callback}
 );
 \end{boxedcode}
@@ -3772,31 +3775,38 @@ with type signature \code{ompt\_callback\_set\_t}.
 
 The return value of the \code{ompt\_callback\_set} entry point may indicate several possible
 outcomes. Callback registration may fail if it is called outside the initializer for the
-callback interface. Otherwise, the return value of set callback 
-indicates whether or not the event may occur during execution and
-whether or not the callback will always be invoked or not.
+callback interface, returning \code{ompt\_set\_error}. 
+Otherwise, the return value of \code{ompt\_callback\_set} 
+indicates whether or \emph{dispatching} a callback leads to its invocation.
+A return value of \code{ompt\_set\_none} indicates that the callback
+will never be invoked at runtime.
+A return value of \code{ompt\_set\_sometimes} indicates that the callback
+will be invoked at runtime for an implementation-defined subset of
+associated event occurrences.
+A return value of \code{ompt\_set\_always} indicates that the callback
+will be always invoked at runtime for associated event occurrences.
+
+A tool may pass \code{NULL} as the \plc{callback} argument to disable
+any callback associated with \plc{which}. If disabling was successful,
+\code{ompt\_set\_always} is returned.
 
 \constraints
 When a tool registers a callback for an event, the type
 signature for the callback must match the type signature appropriate for the
 event. 
-%For an event with enumeration value name {\ttfamily\bfseries ompt\_callback\_{\em xxx}}, 
-%the type signature for the event is {\ttfamily\bfseries ompt\_{\em xxx}\_callback\_t}. 
  
 \begin{table}
-\centering
-\begin{tabular}{ll}
-\hline
-Return code & Meaning \\
-\hline
-0 & callback registration error\\
-1 & event may occur; no callback is possible\\
-2 & event may occur; callback invoked when convenient\\
-3 & event may occur; callback always invoked when event occurs\\
-\hline
-\end{tabular}
+\begin{boxedcode}
+typedef enum ompt_set_result_e \{
+  ompt_set_error = 0,
+  ompt_set_none = 1,
+  ompt_set_sometimes = 2,
+  ompt_set_always = 3
+\} ompt_set_result_t;
+\end{boxedcode}
 \vskip 1ex
-\caption{Meaning of return codes for \code{ompt\_callback\_set}.}
+\caption{Return codes for \code{ompt\_callback\_set} and
+  \code{ompt\_set\_trace\_ompt}.}
 \label{table:ToolsSupport_set_rc}
 \end{table}
 
@@ -3824,7 +3834,7 @@ that an OpenMP implementation will invoke when an OpenMP event occurs.
 \ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_callback_get_t)(
-  ompt_callbacks_t \plc{event},
+  ompt_callbacks_t \plc{which},
   ompt_callback_t *\plc{callback}
 );
 \end{boxedcode}
