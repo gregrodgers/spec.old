@@ -312,15 +312,14 @@ that has an implementation-defined behavior.
 \code{ompt\_callback\_task\_schedule}         &   &   & * \\
 \code{ompt\_callback\_implicit\_task}         &   &   & * \\
 \code{ompt\_callback\_target}                 &   &   & * \\
-\code{ompt\_callback\_target\_data}       &   &   & * \\
+\code{ompt\_callback\_target\_data\_op}       &   &   & * \\
 \code{ompt\_callback\_target\_submit}         &   &   & * \\
 \code{ompt\_callback\_tcontrol}               &   &   & * \\
-\code{ompt\_callback\_runtime\_shutdown}      &   &   & * \\
 \code{ompt\_callback\_idle}                   & * & * & * \\
 \code{ompt\_callback\_sync\_region\_wait}     & * & * & * \\
 \code{ompt\_callback\_mutex\_release}         & * & * & * \\
 \code{ompt\_callback\_task\_dependences}      & * & * & * \\
-\code{ompt\_callback\_task\_dependence\_pair} & * & * & * \\
+\code{ompt\_callback\_task\_dependence} & * & * & * \\
 \code{ompt\_callback\_work}                   & * & * & * \\
 \code{ompt\_callback\_master}                 & * & * & * \\
 \code{ompt\_callback\_target\_map}            & * & * & * \\
@@ -360,8 +359,8 @@ of synchronization regions.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_callback\_t} enumeration type, see
-\specref{sec:ompt_callback_t}.
+\item \code{ompt\_callbacks\_t} enumeration type, see
+\specref{sec:ompt_callbacks_t}.
 \item \code{ompt\_callback\_set\_t} type signature, see \specref{sec:ompt_callback_set_t}
 \item \code{ompt\_callback\_t} type signature, see \specref{sec:ompt_callback_t}.
 
@@ -370,7 +369,7 @@ of synchronization regions.
 \item {\em incomplete cross references stubbed out} 
 \begin{comment}
 \item \code{ompt\_callback\_parallel\_begin}, see \specref
-\item \code{ompt\_callback\_parallel\_end}, see \specref
+\item \code{ompt\_callback\_parallel\_end}, see \specrefdependences
 \item \code{ompt\_callback\_task\_create}, see \specref
 \item \code{ompt\_callback\_task\_schedule}, see \specref
 \item \code{ompt\_callback\_implicit\_task}, see \specref
@@ -379,14 +378,13 @@ of synchronization regions.
 \item \code{ompt\_callback\_target\_submit}, see \specref
 \item \code{ompt\_callback\_tcontrol}, see \specref
 \end{comment}
-\item \code{ompt\_callback\_runtime\_shutdown}, see \specref{sec:ompt_callback_runtime_shutdown}.
 \item \code{ompt\_callback\_idle}, see \specref{sec:ompt_callback_idle}. 
 \item \code{ompt\_callback\_sync\_region\_wait}, see \specref{sec:ompt_callback_runtime_shutdown}.
 \item {\em incomplete cross references stubbed out} 
 \begin{comment}
 \item \code{ompt\_callback\_mutex\_release}, see \specref
 \item \code{ompt\_callback\_task\_dependences}, see \specref
-\item \code{ompt\_callback\_task\_dependence\_pair}, see \specref
+\item \code{ompt\_callback\_task\_dependence}, see \specref
 \item \code{ompt\_callback\_worksharing}, see \specref
 \item \code{ompt\_callback\_master}, see \specref
 \item \code{ompt\_callback\_target\_data\_map}, see \specref
@@ -549,8 +547,48 @@ is in progress.
 \item \code{ompt\_buffer\_get\_record\_native\_abstract}, see \specref{sec:ompt_buffer_get_record_native_abstract_t}.
 \end{itemize}
 
+
+\section{Finalizing a Tool}
+\label{sec:ompt-finalization}
+
+If \code{ompt\_tool} returned a non-\code{NULL} pointer when an OpenMP
+implementation was initialized, the tool finalizer specified by the
+\plc{finalize} field in this structure will be called as the OpenMP
+implementation shuts down.
+
 \section{Data Types}
 \label{sec:ompt-data-types}
+
+\subsection{Tool Initialization and Finalization}
+\label{sec:ompt_fns_t}
+
+\summary
+A tool's implementation of \code{ompt\_tool} returns a pointer to an
+\code{ompt\_fns\_t} structure that contains pointers to the tool's 
+initializer and finalizer functions.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_fns_t \{
+  ompt_initialize_fn_t \plc{initialize};
+  ompt_finalize_fn_t \plc{finalize};
+\} ompt_fns_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\restrictions
+
+Both the \plc{initialize} and \plc{finalize} function pointers in an
+\code{ompt\_fns\_t} structure must be non-\code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_tool}, see \specref{sec:ompt_tool}.
+\end{itemize}
+
+
 \subsection{Thread States}
 \label{sec:thread-states}
 
@@ -838,7 +876,7 @@ e.g., locks.
 \end{description}
 
 \subsection{Events}
-\label{sec:ompt_callback_t}
+\label{sec:ompt_callbacks_t}
 
 The following enumeration type indicates the integer codes used to identify 
 OpenMP events when registering or querying callbacks associated with them.
@@ -846,7 +884,7 @@ OpenMP events when registering or querying callbacks associated with them.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_callback_t \{
+typedef enum ompt_callbacks_t \{
   ompt_callback_thread_begin             = 1,
   ompt_callback_thread_end               = 2,
   ompt_callback_parallel_begin           = 3,
@@ -855,96 +893,95 @@ typedef enum ompt_callback_t \{
   ompt_callback_task_schedule            = 6,
   ompt_callback_implicit_task            = 7,
   ompt_callback_target                   = 8,
-  ompt_callback_target_data              = 9,
+  ompt_callback_target_data_op          = 9,
   ompt_callback_target_submit            = 10,
   ompt_callback_tcontrol                 = 11,
-  ompt_callback_runtime_shutdown         = 12,
-  ompt_callback_idle                     = 13,
-  ompt_callback_sync_region_wait         = 14,
-  ompt_callback_mutex_release            = 15,
-  ompt_callback_task_dependences         = 16,
-  ompt_callback_task_dependence_pair     = 17,
-  ompt_callback_work                     = 18,
-  ompt_callback_master                   = 19,
-  ompt_callback_target_map               = 20,
-  ompt_callback_sync_region              = 21,
-  ompt_callback_init_lock                = 22,
-  ompt_callback_destroy_lock             = 23,
-  ompt_callback_mutex_acquire            = 24,
-  ompt_callback_mutex_acquired           = 25,
-  ompt_callback_nested_lock              = 26,
-  ompt_callback_flush                    = 27,
-  ompt_callback_device_initialize        = 28
-  ompt_callback_cancel                   = 29
+  ompt_callback_idle                     = 12,
+  ompt_callback_sync_region_wait         = 13,
+  ompt_callback_mutex_release            = 14,
+  ompt_callback_task_dependences         = 15,
+  ompt_callback_task_dependence     = 16,
+  ompt_callback_work                     = 17,
+  ompt_callback_master                   = 18,
+  ompt_callback_target_map               = 19,
+  ompt_callback_sync_region              = 20,
+  ompt_callback_init_lock                = 21,
+  ompt_callback_destroy_lock             = 22,
+  ompt_callback_mutex_acquire            = 23,
+  ompt_callback_mutex_acquired           = 24,
+  ompt_callback_nested_lock              = 25,
+  ompt_callback_flush                    = 26,
+  ompt_callback_device_initialize        = 27,
+  ompt_callback_cancel                   = 28
 \} ompt_callback_t;
 \end{boxedcode}
 \ccppspecificend
 }
 
 
-\subsubsection{Triggers for Miscellaneous Events}
-Most events trigger during the execution of OpenMP directives. Other
-events trigger when an application calls certain runtime library
-routines, e.g., those for setting and unsetting locks.
-This section describes events triggered during initialization and
-finialization of an OpenMP implementation. 
-
-\ompteventswithoutdirectives{\code{ompt\_callback\_thread\_begin}}
-\label{sec:ompt_callback_thread_begin}
-
-An OpenMP implementation invokes this callback in the context of an
-initial thread just after it initializes the runtime, or in the
-context of a new thread created by the runtime just after the thread
-initializes itself. In either case, this callback must be the first
-callback for a thread and must occur before the thread executes any
-OpenMP tasks. This callback has type signature
-\code{ompt\_callback\_thread\_begin\_t}.  The callback argument
-\code{thread\_type} indicates the type of the thread: initial, worker,
-or other.
-
-\ompteventswithoutdirectives{\code{ompt\_callback\_thread\_end}}
-\label{sec:ompt_callback_thread_end}
-
-An OpenMP implementation invokes this callback after an OpenMP thread
-completes all of its tasks but before the thread is destroyed. The
-callback executes in the context of the OpenMP thread. This callback
-must be the last callback event for any worker thread; it is optional
-for other types of threads.  This callback has type signature
-\code{ompt\_callback\_thread\_end\_t}.
-
-\ompteventswithoutdirectives{\code{ompt\_callback\_idle}}
-\label{sec:ompt_callback_idle}
-
-An OpenMP implementation invokes this callback with
-\code{endpoint=}\code{ompt\_scope\_begin} when a thread waits for work
-outside a parallel region.  The OpenMP runtime invokes this callback
-with \code{endpoint=}\code{ompt\_scope\_end} before the thread begins
-to execute an implicit task for a parallel region or terminates. The
-callback executes in the environment of the waiting thread.  This
-callback has type signature \code{ompt\_callback\_idle\_t}.
-
-\ompteventswithoutdirectives{\code{ompt\_callback\_sync\_region\_wait}}
-\label{sec:ompt_callback_sync_region_wait}
-
-If the \code{ompt\_callback\_sync\_region\_wait} callback is registered,
-an OpenMP implementation will invoke this callback when a task starts
-and stops waiting in a barrier region, taskwait region, or taskgroup
-region.  This callback has type signature
-\code{ompt\_callback\_sync\_region\_t}.  One region may generate
-multiple pairs of start/stop callbacks if another task is scheduled on
-the thread while the task awaiting completion of the region is
-stalled.  This callback executes in the context of the task that
-encountered the barrier, taskwait, or taskgroup construct.
-
-\ompteventswithoutdirectives{\code{ompt\_callback\_runtime\_shutdown}}
-\label{sec:ompt_callback_runtime_shutdown}
-
-An OpenMP implementation invokes this callback before it shuts down
-the runtime system.  This callback enables a tool to clean up its
-state and record or report information gathered. A runtime may later
-restart and reinitialize the tool by calling the tool initializer
-function (described in Section~\ref{sec:tool-initialize}) again.  This
-callback has type signature \code{ompt\_callback\_t}.
+%\subsubsection{Triggers for Miscellaneous Events}
+%Most events trigger during the execution of OpenMP directives. Other
+%events trigger when an application calls certain runtime library
+%routines, e.g., those for setting and unsetting locks.
+%This section describes events triggered during initialization and
+%finialization of an OpenMP implementation. 
+%
+%\ompteventswithoutdirectives{\code{ompt\_callback\_thread\_begin}}
+%\label{sec:ompt_callback_thread_begin}
+%
+%An OpenMP implementation invokes this callback in the context of an
+%initial thread just after it initializes the runtime, or in the
+%context of a new thread created by the runtime just after the thread
+%initializes itself. In either case, this callback must be the first
+%callback for a thread and must occur before the thread executes any
+%OpenMP tasks. This callback has type signature
+%\code{ompt\_callback\_thread\_begin\_t}.  The callback argument
+%\code{thread\_type} indicates the type of the thread: initial, worker,
+%or other.
+%
+%\ompteventswithoutdirectives{\code{ompt\_callback\_thread\_end}}
+%\label{sec:ompt_callback_thread_end}
+%
+%An OpenMP implementation invokes this callback after an OpenMP thread
+%completes all of its tasks but before the thread is destroyed. The
+%callback executes in the context of the OpenMP thread. This callback
+%must be the last callback event for any worker thread; it is optional
+%for other types of threads.  This callback has type signature
+%\code{ompt\_callback\_thread\_end\_t}.
+%
+%\ompteventswithoutdirectives{\code{ompt\_callback\_idle}}
+%\label{sec:ompt_callback_idle}
+%
+%An OpenMP implementation invokes this callback with
+%\code{endpoint=}\code{ompt\_scope\_begin} when a thread waits for work
+%outside a parallel region.  The OpenMP runtime invokes this callback
+%with \code{endpoint=}\code{ompt\_scope\_end} before the thread begins
+%to execute an implicit task for a parallel region or terminates. The
+%callback executes in the environment of the waiting thread.  This
+%callback has type signature \code{ompt\_callback\_idle\_t}.
+%
+%\ompteventswithoutdirectives{\code{ompt\_callback\_sync\_region\_wait}}
+%\label{sec:ompt_callback_sync_region_wait}
+%
+%If the \code{ompt\_callback\_sync\_region\_wait} callback is registered,
+%an OpenMP implementation will invoke this callback when a task starts
+%and stops waiting in a barrier region, taskwait region, or taskgroup
+%region.  This callback has type signature
+%\code{ompt\_callback\_sync\_region\_t}.  One region may generate
+%multiple pairs of start/stop callbacks if another task is scheduled on
+%the thread while the task awaiting completion of the region is
+%stalled.  This callback executes in the context of the task that
+%encountered the barrier, taskwait, or taskgroup construct.
+%
+%\ompteventswithoutdirectives{\code{ompt\_callback\_runtime\_shutdown}}
+%\label{sec:ompt_callback_runtime_shutdown}
+%
+%An OpenMP implementation invokes this callback before it shuts down
+%the runtime system.  This callback enables a tool to clean up its
+%state and record or report information gathered. A runtime may later
+%restart and reinitialize the tool by calling the tool initializer
+%function (described in Section~\ref{sec:tool-initialize}) again.  This
+%callback has type signature \code{ompt\_callback\_t}.
 
 \begin{targetRecord}
 \subsection{Tracing Support}
@@ -1023,7 +1060,7 @@ will be \code{ompt\_hwid\_none}.
 \ccppspecificstart
 \begin{boxedcode}
 typedef struct ompt_record_ompt_s \{
-  ompt_callback_t \plc{type};
+  ompt_callbacks_t \plc{type};
   ompt_target_time\_t \plc{time};
   ompt_id_t \plc{thread_id};
   ompt_id_t \plc{target_id};
@@ -1038,7 +1075,7 @@ typedef struct ompt_record_ompt_s \{
     ompt_implicit_record_t \plc{implicit};
     ompt_sync_region_record_t \plc{sync_region};
     ompt_target_record_t \plc{target_record};
-    ompt_target_data_record_t \plc{target_data};
+    ompt_target_data_op_t \plc{target_data_op};
     ompt_target_map_record_t \plc{target_map};
     ompt_target_kernel_record_t \plc{kernel};
     ompt_lock_init_record_t \plc{lock_init};
@@ -1249,7 +1286,7 @@ ompt_data_t ompt_data_none = \{.value=0\};
   \specref{sec:ompt_callback_parallel_end_t}.
 \item \code{ompt\_callback\_parallel\_end\_t} callback type, see \specref{sec:ompt_callback_parallel_end_t}.
 \item \code{ompt\_callback\_task\_create\_t} callback type, see \specref{sec:ompt_callback_task_create_t}.
-\item \code{ompt\_callback\_task\_dependencies\_t} callback type, see \specref{sec:ompt_callback_task_dependencies_t}.
+\item \code{ompt\_callback\_task\_dependences\_t} callback type, see \specref{sec:ompt_callback_task_dependences_t}.
 \item \code{ompt\_callback\_task\_dependence\_t} callback type, see \specref{sec:ompt_callback_task_dependence_t}.
 \item \code{ompt\_callback\_task\_schedule\_t} callback type, see
   \specref{sec:ompt_callback_task_schedule_t}.
@@ -1354,7 +1391,7 @@ typedef unsigned long long int ompt_device_time_t;
 \item \code{ompt\_get\_device\_time} inquiry function, see \specref{sec:ompt_get_device_time}.
 \item \code{ompt\_translate\_time} inquiry function, see \specref{sec:ompt_translate_time}.
 \item \code{ompt\_record\_native\_abstract\_t} data type, see \specref{sec:ompt_record_native_abstract_t}.
-\item \code{ompt\_record\_target\_data\_t} data type, see \specref{sec:ompt_record_target_data_t}.
+\item \code{ompt\_record\_target\_data\_op\_t} data type, see \specref{sec:ompt_record_target_data_op_t}.
 \item \code{ompt\_record\_target\_kernel\_t} data type, see \specref{sec:ompt_record_target_kernel_t}.
 \item \code{ompt\_record\_ompt\_t} data type, see \specref{sec:ompt_record_ompt_t}.
 \end{itemize}
@@ -1569,8 +1606,8 @@ typedef enum ompt_sync_region_kind_e \{
 \begin{boxedcode}
 typedef enum ompt_target_data_op_e \{
   ompt_target_data_alloc              = 1,
-  ompt_target_data_to_dev             = 2,
-  ompt_target_data_from_dev           = 3,
+  ompt_target_data_transfer_to_dev    = 2,
+  ompt_target_data_transfer_from_dev  = 3,
   ompt_target_data_delete             = 4
 \} ompt_target_data_op_t;
 \end{boxedcode}
@@ -1580,7 +1617,7 @@ typedef enum ompt_target_data_op_e \{
 \begin{comment}
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_callback\_target\_data\_t} callback type, see \specref{sec:ompt_callback_target_data_t}.
+\item \code{ompt\_callback\_target\_data\_t} callback type, see \specref{sec:ompt_callback_target_data_op_t}.
 \item \code{ompt\_record\_target\_data\_t} data type, see \specref{sec:ompt_record_target_data_t}.
 \end{itemize}
 \end{comment}
@@ -1917,7 +1954,7 @@ the tool must implement \code{ompt\_tool} to announce its interest.
 \ccppspecificstart
 \begin{boxedcode}
 extern "C" \{
-  ompt_initialize_fn_t ompt_tool(void);
+  ompt_fns_t *ompt_tool(void);
 \};
 \end{boxedcode}
 \ccppspecificend
@@ -1930,26 +1967,22 @@ function \code{ompt\_tool}.
 
 A tool may indicate its intent to use the OMPT interface provided
 by an OpenMP implementation by having
-\code{ompt\_tool} return a non-\code{NULL} pointer to a tool
-initializer routine with type signature \code{ompt\_initialize\_fn\_t}.
-
-\begin{comment}
-If a tool so indicates its interest in OMPT, the OpenMP implementation
-will maintain state information for each OpenMP thread and will
-perform any OMPT event callbacks registered by the tool.
-\end{comment}
+\code{ompt\_tool} return a non-\code{NULL} pointer to an
+\code{ompt\_control\_t} structure, which contains pointers to
+a tool's initializer and finalizer functions.
 
 If a tool implements \code{ompt\_tool} but has no interest in using
 an OpenMP implementation's OMPT interface in a particular execution,
 \code{ompt\_tool} should return \code{NULL}. 
 
 \effect
-If a tool returns a non-\code{NULL} pointer to a tool
-initializer routine, an OpenMP implementation will 
-call the tool initializer
-after fully initializing itself but before
+If a tool returns a non-\code{NULL} pointer,
+an OpenMP implementation will call the tool initializer specified by the
+\plc{finalize} field in this structure but before
 beginning execution of any OpenMP construct
-or completing execution of any environment routine invocation. 
+or completing execution of any environment routine invocation; the
+OpenMP implementation will call the tool finializer when the OpenMP
+implementation shuts down.
 
 \begin{comment}
 \crossreferences
@@ -1960,7 +1993,7 @@ or completing execution of any environment routine invocation.
 
 \section{Tool Callback Signatures and Trace Records}
 \label{sec:ompt-tool-callbacks}
-\subsection{Initializer Callback Signature}
+\subsection{Initialization and Finalization Callback Signature}
 
 \omptcallbacksignature{\code{ompt\_initialize\_fn\_t}}
 \label{sec:ompt_initialize_fn_t}
@@ -1998,28 +2031,8 @@ is \plc{lookup}---a callback
 to an OpenMP runtime routine that a tool must use to 
 obtain a pointer to each function in the runtime's OMPT interface.
 
-\begin{comment}
-All functions in the OMPT interface are marked with \code{OMPT\_API}, which
-indicates that the only way a tool can obtain bindings for them
-is using the \plc{lookup} callback.
-
-% The language committee prefers to avoid rationale
-The \code{lookup} callback is necessary in the case when an OpenMP runtime 
-is dynamically loaded by a shared library. In this case, 
-OMPT interface functions provided by the library may 
-not be visible to a preloaded tool.
-% Within a tool, one uses \code{lookup} to obtain function pointers to each function in the OMPT interface.
-\end{comment}
-
 The second argument passed to a tool initializer 
 is a version string that unambiguously identifies the OpenMP implementation.
-
-\begin{comment}
-% The language committee prefers to avoid rationale
-This argument is useful to tool developers trying to debug a statically-linked executable that contains both a tool implementation and an OpenMP implementation.
-Knowing exactly what version of an OpenMP implementation is present 
-may be helpful when diagnosing a problem, e.g., identifying an old runtime system that may be incompatible with a newer tool.
-\end{comment}
 
 The third argument an OpenMP implementation passed to a tool initializer 
 is a version number that unambiguously identifies the version of the 
@@ -2032,6 +2045,40 @@ The actions of a tool initializer are described in \specref{sec:tool-initialize}
 \begin{itemize}
 \item \code{ompt\_function\_lookup\_t}, see
   \specref{sec:ompt_function_lookup_t}.
+\end{itemize}
+
+
+\omptcallbacksignature{\code{ompt\_finalize\_fn\_t}}
+\label{sec:ompt_finalize_fn_t}
+
+\summary
+A tool implements an finalizer with the type signature
+\code{ompt\_finalize\_fn\_t} to finalize the tool's use of
+an OpenMP implementation's OMPT interface.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef void (*\plc{ompt_finalize_fn_t}) (
+  ompt_fns_t *\plc{fns};
+);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+The finalizer for an OpenMP implememtation is invoked by an OpenMP
+implementation as it shuts down.
+
+\argdesc
+The argument passed to a tool finalizer 
+is the value returned by \code{ompt\_tool}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_fns\_t}, see
+  \specref{sec:ompt_fns_t}.
 \end{itemize}
 
 
@@ -2265,7 +2312,7 @@ The binding of \plc{parallel\_data} is the finishing team.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (* ompt_callback_master_t) (
+typedef void (*\plc{ompt_callback_master_t}) (
                ompt_scope_endpoint_t \plc{endpoint},
                ompt_data_t *\plc{parallel_data},
                ompt_data_t *\plc{task_data},
@@ -2343,7 +2390,7 @@ typedef struct ompt_task_create_record_s \{
   const ompt_frame_t *\plc{parent_frame};
   ompt_id_t \plc{new_task_id};
   ompt_task_type_t \plc{type};
-  _Bool \plc{has_dependences};
+  int \plc{has_dependences};
   const void *\plc{codeptr_ra};
 \} ompt_task_create_record_t;
 \end{boxedcode}
@@ -3041,15 +3088,15 @@ that indicates whether the callback signals the begin or end of the scope.
 
 
 
-\omptcallbacksignature{\code{ompt\_callback\_target\_data\_t}}
-\index{ompt\_callback\_target\_data\_t@{\code{ompt\_callback\_target\_data\_t}}}
-\label{sec:ompt_callback_target_data_t}
+\omptcallbacksignature{\code{ompt\_callback\_target\_data\_op\_t}}
+\index{ompt\_callback\_target\_data\_op\_t@{\code{ompt\_callback\_target\_data\_op\_t}}}
+\label{sec:ompt_callback_target_data_op_t}
 \format
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_callback_target_data_t) (
+typedef void (*ompt_callback_target_data_op_t) (
   ompt_id_t \plc{target_id},
   ompt_id_t \plc{host_op_id},
   ompt_target_data_op_t \plc{optype},
@@ -3066,21 +3113,21 @@ typedef void (*ompt_callback_target_data_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt_target_data_record_s \{
+typedef struct ompt_target_data_op_record_s \{
   ompt_id_t \plc{host_op_id};
   ompt_target_data_op_t \plc{optype};
   void *\plc{host_addr};
   void *\plc{device_addr};
   size_t \plc{bytes};
   ompt_device_time_t \plc{end_time};
-\} ompt_target_data_record_t;
+\} ompt_target_data_op_record_t;
 \end{boxedcode}
 \ccppspecificend
 }
 \end{targetRecord}
 
 \descr
-The callbacks with type signature \code{ompt\_callback\_target\_data\_t},
+The callbacks with type signature \code{ompt\_callback\_target\_transfer\_t},
 include a parameter \plc{requested\_team\_size}
 that indicates the number of threads requested by the user, and a parameter
 \plc{actual\_team\_size} that indicates the number of threads in the team.
@@ -3707,7 +3754,7 @@ OpenMP event occurs.
 \ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_callback_set_t)(
-  ompt_callback_t \plc{event},
+  ompt_callbacks_t \plc{event},
   ompt_callback_t \plc{callback}
 );
 \end{boxedcode}
@@ -3733,8 +3780,8 @@ whether or not the callback will always be invoked or not.
 When a tool registers a callback for an event, the type
 signature for the callback must match the type signature appropriate for the
 event. 
-For an event with enumeration value name {\ttfamily\bfseries ompt\_callback\_{\em xxx}}, 
-the type signature for the event is {\ttfamily\bfseries ompt\_{\em xxx}\_callback\_t}. 
+%For an event with enumeration value name {\ttfamily\bfseries ompt\_callback\_{\em xxx}}, 
+%the type signature for the event is {\ttfamily\bfseries ompt\_{\em xxx}\_callback\_t}. 
  
 \begin{table}
 \centering
@@ -3755,7 +3802,7 @@ Return code & Meaning \\
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_callback\_t} enumeration type, see \specref{sec:ompt_callback_t}.
+\item \code{ompt\_callbacks\_t} enumeration type, see \specref{sec:ompt_callbacks_t}.
 \item \code{ompt\_callback\_t} type, see \specref{sec:ompt_callback_t}.
 \item \code{ompt\_callback\_get\_t} host callback ftype signature,
 see \specref{sec:ompt_callback_get_t}.
@@ -3777,7 +3824,7 @@ that an OpenMP implementation will invoke when an OpenMP event occurs.
 \ccppspecificstart
 \begin{boxedcode}
 typedef int (*ompt_callback_get_t)(
-  ompt_callback_t \plc{event},
+  ompt_callbacks_t \plc{event},
   ompt_callback_t *\plc{callback}
 );
 \end{boxedcode}
@@ -3803,7 +3850,7 @@ to a variable of specified type.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_callback\_t} enumeration type, see \specref{sec:ompt_callback_t}.
+\item \code{ompt\_callbacks\_t} enumeration type, see \specref{sec:ompt_callbacks_t}.
 \item \code{ompt\_callback\_t} type, see \specref{sec:ompt_callback_t}.
 \item \code{ompt\_callback\_set\_t} type signature, 
 see \specref{sec:ompt_callback_set_t}. 
@@ -4396,7 +4443,7 @@ recording of events should be disabled by this invocation.
 
 An \code{etype} value 0 indicates that traces for all event types will be enabled or disabled.  
 Passing a positive value for \code{etype} inidicates that recording
-should be enabled or disabled for the event in \code{ompt\_callback\_t}
+should be enabled or disabled for the event in \code{ompt\_callbacks\_t}
 that matches \code{etype}.
 
 Table~\ref{table:record_set} shows the possible return
@@ -4428,8 +4475,8 @@ return code & meaning \\\hline
 \begin{itemize}
 \item \code{ompt\_device\_t},
 see \specref{sec:ompt_device_t}.
-\item \code{ompt\_callback\_t},
-see \specref{sec:ompt_callback_t}.
+\item \code{ompt\_callbacks\_t},
+see \specref{sec:ompt_callbacks_t}.
 \end{itemize}
 
 \omptruntimeentrypoint{\code{ompt\_set\_trace\_native\_t}}
