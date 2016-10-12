@@ -329,11 +329,11 @@ that has an implementation-defined behavior.
 \code{ompt\_callback\_master}                 & * & * & * \\
 \code{ompt\_callback\_target\_map}            & * & * & * \\
 \code{ompt\_callback\_sync\_region}           & * & * & * \\
-\code{ompt\_callback\_init\_lock}             & * & * & * \\
-\code{ompt\_callback\_destroy\_lock}          & * & * & * \\
+\code{ompt\_callback\_lock\_init}             & * & * & * \\
+\code{ompt\_callback\_lock\_destroy}          & * & * & * \\
 \code{ompt\_callback\_mutex\_acquire}         & * & * & * \\
 \code{ompt\_callback\_mutex\_acquired}        & * & * & * \\
-\code{ompt\_callback\_nested\_lock}           & * & * & * \\
+\code{ompt\_callback\_nest\_lock}             & * & * & * \\
 \code{ompt\_callback\_flush}                  & * & * & * \\
 \code{ompt\_callback\_device\_initialize}     & * & * & * \\
 \code{ompt\_callback\_cancel}                 & * & * & * \\
@@ -394,7 +394,7 @@ of synchronization regions.
 \item \code{ompt\_callback\_destroy\_lock}, see \specref
 \item \code{ompt\_callback\_mutex\_acquire}, see \specref
 \item \code{ompt\_callback\_mutex\_acquired}, see \specref
-\item \code{ompt\_callback\_nested\_lock}, see ...
+\item \code{ompt\_callback\_nest\_lock}, see ...
 \item \code{ompt\_callback\_flush}, see \specref{subsec:flush Construct}.
 \item \code{ompt\_callback\_device\_initialize}, see \specref{sec:Device Constructs}.
 \item \code{ompt\_callback\_cancel}, see \specref{sec:Cancellation Constructs}.
@@ -906,11 +906,11 @@ typedef enum ompt_callbacks_t \{
   ompt_callback_master                   = 18,
   ompt_callback_target_map               = 19,
   ompt_callback_sync_region              = 20,
-  ompt_callback_init_lock                = 21,
-  ompt_callback_destroy_lock             = 22,
+  ompt_callback_lock_init                = 21,
+  ompt_callback_lock_destroy             = 22,
   ompt_callback_mutex_acquire            = 23,
   ompt_callback_mutex_acquired           = 24,
-  ompt_callback_nested_lock              = 25,
+  ompt_callback_nest_lock                = 25,
   ompt_callback_flush                    = 26,
   ompt_callback_device_initialize        = 27,
   ompt_callback_cancel                   = 28
@@ -1083,7 +1083,7 @@ typedef struct ompt_record_ompt_s \{
     ompt_lock_destroy_record_t \plc{lock_destroy};
     ompt_mutex_acquire_record_t \plc{mutex_acquire};
     ompt_mutex_record_t \plc{mutex};
-    ompt_nested_lock_record_t \plc{nested_lock};
+    ompt_nest_lock_record_t \plc{nest_lock};
     ompt_master_record_t \plc{master};
     ompt_work_record_t \plc{work};
     ompt_flush_record_t \plc{flush};
@@ -1333,12 +1333,12 @@ Tools should not assume that \code{ompt\_wait\_id\_t} values are small or densel
 \item \code{ompt\_callback\_lock\_destroy\_t} callback type, see \specref{sec:ompt_callback_lock_destroy_t}.
 \item \code{ompt\_callback\_mutex\_acquire\_t} callback type, see \specref{sec:ompt_callback_mutex_acquire_t}.
 \item \code{ompt\_callback\_mutex\_t} callback type, see \specref{sec:ompt_callback_mutex_t}.
-\item \code{ompt\_callback\_nested\_lock\_t} callback type, see \specref{sec:ompt_callback_nested_lock_t}.
+\item \code{ompt\_callback\_nest\_lock\_t} callback type, see \specref{sec:ompt_callback_nest_lock_t}.
 \item \code{ompt\_record\_lock\_init\_t} data type, see \specref{sec:ompt_record_lock_init_t}.
 \item \code{ompt\_record\_lock\_destroy\_t} data type, see \specref{sec:ompt_record_lock_destroy_t}.
 \item \code{ompt\_record\_mutex\_acquire\_t} data type, see \specref{sec:ompt_record_mutex_acquire_t}.
 \item \code{ompt\_record\_mutex\_t} data type, see \specref{sec:ompt_record_mutex_t}.
-\item \code{ompt\_record\_nested\_lock\_t} data type, see \specref{sec:ompt_record_nested_lock_t}.
+\item \code{ompt\_record\_nest\_lock\_t} data type, see \specref{sec:ompt_record_nest_lock_t}.
 \end{itemize}
 \end{comment}
 
@@ -1557,14 +1557,14 @@ typedef enum ompt_scope_endpoint_e \{
 \item \code{ompt\_callback\_implicit\_task\_t} callback type, see
   \specref{sec:ompt_callback_implicit_task_t}.
 \item \code{ompt\_callback\_sync\_region\_t} callback type, see \specref{sec:ompt_callback_sync_region_t}.
-\item \code{ompt\_callback\_nested\_lock\_t} callback type, see \specref{sec:ompt_callback_nested_lock_t}.
+\item \code{ompt\_callback\_nest\_lock\_t} callback type, see \specref{sec:ompt_callback_nest_lock_t}.
 \item \code{ompt\_callback\_master\_t} callback type, see \specref{sec:ompt_callback_master_t}.
 \item \code{ompt\_callback\_work\_t} callback type, see \specref{sec:ompt_callback_work_t}.
 \item \code{ompt\_callback\_target\_t} callback type, see \specref{sec:ompt_callback_target_t}.
 \item \code{ompt\_record\_idle\_t} data type, see \specref{sec:ompt_record_idle_t}.
 \item \code{ompt\_record\_implicit\_t} data type, see \specref{sec:ompt_record_implicit_t}.
 \item \code{ompt\_sync\_region\_t} data type, see \specref{sec:ompt_sync_region_t}.
-\item \code{ompt\_nested\_lock\_t} data type, see \specref{sec:ompt_nested_lock_t}.
+\item \code{ompt\_nest\_lock\_t} data type, see \specref{sec:ompt_nest_lock_t}.
 \item \code{ompt\_master\_t} data type, see \specref{sec:ompt_master_t}.
 \item \code{ompt\_work\_t} data type, see \specref{sec:ompt_work_t}.
 \end{itemize}
@@ -2008,7 +2008,7 @@ an OpenMP implementation's OMPT interface.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*\plc{ompt_initialize_fn_t}) (
+typedef void (*ompt_initialize_fn_t) (
   ompt_function_lookup_t \plc{lookup},
   const char *\plc{runtime_version},
   unsigned int \plc{ompt_version}
@@ -2063,8 +2063,8 @@ an OpenMP implementation's OMPT interface.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*\plc{ompt_finalize_fn_t}) (
-  ompt_fns_t *\plc{fns};
+typedef void (*ompt_finalize_fn_t) (
+  ompt_fns_t *\plc{fns}
 );
 \end{boxedcode}
 \ccppspecificend
@@ -2315,7 +2315,7 @@ The binding of \plc{parallel\_data} is the finishing team.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*\plc{ompt_callback_master_t}) (
+typedef void (*ompt_callback_master_t) (
                ompt_scope_endpoint_t \plc{endpoint},
                ompt_data_t *\plc{parallel_data},
                ompt_data_t *\plc{task_data},
@@ -2872,14 +2872,14 @@ that indicates the number of threads requested by the user, and a parameter
 
 
 
-\omptcallbacksignature{\code{ompt\_callback\_nested\_lock\_t}}
-\index{ompt\_callback\_nested\_lock\_t@{\code{ompt\_callback\_nested\_lock\_t}}}
-\label{sec:ompt_callback_nested_lock_t}
+\omptcallbacksignature{\code{ompt\_callback\_nest\_lock\_t}}
+\index{ompt\_callback\_nest\_lock\_t@{\code{ompt\_callback\_nest\_lock\_t}}}
+\label{sec:ompt_callback_nest_lock_t}
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_callback_nested_lock_t) (
+typedef void (*ompt_callback_nest_lock_t) (
   ompt_scope_endpoint_t \plc{endpoint},
   ompt_wait_id_t \plc{wait_id},
   const void *\plc{codeptr_ra}
@@ -2893,18 +2893,18 @@ typedef void (*ompt_callback_nested_lock_t) (
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt_nested_lock_record_s \{
+typedef struct ompt_nest_lock_record_s \{
   ompt_scope_endpoint_t \plc{endpoint};
   ompt_wait_id_t \plc{wait_id};
   const void *\plc{codeptr_ra};
-\} ompt_nested_lock_record_t;
+\} ompt_nest_lock_record_t;
 \end{boxedcode}
 \ccppspecificend
 }
 \end{targetRecord}
 
 \descr
-The callbacks with type signature \code{ompt\_callback\_nested\_lock\_t},
+The callbacks with type signature \code{ompt\_callback\_nest\_lock\_t},
 include a parameter \plc{requested\_team\_size}
 that indicates the number of threads requested by the user, and a parameter
 \plc{actual\_team\_size} that indicates the number of threads in the team.
@@ -4864,7 +4864,7 @@ part of an OpenMP implementation's OMPT interface.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef ompt_interface_fn_t (*\plc{ompt_function_lookup_t}) (
+typedef ompt_interface_fn_t (*ompt_function_lookup_t) (
   const char *\plc{interface_function_name}
 );
 \end{boxedcode}
