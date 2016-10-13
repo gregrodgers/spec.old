@@ -266,6 +266,8 @@ Entry Point String Name & Type signature\\\hline\hline
 ``\code{ompt\_callback\_set}'' & \code{ompt\_callback\_set\_t}\\
 ``\code{ompt\_callback\_get}'' & \code{ompt\_callback\_get\_t}\\
 ``\code{ompt\_get\_thread\_data}'' & \code{ompt\_get\_thread\_data\_t}\\
+``\code{ompt\_get\_thread\_place}'' & \code{ompt\_get\_thread\_place\_t}\\
+``\code{ompt\_get\_thread\_affinity}'' & \code{ompt\_get\_thread\_affinity\_t}\\
 ``\code{ompt\_get\_state}'' & \code{ompt\_get\_state\_t}\\
 ``\code{ompt\_get\_parallel\_info}'' & \code{ompt\_get\_parallel\_info\_t}\\
 ``\code{ompt\_get\_task\_info}'' & \code{ompt\_get\_task\_info\_t}\\
@@ -286,6 +288,8 @@ Entry Point String Name & Type signature\\\hline\hline
 \item \code{ompt\_callback\_set\_t}, see \specref{sec:ompt_callback_set_t}.
 \item \code{ompt\_callback\_get\_t}, see \specref{sec:ompt_callback_get_t}.
 \item \code{ompt\_get\_thread\_data\_t}, see \specref{sec:ompt_get_thread_data_t}.
+\item \code{ompt\_get\_thread\_place\_t}, see \specref{sec:ompt_get_thread_place_t}.
+\item \code{ompt\_get\_thread\_affinity\_t}, see \specref{sec:ompt_get_thread_affinity_t}.
 \item \code{ompt\_get\_state\_t}, see \specref{sec:ompt_get_state_t}.
 \item \code{ompt\_get\_parallel\_info\_t}, see \specref{sec:ompt_get_parallel_info_t}.
 \item \code{ompt\_get\_task\_info\_t}, see \specref{sec:ompt_get_task_info_t}.
@@ -1345,14 +1349,14 @@ A wait identifier may represent a critical section {\em name}, a lock, a program
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef unsigned long long int ompt_wait_id_t;
+typedef void *ompt_wait_id_t;
 \end{boxedcode}
 \ccppspecificend
 }
 
 When a thread is not in a wait state, the value of the thread's wait identifier is undefined.
 
-Tools should not assume that \code{ompt\_wait\_id\_t} values are small or densely allocated.
+% Tools should not assume that \code{ompt\_wait\_id\_t} values are small or densely allocated.
 
 \begin{comment}
 \crossreferences
@@ -3847,6 +3851,7 @@ to a variable of specified type.
 see \specref{sec:ompt_callback_set_t}. 
 \end{itemize}
 
+
 \omptruntimeentrypoint{\code{ompt\_get\_thread\_data\_t}}
 \label{sec:thread-inquiry}
 \label{sec:ompt_get_thread_data_t}
@@ -3887,6 +3892,77 @@ with value \code{ompt\_data\_none}.
 \begin{itemize}
 \item \code{ompt\_data\_t} type, see \specref{sec:ompt_data_t}.
 \end{itemize}
+
+
+\omptruntimeentrypoint{\code{ompt\_get\_thread\_place\_t}}
+\label{sec:ompt_get_thread_place_t}
+\label{sec:ompt_get_thread_place}
+
+\summary 
+
+An OpenMP implementation's tool entry point known as
+\code{ompt\_get\_thread\_place} with type signature
+\code{ompt\_get\_thread\_place\_t} returns the current place of the
+calling thread.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef int (*ompt_get_thread_place_t)(void);
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+A tool may invoke an OpenMP implementation's entry point known as  
+\code{ompt\_get\_thread\_place}
+with type signature \code{ompt\_get\_thread\_place\_t} 
+to obtain the current place of the calling thread.
+
+{\em This entry point is async signal safe.}
+
+
+\omptruntimeentrypoint{\code{ompt\_get\_thread\_affinity\_t}}
+\label{sec:ompt_get_thread_affinity_t}
+\label{sec:ompt_get_thread_affinity}
+
+\summary 
+
+An OpenMP implementation's tool entry point known as
+\code{ompt\_get\_thread\_affinity} with type signature
+\code{ompt\_get\_thread\_affinity\_t} 
+to obtain the places in the current thread's affinity set.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef int (*ompt_get_thread_affinity_t)(
+    int \plc{set\_size},
+    int *\plc{affinity\_set}
+  );
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+
+A tool may invoke an OpenMP implementation's entry point known as
+\code{ompt\_get\_thread\_affinity} with type signature
+\code{ompt\_get\_thread\_affinity\_t} to obtain the places in the current thread's
+affinity set.  The arguments \plc{affinity\_set} and \plc{set\_size}
+are a pointer to a vector provided to the runtime to receive the
+places in the current thread's affinity set and the number of elements in the
+vector.  If a thread has no affinity set, the return value is 0 and
+the contents of the vector pointed to by \plc{affinity\_set} are not
+modified.  If the size of the affinity set is larger than
+\plc{set\_size}, the contents of the vector pointed to by
+\plc{affinity\_set} are not modified.  
+Otherwise, the places in the current thread's
+affinity set are returned in the vector pointed to by
+\plc{affinity\_set}.
+
 
 \omptruntimeentrypoint{\code{ompt\_get\_state\_t}}
 \label{sec:ompt_get_state_t}
