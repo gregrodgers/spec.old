@@ -112,12 +112,13 @@ typedef enum omp\_proc\_bind\_t
 /*
  * define the tool control commands 
  */
-typedef omp\_tcontrol\_t \{
-  omp\_tcontrol\_start = 1,
-  omp\_tcontrol\_pause = 2,
-  omp\_tcontrol\_flush = 3,
-  omp\_tcontrol\_end = 4,
-\} omp\_tcontrol\_t;
+typedef omp\_tool\_control\_t 
+\{
+  omp\_tool\_control\_start = 1,
+  omp\_tool\_control\_pause = 2,
+  omp\_tool\_control\_flush = 3,
+  omp\_tool\_control\_end = 4,
+\} omp\_tool\_control\_t;
 \end{samepage}
 /*
  * exported OpenMP functions
@@ -207,7 +208,7 @@ extern int omp\_target\_associate\_ptr(void * host\_ptr,
 extern int omp\_target\_disassociate\_ptr(void * ptr,
                                           int device\_num);
 
-extern void omp\_tcontrol(long long int command, long long int modifier);
+extern void omp\_tool\_control(int command, int modifier, void *arg);
 
 \#ifdef _\_cplusplus
 \}
@@ -225,9 +226,12 @@ extern void omp\_tcontrol(long long int command, long long int modifier);
 \label{sec:Example of an Interface Declaration include File}
 \emph{omp\_lib\_kinds.h:}
 {\small \begin{codepar}
+
      integer omp\_lock\_kind
      integer omp\_nest\_lock\_kind
      integer omp\_lock\_hint\_kind
+     integer omp\_tool\_control\_kind
+     integer omp\_tool\_control\_result\_kind
 ! this selects an integer that is large enough to hold a 64 bit integer
      parameter ( omp\_lock\_kind = selected\_int\_kind( 10 ) )
      parameter ( omp\_nest\_lock\_kind = selected\_int\_kind( 10 ) )
@@ -269,17 +273,26 @@ extern void omp\_tcontrol(long long int command, long long int modifier);
      integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_speculative
      parameter ( omp\_lock\_hint\_speculative = 8 )
 \begin{samepage}
-     integer omp\_tcontrol\_kind
-! this selects an integer that is large enough to hold a 64 bit integer
-     parameter ( omp\_tcontrol\_kind = selected\_int\_kind( 10 ) )
-     integer ( omp\_tcontrol\_kind ) omp\_tcontrol\_start 
-     parameter ( omp\_tcontrol\_start = 1 )
-     integer ( omp\_tcontrol\_kind ) omp\_tcontrol\_pause 
-     parameter ( omp\_tcontrol\_pause = 2 )
-     integer ( omp\_tcontrol\_kind ) omp\_tcontrol\_flush 
-     parameter ( omp\_tcontrol\_flush = 3 )
-     integer ( omp\_tcontrol\_kind ) omp\_tcontrol\_end 
-     parameter ( omp\_tcontrol\_end = 4 )
+     parameter ( omp\_tool\_control\_kind = selected\_int\_kind( 8 ) )
+     integer ( omp\_tool\_control\_kind ) omp\_tool\_control\_start 
+     parameter ( omp\_tool\_control\_start = 1 )
+     integer ( omp\_tool\_control\_kind ) omp\_tool\_control\_pause 
+     parameter ( omp\_tool\_control\_pause = 2 )
+     integer ( omp\_tool\_control\_kind ) omp\_tool\_control\_flush 
+     parameter ( omp\_tool\_control\_flush = 3 )
+     integer ( omp\_tool\_control\_kind ) omp\_tool\_control\_end 
+     parameter ( omp\_tool\_control\_end = 4 )
+\end{samepage}
+\begin{samepage}
+     parameter ( omp\_tool\_control\_result\_kind = selected\_int\_kind( 8 ) )
+     integer ( omp\_tool\_control\_result\_kind ) omp_tool_control_notool 
+     parameter ( omp_tool_control_notool = -2 )
+     integer ( omp\_tool\_control\_result\_kind ) omp_tool_control_nocallback
+     parameter ( omp_tool_control_nocallback = -1 )
+     integer ( omp\_tool\_control\_result\_kind ) omp_tool_control_success
+     parameter ( omp_tool_control_success = 0 )
+     integer ( omp\_tool\_control\_result\_kind ) omp_tool_control_ignored 
+     parameter ( omp_tool_control_ignored = 1 )
 \end{samepage}
 \end{codepar}}
 
@@ -381,7 +394,7 @@ extern void omp\_tcontrol(long long int command, long long int modifier);
      external omp\_get\_wtime
      double precision omp\_get\_wtime
 
-     external omp\_tcontrol
+     external omp\_tool\_control
 \end{codepar}}
 
 
@@ -431,18 +444,30 @@ extern void omp\_tcontrol(long long int command, long long int modifier);
       \&   omp\_proc\_bind\_close = 3
         integer (kind=omp\_proc\_bind\_kind), parameter ::
       \&   omp\_proc\_bind\_spread = 4
-         end module omp\_lib\_kinds
 \begin{samepage}
-        integer, parameter :: omp\_tcontrol\_kind = selected\_int\_kind( 10 )
-        integer (kind=omp\_tcontrol\_kind), 
-      \&   parameter :: omp\_tcontrol\_start = 1
-        integer (kind=omp\_tcontrol\_kind), 
-      \&   parameter :: omp\_tcontrol\_pause = 2
-        integer (kind=omp\_tcontrol\_kind), 
-      \&   parameter :: omp\_tcontrol\_flush = 3
-        integer (kind=omp\_tcontrol\_kind), 
-      \&   parameter :: omp\_tcontrol\_end = 4
+        integer, parameter :: omp\_tool\_control\_kind = selected\_int\_kind( 8 )
+        integer (kind=omp\_tool\_control\_kind), parameter :: 
+      \&   omp\_tool\_control\_start = 1
+        integer (kind=omp\_tool\_control\_kind), parameter :: 
+      \&   omp\_tool\_control\_pause = 2
+        integer (kind=omp\_tool\_control\_kind), parameter :: 
+      \&   omp\_tool\_control\_flush = 3
+        integer (kind=omp\_tool\_control\_kind), parameter :: 
+      \&   omp\_tool\_control\_end = 4
+        end module omp\_lib\_kinds
 \end{samepage}
+\begin{samepage}
+        integer, parameter ( omp\_tool\_control\_result\_kind = selected\_int\_kind( 8 ) )
+        integer ( omp\_tool\_control\_result\_kind ), parameter :: 
+      \&   omp_tool_control_notool = -2 
+        integer ( omp\_tool\_control\_result\_kind ), parameter ::
+      \&   omp_tool_control_nocallback = -1
+        integer ( omp\_tool\_control\_result\_kind ), parameter ::
+      \&   omp_tool_control_success = 0
+        integer ( omp\_tool\_control\_result\_kind ), parameter ::
+      \&   omp_tool_control_ignored = 1
+\end{samepage}
+
         module omp\_lib
 
           use omp\_lib\_kinds
@@ -678,11 +703,12 @@ extern void omp\_tcontrol(long long int command, long long int modifier);
            double precision :: omp\_get\_wtime
           end function omp\_get\_wtime
 \begin{samepage}
-          subroutine omp\_tcontrol (command, modifier)
+          function omp\_tool\_control (command, modifier)
            use omp\_lib\_kinds
-           integer(kind=omp\_tcontrol\_kind), intent(in) :: command
-           integer(kind=omp\_tcontrol\_kind), intent(in) :: modifier
-          end subroutine omp\_tcontrol
+           integer :: omp\_tool\_control 
+           integer(kind=omp\_tool\_control\_kind), intent(in) :: command
+           integer(kind=omp\_tool\_control\_kind), intent(in) :: modifier
+          end function omp\_tool\_control
 \end{samepage}
           end interface
 

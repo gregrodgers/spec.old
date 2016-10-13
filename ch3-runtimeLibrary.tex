@@ -60,7 +60,7 @@ to manage pointers on target devices (\specref{sec:Device Memory Routines}).
 % \item OMPT Query Functions (\specref{sec:omptFunctions}).
 
 \item Execution routines to control the application monitoring
-(\specref{sec:tool_tool_control})
+(\specref{sec:tool_control})
 \end{itemize}
 
 Throughout this chapter, \plc{true} and \plc{false} are used as generic terms to simplify the 
@@ -137,6 +137,8 @@ provided in a header file named \code{omp.h}. This file defines the following:
 \item The type \code{omp\_proc\_bind\_t}.
 
 \item The type \code{omp\_tool\_control\_t}.
+
+\item The type \code{omp\_tool\_control\_result\_t}.
 
 \end{itemize}
 
@@ -3322,7 +3324,7 @@ The callback occurs in the context of the target task.  The callback has type si
 
 \section{Tool Control Routines}
 \index{tool control}
-\label{sec:tool_tool_control}
+\label{sec:tool_control}
 
 \summary
 The \code{omp\_tool\_control} routine enables a program to 
@@ -3333,19 +3335,16 @@ pass commands to an active tool.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-int omp\_tool\_control(
-  int \plc{command}, 
-  int \plc{modifier},
-  void *arg);
+int omp\_tool\_control(int \plc{command}, int \plc{modifier}, void *\plc{arg});
 \end{boxedcode}
 \ccppspecificend
 }
 
 \fortranspecificstart
 \begin{boxedcode}
-int function omp\_tool\_control(\plc{command}, \plc{modifier})
-integer \plc{command}
-integer \plc{modifier}
+integer function omp\_tool\_control(\plc{command}, \plc{modifier})
+integer (kind=omp\_tool\_control\_kind) \plc{command}
+integer (kind=omp\_tool\_control\_kind) \plc{modifier}
 \end{boxedcode}
 \fortranspecificend
 
@@ -3366,10 +3365,12 @@ tool-specific commands to a particular tool.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-#define OMP_TOOL_CONTROL_NOTOOL     (-2)
-#define OMP_TOOL_CONTROL_NOCALLBACK (-1)
-#define OMP_TOOL_CONTROL_SUCCESS      0
-#define OMP_TOOL_CONTROL_IGNORED      1
+typedef enum omp_tool_control_result_t \{
+  omp_tool_control_notool = -2,
+  omp_tool_control_nocallback = -1,
+  omp_tool_control_success = 0,
+  omp_tool_control_ignored = 1
+\} omp_tool_control_result_t;
 \end{boxedcode}
 \ccppspecificend
 }
@@ -3377,23 +3378,27 @@ tool-specific commands to a particular tool.
 \vbox{
 \fortranspecificstart
 \begin{boxedcode}
-integer, parameter :: OMP\_TOOL\_CONTROL\_NOTOOL =     -2 
-integer, parameter :: OMP\_TOOL\_CONTROL\_NOCALLBACK = -1
-integer, parameter :: OMP\_TOOL\_CONTROL\_SUCCESS =     0
-integer, parameter :: OMP\_TOOL\_CONTROL\_IGNORED =     1
+integer (kind=omp\_tool\_control\_result\_kind), &
+        parameter :: omp\_tool\_control\_notool = -2 
+integer (kind=omp\_tool\_control\_result\_kind), &
+        parameter :: omp\_tool\_control\_nocallback = -1
+integer (kind=omp\_tool\_control\_result\_kind), &
+        parameter :: omp\_tool\_control\_success = 0
+integer (kind=omp\_tool\_control\_result\_kind), &
+        parameter :: omp\_tool\_control\_ignored = 1
 \end{boxedcode}
 \fortranspecificend
 }
 
 If no tool is active, the OpenMP implementation will return
-\code{OMP\_TOOL\_CONTROL\_NOTOOL}. If a tool is active, but it has not
+\code{omp\_tool\_control\_notool}. If a tool is active, but it has not
 registered a callback for the \plc{tool-control} event, the OpenMP
-implementation will return \code{OMP\_TOOL\_CONTROL\_NOCALLBACK}.  
+implementation will return \code{omp\_tool\_control\_nocallback}.  
 An OpenMP implementation may return other implementation-defined negative
 values; an application may assume that any negative return value
 indicates that a tool has not received the command.  A return value of
-\code{OMP\_TOOL\_CONTROL\_SUCCESS} indicates that the tool has performed the
-specified command.  A return value of \code{OMP\_TOOL\_CONTROL\_IGNORED}
+\code{omp\_tool\_control\_success} indicates that the tool has performed the
+specified command.  A return value of \code{omp\_tool\_control\_ignored}
 indicates that the tool has ignored the specified command.
 A tool may return other positive values that are tool-defined. 
 
