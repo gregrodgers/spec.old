@@ -173,10 +173,7 @@ the OpenMP implementation will invoke the tool initializer specified
 in this structure prior to the occurrence of any OpenMP \emph{event}. 
 
 A tool's initializer, described in \specref{sec:ompt_initialize_fn_t}
-has several duties.  First, the tool initializer should use its third argument
-\plc{ompt\_version} to determine whether it is compatibile with the
-version of the OMPT interface that the OpenMP implementation supports.
-Next, it must use its second argument \plc{lookup} to look up pointers
+uses its \callbackarg{} \plc{lookup} to look up pointers
 to OMPT interface tool entry points provided by the OpenMP
 implementation; this process is described in \specref{sec:ompt-bind}.
 After obtaining a pointer to the OpenMP tool entry point known as
@@ -185,7 +182,7 @@ known as \code{ompt\_callback\_set} with type signature
 register tool callbacks for OpenMP events, as described in
 \specref{sec:ompt-register-callbacks}.
 
-Finally, a tool initializer may wish to use the OMPT interface tool
+A tool initializer may wish to use the OMPT interface tool
 entry points known as \code{ompt\_enumerate\_states} and
 \code{ompt\_enumerate\_mutex\_impls}, which have type signatures
 \code{ompt\_enumerate\_states\_t} and
@@ -568,9 +565,15 @@ is in progress.
 \label{sec:ompt-finalization}
 
 If \code{ompt\_tool} returned a non-\code{NULL} pointer when an OpenMP
-implementation was initialized, the tool finalizer specified by the
+implementation was initialized, the tool finalizer, of type signature 
+\code{ompt\_finalize\_fn\_t}, specified by the
 \plc{finalize} field in this structure will be called as the OpenMP
 implementation shuts down.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_finalize\_fn\_t}, \specref{sec:ompt_finalize_fn_t}
+\end{itemize}
 
 \section{Data Types}
 \label{sec:ompt-data-types}
@@ -1991,6 +1994,10 @@ by an OpenMP implementation by having
 \code{ompt\_control\_t} structure, which contains pointers to
 a tool's initializer and finalizer functions.
 
+A tool may use its \callbackarg{} \plc{ompt\_version} to determine
+whether it is compatible with the OMPT interface provided by an OpenMP
+implementation.
+
 If a tool implements \code{ompt\_tool} but has no interest in using
 an OpenMP implementation's OMPT interface in a particular execution,
 \code{ompt\_tool} should return \code{NULL}. 
@@ -2038,7 +2045,7 @@ an OpenMP implementation's OMPT interface.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_initialize_fn_t) (
+typedef int (*ompt_initialize_fn_t) (
   ompt_function_lookup_t \plc{lookup}
 );
 \end{boxedcode}
@@ -2053,6 +2060,8 @@ An OpenMP implementation will call the tool initializer returned by
 \code{ompt\_tool} after fully initializing itself but before 
 beginning execution of any OpenMP construct
 or completing execution of any environment routine invocation.  
+
+The initializer returns a non-zero value if it succeeds.
 
 \argdesc
 The \callbackarg{} \plc{lookup} is a callback 
