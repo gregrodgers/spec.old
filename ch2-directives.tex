@@ -1696,7 +1696,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk\_size]})
@@ -1724,7 +1724,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk\_size]})
@@ -2120,7 +2120,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 nowait
 \end{indentedcodelist}
@@ -2147,7 +2147,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 \fortranspecificend
@@ -2493,7 +2493,7 @@ simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
 private(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 \end{indentedcodelist}
@@ -2518,7 +2518,7 @@ simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
 private(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 \end{indentedcodelist}
@@ -3124,7 +3124,7 @@ if(\plc{[} taskloop :\plc{] scalar-expr})
 shared(\plc{list})
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
 default(shared \textnormal{|} none)
@@ -3153,7 +3153,7 @@ if(\plc{[} taskloop :\plc{] scalar-logical-expr})
 shared(\plc{list})
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
 default(private \textnormal{|} firstprivate \textnormal{|} shared \textnormal{|} none)
@@ -4477,7 +4477,7 @@ Where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 collapse(\plc{n})
 dist\_schedule(\plc{kind[},\plc{ chunk\_size]})
 \end{indentedcodelist}
@@ -4501,7 +4501,7 @@ Where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 collapse(\plc{n})
 dist\_schedule(\plc{kind[},\plc{ chunk\_size]})
 \end{indentedcodelist}
@@ -8891,8 +8891,13 @@ after the end of the region.
 The syntax of the \code{lastprivate} clause is as follows:
 
 \begin{boxedcode}
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 \end{boxedcode}
+
+where \plc{lastprivate-modifier} is:
+\begin{indentedcodelist}
+conditional
+\end{indentedcodelist}
 
 \descr
 The \code{lastprivate} clause provides a superset of the functionality provided by the 
@@ -8902,10 +8907,13 @@ A list item that appears in a \code{lastprivate} clause is subject to the \code{
 semantics described in 
 \specref{subsubsec:private clause}. 
 In addition, when a 
-\code{lastprivate} clause appears on the directive that identifies a worksharing construct 
+\code{lastprivate} clause without the \code{conditional} modifier present appears on the directive that identifies a worksharing construct 
 or a SIMD construct, the value of each new list item from the sequentially last iteration 
 of the associated loops, or the lexically last \code{section} construct, is assigned to the 
-original list item. 
+original list item. When the \code{lastprivate} clause with the
+\code{conditional} modifier present appears on such a directive, the original list item is assigned the value from the
+sequentially last iteration or lexically last \code{section} construct to write
+to one of its corresponding new list items.
 
 \ccppspecificstart
 For an array of elements of non-array type, each element is assigned to the 
@@ -8952,6 +8960,9 @@ construct, must not appear in a \code{lastprivate} clause on a
 worksharing construct if any of the corresponding
 worksharing regions ever binds to any of the corresponding
 \code{parallel} regions.
+
+\item A list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier present must be a scalar variable.
 
 \cppspecificstart
 \item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
