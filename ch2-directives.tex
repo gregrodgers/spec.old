@@ -50,7 +50,7 @@ into the following sections:
 \item How to specify and to use array sections for all base languages 
 (\specref{sec:Array Sections}) 
 
-\item Details of each OpenMP directive, including events and tool callbacks associated
+\item Details of each OpenMP directive, including associated events and tool callbacks 
 (\specref{sec:parallel Construct} to 
 \specref{sec:Nesting of Regions}) 
 \end{itemize}
@@ -1309,10 +1309,6 @@ The \plc{parallel-begin} event occurs in the thread encountering the
 \code{parallel} construct before any implicit task is created by the
 region.
 
-
-
-
-
 Upon creation of each implicit task, an \plc{implicit-task-begin} event
 occurs in the thread executing the implicit task after the implicit
 task is fully initialized but before the task begins to execute the
@@ -2073,15 +2069,15 @@ in any order and the behavior of an application that depends on any execution or
 \end{supertabular}
 
 
-\def\omptWorksharing#1#2
+\def\omptWorksharing#1#2#3
 {
 \events
 
-The \plc{#1{-begin}} event occurs after an implicit task encounters a 
+The \plc{#1{-begin}} event occurs after an #3 encounters a 
 \code{#1} construct but before the task starts the execution of the structured 
 block of the \code{#1} region.
 
-The \plc{#1{-end}} event occurs after a \code{#1} region finished execution 
+The \plc{#1{-end}} event occurs after a \code{#1} region finishes execution 
 but before resuming execution of the encountering task.
 
 \tools
@@ -2095,7 +2091,7 @@ context of the implicit task.  The callback has type signature
 as its \plc{endpoint} argument, as appropriate, and 
 \code{#2} as its \plc{wstype} argument.
 }
-\omptWorksharing{loop}{ompt\_work\_loop}
+\omptWorksharing{loop}{ompt\_work\_loop}{implicit task}
 
 \restrictions
 Restrictions to the loop construct are as follows:
@@ -2325,7 +2321,7 @@ There is an implicit barrier at the end of a \code{sections} construct unless a 
 clause is specified.
 
 %\tools
-\omptWorksharing{sections}{ompt\_work\_sections}
+\omptWorksharing{sections}{ompt\_work\_sections}{implicit task}
 
 \restrictions
 Restrictions to the \code{sections} construct are as follows:
@@ -2451,7 +2447,8 @@ callback for each occurrence of a \plc{single-begin} and
 \code{ompt\_callback\_work\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
 as its \plc{endpoint} argument, as appropriate, and
-\code{ompt\_work\_single\_executor} as its \plc{wstype} argument.
+\code{ompt\_work\_single\_executor} or or \code{ompt\_work\_single\_other} 
+as its \plc{wstype} argument.
 
 \restrictions
 Restrictions to the \code{single} construct are as follows: 
@@ -2624,7 +2621,7 @@ The \code{workshare} directive causes the sharing of work to occur only in the \
 construct, and not in the remainder of the \code{workshare} region.
 
 %\tools
-\omptWorksharing{workshare}{ompt\_work\_workshare}
+\omptWorksharing{workshare}{ompt\_work\_workshare}{implicit task}
 
 \begin{samepage}
 \restrictions
@@ -3303,9 +3300,8 @@ unspecified behavior
 \item \code{ompt\_callback\_task\_create\_t} type signature of the task generation
 callback, see 
 \specref{sec:ompt_callback_task_create_t}.
-\item \code{ompt\_callback\_task\_schedule\_t} type signature of the task scheduling
-callback, see 
-\specref{sec:ompt_callback_task_schedule_t}.
+%\item \code{ompt\_callback\_task\_schedule\_t} type signature of the task scheduling
+%callback, see \specref{sec:ompt_callback_task_schedule_t}.
 \end{itemize}
 
 
@@ -3472,7 +3468,7 @@ For \code{firstprivate} variables of class type, the number of invocations of co
 % \code{#2} as its \plc{wstype} argument.
 % }
 
-\omptWorksharing{taskloop}{ompt\_work\_taskloop}
+\omptWorksharing{taskloop}{ompt\_work\_taskloop}{task}
 
 \restrictions
 The restrictions of the \code{taskloop} construct are as follows:
@@ -3722,7 +3718,7 @@ The \plc{task-schedule} event occurs in a thread when it switches tasks at a tas
 
 A thread dispatches a registered \code{ompt\_callback\_task\_schedule}
 callback for each occurrence of a \plc{task-schedule} event in 
-the context of the task that is resumed. This callback has the type signature
+the context of the task that begins or resumes. This callback has the type signature
 \code{ompt\_callback\_task\_schedule\_t}. 
 The argument  \plc{prior\_task\_status} is used to indicate the cause for suspending the prior task. 
 This cause may be the completion of the prior task region, the encountering of a 
@@ -3840,26 +3836,27 @@ The \plc{#3{-end}} event occurs when a thread exits a
 \code{#1} region.
 }
 
-\def\omptTargetRegionTools#1#2#3
+\def\omptTargetRegionTools#1#2#3#4
 {
 A thread dispatches a registered \code{ompt\_callback\_target}
 callback for each occurrence of a \plc{#3{-begin}} and
-\plc{#3{-end}} event in that thread. The callback has type signature
+\plc{#3{-end}} event in that thread in the context of #4.
+The callback has type signature
 \code{ompt\_callback\_target\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
 as its \plc{endpoint} argument, as appropriate, and 
 \code{#2} as its \plc{kind} argument.
 }
 
-\def\omptTargetRegion#1#2#3
+\def\omptTargetRegion#1#2#3#4
 {
 \events
 \omptTargetRegionEvents{#1}{#2}{#3}
 
 \tools
-\omptTargetRegionTools{#1}{#2}{#3}
+\omptTargetRegionTools{#1}{#2}{#3}{#4}
 }
-\omptTargetRegion{\code{target}~\code{data}}{ompt\_target}{target-data}
+\omptTargetRegion{\code{target}~\code{data}}{ompt\_target}{target-data}{task encountering the construct}
 
 \restrictions
 \begin{itemize}
@@ -3973,7 +3970,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 
 %\tools
-\def\omptTarget#1#2#3
+\def\omptTarget#1#2#3#4
 {
 
 \events
@@ -3984,9 +3981,9 @@ Events associated with a \plc{target task} are the same as for the \code{task} c
 \tools
 Callbacks associated with events for \plc{target tasks} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
 
-\omptTargetRegionTools{#1}{#2}{#3}
+\omptTargetRegionTools{#1}{#2}{#3}{#4}
 }
-\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}{target-enter-data}
+\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}{target-enter-data}{target task on the host}
 
 
 
@@ -4095,7 +4092,7 @@ If there is no \code{device} clause, the default device is determined by the \pl
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
 %\tools
-\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}{target-exit}
+\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}{target-exit}{target task on the host}
 
 \restrictions
 \begin{itemize}
@@ -4247,8 +4244,9 @@ If a zero-length array section is a list item in a \code{map} clause, and the ar
 The \plc{target-submit} event occurs prior to creating an initial task on a target device for a target
 region. 
 
+% target task
 \tools
-\omptTargetRegionTools{\code{target}}{ompt\_target}{target}
+\omptTargetRegionTools{\code{target}}{ompt\_target}{target}{target task on the host}
 
 A thread dispatches a registered \code{ompt\_callback\_target\_submit}
 callback for each occurrence of a \plc{target-submit} event
@@ -4436,7 +4434,7 @@ is determined by the \plc{default-device-var} ICV. When an \code{if} clause is p
 clause expression evaluates to \plc{false} then no assignments occur.
 
 %\tools
-\omptTarget{\code{target}~\code{update}}{ompt\_target\_update}{target-update}
+\omptTarget{\code{target}~\code{update}}{ompt\_target\_update}{target-update}{target task on the host}
 
 \restrictions
 \begin{itemize}
@@ -4959,7 +4957,7 @@ chunks is unspecified in this case.
 When no \code{dist\_schedule} clause is specified, the schedule is implementation defined.
 
 %\tools
-\omptWorksharing{distribute}{ompt\_work\_distribute}
+\omptWorksharing{distribute}{ompt\_work\_distribute}{initial thread}
 
 \restrictions
 Restrictions to the \code{distribute} construct are as follows:
@@ -6635,21 +6633,20 @@ implied barrier either on entry to, or exit from, the \code{master} construct.
 
 \events
 
-The \plc{master-begin} event occurs in the master thread of 
-a team encountering the \code{master} construct on entry to the
-\code{master} region.
+The \plc{master-begin} event occurs in the thread encountering the \code{master}
+construct on entry to the master region, if it is the master thread of the team.
 
-The \plc{master-end} event occurs in the master thread of a 
-team encountering the \code{master} construct on exit from the
-\code{master} region.
+The \plc{master-end} event occurs in the thread encountering the \code{master}
+construct on exit of the master region, if it is the master thread of the team.
 
 \tools
 
 A thread dispatches a registered \code{ompt\_callback\_master}
 callback for each occurrence of a \plc{master-begin} and a
-\plc{master-end} event in that thread.  The callback occurs in the
-master thread of the team encountering
-the \code{master} construct.  This callback has the type signature
+\plc{master-end} event in that thread.  
+
+The callback occurs  in the context of the implicit task executed by the master thread.
+This callback has the type signature
 \code{ompt\_callback\_master\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
 as its \plc{endpoint} argument, as appropriate.
@@ -6786,7 +6783,7 @@ A thread dispatches a registered \code{ompt\_callback\_mutex\_release}
 callback for each occurrence of a \plc{#1-release} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
 The callbacks occur in the task encountering
-the #1 construct.  Ideally, the callbacks should receive \code{ompt\_mutex\_#1}
+the #1 construct.  The callbacks should receive \code{ompt\_mutex\_#1}
 as their \plc{kind} argument.
 }
 
@@ -8032,6 +8029,7 @@ tasking construct with a \code{depend} clause immediately after the
 The \plc{task-dependence} event indicates a blocking dependence
 between sibling tasks whose lifetimes overlap.  This event will occur in a
 thread that observes the dependence before it is satisfied.
+%look at this
 A dependence will not cause an event if the
 dependence producing task finishes before a dependence consuming task
 is created.
