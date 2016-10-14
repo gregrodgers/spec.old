@@ -79,7 +79,7 @@ data types shared between an OpenMP implementation and a tool
 an interface that enables an OpenMP implementation to determine that a
 tool is available (Section~\ref{sec:tool-interface}),
 type signatures for tool callbacks 
-that an OpenMP implementation may invoke for OpenMP events
+that an OpenMP implementation may dispatch for OpenMP events
 (Section~\ref{sec:ompt-tool-callbacks}), and 
 tool \emph{entry points}---function interfaces
 provided by an OpenMP implementation for use by a tool
@@ -101,8 +101,8 @@ There are three steps to activating a tool. First, an OpenMP
 implementation determines whether a tool should be initialized.  If
 so, the OpenMP implmentation invokes the tool's initializer, enabling
 the tool to prepare to monitor the execution on the host. Finally, a
-tool may arrange to monitor execution of of computations offloaded
-onto target devices. This section explains how the tool and an 
+tool may arrange to monitor computation that execute 
+on target devices. This section explains how the tool and an 
 OpenMP implementation interact to accomplish accomplish these tasks.
 
 \subsection{Determining Whether a Tool Should be Initialized}
@@ -122,7 +122,7 @@ OpenMP implementation:
   of \code{ompt\_tool} into the application's address space, or 
 \item providing the name of a dynamically-linked library appropriate
   for the architecture and operating system used by the application
-  in the \code{OMP\_TOOL\_LIBRARIES} environment variable.
+  in the \plc{tool-libraries-var} ICV.
 \end{itemize}
 
 Immediately before an OpenMP implementation initializes itself, it
@@ -166,7 +166,6 @@ the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
 \begin{itemize}
 \item \code{ompt\_tool}, see \specref{sec:ompt_tool}.
 \item \code{ompt\_fns\_t}, see \specref{sec:ompt_fns_t}.
-\item \code{OMP\_TOOL\_LIBRARIES}, see \specref{sec:OMP_TOOL_LIBRARIES}.
 \item \plc{tool-libraries-var} ICV, see \specref{sec:Internal Control Variables}.
 \item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
@@ -269,14 +268,14 @@ Entry Point String Name & Type signature\\\hline\hline
 ``\code{ompt\_callback\_set}'' & \code{ompt\_callback\_set\_t}\\
 ``\code{ompt\_callback\_get}'' & \code{ompt\_callback\_get\_t}\\
 ``\code{ompt\_get\_thread\_data}'' & \code{ompt\_get\_thread\_data\_t}\\
-``\code{ompt\_get\_thread\_place}'' & \code{ompt\_get\_thread\_place\_t}\\
-``\code{ompt\_get\_thread\_affinity}'' & \code{ompt\_get\_thread\_affinity\_t}\\
+``\code{ompt\_get\_proc\_id}'' & \code{ompt\_get\_proc\_id\_t}\\
+% ``\code{ompt\_get\_thread\_affinity}'' & \code{ompt\_get\_thread\_affinity\_t}\\
 ``\code{ompt\_get\_state}'' & \code{ompt\_get\_state\_t}\\
 ``\code{ompt\_get\_parallel\_info}'' & \code{ompt\_get\_parallel\_info\_t}\\
 ``\code{ompt\_get\_task\_info}'' & \code{ompt\_get\_task\_info\_t}\\
 ``\code{ompt\_get\_num\_devices}'' & \code{ompt\_get\_num\_devices\_t}\\
-``\code{ompt\_get\_device\_id}'' & \code{ompt\_get\_device\_id\_t}\\
-``\code{ompt\_callback\_device\_initialize}'' & \code{ompt\_callback\_device\_initialize\_t}\\\hline
+``\code{ompt\_get\_device\_id}'' & \code{ompt\_get\_device\_id\_t}\\\hline
+% ``\code{ompt\_callback\_device\_initialize}'' & \code{ompt\_callback\_device\_initialize\_t}\\\hline
 \end{tabular}
 \vskip 1ex
 \caption{OMPT callback interface entry point names and their type signatures.}
@@ -291,15 +290,13 @@ Entry Point String Name & Type signature\\\hline\hline
 \item \code{ompt\_callback\_set\_t}, see \specref{sec:ompt_callback_set_t}.
 \item \code{ompt\_callback\_get\_t}, see \specref{sec:ompt_callback_get_t}.
 \item \code{ompt\_get\_thread\_data\_t}, see \specref{sec:ompt_get_thread_data_t}.
-\item \code{ompt\_get\_thread\_place\_t}, see \specref{sec:ompt_get_thread_place_t}.
-\item \code{ompt\_get\_thread\_affinity\_t}, see \specref{sec:ompt_get_thread_affinity_t}.
+\item \code{ompt\_get\_procid\_t}, see \specref{sec:ompt_get_procid_t}.
+% \item \code{ompt\_get\_thread\_affinity\_t}, see \specref{sec:ompt_get_thread_affinity_t}.
 \item \code{ompt\_get\_state\_t}, see \specref{sec:ompt_get_state_t}.
 \item \code{ompt\_get\_parallel\_info\_t}, see \specref{sec:ompt_get_parallel_info_t}.
 \item \code{ompt\_get\_task\_info\_t}, see \specref{sec:ompt_get_task_info_t}.
 \item \code{ompt\_get\_num\_devices\_t}, see \specref{sec:ompt_get_num_devices_t}.
 \item \code{ompt\_get\_device\_id\_t}, see \specref{sec:ompt_get_device_id_t}.
-\item \code{ompt\_callback\_device\_initialize\_t}, see
-  \specref{sec:ompt_callback_device_initialize_t}.
 \end{itemize}
 
 \subsection{Monitoring Activity on the Host}
@@ -409,6 +406,7 @@ of synchronization regions.
 \item \code{ompt\_callback\_target}, see \specref
 \item \code{ompt\_callback\_target\_data}, see \specref
 \item \code{ompt\_callback\_target\_submit}, see \specref
+\item \code{ompt\_callback\_device\_initialize}, see \specref{sec:Device Constructs}.
 \item \code{ompt\_callback\_tool\_control}, see \specref
 \item \code{ompt\_callback\_idle}, see \specref{sec:ompt_callback_idle}. 
 \item \code{ompt\_callback\_sync\_region\_wait}, see \specref
@@ -425,7 +423,6 @@ of synchronization regions.
 \item \code{ompt\_callback\_mutex\_acquired}, see \specref
 \item \code{ompt\_callback\_nest\_lock}, see ...
 \item \code{ompt\_callback\_flush}, see \specref{subsec:flush Construct}.
-\item \code{ompt\_callback\_device\_initialize}, see \specref{sec:Device Constructs}.
 \item \code{ompt\_callback\_cancel}, see \specref{sec:Cancellation Constructs}.
 \end{itemize}
 \end{comment}
@@ -463,7 +460,10 @@ steps:
   by a tool.  If \plc{lookup} is non-\code{NULL}, the device will
   provide entry points that enable a tool to control the device's
   interface for collecting traces in its \emph{native} trace format,
-  which may be device specific. Some devices may also allow a tool to
+  which may be device specific. 
+  The kinds of trace records available for a device will typically be
+  implementation-defined.
+  Some devices may also allow a tool to
   collect traces of records in a standard format known as OMPT format,
   described in this document. If so, the \plc{lookup} function will
   return values for the entry points in the trace interface for
@@ -1990,12 +1990,10 @@ the tool must implement \code{ompt\_tool} to announce its interest.
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-extern "C" \{
-  ompt_fns_t *ompt_tool(
-    unsigned int \plc{ompt_version},
-    const char *\plc{runtime_version}
-  );
-\};
+ompt_fns_t *ompt_tool(
+  unsigned int \plc{ompt_version},
+  const char *\plc{runtime_version}
+);
 \end{boxedcode}
 \ccppspecificend
 }
@@ -2030,6 +2028,11 @@ through the constant \code{OMPT\_VERSION} defined in the
 The \callbackarg{} \plc{runtime\_version}
 is a version string that unambiguously identifies the OpenMP implementation.
 
+\constraints
+The \callbackarg{} \plc{runtime\_version} must be
+an immutable string that is defined for the lifetime of a program
+execution.
+
 \effect
 If a tool returns a non-\code{NULL} pointer,
 an OpenMP implementation will call the tool initializer specified by the
@@ -2046,8 +2049,18 @@ implementation shuts down.
 \end{itemize}
 \end{comment}
 
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_fns\_t}, see \specref{sec:ompt_fns_t}.
+\end{itemize}
+
 \section{Tool Callback Signatures and Trace Records}
 \label{sec:ompt-tool-callbacks}
+
+\restrictions
+Tool callbacks may not use OpenMP directives.
+
 \subsection{Initialization and Finalization Callback Signature}
 
 \omptcallbacksignature{\code{ompt\_initialize\_fn\_t}}
@@ -2079,6 +2092,13 @@ beginning execution of any OpenMP construct
 or completing execution of any environment routine invocation.  
 
 The initializer returns a non-zero value if it succeeds.
+
+\restrictions
+
+Of the OpenMP runtime library routines described in described in
+Section~\ref{chap:Runtime Library Routines},
+a tool initializer may only call OpenMP execution environment routines,
+described in Section~\ref{sec:Execution Environment Routines}. 
 
 \argdesc
 The \callbackarg{} \plc{lookup} is a callback 
@@ -2116,6 +2136,10 @@ typedef void (*ompt_finalize_fn_t) (
 The finalizer for an OpenMP implememtation is invoked by an OpenMP
 implementation as it shuts down.
 
+\restrictions
+A tool finalizer may not call any runtime library routines
+described in Section~\ref{chap:Runtime Library Routines}.
+
 \argdesc
 The \callbackarg{} \plc{fns} is the value returned by \code{ompt\_tool}.
 
@@ -2132,6 +2156,12 @@ The \callbackarg{} \plc{fns} is the value returned by \code{ompt\_tool}.
 
 This section describes the signatures of tool callback functions that an OMPT
 tool might register and that are called during runtime of an OpenMP program.
+
+\restrictions
+Of the OpenMP runtime library routines described in 
+Section~\ref{chap:Runtime Library Routines}, event callbacks 
+may only call execution environment \plc{getter}
+routines described in Section~\ref{sec:Execution Environment Routines}.
 
 \omptcallbacksignature{\code{ompt\_callback\_thread\_begin\_t}}
 \index{ompt\_callback\_thread\_begin\_t@{\code{ompt\_callback\_thread\_begin\_t}}}
@@ -3486,7 +3516,8 @@ device being addressed.
 
 The \callbackarg{} \plc{lookup} is a pointer to a runtime callback
 that a tool must use to obtain pointers to entry points in the
-device's OMPT tracing interface.
+device's OMPT tracing interface. If a device does not support tracing,
+it should provide \code{NULL} for \plc{lookup}.
 
 The \callbackarg{} \plc{documentation} is a string that describes names and type signatures
 of any additional device-specific entry points that can be obtained
@@ -3494,6 +3525,11 @@ using \plc{lookup}. The documentation string should include
 not only the type signature but also descriptive text for how to use
 the device-specific API or pointers to external documentation about
 it.
+
+\constraints
+The \callbackarg{}s \plc{type} and \plc{documentation} must be
+immutable strings that are defined for the lifetime of a program
+execution.
 
 \effect
 
@@ -3603,7 +3639,6 @@ supports, the following interface for enumerating all states that may be reporte
 \end{comment}
 
 \constraints
-
 The first argument passed to the enumerate states entry point must be
 a thread state supported by the OpenMP implementation.  
 To begin enumerating the states that an OpenMP implementation supports,
@@ -3615,6 +3650,10 @@ assigned to the variable passed by reference as the second argument to the previ
 
 The second and third arguments to the entry point must be valid
 references to variables of the specified types.
+
+Any string returned through the \callbackarg{}
+\plc{next\_state\_name} must be immutable and defined 
+for the lifetime of a program execution.
 
 \vspace{2ex}
 
@@ -3720,6 +3759,10 @@ argument to the previous call.
 
 The second and third arguments to the entry point must be valid
 references to variables of the specified types.
+
+Any string returned through the \callbackarg{}
+\plc{next\_impl\_name} must be immutable and defined 
+for the lifetime of a program execution.
 
 \needspace{6\baselineskip}\notestart
 \noteheader -- The following example illustrates how a tool can 
@@ -3913,35 +3956,36 @@ with value \code{ompt\_data\_none}.
 \end{itemize}
 
 
-\omptruntimeentrypoint{\code{ompt\_get\_thread\_place\_t}}
-\label{sec:ompt_get_thread_place_t}
-\label{sec:ompt_get_thread_place}
+\omptruntimeentrypoint{\code{ompt\_get\_proc\_id\_t}}
+\label{sec:ompt_get_proc_id_t}
+\label{sec:ompt_get_proc_id}
 
 \summary 
 
 An OpenMP implementation's tool entry point known as
-\code{ompt\_get\_thread\_place} with type signature
-\code{ompt\_get\_thread\_place\_t} returns the current place of the
+\code{ompt\_get\_proc\_id} with type signature
+\code{ompt\_get\_proc\_id\_t} returns the current proc\_id of the
 calling thread.
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef int (*ompt_get_thread_place_t)(void);
+typedef int (*ompt_get_proc_id_t)(void);
 \end{boxedcode}
 \ccppspecificend
 }
 
 \descr
 A tool may invoke an OpenMP implementation's entry point known as  
-\code{ompt\_get\_thread\_place}
-with type signature \code{ompt\_get\_thread\_place\_t} 
-to obtain the current place of the calling thread.
+\code{ompt\_get\_proc\_id}
+with type signature \code{ompt\_get\_proc\_id\_t} 
+to obtain the current proc\_id of the calling thread.
 
 {\em This entry point is async signal safe.}
 
 
+\begin{comment}
 \omptruntimeentrypoint{\code{ompt\_get\_thread\_affinity\_t}}
 \label{sec:ompt_get_thread_affinity_t}
 \label{sec:ompt_get_thread_affinity}
@@ -3981,6 +4025,7 @@ modified.  If the size of the affinity set is larger than
 Otherwise, the places in the current thread's
 affinity set are returned in the vector pointed to by
 \plc{affinity\_set}.
+\end{comment}
 
 
 \omptruntimeentrypoint{\code{ompt\_get\_state\_t}}
