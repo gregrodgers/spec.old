@@ -108,9 +108,9 @@ OpenMP implementation interact to accomplish these tasks.
 \subsection{Determining Whether a Tool Should be Initialized}
 \label{sec:ompt-check-tool}
 
-A tool indicates its interest in using an OpenMP implementation's OMPT interface 
+A tool indicates its interest in using the OMPT interface 
 by providing a non-\code{NULL} pointer to an \code{ompt\_fns\_t}
-structure to the OpenMP implementation as a return value from 
+structure to an OpenMP implementation as a return value from 
 \code{ompt\_tool}. There are three ways
 that a tool can provide a definition of \code{ompt\_tool} to an
 OpenMP implementation:
@@ -196,8 +196,8 @@ entry points known as \code{ompt\_enumerate\_states} and
 \code{ompt\_enumerate\_mutex\_impls\_t}, to determine what thread
 states and implementations of mutual exclusion a particular OpenMP
 implementation employs. The definitions of the enumeration entry point
-type signatures show how to use them to introspect an OpenMP
-implementation's support for thread states and mutual exclusion.
+type signatures show how to use them to determine what
+thread states and mutual exclusion mechanisms an OpenMP implementation supports.
 
 If a tool initializer returns a non-zero, the tool will be
 \emph{activated} for the execution; otherwise, the tool will be
@@ -238,9 +238,8 @@ runtime entry point with type signature
 \code{ompt\_function\_lookup\_t} as its first argument. Using this
 function, a tool initializer may obtain a pointer to each of the
 runtime entry points that an OpenMP implementation provides to support
-the OMPT interface. A tool may use an OpenMP implementation's
-\plc{lookup} function at any time and the function will return the
-same result given the same input.
+the OMPT interface. Once a tool has obtained a 
+\plc{lookup} function, it may employ it at any point in the future.
 
 For each runtime entry point in the OMPT interface for the host device, 
 Table~\ref{table:ompt-callback-interface-functions} provides the string
@@ -249,12 +248,11 @@ During initialization, a tool should look up each runtime entry point in the
 OMPT interface by name and bind a pointer maintained by the tool
 that it can use later to invoke the entry point as needed. The entry points
 described in Table~\ref{table:ompt-callback-interface-functions}
-enable a tool to introspect an OpenMP
-implementation's support for thread states and mutual exclusion,
-register tool callbacks with an OpenMP implementation, inspect 
-callbacks registered with an OpenMP implementation, 
+enable a tool to assess 
+what thread states and mutual exclusion implementations that an OpenMP runtime supports,
+register tool callbacks, inspect callbacks registered,
 introspect OpenMP state associated with threads, and use tracing to monitor
-computations offloaded onto target devices.
+computations that execute on target devices.
 
 Detailed information about each runtime entry point listed in 
 Table~\ref{table:ompt-callback-interface-functions} is included as
@@ -307,7 +305,7 @@ To monitor execution of an OpenMP program on the host device, a tool's
 initializer must register to receive notification
 of events that occur as an OpenMP program executes.  
 A tool can register callbacks for OpenMP events using
-an OpenMP implementation's tool entry point known by the name
+the runtime entry point known as 
 \code{ompt\_callback\_set}.  The possible return codes for
 \code{ompt\_callback\_set} and their meanings are shown in
 Table~\ref{table:ToolsSupport_set_rc}.  Registration of supported
@@ -1983,7 +1981,7 @@ This section describes miscellaneous constants used by the tool interface.
 \label{sec:ompt_tool}
 
 \summary
-If a tool wants to use an OpenMP implementation's OMPT interface,
+If a tool wants to use the OMPT interface provided by an OpenMP implementation,
 the tool must implement \code{ompt\_tool} to announce its interest.
 
 \format
@@ -1999,7 +1997,7 @@ ompt_fns_t *ompt_tool(
 }
 
 \descr
-For a tool to use an OpenMP implementation's OMPT interface,
+For a tool to use the OMPT interface provided by an OpenMP implementation,
 the tool must define a globally-visible implementation of the
 function \code{ompt\_tool}.
 
@@ -2014,7 +2012,7 @@ whether it is compatible with the OMPT interface provided by an OpenMP
 implementation.
 
 If a tool implements \code{ompt\_tool} but has no interest in using
-an OpenMP implementation's OMPT interface in a particular execution,
+the OMPT interface in a particular execution,
 \code{ompt\_tool} should return \code{NULL}. 
 
 \argdesc
@@ -2069,7 +2067,7 @@ Tool callbacks may not use OpenMP directives.
 \summary
 A tool implements an initializer with the type signature
 \code{ompt\_initialize\_fn\_t} to initialize the tool's use of
-an OpenMP implementation's OMPT interface.
+the OMPT interace.
 
 \format
 \vbox{
@@ -2083,7 +2081,7 @@ typedef int (*ompt_initialize_fn_t) (
 }
 
 \descr
-For a tool to initialize an OpenMP implementation's OMPT interface,
+For a tool to initialize the OMPT interface of an OpenMP implementation,
 the tool's implementation of \code{ompt\_tool} must return a 
 pointer to a tool initializer with type signature \code{ompt\_initialize\_fn\_t}.
 An OpenMP implementation will call the tool initializer returned by
@@ -2119,7 +2117,7 @@ The actions of a tool initializer are described in \specref{sec:tool-initialize}
 \summary
 A tool implements an finalizer with the type signature
 \code{ompt\_finalize\_fn\_t} to finalize the tool's use of
-an OpenMP implementation's OMPT interface.
+the OMPT interface.
 
 \format
 \vbox{
@@ -3587,8 +3585,7 @@ callback interface.
 \label{sec:ompt_enumerate_states}
 
 \summary
-An OpenMP implementation's 
-tool entry point known as \code{ompt\_enumerate\_states} 
+A tool entry point known as \code{ompt\_enumerate\_states} 
 with type signature \code{ompt\_enumerate\_states\_t} 
 enumerates the thread states supported by an OpenMP 
 implementation.
@@ -3660,9 +3657,9 @@ for the lifetime of a program execution.
 \needspace{6\baselineskip}\notestart
 \noteheader -- The following example illustrates how a tool can 
 enumerate all states supported by an OpenMP implementation.
-The example assumes that a pointer to an OpenMP implementation's enumerate
-states entry point has previously been assigned to a function pointer
-\code{ompt\_enumerate\_states\_fn}.
+The example assumes that a function pointer to enumerate
+the thread states supported by an OpenMP implementation
+has previously been assigned to \code{ompt\_enumerate\_states\_fn}.
 
 \vbox{
 \ccppspecificstart
@@ -3690,7 +3687,7 @@ while (ompt_enumerate_states_fn(state, &state, &state_name)) \{
  
 \summary
 
-An OpenMP implementation's tool entry point known as \code{ompt\_enumerate\_mutex\_impls} 
+A tool entry point known as \code{ompt\_enumerate\_mutex\_impls} 
 with type signature \code{ompt\_enumerate\_mutex\_impls\_t} 
 enumerates the kinds of mutual exclusion implementations that
 an OpenMP implementation employs.
@@ -3767,10 +3764,9 @@ for the lifetime of a program execution.
 \needspace{6\baselineskip}\notestart
 \noteheader -- The following example illustrates how a tool can 
 enumerate all types of mutex implementations supported by an OpenMP runtime.
-The example assumes that a pointer to an OpenMP implementation's enumerate
-mutex kinds callback has previously been assigned to a function pointer
-\code{ompt\_enumerate\_mutex\_impls\_fn}.
-
+The example assumes that a function pointer to enumerate
+the mutex implementations supported by an OpenMP runtime 
+has previously been assigned to \code{ompt\_enumerate\_mutex\_impls\_fn}.
 \vspace{2ex}
 
 \vbox{
@@ -3794,7 +3790,7 @@ while (ompt_enumerate_mutex_impls_fn(impl, &impl, &impl_name)) \{
 
 \summary
 
-An OpenMP implementation's tool entry point known as \code{ompt\_callback\_set} 
+A tool entry point known as \code{ompt\_callback\_set} 
 with type signature \code{ompt\_callback\_set\_t} registers a
 pointer to a tool callback that an OpenMP implementation will invoke when a host
 OpenMP event occurs.
@@ -3816,7 +3812,7 @@ typedef int (*ompt_callback_set_t)(
 OpenMP implementations can inform tools about events that occur during
 the execution of an OpenMP program using callbacks.
 To register a tool callback for an OpenMP event on the current device, 
-a tool uses an OpenMP implementation's tool entry point 
+a tool uses the runtime entry point 
 known as \code{ompt\_callback\_set} 
 with type signature \code{ompt\_callback\_set\_t}.
 
@@ -3871,7 +3867,7 @@ see \specref{sec:ompt_callback_get_t}.
 
 \summary
 
-An OpenMP implementation's tool entry point known as \code{ompt\_callback\_get} 
+A tool entry point known as \code{ompt\_callback\_get} 
 with type signature \code{ompt\_callback\_get\_t} retrieves a pointer
 to a tool callback routine (if any) 
 that an OpenMP implementation will invoke when an OpenMP event occurs.
@@ -3889,7 +3885,7 @@ typedef int (*ompt_callback_get_t)(
 }
 
 \descr
-A tool uses an OpenMP implementation's tool entry point known 
+A tool uses the runtime entry point known 
 as \code{ompt\_callback\_get} 
 with type signature \code{ompt\_callback\_get\_t} 
 to obtain a pointer to the tool callback that 
@@ -3920,7 +3916,7 @@ see \specref{sec:ompt_callback_set_t}.
 \label{sec:ompt_get_thread_data}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_thread\_data}
+A tool entry point known as \code{ompt\_get\_thread\_data}
 with type signature \code{ompt\_get\_thread\_data\_t} 
 returns the address of the thread data object for the current thread.
 
@@ -3935,7 +3931,7 @@ typedef ompt_data_t *(*ompt_get_thread_data_t)(void);
 
 Each OpenMP thread has an associated thread data object of type
 \code{ompt\_data\_t}. 
-A tool uses an OpenMP implementation's tool entry point known as
+A tool uses the runtime entry point known as
 \code{ompt\_get\_thread\_data} 
 with type signature \code{ompt\_get\_thread\_data\_t}
 to obtain a pointer to the thread data object, if any, associated with the
@@ -3962,7 +3958,7 @@ with value \code{ompt\_data\_none}.
 
 \summary 
 
-An OpenMP implementation's tool entry point known as
+A tool entry point known as
 \code{ompt\_get\_proc\_id} with type signature
 \code{ompt\_get\_proc\_id\_t} returns the current proc\_id of the
 calling thread.
@@ -3977,7 +3973,7 @@ typedef int (*ompt_get_proc_id_t)(void);
 }
 
 \descr
-A tool may invoke an OpenMP implementation's entry point known as  
+A tool may invoke a runtime entry point known as  
 \code{ompt\_get\_proc\_id}
 with type signature \code{ompt\_get\_proc\_id\_t} 
 to obtain the current proc\_id of the calling thread.
@@ -3992,7 +3988,7 @@ to obtain the current proc\_id of the calling thread.
 
 \summary 
 
-An OpenMP implementation's tool entry point known as
+A tool entry point known as
 \code{ompt\_get\_thread\_affinity} with type signature
 \code{ompt\_get\_thread\_affinity\_t} 
 to obtain the places in the current thread's affinity set.
@@ -4011,7 +4007,7 @@ typedef int (*ompt_get_thread_affinity_t)(
 
 \descr
 
-A tool may invoke an OpenMP implementation's entry point known as
+A tool may invoke a runtime entry point known as
 \code{ompt\_get\_thread\_affinity} with type signature
 \code{ompt\_get\_thread\_affinity\_t} to obtain the places in the current thread's
 affinity set.  The arguments \plc{affinity\_set} and \plc{set\_size}
@@ -4033,7 +4029,7 @@ affinity set are returned in the vector pointed to by
 \label{sec:ompt_get_state}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_state}
+A tool entry point known as \code{ompt\_get\_state}
 with type signature \code{ompt\_get\_state\_t} 
 returns the state and the wait identifier of the 
 current thread. 
@@ -4055,7 +4051,7 @@ exclusion, the thread's wait identifier will contain an opaque handle
 that indicates the data object upon which the thread is waiting.
 
 To retrieve the state and wait identifier for the current thread,
-a tool uses an OpenMP implementation's tool entry point known as
+a tool uses the runtime entry point known as
 \code{ompt\_get\_state} with type signature \code{ompt\_get\_state\_t}.
 
 If the returned state indicates that the thread is waiting for a
@@ -4086,7 +4082,7 @@ to a variable of the specified type or \code{NULL}.
 
 \summary
 
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_parallel\_info} 
+A tool entry point known as \code{ompt\_get\_parallel\_info} 
 with type signature \code{ompt\_get\_parallel\_info\_t} 
 returns information about
 the parallel region, if any, at the specified ancestor level 
@@ -4107,7 +4103,7 @@ typedef int (*ompt_get_parallel_info_t)(
 During execution, an OpenMP program may employ nested parallel
 regions. 
 To obtain information about a parallel region, 
-a tool uses an OpenMP implementation's tool entry point known as
+a tool uses the runtime entry point known as
 \code{ompt\_get\_parallel\_info} 
 with type signature \code{ompt\_get\_parallel\_info\_t}. 
 This entry point
@@ -4160,7 +4156,7 @@ to variables of the specified types.
 \label{sec:ompt_get_task_info}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_task\_info} 
+A tool entry point known as \code{ompt\_get\_task\_info} 
 with type signature \code{ompt\_get\_task\_info\_t} provides information about the
 task, if any, at the specified ancestor level in the current execution
 context.
@@ -4185,7 +4181,7 @@ Additionally, the thread's stack may contain
 procedure frames associated with suspended OpenMP tasks or
 OpenMP runtime system routines.
 To obtain information about any task on the current thread's stack, 
-a tool uses an OpenMP implementation's tool entry point known as
+a tool uses the runtime entry point known as
 \code{ompt\_get\_task\_info} 
 with type signature \code{ompt\_get\_task\_info\_t}. 
 
@@ -4272,7 +4268,7 @@ to variables of the specified types.
 \label{sec:ompt_get_target_info}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_target\_info} 
+A tool entry point known as \code{ompt\_get\_target\_info} 
 with type signature \code{ompt\_get\_target\_info\_t} returns identifiers that specify a
 thread's current target region and target operation id, if any.
 
@@ -4325,7 +4321,7 @@ references to variables of the specified types.
 \label{sec:ompt_get_num_devices}
 
 \summary
-An OpenMP implementation's tool entry point known as \code{ompt\_get\_num\_devices} 
+A tool entry point known as \code{ompt\_get\_num\_devices} 
 with type signature \code{ompt\_get\_num\_devices\_t} 
 returns the number of available devices.
 
@@ -4340,7 +4336,7 @@ typedef int (*ompt_get_num_devices_t)(void);
 
 An OpenMP program may execute on one or more devices.
 A tool may determine the number of devices available to an OpenMP
-program by invoking an OpenMP implementation's tool entry point 
+program by invoking a runtime entry point 
 known as \code{ompt\_get\_num\_devices} 
 with type signature \code{ompt\_get\_num\_devices\_t}.
 
@@ -4352,7 +4348,7 @@ with type signature \code{ompt\_get\_num\_devices\_t}.
 \label{sec:ompt_get_device_id}
 
 \summary
-An OpenMP implementation's tool entry point known as
+A tool entry point known as
 \code{ompt\_get\_device\_id} 
 with type signature \code{ompt\_get\_device\_id\_t} 
 returns the device identifier for the active target device. 
@@ -4366,7 +4362,7 @@ typedef int (*ompt_get_device_id_t)(void);
 
 \descr
 
-An OpenMP implementation's tool entry point known as
+A tool entry point known as
 \code{ompt\_get\_device\_id} with type signature
 \code{ompt\_get\_device\_id\_t} returns the device identifier for the
 active target device.  This inquiry function is only supported on the
@@ -4383,7 +4379,7 @@ it will return a value of -1.
 \label{sec:ompt_get_device_time_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known 
+A tool entry point for a device known 
 as \code{ompt\_get\_device\_time} 
 with type signature \code{ompt\_get\_device\_time\_t} 
 returns the current time on the specified device.
@@ -4403,7 +4399,7 @@ If host and target devices are different hardware components, they
 may use different clock generators. For this reason,  there may be
 no common time base for ordering host-side and device-side events.
 
-An OpenMP implementation's tool entry point for a device known 
+A tool entry point for a device known 
 as \code{ompt\_get\_device\_time} with type signature 
 \code{ompt\_get\_device\_time\_t} 
 returns the current time on the specified device.
@@ -4422,7 +4418,7 @@ see \specref{sec:ompt_device_time_t}.
 \label{sec:ompt_translate_time_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known 
+A tool entry point for a device known 
 as \code{ompt\_translate\_time} 
 with type signature \code{ompt\_translate\_time\_t} translates
 a time value obtained from the specified device to a corresponding time
@@ -4439,7 +4435,7 @@ typedef double (*ompt_translate_time_t)(
 \ccppspecificend}
 
 \descr
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_translate\_time} 
+A tool entry point for a device known as \code{ompt\_translate\_time} 
 with type signature \code{ompt\_translate\_time\_t} translates
 a time value obtained from the specified device to a corresponding time
 value on the host device. The returned value for the host time has
@@ -4465,7 +4461,7 @@ see \specref{sec:ompt_device_time_t}.
 \label{sec:ompt_set_trace_ompt_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_set\_trace\_ompt} 
+A tool entry point for a device known as \code{ompt\_set\_trace\_ompt} 
 with type signature \code{ompt\_set\_trace\_ompt\_t} 
 enables or disables the recording of trace records for one or more
 types of OMPT events.
@@ -4533,7 +4529,7 @@ see \specref{sec:ompt_callbacks_t}.
 \label{sec:ompt_set_trace_native_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_set\_trace\_native} 
+A tool entry point for a device known as \code{ompt\_set\_trace\_native} 
 with type signature \code{ompt\_set\_trace\_native\_t} 
 enables or disables the recording of native trace records for a device.
 
@@ -4587,7 +4583,7 @@ see \specref{sec:ompt_device_t}.
 \label{sec:ompt_start_trace_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_start\_trace} 
+A tool entry point for a device known as \code{ompt\_start\_trace} 
 with type signature \code{ompt\_start\_trace\_t} 
 starts tracing of activity on a specific device.
 
@@ -4639,7 +4635,7 @@ see \specref{sec:ompt_callback_buffer_complete_t}.
 \label{sec:ompt_pause_trace_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_pause\_trace} 
+A tool entry point for a device known as \code{ompt\_pause\_trace} 
 with type signature \code{ompt\_pause\_trace\_t} 
 pauses or restarts activity tracing on a specific device.
 
@@ -4675,7 +4671,7 @@ see \specref{sec:ompt_device_t}.
 \label{sec:ompt_stop_trace_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_stop\_trace} 
+A tool entry point for a device known as \code{ompt\_stop\_trace} 
 with type signature \code{ompt\_stop\_trace\_t} 
 stops tracing for a device.
 
@@ -4711,7 +4707,7 @@ see \specref{sec:ompt_device_t}.
 %There are several routines that need to be used together to process %target event records deposited in a buffer by a device. 
 
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_advance\_buffer\_cursor} 
+A tool entry point for a device known as \code{ompt\_advance\_buffer\_cursor} 
 with type signature \code{ompt\_advance\_buffer\_cursor\_t}
 advances a trace buffer cursor to the next record.
 
@@ -4742,7 +4738,7 @@ see \specref{sec:ompt_buffer_cursor_t}.
 \label{sec:ompt_buffer_get_record_type_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as
+A tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_type} with type signature
 \code{ompt\_buffer\_get\_record\_type\_t} inspects the type
 of a trace record for a device.
@@ -4766,7 +4762,7 @@ corresponds to an OpenMP \emph{event} and fields in the record
 structure are mostly the arguments that would be passed to the
 OMPT callback for the event. 
 
-An OpenMP implementation's tool entry point for a device known as
+A tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_type} with type signature
 \code{ompt\_buffer\_get\_record\_type\_t} inspects the type
 of a trace record and indicates whether the record at the current
@@ -4793,7 +4789,7 @@ see \specref{sec:ompt_buffer_cursor_t}.
 \label{sec:ompt_buffer_get_record_ompt_t}
  
 \summary
-An OpenMP implementation's tool entry point for a device known as \code{ompt\_buffer\_get\_record\_ompt} 
+A tool entry point for a device known as \code{ompt\_buffer\_get\_record\_ompt} 
 with type signature \code{ompt\_buffer\_get\_record\_ompt\_t} 
 obtains a pointer to an OMPT trace record from a trace buffer associated with a device.
 
@@ -4835,7 +4831,7 @@ see \specref{sec:ompt_record_ompt_t}.
 
 \summary
 
-An OpenMP implementation's tool entry point for a device known as
+A tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_native} with type signature
 \code{ompt\_buffer\_get\_record\_native\_t} 
 obtains a pointer to a native trace record from a trace buffer associated with a device.
@@ -4877,7 +4873,7 @@ see \specref{sec:ompt_id_t}.
 \label{sec:ompt_buffer_get_record_native_abstract_t}
 
 \summary
-An OpenMP implementation's tool entry point for a device known as
+A tool entry point for a device known as
 \code{ompt\_buffer\_get\_record\_native\_abstract} 
 with type signature
 \code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
@@ -4896,10 +4892,8 @@ typedef ompt_record_native_abstract_t *
 \descr
 An OpenMP implementation may execute on a device that logs 
 trace records in a native (device-specific) format unknown to a tool.
-A tool can use an OpenMP implementation's tool entry point for the
-device known as
-\code{ompt\_buffer\_get\_record\_native\_abstract} 
-with type signature
+A tool can use the \code{ompt\_buffer\_get\_record\_native\_abstract} 
+runtime entry point for the device with type signature
 \code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
 to decode a native trace record that it
 does not understand into a standard form that it can interpret. 
@@ -4920,7 +4914,7 @@ see \specref{sec:ompt_record_native_abstract_t}.
 A tool uses a lookup routine with type signature 
 \code{ompt\_function\_lookup\_t}
 to obtain pointers to entry points that are
-part of an OpenMP implementation's OMPT interface.
+part of the OMPT interface.
 
 \format
 \vbox{
@@ -4951,16 +4945,15 @@ tracing control routines appropriate for that device.
 If a tool callback to initialize monitoring using the OMPT callback
 interface has been provided to the OpenMP implementation by
 \code{ompt\_tool} and it is invoked on a device,
-the initializer will be passed a lookup function to   
-obtain pointers to runtime entry points that implement
-routines used by the OpenMP implementation's callback interface.
+the initializer will be passed a lookup function that it can use   
+to obtain pointers to runtime entry points.
 \end{comment}
 
 When an OpenMP implementation invokes a tool initializer to configure
 the OMPT callback interface, the OpenMP implementation will pass the
 initializer a lookup function that the tool can use to obtain 
-pointers to entry points that implement routines that are part of 
-the OpenMP implementation's callback interface.
+pointers to runtime entry points that implement routines that are part of 
+the OMPT callback interface.
 
 When an OpenMP implementation invokes a tool initializer to configure
 the OMPT tracing interface for a device, the Open implementation will
