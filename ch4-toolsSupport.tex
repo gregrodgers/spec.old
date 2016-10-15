@@ -111,15 +111,15 @@ OpenMP implementation interact to accomplish these tasks.
 A tool indicates its interest in using the OMPT interface 
 by providing a non-\code{NULL} pointer to an \code{ompt\_fns\_t}
 structure to an OpenMP implementation as a return value from 
-\code{ompt\_tool}. There are three ways
-that a tool can provide a definition of \code{ompt\_tool} to an
+\code{ompt\_start\_tool}. There are three ways
+that a tool can provide a definition of \code{ompt\_start\_tool} to an
 OpenMP implementation:
 
 \begin{itemize}
-\item statically-linking the tool's definition of \code{ompt\_tool}
+\item statically-linking the tool's definition of \code{ompt\_start\_tool}
   into an OpenMP application, 
 \item introducing a dynamically-linked library that includes the tool's definition
-  of \code{ompt\_tool} into the application's address space, or 
+  of \code{ompt\_start\_tool} into the application's address space, or 
 \item providing the name of a dynamically-linked library appropriate
   for the architecture and operating system used by the application
   in the \plc{tool-libraries-var} ICV.
@@ -135,24 +135,24 @@ unavailable as the program executes.
  
 If the value of \plc{tool-var} is \plc{enabled}, the OpenMP
 implementation will check to see if a tool has provided an
-implmentation of \code{ompt\_tool}.  The OpenMP implementation first
-checks if a tool-provided implementation of \code{ompt\_tool} is
+implmentation of \code{ompt\_start\_tool}.  The OpenMP implementation first
+checks if a tool-provided implementation of \code{ompt\_start\_tool} is
 available in the address space, either statically-linked into the
 application or in a dynamically-linked library loaded in the address
-space. If multiple implementations of \code{ompt\_tool} are available,
+space. If multiple implementations of \code{ompt\_start\_tool} are available,
 the OpenMP implementation will use the first tool-provided
-implementation of \code{ompt\_tool} found.
+implementation of \code{ompt\_start\_tool} found.
 
-If no tool-provided implementation of \code{ompt\_tool} is found in
+If no tool-provided implementation of \code{ompt\_start\_tool} is found in
 the address space, the OpenMP implementation will consult the
 \plc{tool-libraries-var} ICV, which contains a (possibly empty) list
 of dynamically-linked libraries.  As described in detail in
 Section~\ref{sec:OMP_TOOL_LIBRARIES}, the libraries in
 \plc{tool-libraries-var}, will be searched for the first usable
-implementation of \code{ompt\_tool} provided by one of the libraries
+implementation of \code{ompt\_start\_tool} provided by one of the libraries
 in the list.
 
-If a tool-provided definition of \code{ompt\_tool} is found using
+If a tool-provided definition of \code{ompt\_start\_tool} is found using
 either method, the OpenMP implementation will invoke it; if it returns
 a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure, 
 the OpenMP implementation will know
@@ -164,7 +164,7 @@ the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_tool}, see \specref{sec:ompt_tool}.
+\item \code{ompt\_start\_tool}, see \specref{sec:ompt_start_tool}.
 \item \code{ompt\_fns\_t}, see \specref{sec:ompt_fns_t}.
 \item \plc{tool-libraries-var} ICV, see \specref{sec:Internal Control Variables}.
 \item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
@@ -174,12 +174,12 @@ the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
 \index{tool initialization}
 \label{sec:tool-initialize}
 
-If a tool-provided implementation of \code{ompt\_tool} returns a
+If a tool-provided implementation of \code{ompt\_start\_tool} returns a
 non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
 the OpenMP implementation will invoke the tool initializer specified
 in this structure prior to the occurrence of any OpenMP \emph{event}. 
 
-A tool's initializer, described in \specref{sec:ompt_initialize_fn_t}
+A tool's initializer, described in \specref{sec:ompt_initialize_t}
 uses its \callbackarg{} \plc{lookup} to look up pointers
 to OMPT interface runtime entry points provided by the OpenMP
 implementation; this process is described in \specref{sec:ompt-bind}.
@@ -210,7 +210,7 @@ callback has type signature \code{ompt\_callback\_thread\_begin\_t}.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_initialize\_fn\_t}, see \specref{sec:ompt_initialize_fn_t}.
+\item \code{ompt\_initialize\_t}, see \specref{sec:ompt_initialize_t}.
 \item \code{ompt\_function\_lookup\_t}, see \specref{sec:ompt_function_lookup_t}.
 \item \code{ompt\_callback\_set\_t}, see \specref{sec:ompt_callback_set_t}.
 \item \code{ompt\_enumerate\_states\_t}, see \specref{sec:ompt_enumerate_states_t}.
@@ -444,11 +444,11 @@ steps:
   \code{ompt\_callback\_device\_initialize} callback.
 \item When an OpenMP implementation initializes a target device, the
   OpenMP implementation will dispatch the tool's device initialization
-  callback. If the target device does not support tracing, it
-  will provide a \code{NULL} to the device initializer for its
-  \plc{lookup} argument; otherwise, the target device will pass the
-  tool's device initializer a pointer to a runtime
-  entry point with type signature \code{ompt\_function\_lookup\_t}.
+  callback on the host device. If the target device does not support tracing, 
+  the OpenMP implementation will pass a \code{NULL} to the tool's device initializer for its
+  \plc{lookup} argument; otherwise, the OpenMP implementation will pass 
+  a pointer to a device-specific runtime entry point with type 
+  signature \code{ompt\_function\_lookup\_t} to the tool's device initializer. 
 \item If the device initializer for the tool receives a
   non-\code{NULL} \plc{lookup} pointer, the tool may use it to query
   which runtime entry points in the tracing interface are available for a target device
@@ -494,34 +494,41 @@ Entry Point String Name & Type Signature\\\hline\hline
 \label{table:ompt-tracing-interface-functions} 
 \end{table}
 
+\footnotetext{These runtime entry points will
+  only be available for target devices that support collection of
+  standard traces in OMPT format.}
+
 \item The tool will use the \code{ompt\_set\_trace\_native}
   and/or the \code{ompt\_set\_trace\_ompt} runtime entry point to specify what
   types of events or activities to monitor on the target device.
-\item The tool will initiate tracing using \code{ompt\_start\_trace},
-  providing the target device with two tool callbacks: one to allocate
+\item The tool will initiate tracing on the target device by 
+  invoking \code{ompt\_start\_trace}. Arguments to \code{ompt\_start\_trace}
+  include two tool callbacks for use by the OpenMP implementation to manage
+  traces associated with the target device: one to allocate
   a buffer where the target device can deposit trace events and a
-  second that will receive a buffer of trace events. 
-\item When the target device needs a trace buffer, it invokes the
-  tool-supplied callback function to request a new buffer.
-\item The target device will monitor execution on the target device as
+  second to process a buffer of trace events from the target device. 
+\item When the target device needs a trace buffer, the OpenMP implementation 
+  will invoke the tool-supplied callback function on the host device to request a new buffer.
+\item The OpenMP implementation will monitor execution of OpenMP constructs on the target device as
   directed and record a trace of events or activities into a trace
   buffer. If the device is capable, device trace records will be
   marked with a \plc{host\_op\_id}---an identifier used to associate
   device activities with the target operation initiated on the host
   that caused these activities.  To correlate activities on the host
   with activities on a device, a tool can register a
-  callback for the \code{ompt\_callback\_target\_submit} event, which
-  will notify the host thread when and where it is offloading work to a
-  target device and provide the tool with the \plc{host\_op\_id} for
-  the offloaded work.
+  \code{ompt\_callback\_target\_submit} callback. 
+  Before the host initiates each distinct activity associated with a structured block for a \code{target} construct
+  on a target device, the OpenMP implementation will dispatch the \code{ompt\_callback\_target\_submit} callback
+  on the host in the thread executing the task that encounters the \code{target} construct. 
+  Examples of activities that could cause an \code{ompt\_callback\_target\_submit} callback to be dispatched
+  include an explicit data copy between a host and target device or execution of a computation.
+  The callback provides the tool with a pair of identifiers: one that identifies the target region and a second
+  that uniquely identifies an activity associated with that region.  
+  These identifiers help the tool correlate activities on the target device with their target region.
 \item When appropriate, e.g., when a trace buffer fills or needs to be
-  flushed, the target device will invoke the tool-supplied buffer
+  flushed, the OpenMP implementation will invoke the tool-supplied buffer
   completion callback to process a non-empty sequence of
-  records in a trace buffer. 
-
-\footnotetext{These runtime entry points will
-  only be available for target devices that support collection of
-  standard traces in OMPT format.}
+  records in a trace buffer associated with the target device.
 
 \item The tool-supplied buffer completion callback may return
   immediately, ignoring records in the trace buffer, or it may iterate
@@ -542,20 +549,22 @@ Entry Point String Name & Type Signature\\\hline\hline
   \code{ompt\_record\_native\_abstract\_t} record.
   Only a record in OMPT format can be retrieved using the
   \code{ompt\_get\_record\_ompt} runtime entry point.
-\item Once tracing has been started, a tool may pause or resume
-  tracing on a device at any time by invoking
+\item Once tracing has been started on a device, a tool may pause or resume
+  tracing on the device at any time by invoking
   \code{ompt\_pause\_trace} with an appropriate flag value as an
   argument.  
-\item A tool may start or stop tracing at any time using the 
+\item A tool may start or stop tracing on a device at any time using the 
   \code{ompt\_start\_trace} or \code{ompt\_stop\_trace} runtime entry points,
-  respectively. When tracing is stopped, all trace records already
-  collected will eventually be flushed and presented to the tool using
-  its buffer completion callback.
+  respectively. When tracing is stopped on a device, the OpenMP implementatin will eventually 
+  gather all trace records already collected on the device and present to the tool using
+  the buffer completion callback provided by the tool.
 \item It is legal to shut down OpenMP while device tracing 
 is in progress.  
 \item When OpenMP is shut down, any device tracing in progress will be
-  stopped and all trace records collected on a device will be flushed
-  and presented to the tool using its buffer completion callback.
+  stopped and all trace records collected on each device will be flushed.
+  For each target device, the OpenMP implementation will present the tool 
+  with the trace records for the device using the buffer completion callback 
+  associated with that device.
 \end{itemize}
 
 
@@ -579,15 +588,15 @@ is in progress.
 \section{Finalizing a Tool}
 \label{sec:ompt-finalization}
 
-If \code{ompt\_tool} returned a non-\code{NULL} pointer when an OpenMP
+If \code{ompt\_start\_tool} returned a non-\code{NULL} pointer when an OpenMP
 implementation was initialized, the tool finalizer, of type signature 
-\code{ompt\_finalize\_fn\_t}, specified by the
+\code{ompt\_finalize\_t}, specified by the
 \plc{finalize} field in this structure will be called as the OpenMP
 implementation shuts down.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_finalize\_fn\_t}, \specref{sec:ompt_finalize_fn_t}
+\item \code{ompt\_finalize\_t}, \specref{sec:ompt_finalize_t}
 \end{itemize}
 
 \section{Data Types}
@@ -597,7 +606,7 @@ implementation shuts down.
 \label{sec:ompt_fns_t}
 
 \summary
-A tool's implementation of \code{ompt\_tool} returns a pointer to an
+A tool's implementation of \code{ompt\_start\_tool} returns a pointer to an
 \code{ompt\_fns\_t} structure that contains pointers to the tool's 
 initializer and finalizer functions.
 
@@ -605,8 +614,8 @@ initializer and finalizer functions.
 \ccppspecificstart
 \begin{boxedcode}
 typedef struct ompt_fns_t \{
-  ompt_initialize_fn_t \plc{initialize};
-  ompt_finalize_fn_t \plc{finalize};
+  ompt_initialize_t \plc{initialize};
+  ompt_finalize_t \plc{finalize};
 \} ompt_fns_t;
 \end{boxedcode}
 \ccppspecificend
@@ -615,12 +624,12 @@ typedef struct ompt_fns_t \{
 \restrictions
 
 Both the \plc{initialize} and \plc{finalize} function pointers in an
-\code{ompt\_fns\_t} structure returned by \code{ompt\_tool} must be
+\code{ompt\_fns\_t} structure returned by \code{ompt\_start\_tool} must be
 non-\code{NULL}.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_tool}, see \specref{sec:ompt_tool}.
+\item \code{ompt\_start\_tool}, see \specref{sec:ompt_start_tool}.
 \end{itemize}
 
 
@@ -1977,19 +1986,19 @@ This section describes miscellaneous constants used by the tool interface.
 \section{Tool Interface Routine}
 \label{sec:tool-interface}
 
-\ompttoolsignature{\code{ompt\_tool}}
-\label{sec:ompt_tool}
+\ompttoolsignature{\code{ompt\_start\_tool}}
+\label{sec:ompt_start_tool}
 
 \summary
 If a tool wants to use the OMPT interface provided by an OpenMP implementation,
-the tool must implement \code{ompt\_tool} to announce its interest.
+the tool must implement \code{ompt\_start\_tool} to announce its interest.
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-ompt_fns_t *ompt_tool(
-  unsigned int \plc{ompt_version},
+ompt_fns_t *ompt_start_tool(
+  unsigned int \plc{omp_version},
   const char *\plc{runtime_version}
 );
 \end{boxedcode}
@@ -1999,29 +2008,28 @@ ompt_fns_t *ompt_tool(
 \descr
 For a tool to use the OMPT interface provided by an OpenMP implementation,
 the tool must define a globally-visible implementation of the
-function \code{ompt\_tool}.
+function \code{ompt\_start\_tool}.
 
 A tool may indicate its intent to use the OMPT interface provided
 by an OpenMP implementation by having
-\code{ompt\_tool} return a non-\code{NULL} pointer to an
+\code{ompt\_start\_tool} return a non-\code{NULL} pointer to an
 \code{ompt\_fns\_t} structure, which contains pointers to
 a tool's initializer and finalizer functions.
 
-A tool may use its \callbackarg{} \plc{ompt\_version} to determine
+A tool may use its \callbackarg{} \plc{omp\_version} to determine
 whether it is compatible with the OMPT interface provided by an OpenMP
 implementation.
 
-If a tool implements \code{ompt\_tool} but has no interest in using
+If a tool implements \code{ompt\_start\_tool} but has no interest in using
 the OMPT interface in a particular execution,
-\code{ompt\_tool} should return \code{NULL}. 
+\code{ompt\_start\_tool} should return \code{NULL}. 
 
 \argdesc
-The \callbackarg{} \plc{ompt\_version} is a version number that 
-unambiguously identifies the version of the 
-OMPT interface supported by the OpenMP implementation.  
-The version of OMPT described by this document is 1, and available
-through the constant \code{OMPT\_VERSION} defined in the
-\code{ompt.h} header file.
+The \callbackarg{} \plc{omp\_version} 
+is the value of the \code{\_OPENMP} version macro 
+associated with the OpenMP API implementation. This value 
+identifies the OpenMP API version supported by an OpenMP implementation,
+which specifies the version of the OMPT interface that it supports.
 
 The \callbackarg{} \plc{runtime\_version}
 is a version string that unambiguously identifies the OpenMP implementation.
@@ -2048,7 +2056,7 @@ implementation shuts down.
 \begin{comment}
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_initialize\_fn\_t} type signature, see \specref{sec:ompt_initialize_fn_t}
+\item \code{ompt\_initialize\_t} type signature, see \specref{sec:ompt_initialize_t}
 \end{itemize}
 \end{comment}
 
@@ -2062,23 +2070,24 @@ implementation shuts down.
 \label{sec:ompt-tool-callbacks}
 
 \restrictions
-Tool callbacks may not use OpenMP directives.
+Tool callbacks may not use OpenMP directives or call any runtime library routines
+described in Section~\ref{chap:Runtime Library Routines}.
 
 \subsection{Initialization and Finalization Callback Signature}
 
-\omptcallbacksignature{\code{ompt\_initialize\_fn\_t}}
-\label{sec:ompt_initialize_fn_t}
+\omptcallbacksignature{\code{ompt\_initialize\_t}}
+\label{sec:ompt_initialize_t}
 
 \summary
 A tool implements an initializer with the type signature
-\code{ompt\_initialize\_fn\_t} to initialize the tool's use of
+\code{ompt\_initialize\_t} to initialize the tool's use of
 the OMPT interace.
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef int (*ompt_initialize_fn_t) (
+typedef int (*ompt_initialize_t) (
   ompt_function_lookup_t \plc{lookup}
 );
 \end{boxedcode}
@@ -2087,21 +2096,14 @@ typedef int (*ompt_initialize_fn_t) (
 
 \descr
 For a tool to initialize the OMPT interface of an OpenMP implementation,
-the tool's implementation of \code{ompt\_tool} must return a 
-pointer to a tool initializer with type signature \code{ompt\_initialize\_fn\_t}.
+the tool's implementation of \code{ompt\_start\_tool} must return a 
+pointer to a tool initializer with type signature \code{ompt\_initialize\_t}.
 An OpenMP implementation will call the tool initializer returned by
-\code{ompt\_tool} after fully initializing itself but before 
+\code{ompt\_start\_tool} after fully initializing itself but before 
 beginning execution of any OpenMP construct
 or completing execution of any environment routine invocation.  
 
 The initializer returns a non-zero value if it succeeds.
-
-\restrictions
-
-Of the OpenMP runtime library routines described in described in
-Section~\ref{chap:Runtime Library Routines},
-a tool initializer may only call OpenMP execution environment routines,
-described in Section~\ref{sec:Execution Environment Routines}. 
 
 \argdesc
 The \callbackarg{} \plc{lookup} is a callback 
@@ -2116,19 +2118,19 @@ The actions of a tool initializer are described in \specref{sec:tool-initialize}
 \end{itemize}
 
 
-\omptcallbacksignature{\code{ompt\_finalize\_fn\_t}}
-\label{sec:ompt_finalize_fn_t}
+\omptcallbacksignature{\code{ompt\_finalize\_t}}
+\label{sec:ompt_finalize_t}
 
 \summary
 A tool implements an finalizer with the type signature
-\code{ompt\_finalize\_fn\_t} to finalize the tool's use of
+\code{ompt\_finalize\_t} to finalize the tool's use of
 the OMPT interface.
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef void (*ompt_finalize_fn_t) (
+typedef void (*ompt_finalize_t) (
   ompt_fns_t *\plc{fns}
 );
 \end{boxedcode}
@@ -2139,12 +2141,8 @@ typedef void (*ompt_finalize_fn_t) (
 The finalizer for an OpenMP implememtation is invoked by an OpenMP
 implementation as it shuts down.
 
-\restrictions
-A tool finalizer may not call any runtime library routines
-described in Section~\ref{chap:Runtime Library Routines}.
-
 \argdesc
-The \callbackarg{} \plc{fns} is the value returned by \code{ompt\_tool}.
+The \callbackarg{} \plc{fns} is the value returned by \code{ompt\_start\_tool}.
 
 \crossreferences
 \begin{itemize}
@@ -2159,12 +2157,6 @@ The \callbackarg{} \plc{fns} is the value returned by \code{ompt\_tool}.
 
 This section describes the signatures of tool callback functions that an OMPT
 tool might register and that are called during runtime of an OpenMP program.
-
-\restrictions
-Of the OpenMP runtime library routines described in 
-Section~\ref{chap:Runtime Library Routines}, event callbacks 
-may only call execution environment \plc{getter}
-routines described in Section~\ref{sec:Execution Environment Routines}.
 
 \omptcallbacksignature{\code{ompt\_callback\_thread\_begin\_t}}
 \index{ompt\_callback\_thread\_begin\_t@{\code{ompt\_callback\_thread\_begin\_t}}}
@@ -4941,7 +4933,7 @@ monitoring an OpenMP device using either tracing or callbacks.
 \begin{comment}
 When an OpenMP runtime implementation is initialized for a device,
 if a tool callback to initialize tracing for devices has been provided
-to the OpenMP implementation by \code{ompt\_tool}, 
+to the OpenMP implementation by \code{ompt\_start\_tool}, 
 it will be invoked on the host. The OpenMP implementation will pass the
 tool's device tracing initializer callback a lookup routine that the tool
 can use to obtain pointers to runtime entry points that implement
@@ -4949,7 +4941,7 @@ tracing control routines appropriate for that device.
 
 If a tool callback to initialize monitoring using the OMPT callback
 interface has been provided to the OpenMP implementation by
-\code{ompt\_tool} and it is invoked on a device,
+\code{ompt\_start\_tool} and it is invoked on a device,
 the initializer will be passed a lookup function that it can use   
 to obtain pointers to runtime entry points.
 \end{comment}
@@ -4974,7 +4966,7 @@ and returns a pointer to the corresponding runtime entry point.
 
 \crossreferences
 \begin{itemize}
-\item Tool initializer for the OMPT callback interface, \specref{sec:ompt_initialize_fn_t}
+\item Tool initializer for the OMPT callback interface, \specref{sec:ompt_initialize_t}
 \item Entry points in the OMPT callback interface, see
   \tabref{table:ompt-callback-interface-functions} for a list and
   \specref{sec:ompt-callback-entry-points} for detailed definitions.
