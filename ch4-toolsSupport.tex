@@ -99,7 +99,7 @@ OpenMP target devices, and controlling a tool from an OpenMP application.
 
 There are three steps to activating a tool. First, an OpenMP
 implementation determines whether a tool should be initialized.  If
-so, the OpenMP implmentation invokes the tool's initializer, enabling
+so, the OpenMP implementation invokes the tool's initializer, enabling
 the tool to prepare to monitor the execution on the host. Finally, a
 tool may arrange to monitor computation that execute 
 on target devices. This section explains how the tool and an 
@@ -308,9 +308,10 @@ A tool can register callbacks for OpenMP events using
 the runtime entry point known as 
 \code{ompt\_callback\_set}.  The possible return codes for
 \code{ompt\_callback\_set} and their meanings are shown in
-Table~\ref{table:ToolsSupport_set_rc}.  Registration of supported
-callbacks may fail if the \code{ompt\_callback\_set} runtime entry point is
-called outside a tool's initializer.
+Table~\ref{table:ToolsSupport_set_rc}.  
+If the \code{ompt\_callback\_set} runtime entry point is
+called outside a tool's initializer, registration of supported
+callbacks may fail with a return code of \code{ompt\_set\_error}. 
 
 All callbacks registered with \code{ompt\_callback\_set} or returned
 by \code{ompt\_callback\_get} use the dummy type signature
@@ -318,18 +319,24 @@ by \code{ompt\_callback\_get} use the dummy type signature
 than providing unique runtime entry points with a precise type signatures to
 set and get the callback for each unique runtime entry point type signature.
 
-Table~\ref{table:valid_rc} indicates the return codes permissible when
-trying to register a callback for different events.
-Some events always need to invoke a registered callback.
-For other events, its implementation-defined whether they invoke the registered
-callback never, sometimes, or always.
-The return code enables a tool to know what to expect for an event
-that has an implementation-defined behavior.
+Table~\ref{table:valid_rc} indicates the return codes permissible
+when trying to register various callbacks. For some callbacks, an
+OpenMP implementation must guarantee that the callback will be
+invoked every time a runtime event associated with it occurs. Support
+for such callbacks is required in a minimal implementation of the
+OMPT interface. For other callbacks, its implementation-defined
+whether an OpenMP implementation invokes a registered callback
+never, sometimes, or always. If registration for a callback allows 
+a return code of \code{omp\_set\_never}, support for invoking such 
+a callback need not be present in a minimal implementation of the 
+OMPT interface.  The return code when a callback is
+registered enables a tool to know what to expect when the level
+of support for the callback can be implementation defined.
 
 \begin{table}
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lp{3em}p{3em}p{3em}p{3em}}
-                                & \rot{\code{ompt\_set\_none}}
+                                & \rot{\code{ompt\_set\_never}}
                                 & \rot{\code{ompt\_set\_sometimes}}
                                 & \rot{\code{ompt\_set\_always}}\\
                                 \midrule
@@ -558,9 +565,9 @@ Entry Point String Name & Type Signature\\\hline\hline
   respectively. When tracing is stopped on a device, the OpenMP implementatin will eventually 
   gather all trace records already collected on the device and present to the tool using
   the buffer completion callback provided by the tool.
-\item It is legal to shut down OpenMP while device tracing 
+\item It is legal to shut down the OpenMP implementation while device tracing 
 is in progress.  
-\item When OpenMP is shut down, any device tracing in progress will be
+\item When the OpenMP implementation is shut down, any device tracing in progress will be
   stopped and all trace records collected on each device will be flushed.
   For each target device, the OpenMP implementation will present the tool 
   with the trace records for the device using the buffer completion callback 
@@ -2138,7 +2145,7 @@ typedef void (*ompt_finalize_t) (
 }
 
 \descr
-The finalizer for an OpenMP implememtation is invoked by an OpenMP
+The finalizer for an OpenMP implementation is invoked by an OpenMP
 implementation as it shuts down.
 
 \argdesc
@@ -3815,10 +3822,10 @@ with type signature \code{ompt\_callback\_set\_t}.
 
 The return value of the \code{ompt\_callback\_set} runtime entry point may indicate several possible
 outcomes. Callback registration may fail if it is called outside the initializer for the
-callback interface, returning \code{ompt\_set\_error}. 
+callback interface, returning \code{omp\_set\_error}. 
 Otherwise, the return value of \code{ompt\_callback\_set} 
 indicates whether or \emph{dispatching} a callback leads to its invocation.
-A return value of \code{ompt\_set\_none} indicates that the callback
+A return value of \code{ompt\_set\_never} indicates that the callback
 will never be invoked at runtime.
 A return value of \code{ompt\_set\_sometimes} indicates that the callback
 will be invoked at runtime for an implementation-defined subset of
@@ -3854,7 +3861,7 @@ typedef enum ompt_set_result_e \{
 \begin{itemize}
 \item \code{ompt\_callbacks\_t} enumeration type, see \specref{sec:ompt_callbacks_t}.
 \item \code{ompt\_callback\_t} type, see \specref{sec:ompt_callback_t}.
-\item \code{ompt\_callback\_get\_t} host callback ftype signature,
+\item \code{ompt\_callback\_get\_t} host callback type signature,
 see \specref{sec:ompt_callback_get_t}.
 \end{itemize}
 
