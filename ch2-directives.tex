@@ -8104,13 +8104,28 @@ attribute, or that are data initialized, are shared unless they appear in a
 
 \item Variables belonging to common blocks, or accessed by host or use association, and referenced in called routines in the region are shared unless they appear in a \code{threadprivate} directive. 
 
-\item Dummy arguments of called routines in the region that are passed by reference have the same data-sharing attributes as the associated actual arguments. 
+\item Dummy arguments of called routines in the region that have the
+    \code{VALUE} attribute are private.
+
+\item Dummy arguments of called routines in the region that do not have the
+    \code{VALUE} attribute are private if the associated actual argument is not
+    shared.
+
+\item Dummy arguments of called routines in the region that do not have the
+\code{VALUE} attribute are shared if the actual argument is shared and it
+is a scalar variable, structure, an array that is not a pointer or
+assumed-shape array, or a simply contiguous array section.  Otherwise, the
+data-sharing attribute of the dummy argument is implementation-defined if
+the associated actual argument is shared.
 
 \item Cray pointees have the same data-sharing attribute as the storage with which their Cray pointers are associated.
 
 \item Implied-do indices, \code{forall} indices, and other local variables declared in called 
 routines in the region are private. 
+
 \end{itemize}
+
+
 \fortranspecificend
 
 
@@ -8499,59 +8514,34 @@ The programmer must ensure, by adding proper synchronization, that
 storage shared by an explicit task region does not reach the end of its lifetime before 
 the explicit task region completes its execution. 
 
+
 \fortranspecificstart
 The association status of a shared pointer becomes undefined upon entry to and on exit 
 from the \code{parallel}, \code{teams}, or task generating construct if it
 is associated with a target or a  subobject of a target that is in a \code{private},
 \code{firstprivate}, \code{lastprivate}, or \code{reduction} clause in the construct.
 
-Under certain conditions, passing a shared variable to a non-intrinsic procedure may 
-result in the value of the shared variable being copied into temporary storage before the 
-procedure reference, and back out of the temporary storage into the actual argument 
-storage after the procedure reference. When this situation occurs is implementation defined.
 
 \notestart
-\noteheader – Use of intervening temporary storage may occur when the following three 
-conditions hold regarding an actual argument in a reference to a non-intrinsic procedure:
+\noteheader – Passing a shared variable to a procedure may result in the use of
+temporary storage in place of the actual argument when the corresponding dummy
+argument does not have the \code{VALUE} attribute and is implementation-defined
+as per the rules in
+\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Region but not in a Construct}.  
+These conditions effectively result in references to, and definitions of, the
+temporary storage during the procedure reference.  Furthermore, the value of
+the shared variable is copied into the intervening temporary storage before the procedure
+reference when the dummy argument does not have the \code{INTENT(OUT)}
+attribute, and back out of the temporary storage into the shared variable when
+the dummy argument does not have the \code{INTENT(IN)} attribute.  Any
+references to (or definitions of) the shared storage that is associated with
+the dummy argument by any other task must be synchronized with
+the procedure reference to avoid possible race conditions.
 
-\begin{enumerate}%%[label=\alph*] % L0 vvvvvvvvvvv
-\item The actual argument is one of the following:
-
-\begin{itemize} % L1 vvvvvv
-\item A shared variable.
-
-\item A subobject of a shared variable.
-
-\item An object associated with a shared variable.
-
-\item An object associated with a subobject of a shared variable.
-\end{itemize} % L1 ^^^^^^
-
-\item The actual argument is also one of the following:
-
-\begin{itemize} % L1 vvvvvvv
-\item An array section.
-
-\item An array section with a vector subscript.
-
-\item An assumed-shape array.
-
-\item A pointer array.
-\end{itemize} % L1 ^^^^^
-
-\item The associated dummy argument for this actual argument is an explicit-shape array 
-or an assumed-size array.
-\end{enumerate}
-
-\needspace{8\baselineskip}\begin{samepage}
-These conditions effectively result in references to, and definitions of, the temporary 
-storage during the procedure reference. Any references to (or definitions of) the shared 
-storage that is associated with the dummy argument by any other task must be 
-synchronized with the procedure reference to avoid possible race conditions. 
 \noteend
 \medskip
 \fortranspecificend
-\end{samepage}
+
 
 \restrictions
 The restrictions for the \code{shared} clause are as follows:
