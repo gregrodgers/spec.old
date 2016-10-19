@@ -462,7 +462,7 @@ steps:
   \code{ompt\_callback\_device\_initialize} callback.
 \item When an OpenMP implementation initializes a target device, the
   OpenMP implementation will dispatch the tool's device initialization
-  callback on the host device. If the target device does not support tracing, 
+  callback on the host device. If the OpenMP implementation or target device does not support tracing, 
   the OpenMP implementation will pass a \code{NULL} to the tool's device initializer for its
   \plc{lookup} argument; otherwise, the OpenMP implementation will pass 
   a pointer to a device-specific runtime entry point with type 
@@ -476,33 +476,36 @@ steps:
   by a tool.  If \plc{lookup} is non-\code{NULL}, the driver for a device will
   provide runtime entry points that enable a tool to control the device's
   interface for collecting traces in its \emph{native} trace format,
-  which may be device specific. 
+  which may be device specific.  
   The kinds of trace records available for a device will typically be
   implementation-defined.
   Some devices may also allow a tool to
   collect traces of records in a standard format known as OMPT format,
   described in this document. If so, the \plc{lookup} function will
-  return values for the runtime entry points in the trace interface for
-  collecting and decoding OMPT traces.\footnote{A device's native
-    tracing format may be OMPT format. In that case, tracing can be
-    controlled using either the runtime entry points for native or OMPT
-    tracing.}
+  return values for the runtime entry points 
+  \code{ompt\_set\_trace\_ompt} and \code{ompt\_buffer\_get\_record\_ompt}, which support
+  collecting and decoding OMPT traces. 
+  These runtime entry points are not required for all devices and will only be available for target devices that support 
+  collection of standard traces in OMPT format.
+  For some devices, their native
+  tracing format may be OMPT format. In that case, tracing can be
+  controlled using either the runtime entry points for native or OMPT
+  tracing.
 
 \begin{table}
-\addtocounter{footnote}{1}
 {\small
 \begin{tabular}{ll}\hline
 Entry Point String Name & Type Signature\\\hline\hline
 ``\code{ompt\_get\_device\_time}'' & \code{ompt\_get\_device\_time\_t}\\
 ``\code{ompt\_translate\_time}'' & \code{ompt\_translate\_time\_t}\\
-``\code{ompt\_set\_trace\_ompt}''\footnotemark[\value{footnote}] & \code{ompt\_set\_trace\_ompt\_t}\\
+``\code{ompt\_set\_trace\_ompt}'' & \code{ompt\_set\_trace\_ompt\_t}\\
 ``\code{ompt\_set\_trace\_native}'' & \code{ompt\_set\_trace\_native\_t}\\
 ``\code{ompt\_start\_trace}'' & \code{ompt\_start\_trace\_t}\\
 ``\code{ompt\_pause\_trace}'' & \code{ompt\_pause\_trace\_t}\\
 ``\code{ompt\_stop\_trace}'' & \code{ompt\_stop\_trace\_t}\\
 ``\code{ompt\_advance\_buffer\_cursor}'' & \code{ompt\_advance\_buffer\_cursor\_t}\\
 ``\code{ompt\_buffer\_get\_record\_type}'' & \code{ompt\_buffer\_get\_record\_type\_t}\\
-``\code{ompt\_buffer\_get\_record\_ompt}''\footnotemark[\value{footnote}] & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
+``\code{ompt\_buffer\_get\_record\_ompt}'' & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
 ``\code{ompt\_buffer\_get\_record\_native}'' & \code{ompt\_buffer\_get\_record\_native\_t}\\
 ``\code{ompt\_buffer\_get\_record\_native\_abstract}'' & \code{ompt\_buffer\_get\_record\_native\_abstract\_t}\\\hline
 \end{tabular}
@@ -512,9 +515,6 @@ Entry Point String Name & Type Signature\\\hline\hline
 \label{table:ompt-tracing-interface-functions} 
 \end{table}
 
-\footnotetext{These runtime entry points will
-  only be available for target devices that support collection of
-  standard traces in OMPT format.}
 
 \item The tool will use the \code{ompt\_set\_trace\_native}
   and/or the \code{ompt\_set\_trace\_ompt} runtime entry point to specify what
@@ -1170,13 +1170,13 @@ A thread's stack is said to include a \emph{degenerate task}
 if it contains a sequence of one or more procedure 
 frames from OpenMP runtime routines between a pair of frames for user
 procedures that belong to the same
-task.\footnote{A degenerate task may arise when a parallel
+task. A degenerate task may arise when a parallel
 construct is encountered in a parallel region and nested parallelism
 is not enabled or when an orphaned task directive 
 is encountered outside a parallel region.  In such cases, the program
 may invoke the OpenMP runtime and runtime procedure frames may remain
 on the stack when the runtime 
-invokes an outlined procedure.} 
+invokes an outlined procedure.
 An OpenMP implementation must
 maintain an \code{ompt\_frame\_t} data structure 
 for each initial, implicit, explicit, target, or degenerate task. 
@@ -3185,8 +3185,7 @@ typedef struct ompt_record_target_data_op_s \{
 \end{targetRecord}
 
 \argdesc
-The \callbackarg{} \plc{host\_op\_id} is a unique identifer for the initial task
-on the target device.
+The \callbackarg{} \plc{host\_op\_id} is a unique identifer for a data operations on a target device.
 The \callbackarg{} \plc{optype} indicates the kind of data mapping.
 The \callbackarg{} \plc{host\_addr} indicates the address of data on host side.
 The \callbackarg{} \plc{device\_addr} indicates the address of data on device side.
@@ -3344,8 +3343,7 @@ disabled until the next invocation of \code{ompt\_start\_trace}.  This
 will cause the device to drop future trace records until recording is
 restarted.
 
-Note: {\em the buffer request callback is not 
-required to be async-signal safe.}
+The buffer request callback is not required to be \emph{async signal safe}.
 
 \argdesc
 The \callbackarg{} \plc{device\_id} specifies the device. 
@@ -3386,8 +3384,8 @@ specified device.
 The OpenMP implementation will make these callbacks
 on a thread that is not an OpenMP master or worker. 
 
-Note: {\em the buffer completion callback is not 
-required to be async-signal safe.}
+The buffer completion callback is not 
+required to be \emph{async signal safe}.
 
 
 \argdesc
@@ -3534,10 +3532,10 @@ it should provide \code{NULL} for \plc{lookup}.
 
 The \callbackarg{} \plc{documentation} is a string that describes names and type signatures
 of any additional device-specific runtime entry points that can be obtained
-using \plc{lookup}. The documentation string should include
-not only the type signature but also descriptive text for how to use
-the device-specific API or pointers to external documentation about
-it.
+using \plc{lookup}. The documentation string should include 
+inline descriptions and/or pointers to external documentation 
+that includes type signatures for any device-specific interfaces that are available through \plc{lookup} 
+as well as descriptions of how to use these interface functions to control monitoring and analysis of device traces.
 
 \constraints
 The \callbackarg{}s \plc{type} and \plc{documentation} must be
@@ -3959,7 +3957,7 @@ inspect or modify the value of the data object.
 When an OpenMP thread is created, its data object will be initialized
 with value \code{ompt\_data\_none}.  
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 \crossreferences
 \begin{itemize}
@@ -3993,7 +3991,7 @@ A tool may invoke a runtime entry point known as
 with type signature \code{ompt\_get\_proc\_id\_t} 
 to obtain the current proc\_id of the calling thread.
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 
 \begin{comment}
@@ -4079,7 +4077,7 @@ If the returned state is not one of the specified wait states,
 the value of a wait identifier passed by reference to the entry
 point is undefined following the call.
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 \constraints
 The argument passed to the entry point must be a reference
@@ -4155,7 +4153,7 @@ data object.
 When a parallel region is created, its data object will be initialized
 with the value \code{ompt\_data\_none}.  
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 \constraints
 The second and third arguments to the entry point must be references
@@ -4228,11 +4226,12 @@ The pointer returned in \code{task\_frame} represents an
 \code{ompt\_frame\_t} structure, which
 a tool can use to distinguish between frames in the call stack 
 associated with user code and those associated with
-the OpenMP runtime system.\footnote{A frame 
+the OpenMP runtime system.
+A frame 
 on the call stack is said to be associated with 
 the OpenMP runtime if it is a frame for a runtime system
 routine or it belongs to a library function called by a runtime
-system routine, directly or indirectly.} 
+system routine, directly or indirectly.
 The \code{enter\_frame} field in this structure contains the
 canonical frame pointer for the procedure that invoked 
 user code for the task. 
@@ -4263,7 +4262,7 @@ value of the data object.  When either a parallel region or a task
 region is created, its data object will be initialized with the value
 \code{ompt\_data\_none}.
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 \constraints
 With the exception of \code{ancestor\_level}, which is passed by
@@ -4319,7 +4318,7 @@ the identifier for the operation being initiated will be returned in
 the variable passed by reference as the third argument; 
 otherwise, the third argument will be set to \code{ompt\_id\_none}.
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 \constraints
 
@@ -4355,7 +4354,7 @@ program by invoking a runtime entry point
 known as \code{ompt\_get\_num\_devices} 
 with type signature \code{ompt\_get\_num\_devices\_t}.
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 
 \omptruntimeentrypoint{\code{ompt\_get\_device\_id\_t}}
@@ -4385,7 +4384,7 @@ host. If the inquiry function is invoked by a thread not executing in
 the scope of a target, target data, or target update construct, then
 it will return a value of -1.
 
-{\em This runtime entry point is async signal safe.}
+This runtime entry point is \emph{async signal safe}.
 
 \subsection{Entry Points in the OMPT Device Tracing Interface}
 \label{sec:ompt-tracing-entry-points}.
@@ -4566,7 +4565,7 @@ an attached device. If a tool knows how to program a particular
 attached device, it may opt to invoke native control functions
 directly using pointers obtained through the \code{lookup} function
 associated with the device and described in the \code{documentation}
-string that is returned by \code{ompt\_get\_device\_info}.
+string that is provided to the device initializer callback.
 
 \constraints
 The argument \code{device} is a handle to identify the target device
