@@ -1134,6 +1134,7 @@ typedef struct ompt_record_ompt_s \{
   ompt_id_t \plc{target_id};
   union \{
     ompt_record_thread_begin_t \plc{thread_begin};
+    ompt_record_thread_end_t \plc{thread_end};
     ompt_record_idle_t \plc{idle};
     ompt_record_parallel_begin_t \plc{parallel_begin};
     ompt_record_parallel_end_t \plc{parallel_end};
@@ -2132,7 +2133,7 @@ The initializer returns a non-zero value if it succeeds.
 \argdesc
 The \callbackarg{} \plc{lookup} is a callback 
 to an OpenMP runtime routine that a tool must use to 
-obtain a pointer to each function in the runtime's OMPT interface.
+obtain a pointer to each runtime entry point in the OMPT interface.
 The actions of a tool initializer are described in \specref{sec:tool-initialize}.
 
 \crossreferences
@@ -2204,6 +2205,7 @@ typedef void (*ompt_callback_thread_begin_t) (
 \begin{boxedcode}
 typedef struct ompt_record_thread_begin_s \{
   ompt_thread_type_t \plc{thread_type};
+  ompt_id_t \plc{thread_id};
 \} ompt_record_thread_begin_t;
 \end{boxedcode}
 \ccppspecificend
@@ -2213,6 +2215,7 @@ typedef struct ompt_record_thread_begin_s \{
 \argdesc
 The \callbackarg{} \plc{thread\_type}
 indicates the type of the new thread: initial, worker, or other.
+
 The binding of \callbackarg{} \plc{thread\_data} is the new thread.
 
 \crossreferences
@@ -2238,6 +2241,19 @@ typedef void (*ompt_callback_thread_end_s) (
 \end{boxedcode}
 \ccppspecificend
 }
+
+\begin{targetRecord}
+\record
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_thread_end_s \{
+  ompt_id_t \plc{thread_id};
+\} ompt_record_thread_end_t;
+\end{boxedcode}
+\ccppspecificend
+}
+\end{targetRecord}
 
 \argdesc
 The binding of \callbackarg{} \plc{thread\_data} is the thread that is terminating.
@@ -3435,15 +3451,18 @@ typedef int (*ompt_callback_control\_tool_t) (
 \end{boxedcode}
 \ccppspecificend
 }
-\descr 
-The callback with type signature \code{ompt\_callback\_control\_tool\_t},
-includes \callbackarg{}s \plc{command} and \plc{modifier}. Standard values for
+
+\argdesc 
+The \callbackarg{} \plc{command} passes a command from an application to a tool. 
+Standard values for
 \plc{command} are defined by \code{omp\_control\_tool\_t}. 
 defined in \specref{sec:control_tool}.
-The callback also allows tool-specific values for \plc{command} and \plc{modifier}.
+The \callbackarg{} \plc{modifier} passes a command modifier from an application to a tool. 
+The callback allows tool-specific values for \plc{command} and \plc{modifier}.
+Tools must ignore \plc{command} values that they are not explicitly designed to handle.
+
+\constraints
 Tool-specific values for \plc{command} must be $\geq$ 64.
-Tools must ignore \plc{command} values that they are not 
-explicitly designed to handle.
 
 \crossreferences
 \begin{itemize}
@@ -3465,15 +3484,15 @@ typedef void (*ompt_callback_cancel_t) (
 \end{boxedcode}
 \ccppspecificend
 }
-\descr 
-The callback with type signature \code{ompt\_callback\_cancel\_t},
-includes \plc{flags} defined by the enumeration  \code{ompt\_cancel\_flag\_t}, which determines
+
+\argdesc 
+The \callbackarg{} \plc{flags}, defined by the enumeration \code{ompt\_cancel\_flag\_t}, indicates
 whether the cancel is activated by the current task, or detected as being activated by another task. 
 The construct being canceled is also described in the \plc{flags}.
 When several constructs are detected as being concurrently canceled, each corresponding 
-bit in the flags will be set. The \plc{task\_data} corresponds to 
-the task encountering the cancel construct, 
-the cancellation point construct, or the construct defined as having an implicit cancellation point construct.
+bit in the flags will be set. 
+The \callbackarg{} \plc{task\_data} corresponds to the task encountering a \code{cancel} construct, 
+a \code{cancellation point} construct, or a construct defined as having an implicit cancellation point.
 \codeptrdesc
 
 \crossreferences
