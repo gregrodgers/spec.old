@@ -35,6 +35,13 @@
 \newcommand\longlongint{int\_atleast64\_t}
 \newcommand\callbackarg{argument}
 
+\newcommand{\devicedesc}{
+The \callbackarg{} \plc{device} is a pointer to an opaque object that
+represents the target device instance. The pointer to the device
+instance object is used by functions in the device tracing interface
+to identify the device being addressed.
+}
+
 \newcommand{\epdesc}{
 The \callbackarg{} \plc{endpoint} indicates whether the callback is
 signalling the beginning or the end of a scope.
@@ -2219,7 +2226,6 @@ typedef void (*ompt_callback_thread_begin_t) (
 \begin{boxedcode}
 typedef struct ompt_record_thread_begin_s \{
   ompt_thread_type_t \plc{thread_type};
-  ompt_id_t \plc{thread_id};
 \} ompt_record_thread_begin_t;
 \end{boxedcode}
 \ccppspecificend
@@ -2257,19 +2263,6 @@ typedef void (*ompt_callback_thread_end_s) (
 \ccppspecificend
 }
 
-\begin{targetRecord}
-\record
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_thread_end_s \{
-  ompt_id_t \plc{thread_id};
-\} ompt_record_thread_end_t;
-\end{boxedcode}
-\ccppspecificend
-}
-\end{targetRecord}
-
 \argdesc
 
 The binding of \callbackarg{} \plc{thread\_data} is the thread that is
@@ -2280,7 +2273,6 @@ terminating.
 \item \code{ompt\_data\_t} type, see
 \specref{sec:ompt_data_t}.
 \end{itemize}
-
 
 
 \omptcallbacksignature{\code{ompt\_callback\_idle\_t}}
@@ -3523,14 +3515,17 @@ typedef void (*ompt_callback_buffer_complete_t) (
 
 \descr 
 The callback provides a tool with a buffer containing trace records for the
-specified device.
+specified device. Typically, a tool will iterate through the records
+in the buffer and process them.
 
 The OpenMP implementation will make these callbacks
 on a thread that is not an OpenMP master or worker. 
 
+The callee may delete the buffer if the \callbackarg{}
+\plc{buffer\_owned}=0.
+
 The buffer completion callback is not 
 required to be \emph{async signal safe}.
-
 
 \argdesc
 
@@ -3545,15 +3540,12 @@ The \callbackarg{} \plc{bytes} indicates the full size of the buffer.
 The \callbackarg{} \plc{begin} is an opaque cursor that indicates the
 position at the beginning of the first record in the buffer.
 
-\constraints
-
-The \callbackarg{} \plc{buffer\_owned} is 1 if the data
-pointed to by buffer was allocated by a call to the buffer request
-callback for that device and 0 otherwise. If multiple devices accumulate trace
-events into a single buffer,
-this callback might be invoked with a pointer to one or more trace
-records in a shared buffer with \plc{buffer\_owned} = 0. In this
-case, the callback may not delete the buffer.
+The \callbackarg{} \plc{buffer\_owned} is 1 if the data pointed to by
+buffer can be deleted by the callback and 0 otherwise. If multiple
+devices accumulate trace events into a single buffer, this callback
+might be invoked with a pointer to one or more trace records in a
+shared buffer with \plc{buffer\_owned} = 0. In this case, the callback
+may not delete the buffer.
 
 \crossreferences
 \begin{itemize}
@@ -3591,6 +3583,10 @@ application to a tool.
 The callback allows tool-specific values for \plc{command} and
 \plc{modifier}.  Tools must ignore \plc{command} values that they are
 not explicitly designed to handle.
+
+The \callbackarg{} \plc{arg} is a void pointer that enables a tool and
+an application to pass arbitrary state back and forth. 
+The \callbackarg{} \plc{arg} may be \code{NULL}.
 
 \constraints
 Tool-specific values for \plc{command} must be $\geq$ 64.
@@ -3683,10 +3679,7 @@ character string that includes at a minimum the vendor and model name
 of the device. This may be followed by a semicolon-separated sequence
 of properties that describe a device's hardware or software.
 
-The \callbackarg{} \plc{device} is a pointer to an opaque object that
-represents the target device instance. The pointer to the device
-instance object is used by functions in the device tracing interface
-to identify the device being addressed.
+\devicedesc
 
 The \callbackarg{} \plc{lookup} is a pointer to a runtime callback
 that a tool must use to obtain pointers to runtime entry points in the
@@ -4933,21 +4926,20 @@ typedef int (*ompt_set_trace_ompt_t)(
 
 \argdesc
 
-The \callbackarg{} \plc{device} is a pointer to an opaque object that
-represents the target device instance. The pointer to the device
-instance object is used by functions in the device tracing interface
-to identify the device being addressed.
+\devicedesc
 
-A positive value for \callbackarg{} \code{enable} indicates that
-recording of one or more events specified by \callbackarg{}
-\code{etype} should be enabled; a value of 0 for \code{enable}
-indicates that recording of events should be disabled by this
-invocation.
+The \callbackarg{} \plc{enable} indicates whether tracing should be
+enabled or disabled for the event or events specified by
+\callbackarg{} \plc{etype}. A positive value for \plc{enable}
+indicates that recording of one or more events specified by
+\plc{etype} should be enabled; a value of 0 for \plc{enable} indicates
+that recording of events should be disabled by this invocation.
 
-An \callbackarg{} \code{etype} value 0 indicates that traces for all
+An \callbackarg{} \plc{etype} value 0 indicates that traces for all
 event types will be enabled or disabled.  Passing a positive value for
-\code{etype} inidicates that recording should be enabled or disabled
-for the event in \code{ompt\_callbacks\_t} that matches \code{etype}.
+\plc{etype} inidicates that recording should be enabled or disabled
+for the event in \code{ompt\_callbacks\_t} that matches \plc{etype}.
+
 
 \effect
 
@@ -4999,7 +4991,7 @@ enables or disables the recording of native trace records for a device.
 typedef int (*ompt_set_trace_native_t)(
   ompt_device_t *\plc{device},
   int \plc{enable},
-  int  \plc{flags}
+  int \plc{flags}
 );
 \end{boxedcode}
 \ccppspecificend}
@@ -5008,17 +5000,19 @@ typedef int (*ompt_set_trace_native_t)(
 This interface is designed for use by a tool with no knowledge about
 an attached device. If a tool knows how to program a particular
 attached device, it may opt to invoke native control functions
-directly using pointers obtained through the \code{lookup} function
-associated with the device and described in the \code{documentation}
+directly using pointers obtained through the \plc{lookup} function
+associated with the device and described in the \plc{documentation}
 string that is provided to the device initializer callback.
 
-\constraints
-The argument \code{device} is a handle to identify the target device
-whose performance monitoring may be altered by invoking this function.
-The boolean \code{enable} indicates whether recording of events
-should be enabled or disabled by this invocation.  The kinds of
-native device monitoring to enable or disable are specified by
-\code{flags}. Each kind of monitoring is specified by a flag bit.
+\argdesc
+\devicedesc
+
+The \callbackarg{} \plc{enable} indicates whether recording of events
+should be enabled or disabled by this invocation.  
+
+The \callbackarg{} \plc{flags} specifies the kinds of native device
+monitoring to enable or disable.
+Each kind of monitoring is specified by a flag bit.
 Flags can be composed by using logical {\ttfamily or}  to combine enumeration
 values from type \code{ompt\_native\_mon\_flags\_t}.
 Table~\ref{table:record_set} shows the possible return codes for
@@ -5027,9 +5021,10 @@ Table~\ref{table:record_set} shows the possible return codes for
 than one kind of monitoring, the return code will be 3 if tracing
 is possible for one or more kinds of monitoring but not for others.
 
-
-To start, pause, or stop tracing for a specific target device associated with the handle \code{device}, 
-a tool calls the functions \code{ompt\_start\_trace}, \code{ompt\_pause\_trace}, or \code{ompt\_stop\_trace}.
+To start, pause, or stop tracing for a specific target device
+associated with the handle \plc{device}, a tool calls the functions
+\code{ompt\_start\_trace}, \code{ompt\_pause\_trace}, or
+\code{ompt\_stop\_trace}.
 
 
 \crossreferences
@@ -5073,8 +5068,7 @@ device.
 
 \argdesc
 
-The \callbackarg{} \plc{device} is a handle that identifies a target
-device. 
+\devicedesc
 
 The \callbackarg{} \emph{buffer request} specifies a tool callback
 that will supply a device with a buffer to deposit events.
@@ -5118,8 +5112,13 @@ typedef int (*ompt_pause_trace_t)(
 
 A tool may pause or resume tracing on a device by invoking the device's
 \code{ompt\_pause\_trace} runtime entry point.  
-To pause tracing, a non-zero value should be supplied for
-\plc{begin\_pause}.
+
+\argdesc
+
+\devicedesc
+
+The \callbackarg{} \plc{begin\_pause} indicates whether to pause or
+resume tracing.
 To resume tracing, zero should be supplied for \plc{begin\_pause}.
 The entry point will
 return 0 if the request fails, e.g., if tracing for a device has not
@@ -5152,6 +5151,11 @@ typedef int (*ompt_stop_trace_t)(
 \descr
 Each invocation returns 1 if the command succeeded and 0 otherwise.
 A call to \code{ompt\_stop\_trace} also implicitly requests that the device flush any buffers that it owns.
+
+\argdesc
+
+\devicedesc
+
 
 %%? johnmc says: we should export one more function from a target device: ompt_target_scope(begin/end, host_id)
 %% this function will be used by the OpenMP runtime when a target device is being monitored to signal the target device when 
@@ -5190,7 +5194,23 @@ typedef int (*ompt_advance_buffer_cursor_t)(
 \ccppspecificend}
 
 \descr
-It returns \code{true} if the advance is successful and the returned value \code{*next} is valid.
+It returns \code{true} if the advance is successful and the next
+position in the buffer is valid.
+
+\argdesc
+
+\devicedesc
+ 
+The \callbackarg{} \plc{buffer} indicates a trace buffer associated
+with the cursors.
+
+The \callbackarg{} \plc{size} indicates the size of \plc{buffer} in
+bytes.
+
+The \callbackarg{} \plc{current} is an opaque buffer cursor.
+
+The \callbackarg{} \plc{next} is a pointer to a return value for the
+next value of a opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
@@ -5236,6 +5256,11 @@ position in the provided trace buffer is an OMPT record,
 a native record, or an invalid record. An invalid record type
 is returned if the cursor is out of bounds.
 
+\argdesc
+The \callbackarg{} \plc{buffer} indicates a trace buffer. 
+
+The \callbackarg{} \plc{current} is an opaque buffer cursor.
+
 \begin{comment}
 \crossreferences
 Appendix~\ref{appendix:ompt-records} defines the corresponding enumeration type for \code{ompt\_record\_kind\_t}. 
@@ -5271,16 +5296,21 @@ typedef ompt_record_ompt_t *(*ompt_buffer_get_record_ompt_t)(
 
 \descr
 
-This function returns a pointer that may point to a record in the trace
-buffer, or it may point to a record in thread local storage where the information
-extracted from a record was assembled. The information available
-for an event depends upon its type. 
+This function returns a pointer that may point to a record in the
+trace buffer, or it may point to a record in thread local storage
+where the information extracted from a record was assembled. The
+information available for an event depends upon its type.
 
 The return value of type \code{ompt\_record\_ompt\_t} 
 defines a union type that can represent
 information for any OMPT event record type.
 Another call to the runtime entry point may overwrite the
 contents of the fields in a record returned by a prior invocation.
+
+\argdesc
+The \callbackarg{} \plc{buffer} indicates a trace buffer. 
+
+The \callbackarg{} \plc{current} is an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
@@ -5324,6 +5354,17 @@ for the operation associated with the record.  A subsequent call
 to \code{ompt\_buffer\_get\_record\_native} may overwrite the
 contents of the fields in a record returned by a prior invocation.
 
+\argdesc
+The \callbackarg{} \plc{buffer} indicates a trace buffer. 
+
+The \callbackarg{} \plc{current} is an opaque buffer cursor.
+
+The \callbackarg{} \plc{host\_op\_id} is a pointer to an identifier
+that will be returned by the function. The entry point will set 
+*\plc{host\_op\_id} to the value of a host-side identifier for an operation on
+a target device that was created when the operation was initiated by
+the host. 
+
 
 \crossreferences
 \begin{itemize}
@@ -5363,6 +5404,11 @@ runtime entry point for the device with type signature
 \code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
 to decode a native trace record that it
 does not understand into a standard form that it can interpret. 
+
+\argdesc
+
+The \callbackarg{} \plc{native\_record} is a pointer to a native trace
+record.
 
 \crossreferences
 \begin{itemize}
@@ -5427,11 +5473,12 @@ pass the device tracing initializer a lookup function that the tool
 can use to obtain pointers to runtime entry points that implement
 tracing control routines appropriate for that device. 
 
-\constraints
-A lookup routine with type
-signature \code{ompt\_function\_lookup\_t} takes a C string
-that represents the name of a runtime entry point in an interface
-and returns a pointer to the corresponding runtime entry point.
+A tool can call the lookup function to obtain a pointer to a runtime
+entry point.
+
+\argdesc
+The \callbackarg{} \plc{interface\_function\_name} is a C string
+that represents the name of a runtime entry point.
 
 \crossreferences
 \begin{itemize}
