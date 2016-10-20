@@ -196,7 +196,7 @@ known as \code{ompt\_callback\_set} with type signature
 register tool callbacks for OpenMP events, as described in
 \specref{sec:ompt-register-callbacks}.
 
-A tool initializer may wish to use the OMPT interface runtime
+A tool initializer may use the OMPT interface runtime
 entry points known as \code{ompt\_enumerate\_states} and
 \code{ompt\_enumerate\_mutex\_impls}, which have type signatures
 \code{ompt\_enumerate\_states\_t} and
@@ -206,7 +206,7 @@ implementation employs. The descriptions of the enumeration runtime entry point
 type signatures show how to use them to determine what
 thread states and mutual exclusion mechanisms an OpenMP implementation supports.
 
-If a tool initializer returns a non-zero, the tool will be
+If a tool initializer returns a non-zero value, the tool will be
 \emph{activated} for the execution; otherwise, the tool will be
 inactive.
 
@@ -218,6 +218,7 @@ callback has type signature \code{ompt\_callback\_thread\_begin\_t}.
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_initialize\_t}, see \specref{sec:ompt_initialize_t}.
+\item \code{ompt\_callback\_thread\_begin\_t}, see \specref{sec:ompt_callback_thread_begin_t}.
 \item \code{ompt\_enumerate\_states\_t}, see \specref{sec:ompt_enumerate_states_t}.
 \item \code{ompt\_enumerate\_mutex\_impls\_t}, see   \specref{sec:ompt_enumerate_mutex_impls_t}.
 \item \code{ompt\_callback\_set\_t}, see \specref{sec:ompt_callback_set_t}.
@@ -311,6 +312,7 @@ Entry Point String Name & Type signature\\\hline\hline
 \item \code{ompt\_get\_task\_info\_t}, see \specref{sec:ompt_get_task_info_t}.
 \item \code{ompt\_get\_target\_info\_t}, see \specref{sec:ompt_get_target_info_t}.
 \item \code{ompt\_get\_num\_devices\_t}, see \specref{sec:ompt_get_num_devices_t}.
+\item \code{ompt\_function\_lookup\_t}, see \specref{sec:ompt_function_lookup_t}.
 \end{itemize}
 
 \subsection{Monitoring Activity on the Host}
@@ -419,6 +421,13 @@ regions. Some events involve both kinds of collapsing: the aforementioned
 \code{ompt\_callback\_sync\_region\_wait} represents
 a callback that will be invoked at each endpoint for different kinds
 of synchronization regions.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_set\_t}, see \specref{sec:ompt_callback_set_t}.
+\item \code{ompt\_callback\_get\_t}, see \specref{sec:ompt_callback_get_t}.
+\end{itemize}
 
 \begin{comment}
 \crossreferences
@@ -611,6 +620,7 @@ is in progress.
 
 \crossreferences
 \begin{itemize}
+\item \code{ompt\_callback\_device\_initialize\_t}, see \specref{sec:ompt_callback_device_initialize_t}.
 \item \code{ompt\_get\_device\_time}, see \specref{sec:ompt_get_device_time_t}.
 \item \code{ompt\_translate\_time}, see \specref{sec:ompt_translate_time_t}.
 \item\code{ompt\_set\_trace\_ompt}, see \specref{sec:ompt_set_trace_ompt_t}.
@@ -767,7 +777,7 @@ block to wait for an unavailable lock. A third implementation
 may transition the thread to the state even later, e.g., only
 after the thread waits for a significant amount of time. 
 
-The following describes the classes and the states in each class.
+The following sections describe the classes of states and the states in each class.
 \subsubsection{Work States}
 An OpenMP implementation reports a thread in a work state 
 when the thread is performing serial work, parallel work, or a reduction.
@@ -1068,120 +1078,22 @@ typedef enum ompt_callbacks_t \{
 %function (described in Section~\ref{sec:tool-initialize}) again.  This
 %callback has type signature \code{ompt\_callback\_t}.
 
-\begin{targetRecord}
-\subsection{Tracing Support}
-\label{sec:ompt-records}
 
-\subsubsection{Record Kind}
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef enum ompt_record_kind_e \{
-  ompt_record_ompt               = 1,
-  ompt_record_native             = 2,
-  ompt_record_invalid            = 3
-\} ompt_record_kind_t; 
-\end{boxedcode}
-\ccppspecificend
-}
-
-\subsubsection{Native Record Kind}
-\label{sec:ompt_record_native_kind_t}
+\subsection{Frames}
+\index{frames}
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef enum ompt_record_native_kind_e \{
-  ompt_record_native_info  = 1,
-  ompt_record_native_event = 2
-\} ompt_record_native_kind_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\subsubsection{Native Record Abstract Type}
-\label{sec:ompt_record_native_abstract_t}
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_native_abstract_s \{
-  ompt_record_native_class_t \plc{rclass};
-  const char *\plc{type};
-  ompt_device_time_t \plc{start\_time};
-  ompt_device_time_t \plc{end\_time};
-  ompt_hwid_t \plc{hwid};
-\} ompt_record_native_abstract_t;
+typedef struct ompt_frame_s \{\\
+  void *\plc{exit_frame};
+  void *\plc{enter_frame};
+\} ompt_frame_t;
 \end{boxedcode}
 \ccppspecificend
 }
 
 \descr
-
-A \code{ompt\_record\_native\_abstract\_t} record contains several
-pieces of information that a tool can use to process a native record
-that it may not fully understand. The record \code{rclass} field
-indicates whether the record is informational
-or represents an event; knowing this can help a tool determine
-how to present the record. The record \code{type} field points to
-a statically-allocated, immutable character string that provides
-a meaningful name that a tool might want to use to describe the event
-to a user. The \code{start\_time} and \code{end\_time} fields are
-used to place an event in time. The times are relative to the device
-clock. If an event has no associated \code{start\_time} and/or
-\code{end\_time}, its value will be 
-\code{ompt\_time\_none}. The hardware id field,
-\code{hwid},  is used to indicate the location on the device where
-the event occurred. A \code{hwid} may represent a hardware abstraction
-such as a core or a hardware thread id. The meaning of a \code{hwid}
-value for a device is defined by the implementer of the software
-stack for the device. If there is no hardware abstraction associated 
-with the record, the value of \code{hwid} 
-will be \code{ompt\_hwid\_none}.
-
-\subsubsection{Record Type}
-\label{sec:ompt_record_ompt_t}
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_record_ompt_s \{
-  ompt_callbacks_t \plc{type};
-  ompt_target_time\_t \plc{time};
-  ompt_id_t \plc{thread_id};
-  ompt_id_t \plc{target_id};
-  union \{
-    ompt_record_thread_begin_t \plc{thread_begin};
-    ompt_record_thread_end_t \plc{thread_end};
-    ompt_record_idle_t \plc{idle};
-    ompt_record_parallel_begin_t \plc{parallel_begin};
-    ompt_record_parallel_end_t \plc{parallel_end};
-    ompt_record_task_create_t \plc{task_create};
-    ompt_record_task_dependence_t \plc{task_dep};
-    ompt_record_task_schedule_t \plc{task_sched};
-    ompt_record_implicit_t \plc{implicit};
-    ompt_record_sync_region_t \plc{sync_region};
-    ompt_record_target_t \plc{target_record};
-    ompt_record_target_data_op_t \plc{target_data_op};
-    ompt_record_target_map_t \plc{target_map};
-    ompt_record_target_kernel_t \plc{kernel};
-    ompt_record_lock_init_t \plc{lock_init};
-    ompt_record_lock_destroy_t \plc{lock_destroy};
-    ompt_record_mutex_acquire_t \plc{mutex_acquire};
-    ompt_record_mutex_t \plc{mutex};
-    ompt_record_nest_lock_t \plc{nest_lock};
-    ompt_record_master_t \plc{master};
-    ompt_record_work_t \plc{work};
-    ompt_record_flush_t \plc{flush};
-  \} \plc{record};
-\} ompt_record_ompt_t;
-\end{boxedcode}
-\ccppspecificend
-}
-
-\end{targetRecord}
-
-\subsection{Frames}
-\index{frames}
 
 When executing an OpenMP program, at times procedure frames from
 the OpenMP runtime appear on the call stack between procedure frames
@@ -1215,21 +1127,10 @@ task}.
 \end{comment}
 
 An \code{ompt\_frame\_t} object for a task contains a pair of pointers:
-\plc{enter\_frame}--the canonical frame address for the user frame that invoked the
+\plc{enter\_frame}---the canonical frame address for the user frame that invoked the
 OpenMP runtime system to create the task, and  
-\plc{exit\_frame}--the canonical frame address for the frame that
+\plc{exit\_frame}---the canonical frame address for the frame that
 invoked a user procedure for the task.
-
-\vbox{
-\ccppspecificstart
-\begin{boxedcode}
-typedef struct ompt_frame_s \{\\
-  void *\plc{exit_frame};
-  void *\plc{enter_frame};
-\} ompt_frame_t;
-\end{boxedcode}
-\ccppspecificend
-}
 
 An \code{ompt\_frame\_t}'s lifetime begins when a task is created
 and ends when the task is destroyed. Tools should not assume that
@@ -1292,6 +1193,116 @@ Tools must be prepared to observe and handle frame exit and reenter
 values that have not yet been set or reset as the program enters
 or leaves the runtime.
 
+\begin{targetRecord}
+\subsection{Tracing Support}
+\label{sec:ompt-records}
+
+\subsubsection{Record Kind}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum ompt_record_kind_e \{
+  ompt_record_ompt               = 1,
+  ompt_record_native             = 2,
+  ompt_record_invalid            = 3
+\} ompt_record_kind_t; 
+\end{boxedcode}
+\ccppspecificend
+}
+
+\subsubsection{Native Record Kind}
+\label{sec:ompt_record_native_kind_t}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum ompt_record_native_kind_e \{
+  ompt_record_native_info  = 1,
+  ompt_record_native_event = 2
+\} ompt_record_native_kind_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\subsubsection{Native Record Abstract Type}
+\label{sec:ompt_record_native_abstract_t}
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_native_abstract_s \{
+  ompt_record_native_class_t \plc{rclass};
+  const char *\plc{type};
+  ompt_device_time_t \plc{start\_time};
+  ompt_device_time_t \plc{end\_time};
+  ompt_hwid_t \plc{hwid};
+\} ompt_record_native_abstract_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\descr
+
+A \code{ompt\_record\_native\_abstract\_t} record contains several
+pieces of information that a tool can use to process a native record
+that it may not fully understand. The \plc{rclass} field
+indicates whether the record is informational
+or represents an event; knowing this can help a tool determine
+how to present the record. The record \plc{type} field points to
+a statically-allocated, immutable character string that provides
+a meaningful name that a tool might want to use to describe the event
+to a user. The \plc{start\_time} and \plc{end\_time} fields are
+used to place an event in time. The times are relative to the device
+clock. If an event has no associated \plc{start\_time} and/or
+\plc{end\_time}, its value will be 
+\code{ompt\_time\_none}. The hardware id field,
+\plc{hwid},  is used to indicate the location on the device where
+the event occurred. A \plc{hwid} may represent a hardware abstraction
+such as a core or a hardware thread id. The meaning of a \plc{hwid}
+value for a device is defined by the implementer of the software
+stack for the device. If there is no hardware abstraction associated 
+with the record, the value of \plc{hwid} 
+will be \code{ompt\_hwid\_none}.
+
+\subsubsection{Record Type}
+\label{sec:ompt_record_ompt_t}
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct ompt_record_ompt_s \{
+  ompt_callbacks_t \plc{type};
+  ompt_target_time\_t \plc{time};
+  ompt_id_t \plc{thread_id};
+  ompt_id_t \plc{target_id};
+  union \{
+    ompt_record_thread_begin_t \plc{thread_begin};
+    ompt_record_idle_t \plc{idle};
+    ompt_record_parallel_begin_t \plc{parallel_begin};
+    ompt_record_parallel_end_t \plc{parallel_end};
+    ompt_record_task_create_t \plc{task_create};
+    ompt_record_task_dependence_t \plc{task_dep};
+    ompt_record_task_schedule_t \plc{task_sched};
+    ompt_record_implicit_t \plc{implicit};
+    ompt_record_sync_region_t \plc{sync_region};
+    ompt_record_target_t \plc{target_record};
+    ompt_record_target_data_op_t \plc{target_data_op};
+    ompt_record_target_map_t \plc{target_map};
+    ompt_record_target_kernel_t \plc{kernel};
+    ompt_record_lock_init_t \plc{lock_init};
+    ompt_record_lock_destroy_t \plc{lock_destroy};
+    ompt_record_mutex_acquire_t \plc{mutex_acquire};
+    ompt_record_mutex_t \plc{mutex};
+    ompt_record_nest_lock_t \plc{nest_lock};
+    ompt_record_master_t \plc{master};
+    ompt_record_work_t \plc{work};
+    ompt_record_flush_t \plc{flush};
+  \} \plc{record};
+\} ompt_record_ompt_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\end{targetRecord}
 \subsection{Miscellaneous Type Definitions}
 \label{sec:ompt-types:misc}
 This section describes miscellaneous types and enumerations used by the tool interface.
