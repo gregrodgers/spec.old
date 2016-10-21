@@ -366,7 +366,7 @@ of each matching event pair.
 \renewcommand{\arraystretch}{1.2}
 \begin{tabular}{lp{3em}p{3em}p{3em}p{3em}}
                                 & \rot{\code{ompt\_set\_never}}
-                                & \rot{\code{ompt\_set\_sometimes}}
+                                & \rot{\code{ompt\_set\_sometimes/paired}}
                                 & \rot{\code{ompt\_set\_always}}\\
                                 \midrule
 \code{ompt\_callback\_thread\_begin}          &   &   & * \\
@@ -4014,12 +4014,18 @@ The return value of the \code{ompt\_callback\_set} runtime entry point may indic
 outcomes. Callback registration may fail if it is called outside the initializer for the
 callback interface, returning \code{omp\_set\_error}. 
 Otherwise, the return value of \code{ompt\_callback\_set} 
-indicates whether or \emph{dispatching} a callback leads to its invocation.
+indicates whether \emph{dispatching} a callback leads to its invocation.
 A return value of \code{ompt\_set\_never} indicates that the callback
 will never be invoked at runtime.
 A return value of \code{ompt\_set\_sometimes} indicates that the callback
 will be invoked at runtime for an implementation-defined subset of
 associated event occurrences.
+A return value of \code{ompt\_set\_sometimes\_paired} is similar to 
+\code{ompt\_set\_sometimes}, but provides an additional guarantee for 
+callbacks with an \plc{endpoint} parameter. Namely, it guarantees that a callback 
+with an \plc{endpoint} value of \code{ompt\_scope\_begin} is invoked if and only if
+the same callback with \plc{endpoint} value of \code{ompt\_scope\_end} will 
+also be invoked sometime in the future.
 A return value of \code{ompt\_set\_always} indicates that the callback
 will be always invoked at runtime for associated event occurrences.
 
@@ -4041,10 +4047,11 @@ event.
 \begin{table}
 \begin{boxedcode}
 typedef enum ompt_set_result_e \{
-  ompt_set_error = 0,
-  ompt_set_none = 1,
-  ompt_set_sometimes = 2,
-  ompt_set_always = 3
+  ompt_set_error            = 0,
+  ompt_set_none             = 1,
+  ompt_set_sometimes        = 2,
+  ompt_set_sometimes_paired = 3,
+  ompt_set_always           = 4
 \} ompt_set_result_t;
 \end{boxedcode}
 \vskip 1ex
