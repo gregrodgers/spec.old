@@ -3870,6 +3870,11 @@ directly.  Support for device pointers created outside of OpenMP, specifically
 outside of the \code{omp\_target\_alloc} routine and the \code{use\_device\_ptr} clause,
 is implementation defined.
 
+If a function (C, C++, Fortran) or subroutine (Fortran) is referenced in a
+\code{target} construct then that function or subroutine is treated as if its
+name had appeared in a \code{to} clause on a \code{declare}~\code{target}
+directive.
+
 \ccppspecificstart
 If an array section is a list item in a \code{map} clause and the array section is derived from a variable for which the type is pointer then the data-sharing attribute for that variable in the construct is firstprivate.  Prior to the execution of the construct, the private variable is initialized with the address of the storage location of the corresponding array section in the device data environment.
 
@@ -4175,18 +4180,39 @@ device executions through a \code{link} clause.
 If an \plc{extended-list} is present with no clause then the \code{to}
 clause is assumed.
 
-If a list item of a \code{to} clause is a function (C, C++, Fortran) 
-or subroutine (Fortran) then a device-specific version of the routine is 
-created that can be called from a \code{target} region.
+\ccppspecificstart
+If a function is treated as if it appeared as a list item in a \code{to} clause
+on a \code{declare}~\code{target} directive in the same translation unit in
+which the definition of the function occurs then a device-specific version of
+the function is created.
+
+If a variable is treated as if it appeared as a list item in a \code{to} clause
+on a \code{declare}~\code{target} directive in the same translation unit in
+which the definition of the variable occurs then the original list item is
+allocated a corresponding list item in the device data environment of all
+devices.  
+\ccppspecificend
+
+\fortranspecificstart
+If a procedure that is host or use associated is treated as if it appeared as a
+list item in a \code{to} clause on a \code{declare}~\code{target} directive
+then a device-specific version of the procedure is created.
+
+If a variable that is host or use associated is treated as if it appeared as a
+list item in a \code{to} clause on a \code{declare}~\code{target} directive
+then the original list item is allocated a corresponding list item in the
+device data environment of all devices.
+\fortranspecificend
 
 \end{samepage}
 
-If a list item of a \code{to} clause is a variable then the original 
-variable is mapped to a corresponding variable in the device data environment 
-of all devices as if it had appeared in a \code{map} clause with the
-\plc{map-type} \code{to} on the implicit \code{target}~\code{data} construct 
-for each device. The list item is never removed from those device data 
-environments as if its reference count is initialized to positive infinity.
+If a variable is treated as if it appeared as a list item in a \code{to}
+clause on a \code{declare}~\code{target} directive then the corresponding list
+item in the device data environment of each device is initialized once, in the
+manner specified by the program, but at an unspecified point in the program
+prior to the first reference to that list item.  The list item is never removed
+from those device data environments as if its reference count is initialized to
+positive infinity.
 
 The list items of a \code{link} clause are not mapped 
 by the \code{declare}~\code{target} directive. Instead, their mapping
@@ -4195,20 +4221,37 @@ or \code{target} constructs. They are mapped only for such regions.
 
 \pagebreak
 \ccppspecificstart
-The form of the \code{declare}~\code{target} directive that has no clauses and
-requires a matching \code{end}~\code{declare}~\code{target} directive defines
-an implicit \plc{extended-list} to an implicit \code{to} clause.  The implicit
-\plc{extended-list} consists of the variable names of any variable declarations
-that have static storage duration between the two directives and of the
-function names of any function declarations that appear between the two
-directives.
+If a function is referenced in a function that is treated as if it appeared as
+a list item in a \code{to} clause on a \code{declare}~\code{target} directive
+then the name of the referenced function is treated as if it had appeared in a
+\code{to} clause on a \code{declare}~\code{target} directive.
+
+If a variable with static storage duration or a function is referenced in the
+initializer expression list of a variable with static storage duration that is
+treated as if it appeared as a list item in a \code{to} clause on a
+\code{declare}~\code{target} construct then the name of the referenced variable
+or function is treated as if it had appeared in a \code{to} clause on a
+\code{declare}~\code{target} directive.
+
+The form of the \code{declare}~\code{target} directive that has no clauses 
+and requires a matching \code{end}~\code{declare}~\code{target} directive
+defines an implicit \plc{extended-list} to an implicit \code{to}
+clause. The implicit \plc{extended-list} consists of the variable names 
+of any variable declarations at file or namespace scope that appear between 
+the two directives and of the function names of any function declarations at 
+file, namespace or class scope that appear between the two directives.
 \ccppspecificend
 
 \fortranspecificstart
-If a \code{declare}~\code{target} does not have any clauses then an implicit
-\plc{extended-list} to an implicit \code{to} clause is formed from the name of
-the enclosing procedure or interface body to which it applies and, if it
-applies to a subprogram, any procedure declared in that subprogram.
+If a procedure is referenced in a procedure that is treated as if it appeared
+as a list item in a \code{to} clause on a \code{declare}~\code{target}
+directive then the name of the procedure is treated as if it had appeared in a
+\code{to} clause on a \code{declare}~\code{target} directive.
+
+If a \code{declare}~\code{target} does not have any clauses then an implicit 
+\plc{extended-list} to an implicit \code{to} clause of one item is formed from
+the name of the enclosing subroutine subprogram, function subprogram or 
+interface body to which it applies.
 \fortranspecificend
 
 \restrictions
@@ -4226,10 +4269,6 @@ applies to a subprogram, any procedure declared in that subprogram.
 another \code{declare}~\code{target} directive.
 
 \ccppspecificstart
-\item All declarations and definitions for a function must have a 
-      \code{declare}~\code{target} directive if one is specified for 
-      any of them. Otherwise, the result is unspecified.
-
 \item The \plc{declaration-definition-seq} defined by a 
       \code{declare}~\code{target} directive and an 
       \code{end}~\code{declare}~\code{target} directive must not contain
