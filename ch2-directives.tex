@@ -1696,7 +1696,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk\_size]})
@@ -1724,7 +1724,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk\_size]})
@@ -2120,7 +2120,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 nowait
 \end{indentedcodelist}
@@ -2147,7 +2147,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 \fortranspecificend
@@ -2493,7 +2493,7 @@ simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
 private(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 \end{indentedcodelist}
@@ -2518,7 +2518,7 @@ simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
 private(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 \end{indentedcodelist}
@@ -8930,8 +8930,13 @@ after the end of the region.
 The syntax of the \code{lastprivate} clause is as follows:
 
 \begin{boxedcode}
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 \end{boxedcode}
+
+where \plc{lastprivate-modifier} is:
+\begin{indentedcodelist}
+conditional
+\end{indentedcodelist}
 
 \descr
 The \code{lastprivate} clause provides a superset of the functionality provided by the 
@@ -8941,10 +8946,15 @@ A list item that appears in a \code{lastprivate} clause is subject to the \code{
 semantics described in 
 \specref{subsubsec:private clause}. 
 In addition, when a 
-\code{lastprivate} clause appears on the directive that identifies a worksharing construct 
+\code{lastprivate} clause without the \code{conditional} modifier appears on the directive that identifies a worksharing construct 
 or a SIMD construct, the value of each new list item from the sequentially last iteration 
 of the associated loops, or the lexically last \code{section} construct, is assigned to the 
-original list item. 
+original list item. When the \code{conditional} modifier appears on the clause,
+if an assignment to a list item is encountered in the construct then the
+original list item is assigned the value that is assigned to the new list item
+in the sequentially last iteration or lexically last section in which such an
+assignment is encountered.
+
 
 \ccppspecificstart
 For an array of elements of non-array type, each element is assigned to the 
@@ -8962,21 +8972,22 @@ If the original list item has the \code{POINTER} attribute, its update occurs as
 assignment.
 \fortranspecificend
 
-List items that are not assigned a value by the sequentially last iteration of the loops, or 
-by the lexically last \code{section} construct, have unspecified values after the construct. 
-Unassigned subcomponents also have unspecified values after the construct.
+When the \code{conditional} modifier does not appear on the \code{lastprivate} clause, list items that are not
+assigned a value by the sequentially last iteration of the loops, or by the
+lexically last \code{section} construct, have unspecified values after the
+construct.  Unassigned subcomponents also have unspecified values after the
+construct.
 
 The original list item becomes defined at the end of the construct if there is an implicit 
 barrier at that point. To avoid race conditions, concurrent reads or updates of the original 
 list item must be synchronized with the update of the original list item that occurs as a 
 result of the \code{lastprivate} clause.
 
-If the \code{lastprivate} clause is used on a construct to which \code{nowait} is applied, 
-accesses to the original list item may create a data race. To avoid this, synchronization 
-must be inserted to ensure that the sequentially last iteration or lexically last section 
-construct has stored and flushed that list item.
-
-If the \code{lastprivate} clause is used on a \code{distribute simd}, distribute parallel loop, or distribute parallel loop SIMD, accesses to the original list item may create a data race. To avoid this, synchronization must be inserted to ensure that the sequentially last iteration has stored and flushed that list item.
+If the \code{lastprivate} clause is used on a construct that does not end with
+an implicit barrier, accesses to the original list item may create a data race.
+To avoid this, if an assignment to the original list item occurs
+then synchronization must be inserted to ensure that the assignment completes and
+the original list item is flushed to memory.
 
 If a list item appears in both \code{firstprivate} and \code{lastprivate} clauses, the update 
 required for \code{lastprivate} occurs after all initializations for \code{firstprivate}.
@@ -8991,6 +9002,14 @@ construct, must not appear in a \code{lastprivate} clause on a
 worksharing construct if any of the corresponding
 worksharing regions ever binds to any of the corresponding
 \code{parallel} regions.
+
+\item If a list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier is modified in the region by an assignment
+outside the construct or not to the list item then the value assigned to
+the original list item is unspecified.
+
+\item A list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier must be a scalar variable.
 
 \cppspecificstart
 \item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
@@ -9016,7 +9035,9 @@ construct has a reference type then it must bind to the same object for all thre
 \fortranspecificstart
 \item A variable that appears in a \code{lastprivate} clause must be definable.
 
-\item If the original list item has the \code{ALLOCATABLE} attribute, the corresponding list item in the sequentially last iteration or lexically last section must have an allocation status of allocated upon exit from that iteration or section.
+\item If the original list item has the \code{ALLOCATABLE} attribute, the
+    corresponding list item whose value is assigned to the original list item must have an allocation status of allocated upon exit from
+    the sequentially last iteration or lexically last \code{section} construct.
 
 \item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{lastprivate} 
