@@ -1696,7 +1696,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk\_size]})
@@ -1724,7 +1724,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
 reduction(\plc{reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk\_size]})
@@ -2120,7 +2120,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 nowait
 \end{indentedcodelist}
@@ -2147,7 +2147,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 \fortranspecificend
@@ -2493,7 +2493,7 @@ simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
 private(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 \end{indentedcodelist}
@@ -2518,7 +2518,7 @@ simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
 aligned(\plc{list[ }:\plc{ alignment]})
 private(\plc{list})
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 \end{indentedcodelist}
@@ -3798,6 +3798,7 @@ if(\plc{[} target :\plc{] scalar-expression})
 device(\plc{integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 is\_device\_ptr(\plc{list})
 defaultmap(tofrom:scalar)
@@ -3826,6 +3827,7 @@ if(\plc{[} target :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 is\_device\_ptr(\plc{list})
 defaultmap(tofrom:scalar)
@@ -3852,7 +3854,7 @@ The functionality added to the \code{target} directive is the inclusion of an ex
 
 The \code{target} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target} region.
 
-All clauses are evaluated when the \code{target} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target} construct.  A variable that is mapped in the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
+All clauses are evaluated when the \code{target} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target} construct.  A variable that appears as a list item in a \code{reduction} clause on the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}. Likewise, a variable that is mapped in the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
 
 Assignment operations associated with mapping a variable ({see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
@@ -3867,6 +3869,11 @@ pointer already in the device data environment and that it should be used
 directly.  Support for device pointers created outside of OpenMP, specifically
 outside of the \code{omp\_target\_alloc} routine and the \code{use\_device\_ptr} clause,
 is implementation defined.
+
+If a function (C, C++, Fortran) or subroutine (Fortran) is referenced in a
+\code{target} construct then that function or subroutine is treated as if its
+name had appeared in a \code{to} clause on a \code{declare}~\code{target}
+directive.
 
 \ccppspecificstart
 If an array section is a list item in a \code{map} clause and the array section is derived from a variable for which the type is pointer then the data-sharing attribute for that variable in the construct is firstprivate.  Prior to the execution of the construct, the private variable is initialized with the address of the storage location of the corresponding array section in the device data environment.
@@ -3908,6 +3915,7 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 \cppspecificstart
 \item A list item that appears in an \code{is\_device\_ptr} clause must have a type
   of pointer, array, reference to pointer or reference to array.
+\item The effect of invoking a virtual member function of an object on a device other than the device on which the object was constructed is implementation defined. 
 \item A throw executed inside a \code{target} region must cause execution to resume within the
 same \code{target} region, and the same thread that threw the exception must catch it. 
 \cppspecificend
@@ -4172,18 +4180,39 @@ device executions through a \code{link} clause.
 If an \plc{extended-list} is present with no clause then the \code{to}
 clause is assumed.
 
-If a list item of a \code{to} clause is a function (C, C++, Fortran) 
-or subroutine (Fortran) then a device-specific version of the routine is 
-created that can be called from a \code{target} region.
+\ccppspecificstart
+If a function is treated as if it appeared as a list item in a \code{to} clause
+on a \code{declare}~\code{target} directive in the same translation unit in
+which the definition of the function occurs then a device-specific version of
+the function is created.
+
+If a variable is treated as if it appeared as a list item in a \code{to} clause
+on a \code{declare}~\code{target} directive in the same translation unit in
+which the definition of the variable occurs then the original list item is
+allocated a corresponding list item in the device data environment of all
+devices.  
+\ccppspecificend
+
+\fortranspecificstart
+If a procedure that is host or use associated is treated as if it appeared as a
+list item in a \code{to} clause on a \code{declare}~\code{target} directive
+then a device-specific version of the procedure is created.
+
+If a variable that is host or use associated is treated as if it appeared as a
+list item in a \code{to} clause on a \code{declare}~\code{target} directive
+then the original list item is allocated a corresponding list item in the
+device data environment of all devices.
+\fortranspecificend
 
 \end{samepage}
 
-If a list item of a \code{to} clause is a variable then the original 
-variable is mapped to a corresponding variable in the device data environment 
-of all devices as if it had appeared in a \code{map} clause with the
-\plc{map-type} \code{to} on the implicit \code{target}~\code{data} construct 
-for each device. The list item is never removed from those device data 
-environments as if its reference count is initialized to positive infinity.
+If a variable is treated as if it appeared as a list item in a \code{to}
+clause on a \code{declare}~\code{target} directive then the corresponding list
+item in the device data environment of each device is initialized once, in the
+manner specified by the program, but at an unspecified point in the program
+prior to the first reference to that list item.  The list item is never removed
+from those device data environments as if its reference count is initialized to
+positive infinity.
 
 The list items of a \code{link} clause are not mapped 
 by the \code{declare}~\code{target} directive. Instead, their mapping
@@ -4192,6 +4221,18 @@ or \code{target} constructs. They are mapped only for such regions.
 
 \pagebreak
 \ccppspecificstart
+If a function is referenced in a function that is treated as if it appeared as
+a list item in a \code{to} clause on a \code{declare}~\code{target} directive
+then the name of the referenced function is treated as if it had appeared in a
+\code{to} clause on a \code{declare}~\code{target} directive.
+
+If a variable with static storage duration or a function is referenced in the
+initializer expression list of a variable with static storage duration that is
+treated as if it appeared as a list item in a \code{to} clause on a
+\code{declare}~\code{target} construct then the name of the referenced variable
+or function is treated as if it had appeared in a \code{to} clause on a
+\code{declare}~\code{target} directive.
+
 The form of the \code{declare}~\code{target} directive that has no clauses 
 and requires a matching \code{end}~\code{declare}~\code{target} directive
 defines an implicit \plc{extended-list} to an implicit \code{to}
@@ -4202,6 +4243,11 @@ file, namespace or class scope that appear between the two directives.
 \ccppspecificend
 
 \fortranspecificstart
+If a procedure is referenced in a procedure that is treated as if it appeared
+as a list item in a \code{to} clause on a \code{declare}~\code{target}
+directive then the name of the procedure is treated as if it had appeared in a
+\code{to} clause on a \code{declare}~\code{target} directive.
+
 If a \code{declare}~\code{target} does not have any clauses then an implicit 
 \plc{extended-list} to an implicit \code{to} clause of one item is formed from
 the name of the enclosing subroutine subprogram, function subprogram or 
@@ -4223,10 +4269,6 @@ interface body to which it applies.
 another \code{declare}~\code{target} directive.
 
 \ccppspecificstart
-\item All declarations and definitions for a function must have a 
-      \code{declare}~\code{target} directive if one is specified for 
-      any of them. Otherwise, the result is unspecified.
-
 \item The \plc{declaration-definition-seq} defined by a 
       \code{declare}~\code{target} directive and an 
       \code{end}~\code{declare}~\code{target} directive must not contain
@@ -8101,13 +8143,28 @@ attribute, or that are data initialized, are shared unless they appear in a
 
 \item Variables belonging to common blocks, or accessed by host or use association, and referenced in called routines in the region are shared unless they appear in a \code{threadprivate} directive. 
 
-\item Dummy arguments of called routines in the region that are passed by reference have the same data-sharing attributes as the associated actual arguments. 
+\item Dummy arguments of called routines in the region that have the
+    \code{VALUE} attribute are private.
+
+\item Dummy arguments of called routines in the region that do not have the
+    \code{VALUE} attribute are private if the associated actual argument is not
+    shared.
+
+\item Dummy arguments of called routines in the region that do not have the
+\code{VALUE} attribute are shared if the actual argument is shared and it
+is a scalar variable, structure, an array that is not a pointer or
+assumed-shape array, or a simply contiguous array section.  Otherwise, the
+data-sharing attribute of the dummy argument is implementation-defined if
+the associated actual argument is shared.
 
 \item Cray pointees have the same data-sharing attribute as the storage with which their Cray pointers are associated.
 
 \item Implied-do indices, \code{forall} indices, and other local variables declared in called 
 routines in the region are private. 
+
 \end{itemize}
+
+
 \fortranspecificend
 
 
@@ -8496,59 +8553,34 @@ The programmer must ensure, by adding proper synchronization, that
 storage shared by an explicit task region does not reach the end of its lifetime before 
 the explicit task region completes its execution. 
 
+
 \fortranspecificstart
 The association status of a shared pointer becomes undefined upon entry to and on exit 
 from the \code{parallel}, \code{teams}, or task generating construct if it
 is associated with a target or a  subobject of a target that is in a \code{private},
 \code{firstprivate}, \code{lastprivate}, or \code{reduction} clause in the construct.
 
-Under certain conditions, passing a shared variable to a non-intrinsic procedure may 
-result in the value of the shared variable being copied into temporary storage before the 
-procedure reference, and back out of the temporary storage into the actual argument 
-storage after the procedure reference. When this situation occurs is implementation defined.
 
 \notestart
-\noteheader – Use of intervening temporary storage may occur when the following three 
-conditions hold regarding an actual argument in a reference to a non-intrinsic procedure:
+\noteheader – Passing a shared variable to a procedure may result in the use of
+temporary storage in place of the actual argument when the corresponding dummy
+argument does not have the \code{VALUE} attribute and its data-sharing attribute
+is implementation-defined as per the rules in
+\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Region but not in a Construct}.  
+These conditions effectively result in references to, and definitions of, the
+temporary storage during the procedure reference.  Furthermore, the value of
+the shared variable is copied into the intervening temporary storage before the procedure
+reference when the dummy argument does not have the \code{INTENT(OUT)}
+attribute, and back out of the temporary storage into the shared variable when
+the dummy argument does not have the \code{INTENT(IN)} attribute.  Any
+references to (or definitions of) the shared storage that is associated with
+the dummy argument by any other task must be synchronized with
+the procedure reference to avoid possible race conditions.
 
-\begin{enumerate}%%[label=\alph*] % L0 vvvvvvvvvvv
-\item The actual argument is one of the following:
-
-\begin{itemize} % L1 vvvvvv
-\item A shared variable.
-
-\item A subobject of a shared variable.
-
-\item An object associated with a shared variable.
-
-\item An object associated with a subobject of a shared variable.
-\end{itemize} % L1 ^^^^^^
-
-\item The actual argument is also one of the following:
-
-\begin{itemize} % L1 vvvvvvv
-\item An array section.
-
-\item An array section with a vector subscript.
-
-\item An assumed-shape array.
-
-\item A pointer array.
-\end{itemize} % L1 ^^^^^
-
-\item The associated dummy argument for this actual argument is an explicit-shape array 
-or an assumed-size array.
-\end{enumerate}
-
-\needspace{8\baselineskip}\begin{samepage}
-These conditions effectively result in references to, and definitions of, the temporary 
-storage during the procedure reference. Any references to (or definitions of) the shared 
-storage that is associated with the dummy argument by any other task must be 
-synchronized with the procedure reference to avoid possible race conditions. 
 \noteend
 \medskip
 \fortranspecificend
-\end{samepage}
+
 
 \restrictions
 The restrictions for the \code{shared} clause are as follows:
@@ -8898,8 +8930,13 @@ after the end of the region.
 The syntax of the \code{lastprivate} clause is as follows:
 
 \begin{boxedcode}
-lastprivate(\plc{list})
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 \end{boxedcode}
+
+where \plc{lastprivate-modifier} is:
+\begin{indentedcodelist}
+conditional
+\end{indentedcodelist}
 
 \descr
 The \code{lastprivate} clause provides a superset of the functionality provided by the 
@@ -8909,10 +8946,15 @@ A list item that appears in a \code{lastprivate} clause is subject to the \code{
 semantics described in 
 \specref{subsubsec:private clause}. 
 In addition, when a 
-\code{lastprivate} clause appears on the directive that identifies a worksharing construct 
+\code{lastprivate} clause without the \code{conditional} modifier appears on the directive that identifies a worksharing construct 
 or a SIMD construct, the value of each new list item from the sequentially last iteration 
 of the associated loops, or the lexically last \code{section} construct, is assigned to the 
-original list item. 
+original list item. When the \code{conditional} modifier appears on the clause,
+if an assignment to a list item is encountered in the construct then the
+original list item is assigned the value that is assigned to the new list item
+in the sequentially last iteration or lexically last section in which such an
+assignment is encountered.
+
 
 \ccppspecificstart
 For an array of elements of non-array type, each element is assigned to the 
@@ -8930,21 +8972,22 @@ If the original list item has the \code{POINTER} attribute, its update occurs as
 assignment.
 \fortranspecificend
 
-List items that are not assigned a value by the sequentially last iteration of the loops, or 
-by the lexically last \code{section} construct, have unspecified values after the construct. 
-Unassigned subcomponents also have unspecified values after the construct.
+When the \code{conditional} modifier does not appear on the \code{lastprivate} clause, list items that are not
+assigned a value by the sequentially last iteration of the loops, or by the
+lexically last \code{section} construct, have unspecified values after the
+construct.  Unassigned subcomponents also have unspecified values after the
+construct.
 
 The original list item becomes defined at the end of the construct if there is an implicit 
 barrier at that point. To avoid race conditions, concurrent reads or updates of the original 
 list item must be synchronized with the update of the original list item that occurs as a 
 result of the \code{lastprivate} clause.
 
-If the \code{lastprivate} clause is used on a construct to which \code{nowait} is applied, 
-accesses to the original list item may create a data race. To avoid this, synchronization 
-must be inserted to ensure that the sequentially last iteration or lexically last section 
-construct has stored and flushed that list item.
-
-If the \code{lastprivate} clause is used on a \code{distribute simd}, distribute parallel loop, or distribute parallel loop SIMD, accesses to the original list item may create a data race. To avoid this, synchronization must be inserted to ensure that the sequentially last iteration has stored and flushed that list item.
+If the \code{lastprivate} clause is used on a construct that does not end with
+an implicit barrier, accesses to the original list item may create a data race.
+To avoid this, if an assignment to the original list item occurs
+then synchronization must be inserted to ensure that the assignment completes and
+the original list item is flushed to memory.
 
 If a list item appears in both \code{firstprivate} and \code{lastprivate} clauses, the update 
 required for \code{lastprivate} occurs after all initializations for \code{firstprivate}.
@@ -8959,6 +9002,14 @@ construct, must not appear in a \code{lastprivate} clause on a
 worksharing construct if any of the corresponding
 worksharing regions ever binds to any of the corresponding
 \code{parallel} regions.
+
+\item If a list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier is modified in the region by an assignment
+outside the construct or not to the list item then the value assigned to
+the original list item is unspecified.
+
+\item A list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier must be a scalar variable.
 
 \cppspecificstart
 \item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
@@ -8984,7 +9035,9 @@ construct has a reference type then it must bind to the same object for all thre
 \fortranspecificstart
 \item A variable that appears in a \code{lastprivate} clause must be definable.
 
-\item If the original list item has the \code{ALLOCATABLE} attribute, the corresponding list item in the sequentially last iteration or lexically last section must have an allocation status of allocated upon exit from that iteration or section.
+\item If the original list item has the \code{ALLOCATABLE} attribute, the
+    corresponding list item whose value is assigned to the original list item must have an allocation status of allocated upon exit from
+    the sequentially last iteration or lexically last \code{section} construct.
 
 \item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{lastprivate} 
@@ -9516,11 +9569,15 @@ one for each implicit task, as if the \code{private} clause had been used. For t
 construct, a private copy of each list item is created, one for each SIMD lane as if the 
 \code{private} clause had been used. 
 For the \code{taskloop} construct, private copies are created according to the rules of the reduction scoping clauses. 
-For the \code{teams} construct, a private copy of each list 
-item is created and initialized, one for each team in the league as if the \code{private} clause had been 
-used. At the end of the region for  which the \code{reduction} clause was specified, the original
-list item is updated by combining its original value with the final value of each of the private
-copies, using the combiner of the specified \plc{reduction-identifier}.
+For the \code{target} construct, a private
+copy of each list item is created and initialized for the initial task as if
+the \code{private} clause had been used. For the \code{teams} construct, a
+private copy of each list item is created and initialized, one for each team in
+the league as if the \code{private} clause had been used. At the end of the
+region for  which the \code{reduction} clause was specified, the original list
+item is updated by combining its original value with the final value of each of
+the private copies, using the combiner of the specified
+\plc{reduction-identifier}.
 
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the 
@@ -9931,7 +9988,7 @@ The original and corresponding list items may share storage such that writes to 
 item by one task followed by a read or write of the other item by another task without
 intervening synchronization can result in data races.
 
-If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs:
+If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs as if performed as a single atomic operation:
 \begin{enumerate}
 \item If a corresponding list item of the original list item is not present in the device data environment, then:
 \begin{enumerate}
@@ -9950,7 +10007,7 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \end{enumerate}
 \end{enumerate}
 
-If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs:
+If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs as if performed as a single atomic operation:
 \begin{enumerate}
 \item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
 \item If a corresponding list item of the original list item is present in the device data environment, then:
@@ -9969,10 +10026,17 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \end{enumerate}
 \end{enumerate}
 
+If a single contiguous part of the original storage of a list item with an
+implicit data-mapping attribute has corresponding storage in the device data
+environment prior to a task encountering the construct associated with the
+\code{map} clause, only that part of the original storage will have
+corresponding storage in the device data environment as a result of the \code{map}
+clause. 
+
 \ccppspecificstart
 If a new list item is created then a new list item of the same type, with automatic storage
 duration, is allocated for the construct. The size and alignment of the new list
-item are determined by the type of the variable. This allocation occurs if the region
+item are determined by the static type of the variable. This allocation occurs if the region
 references the list item in any statement.
 \ccppspecificend
 
@@ -9997,7 +10061,11 @@ clauses of the same construct.
 
 \item List items of \code{map} clauses in the same construct must not share original storage.
 
-\item If any part of the original storage of a list item has corresponding storage in the device data environment, all of the original storage must have corresponding storage in the device data environment. 
+\item If any part of the original storage of a list item with a predetermined or
+explicit data-mapping attribute has corresponding storage in the device data
+environment prior to a task encountering the construct associated with the map
+clause, all of the original storage must have corresponding storage
+in the device data environment prior to the task encountering the construct.
 
 \item If a list item is an element of a structure, and a different element 
 of the structure has a corresponding list item in the device data environment 
