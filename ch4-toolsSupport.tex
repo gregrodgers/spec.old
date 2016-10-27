@@ -705,30 +705,32 @@ and miscellaneous.
 
 \begin{boxedcode}
 typedef enum omp_state_t \{
-  omp_state_work_serial            = 0x000,
-  omp_state_work_parallel          = 0x001,
-  omp_state_work_reduction         = 0x002,
+  omp_state_work_serial                      = 0x000,
+  omp_state_work_parallel                    = 0x001,
+  omp_state_work_reduction                   = 0x002,
 
-  omp_state_wait_barrier           = 0x010,
-  omp_state_wait_barrier_implicit  = 0x011,
-  omp_state_wait_barrier_explicit  = 0x012,
+  omp_state_wait_barrier                     = 0x010,
+  omp_state_wait_barrier_implicit_parallel   = 0x011,
+  omp_state_wait_barrier_implicit_workshare  = 0x012,
+  omp_state_wait_barrier_implicit            = 0x013,
+  omp_state_wait_barrier_explicit            = 0x014,
 
-  omp_state_wait_taskwait          = 0x020,
-  omp_state_wait_taskgroup         = 0x021,
+  omp_state_wait_taskwait                    = 0x020,
+  omp_state_wait_taskgroup                   = 0x021,
 
-  omp_state_wait_mutex             = 0x040,
-  omp_state_wait_lock              = 0x041,
-  omp_state_wait_critical          = 0x042,
-  omp_state_wait_atomic            = 0x043,
-  omp_state_wait_ordered           = 0x044,
+  omp_state_wait_mutex                       = 0x040,
+  omp_state_wait_lock                        = 0x041,
+  omp_state_wait_critical                    = 0x042,
+  omp_state_wait_atomic                      = 0x043,
+  omp_state_wait_ordered                     = 0x044,
 
-  omp_state_wait_target            = 0x080,
-  omp_state_wait_target_map        = 0x081,
-  omp_state_wait_target_update     = 0x082,
+  omp_state_wait_target                      = 0x080,
+  omp_state_wait_target_map                  = 0x081,
+  omp_state_wait_target_update               = 0x082,
 
-  omp_state_idle                   = 0x100, 
-  omp_state_overhead               = 0x101, 
-  omp_state_undefined              = 0x102
+  omp_state_idle                             = 0x100, 
+  omp_state_overhead                         = 0x101, 
+  omp_state_undefined                        = 0x102
 \} omp_state_t;
 \end{boxedcode}
 \ccppspecificend
@@ -761,10 +763,15 @@ Other values of the enumeration type describe a thread's state at
 different levels of specificity. 
 For instance, an OpenMP implementation may use 
 the state \code{omp\_state\_wait\_barrier}  to represent all 
-waiting at barriers; or it may differentiate between waiting at 
-implicit and explicit barriers by using the pair of states
-\code{omp\_state\_wait\_barrier\_implicit} and 
-\code{omp\_state\_wait\_barrier\_explicit}. 
+waiting at barriers. It may differentiate between waiting at implicit or explicit barriers using
+\code{omp\_state\_wait\_barrier\_implicit} and \code{omp\_state\_wait\_barrier\_explicit}. 
+To provide full detail about the type of an implicit barrier, a runtime may report either
+\code{omp\_state\_wait\_barrier\_implicit\_parallel} or 
+\code{omp\_state\_wait\_barrier\_implicit\_workshare}.
+As explained in \specref{sec:ompt_callback_sync_region_t},
+reporting the state \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
+permits a weaker contract between a runtime and a tool that 
+enables a simpler and faster implementation of parallel regions.
 
 For states that represent waiting, an OpenMP implementation has the 
 choice of transitioning a thread to such states early or late.
@@ -2793,7 +2800,7 @@ synchronization region.
 
 \epdesc
 
-The binding of \callbackarg{} \plc{parallel\_data} is the enclosing
+The binding of \callbackarg{} \plc{parallel\_data} is the current
 parallel region.
 
 The binding of \callbackarg{} \plc{task\_data} is the current task.
@@ -4533,6 +4540,16 @@ entry point returns.
 While \callbackarg{} \plc{ancestor\_level} is passed by
 value, all other arguments to the entry point must be references
 to variables of the specified types.
+
+
+\restrictions
+If a thread is in the state \code{omp\_state\_wait\_barrier\_implicit\_parallel},
+a call to \code{ompt\_get\_parallel\_info}
+may return a pointer to a copy of the specified parallel region's \plc{parallel\_data}
+rather than a pointer to the data word for the region itself. This convention enables the master thread
+for a parallel region to free storage for the region immediately after the region ends, yet
+avoid having some other thread in the region's team
+potentially reference the region's \plc{parallel\_data} object after it has been freed.
 
 \crossreferences
 \begin{itemize}
