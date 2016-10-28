@@ -1107,27 +1107,17 @@ typedef struct ompt_frame_s \{\\
 
 \descr
 
-When executing an OpenMP program, at times procedure frames from
-the OpenMP runtime appear on the call stack between procedure frames
-for user code.  To enable a tool to determine whether each procedure
-frame on the call stack represents user code or an OpenMP runtime
-routine, an implementation of the OpenMP API must maintain an
-instance of an \code{ompt\_frame\_t} for each 
-task that has procedure frames on a thread's stack.  
-A thread's stack is said to include a \emph{degenerate task} 
-if it contains a sequence of one or more procedure 
-frames from OpenMP runtime routines between a pair of frames for user
-procedures that belong to the same
-task. A degenerate task may arise when a parallel
-construct is encountered in a parallel region and nested parallelism
-is not enabled or when an orphaned task directive 
-is encountered outside a parallel region.  In such cases, the program
-may invoke the OpenMP runtime and runtime procedure frames may remain
-on the stack when the runtime 
-invokes an outlined procedure.
-An OpenMP implementation must
-maintain an \code{ompt\_frame\_t} data structure 
-for each initial, implicit, explicit, target, or degenerate task. 
+When executing an OpenMP program, at times, one or more procedure frames associated with
+the OpenMP runtime may appear on a thread's stack between frames
+associated with tasks. To help a tool determine whether a procedure
+frame on the call stack belongs to a task or not,
+for each task whose frames appear on the stack, the runtime
+maintains an \code{ompt\_frame\_t} object 
+that indicates a contiguous sequence of 
+procedure frames associated with the task.
+Each \code{ompt\_frame\_t} object is associated with the task to which the procedure frames belong.
+Each non-merged initial, implicit, explicit, or target task with one or more frames on a thread's stack
+will have an associated \code{ompt\_frame\_t} object.
 
 \begin{comment}
 The OpenMP API will maintain an
@@ -1138,72 +1128,101 @@ qualifier ``possibly degenerate'' each time we use the term {\em
 task}.
 \end{comment}
 
-An \code{ompt\_frame\_t} object for a task contains a pair of pointers:
-\plc{enter\_frame}---the canonical frame address for the user frame that invoked the
-OpenMP runtime system to create the task, and  
-\plc{exit\_frame}---the canonical frame address for the frame that
-invoked a user procedure for the task.
+An \code{ompt\_frame\_t} object associated with a task contains a pair
+of pointers: \plc{exit\_frame} and \plc{enter\_frame}. The field names were
+chosen, respectively, to reflect that they typically contain a pointer to a procedure frame on the stack when 
+\emph{exiting} the OpenMP runtime into code for a task or \emph{entering} the OpenMP runtime from a task.
+
+The \plc{exit\_frame} field of a task's \code{ompt\_frame\_t} object 
+contains the canonical frame address for the procedure frame that
+transfers control to the structured block for the task. 
+The value of \plc{exit\_frame} is \code{NULL} until just prior to
+beginning execution of the structured block for the task.
+A task's \plc{exit\_frame} may point to a procedure frame that belongs
+to the OpenMP runtime or one that belongs to another task.
+The \plc{exit\_frame} for the \code{ompt\_frame\_t} object associated 
+with an \emph{initial task} is \code{NULL}.
+
+The \plc{enter\_frame} field of a task's \code{ompt\_frame\_t} object 
+contains the canonical frame address of a task procedure frame that invoked the
+OpenMP runtime causing the current task to suspend and another task to
+execute.
+If a task with frames on the stack has not suspended, the value of
+\plc{enter\_frame} for the \code{ompt\_frame\_t} object 
+associated with the task may contain \code{NULL}. 
+The value of \plc{enter\_frame} in a task's \code{ompt\_frame\_t} is
+reset to \code{NULL} just before a suspended task resumes execution.
 
 An \code{ompt\_frame\_t}'s lifetime begins when a task is created
 and ends when the task is destroyed. Tools should not assume that
 a frame structure remains at a constant location in memory throughout
-a task's lifetime. A task's frame object is passed to some callbacks; it
-can also be retrieved asynchronously by invoking the
-\code{ompt\_get\_task\_info} function (described in
-Section~\ref{sec:ompt_get_task_info}) in a signal handler.
+a task's lifetime. A pointer to a task's \code{ompt\_frame\_t} object is passed to
+some callbacks; a pointer to a task's \code{ompt\_frame\_t} object 
+can also be retrieved by a tool at any time, including in a signal
+handler, by invoking the
+\code{ompt\_get\_task\_info} runtime entry point (described in
+Section~\ref{sec:ompt_get_task_info}).
 
+\begin{comment}
 The value of \plc{exit\_frame} is \code{NULL} in a task's frame
-object until just before an outlined procedure for the task is invoked.
-When an outlined procedure for the task is invoked,
+object until just before a procedure associated with the task is invoked.
+When a procedure associated with a task is invoked,
 \plc{exit\_frame} is set to the canonical frame
-address of the procedure that invokes the outlined procedure for the
-task. 
-The value of \plc{exit\_frame} is set to \code{NULL}
-when the outlined procedure returns to the runtime, whether the task is finished or deferred.
+address of the procedure frame that
+executes immediately before the structured block of the task.
+\end{comment}
 
+\begin{comment}
 The \plc{enter\_frame} field of a task's frame object is set each time the task re-enters the
 runtime to create a new implicit, explicit, or target 
-task. When a task invokes a runtime entry point in the
-OpenMP runtime to create a task,
+task. When a task invokes the OpenMP runtime 
+to create a task,
 \plc{enter\_frame} of the task's frame object will be set to
 the canonical frame address of the user function that invoked the runtime.
-The value of \plc{enter\_frame} is cleared 
-just prior to returning from the runtime invocation.
+The value of \plc{enter\_frame} is set to \code{NULL} when a task
+resumes execution.
+\end{comment}
 
 \begin{table}
 \begin{center}
 \begin{tabular}{|p{1in}||p{2in}|p{2in}|}
 \hline
-\plc{exit\_frame} / \plc{enter\_frame} 	state & \plc{enter\_frame} is \code{NULL}										& \plc{enter\_frame} is defined \\
+\plc{exit\_frame} / \plc{enter\_frame} 	state & \plc{enter\_frame} is
+\code{NULL}
+& \plc{enter\_frame} is non-\code{NULL} \\
 \hline
 \hline
-\plc{exit\_frame} is \code{NULL} & case 1)  initial task in user code\newline case 2) task that is created but not yet scheduled or already finished & initial task entered the runtime to schedule an implicit, explicit, or target task \\\hline
-\plc{exit\_frame} is defined 	& non-initial task in (or soon to be
-in) user code							&
-non-initial task entered the runtime and scheduled an implicit,
-explicit, or target task\\
-\hline
+\plc{exit\_frame} is \code{NULL} & 
+case 1)  initial task during execution\newline 
+case 2) task that is created but not yet scheduled or already finished & 
+initial task suspended while another task executes
+\\\hline
+\plc{exit\_frame} is non-\code{NULL} 	& non-initial task that has
+been scheduled &
+non-initial task 
+suspended while another task executes
+\\\hline
 \end{tabular}
 \vspace{1ex}
 \end{center}
 \caption{Meaning of various states of an \code{ompt\_frame\_t}
-  record.}
+  object.}
 \label{tab:frame}
 \end{table}
 
 Table~\ref{tab:frame} describes various states in which 
 an \code{ompt\_frame\_t} object may be observed and their meaning.
 In the presence of nested parallelism, a tool may
-observe a sequence of \code{ompt\_frame\_t} records for a thread.
+observe a sequence of \code{ompt\_frame\_t} objects for a thread.
 Appendix~\ref{chap:frames} illustrates 
-use of \code{ompt\_frame\_t} records with nested parallelism.
+use of \code{ompt\_frame\_t} objects with nested parallelism.
 
-\littleheader{Advice to tool implementers:} 
-A monitoring tool using asynchronous sampling can observe values
+\needspace{6\baselineskip}\notestart
+\noteheader -- A monitoring tool using asynchronous sampling can observe values
 of \plc{exit\_frame} and \plc{enter\_frame} at inconvenient times.
-Tools must be prepared to observe and handle frame exit and reenter
-values that have not yet been set or reset as the program enters
-or leaves the runtime.
+Tools must be prepared to observe and handle \code{ompt\_frame\_t}
+objects observed just prior to when their field values should be set or reset.
+\noteend
 
 \subsection{Tracing Support}
 \label{sec:ompt-records}
