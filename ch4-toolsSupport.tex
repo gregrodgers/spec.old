@@ -211,11 +211,6 @@ If a tool initializer returns a non-zero value, the tool will be
 \emph{activated} for the execution; otherwise, the tool will be
 inactive.
 
-If a tool has been activated, an OpenMP implementation dispatches
-a registered \code{ompt\_callback\_thread\_begin} in the initial
-thread. The callback occurs in the context of the thread.  The
-callback has type signature \code{ompt\_callback\_thread\_begin\_t}.
-
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_initialize\_t}, see \specref{sec:ompt_initialize_t}.
@@ -473,7 +468,7 @@ OpenMP specification.
   collect traces of records in a standard format known as OMPT format,
   described in this document. If so, the \plc{lookup} function will
   return values for the runtime entry points 
-  \code{ompt\_set\_trace\_ompt} and \code{ompt\_buffer\_get\_record\_ompt}, which support
+  \code{ompt\_set\_trace\_ompt} and \code{ompt\_get\_record\_ompt}, which support
   collecting and decoding OMPT traces. 
   These runtime entry points are not required for all devices and will only be available for target devices that support 
   collection of standard traces in OMPT format.
@@ -494,10 +489,10 @@ Entry Point String Name & Type Signature\\\hline\hline
 ``\code{ompt\_pause\_trace}'' & \code{ompt\_pause\_trace\_t}\\
 ``\code{ompt\_stop\_trace}'' & \code{ompt\_stop\_trace\_t}\\
 ``\code{ompt\_advance\_buffer\_cursor}'' & \code{ompt\_advance\_buffer\_cursor\_t}\\
-``\code{ompt\_buffer\_get\_record\_type}'' & \code{ompt\_buffer\_get\_record\_type\_t}\\
-``\code{ompt\_buffer\_get\_record\_ompt}'' & \code{ompt\_buffer\_get\_record\_ompt\_t}\\
-``\code{ompt\_buffer\_get\_record\_native}'' & \code{ompt\_buffer\_get\_record\_native\_t}\\
-``\code{ompt\_buffer\_get\_record\_native\_abstract}'' & \code{ompt\_buffer\_get\_record\_native\_abstract\_t}\\\hline
+``\code{ompt\_get\_record\_type}'' & \code{ompt\_get\_record\_type\_t}\\
+``\code{ompt\_get\_record\_ompt}'' & \code{ompt\_get\_record\_ompt\_t}\\
+``\code{ompt\_get\_record\_native}'' & \code{ompt\_get\_record\_native\_t}\\
+``\code{ompt\_get\_record\_abstract}'' & \code{ompt\_get\_record\_abstract\_t}\\\hline
 \end{tabular}
 }
 \vskip 1ex
@@ -547,14 +542,14 @@ Entry Point String Name & Type Signature\\\hline\hline
   runtime entry point.  A tool may choose to inspect the contents of some or
   all records in a trace buffer using the \code{ompt\_get\_record\_ompt},
   \code{ompt\_get\_record\_native}, or
-  \code{ompt\_get\_record\_native\_abstract} runtime entry point.  Presumably, a tool that
+  \code{ompt\_get\_record\_abstract} runtime entry point.  Presumably, a tool that
   chooses to use the \code{ompt\_get\_record\_native} runtime entry point to
   inspect records will have some knowledge about a device's native
   trace format.  A tool may always use the
-  \code{ompt\_get\_record\_native\_abstract} runtime entry point to inspect a trace
-  record; this runtime entry point will decode the contents of a native trace
+  \code{ompt\_get\_record\_abstract} runtime entry point to inspect a trace
+  record; this runtime entry point will decode the contents of a native trace record
   and summarize them in a standard format, namely, a
-  \code{ompt\_record\_native\_abstract\_t} record.
+  \code{ompt\_record\_abstract\_t} record.
   Only a record in OMPT format can be retrieved using the
   \code{ompt\_get\_record\_ompt} runtime entry point.
 \item Once tracing has been started on a device, a tool may pause or resume
@@ -587,10 +582,10 @@ is in progress.
 \item \code{ompt\_pause\_trace}, see \specref{sec:ompt_pause_trace_t}.
 \item \code{ompt\_stop\_trace}, see \specref{sec:ompt_stop_trace_t}.
 \item \code{ompt\_advance\_buffer\_cursor}, see \specref{sec:ompt_advance_buffer_cursor_t}.
-\item \code{ompt\_buffer\_get\_record\_type}, see \specref{sec:ompt_buffer_get_record_type_t}.
-\item \code{ompt\_buffer\_get\_record\_ompt}, see \specref{sec:ompt_buffer_get_record_ompt_t}.
-\item \code{ompt\_buffer\_get\_record\_native}, see \specref{sec:ompt_buffer_get_record_native_t}.
-\item \code{ompt\_buffer\_get\_record\_native\_abstract}, see \specref{sec:ompt_buffer_get_record_native_abstract_t}.
+\item \code{ompt\_get\_record\_type}, see \specref{sec:ompt_get_record_type_t}.
+\item \code{ompt\_get\_record\_ompt}, see \specref{sec:ompt_get_record_ompt_t}.
+\item \code{ompt\_get\_record\_native}, see \specref{sec:ompt_get_record_native_t}.
+\item \code{ompt\_get\_record\_abstract}, see \specref{sec:ompt_get_record_abstract_t}.
 \end{itemize}
 
 
@@ -711,13 +706,9 @@ For instance, an OpenMP implementation may use
 the state \code{omp\_state\_wait\_barrier}  to represent all 
 waiting at barriers. It may differentiate between waiting at implicit or explicit barriers using
 \code{omp\_state\_wait\_barrier\_implicit} and \code{omp\_state\_wait\_barrier\_explicit}. 
-To provide full detail about the type of an implicit barrier, a runtime may report either
+To provide full detail about the type of an implicit barrier, a runtime may report 
 \code{omp\_state\_wait\_barrier\_implicit\_parallel} or 
-\code{omp\_state\_wait\_barrier\_implicit\_workshare}.
-As explained in \specref{sec:ompt_callback_sync_region_t},
-reporting the state \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
-permits a weaker contract between a runtime and a tool that 
-enables a simpler and faster implementation of parallel regions.
+\code{omp\_state\_wait\_barrier\_implicit\_workshare} as appropriate.
 
 For states that represent waiting, an OpenMP implementation has the 
 choice of transitioning a thread to such states early or late.
@@ -786,6 +777,24 @@ when the thread is awaiting completion of a barrier.
   An OpenMP implementation may report \code{omp\_state\_wait\_barrier} 
   for implicit barriers.
   
+  \item \code{omp\_state\_wait\_barrier\_explicit\_parallel} 
+
+  The description of when a thread reports a state associated with an implicit barrier
+  is described for state \code{omp\_state\_wait\_barrier\_implicit}.  
+  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_explicit\_parallel} 
+  for an implicit barrier that occurs at the end of a parallel region. 
+  As explained in \specref{sec:ompt_callback_sync_region_t},
+  reporting the state \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
+  permits a weaker contract between a runtime and a tool that 
+  enables a simpler and faster implementation of parallel regions.
+
+  \item \code{omp\_state\_wait\_barrier\_explicit\_workshare} 
+
+  The description of when a thread reports a state associated with an implicit barrier
+  is described for state \code{omp\_state\_wait\_barrier\_implicit}.  
+  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_explicit\_parallel} 
+  for an implicit barrier that occurs at the end of a worksharing construct.
+
   \item \code{omp\_state\_wait\_barrier\_explicit} 
 
   The thread is waiting at an explicit barrier  in a parallel region. 
@@ -794,6 +803,7 @@ when the thread is awaiting completion of a barrier.
   thread begins to wait at the barrier.
   An implementation may report \code{omp\_state\_wait\_barrier} 
   for explicit barriers.
+
   
 \end{description}
   
@@ -1176,25 +1186,25 @@ typedef enum ompt_record_native_kind_e \{
 }
 
 \subsubsection{Native Record Abstract Type}
-\label{sec:ompt_record_native_abstract_t}
+\label{sec:ompt_record_abstract_t}
 
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct ompt_record_native_abstract_s \{
+typedef struct ompt_record_abstract_s \{
   ompt_record_native_class_t \plc{rclass};
   const char *\plc{type};
   ompt_device_time_t \plc{start\_time};
   ompt_device_time_t \plc{end\_time};
   ompt_hwid_t \plc{hwid};
-\} ompt_record_native_abstract_t;
+\} ompt_record_abstract_t;
 \end{boxedcode}
 \ccppspecificend
 }
 
 \descr
 
-A \code{ompt\_record\_native\_abstract\_t} record contains several
+A \code{ompt\_record\_abstract\_t} record contains several
 pieces of information that a tool can use to process a native record
 that it may not fully understand. The \plc{rclass} field
 indicates whether the record is informational
@@ -1757,7 +1767,7 @@ typedef enum ompt_cancel_flag_e \{
 \label{sec:ompt_hwid_none} 
 \code{ompt\_hwid\_none} refers to an uknown or unspecified hardware id.
 If there is no \code{hwid} associated with a
-\code{ompt\_record\_native\_abstract\_t}, the value of \code{hwid} shall be
+\code{ompt\_record\_abstract\_t}, the value of \code{hwid} shall be
 \code{ompt\_hwid\_none}.
 
 \vbox{
@@ -2207,6 +2217,7 @@ typedef struct ompt_record_master_s \{
 The binding of \callbackarg{} \plc{parallel\_data} is the current parallel region.
 
 The binding of \callbackarg{} \plc{task\_data} is the encountering task.
+
 \codeptrdesc
 
 %\effect
@@ -2527,6 +2538,7 @@ The binding of \callbackarg{} \plc{parallel\_data} is the current
 parallel region.
 
 The binding of \callbackarg{} \plc{task\_data} is the current task.
+
 \codeptrdesc
 
 \crossreferences
@@ -4893,19 +4905,19 @@ see \specref{sec:ompt_device_t}.
 see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
-\omptruntimeentrypoint{\code{ompt\_buffer\_get\_record\_type\_t}}
-\label{sec:ompt_buffer_get_record_type_t}
+\omptruntimeentrypoint{\code{ompt\_get\_record\_type\_t}}
+\label{sec:ompt_get_record_type_t}
 
 \summary
 A runtime entry point for a device known as
-\code{ompt\_buffer\_get\_record\_type} with type signature
-\code{ompt\_buffer\_get\_record\_type\_t} inspects the type
+\code{ompt\_get\_record\_type} with type signature
+\code{ompt\_get\_record\_type\_t} inspects the type
 of a trace record for a device.
 
 \format
 \vbox{\ccppspecificstart
 \begin{boxedcode}
-typedef ompt_record_type_t (*ompt_buffer_get_record_type_t)(
+typedef ompt_record_type_t (*ompt_get_record_type_t)(
   ompt_buffer_t *\plc{buffer}, 
   ompt_buffer_cursor_t \plc{current}
 );
@@ -4922,8 +4934,8 @@ structure are mostly the arguments that would be passed to the
 OMPT callback for the event. 
 
 A runtime entry point for a device known as
-\code{ompt\_buffer\_get\_record\_type} with type signature
-\code{ompt\_buffer\_get\_record\_type\_t} inspects the type
+\code{ompt\_get\_record\_type} with type signature
+\code{ompt\_get\_record\_type\_t} inspects the type
 of a trace record and indicates whether the record at the current
 position in the provided trace buffer is an OMPT record, 
 a native record, or an invalid record. An invalid record type
@@ -4945,18 +4957,18 @@ see \specref{sec:ompt_buffer_t}.
 see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
-\omptruntimeentrypoint{\code{ompt\_buffer\_get\_record\_ompt\_t}}
-\label{sec:ompt_buffer_get_record_ompt_t}
+\omptruntimeentrypoint{\code{ompt\_get\_record\_ompt\_t}}
+\label{sec:ompt_get_record_ompt_t}
  
 \summary
-A runtime entry point for a device known as \code{ompt\_buffer\_get\_record\_ompt} 
-with type signature \code{ompt\_buffer\_get\_record\_ompt\_t} 
+A runtime entry point for a device known as \code{ompt\_get\_record\_ompt} 
+with type signature \code{ompt\_get\_record\_ompt\_t} 
 obtains a pointer to an OMPT trace record from a trace buffer associated with a device.
 
 \format
 \vbox{\ccppspecificstart
 \begin{boxedcode}
-typedef ompt_record_ompt_t *(*ompt_buffer_get_record_ompt_t)(
+typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t)(
   ompt_buffer_t *\plc{buffer}, 
   ompt_buffer_cursor_t \plc{current}
 );
@@ -4991,20 +5003,20 @@ see \specref{sec:ompt_device_t}.
 see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
-\omptruntimeentrypoint{\code{ompt\_buffer\_get\_record\_native\_t}}
-\label{sec:ompt_buffer_get_record_native_t}
+\omptruntimeentrypoint{\code{ompt\_get\_record\_native\_t}}
+\label{sec:ompt_get_record_native_t}
 
 \summary
 
 A runtime entry point for a device known as
-\code{ompt\_buffer\_get\_record\_native} with type signature
-\code{ompt\_buffer\_get\_record\_native\_t} 
+\code{ompt\_get\_record\_native} with type signature
+\code{ompt\_get\_record\_native\_t} 
 obtains a pointer to a native trace record from a trace buffer associated with a device.
 
 \format
 \vbox{\ccppspecificstart
 \begin{boxedcode}
-typedef void *(ompt_buffer_get_record_native_t)(
+typedef void *(ompt_get_record_native_t)(
   ompt_buffer_t *\plc{buffer}, 
   ompt_buffer_cursor_t \plc{current},
   ompt_id_t *\plc{host_op_id}
@@ -5020,7 +5032,7 @@ record was assembled. The information available for a native event
 depends upon its type. If the function returns a non-NULL result,
 it will also set \code{*host\_op\_id} to identify host-side identifier
 for the operation associated with the record.  A subsequent call
-to \code{ompt\_buffer\_get\_record\_native} may overwrite the
+to \code{ompt\_get\_record\_native} may overwrite the
 contents of the fields in a record returned by a prior invocation.
 
 \argdesc
@@ -5045,21 +5057,21 @@ see \specref{sec:ompt_buffer_t}.
 see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
-\omptruntimeentrypoint{\code{ompt\_buffer\_get\_record\_native\_abstract\_t}}
-\label{sec:ompt_buffer_get_record_native_abstract_t}
+\omptruntimeentrypoint{\code{ompt\_get\_record\_abstract\_t}}
+\label{sec:ompt_get_record_abstract_t}
 
 \summary
 A runtime entry point for a device known as
-\code{ompt\_buffer\_get\_record\_native\_abstract} 
+\code{ompt\_get\_record\_abstract} 
 with type signature
-\code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
+\code{ompt\_get\_record\_abstract\_t} 
 summarizes the context of a native (device-specific) trace record.  
 
 \format
 \vbox{\ccppspecificstart
 \begin{boxedcode}
-typedef ompt_record_native_abstract_t *
-(*ompt_buffer_get_record_native_abstract_t)(
+typedef ompt_record_abstract_t *
+(*ompt_get_record_abstract_t)(
   void *\plc{native_record} 
 );
 \end{boxedcode}
@@ -5068,9 +5080,9 @@ typedef ompt_record_native_abstract_t *
 \descr
 An OpenMP implementation may execute on a device that logs 
 trace records in a native (device-specific) format unknown to a tool.
-A tool can use the \code{ompt\_buffer\_get\_record\_native\_abstract} 
+A tool can use the \code{ompt\_get\_record\_abstract} 
 runtime entry point for the device with type signature
-\code{ompt\_buffer\_get\_record\_native\_abstract\_t} 
+\code{ompt\_get\_record\_abstract\_t} 
 to decode a native trace record that it
 does not understand into a standard form that it can interpret. 
 
@@ -5081,8 +5093,8 @@ record.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt\_record\_native\_abstract\_t},
-see \specref{sec:ompt_record_native_abstract_t}.
+\item \code{ompt\_record\_abstract\_t},
+see \specref{sec:ompt_record_abstract_t}.
 \end{itemize}
 
 \subsection{Lookup Entry Point}
