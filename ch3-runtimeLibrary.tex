@@ -35,7 +35,7 @@
 \chapter{Runtime Library Routines}
 \index{runtime library routines}
 \label{chap:Runtime Library Routines}
-This chapter describes the OpenMP API runtime library routines and is divided into the 
+This chapter describes the OpenMP API runtime library routines and queryable runtime states, and is divided into the 
 following sections:
 
 \begin{itemize}
@@ -54,6 +54,13 @@ execution environment
 
 \item Device memory routines that can be used to allocate memory and 
 to manage pointers on target devices (\specref{sec:Device Memory Routines}).
+
+%\item Runtime states (\specref{sec:runtimeStates}).
+
+% \item OMPT Query Functions (\specref{sec:omptFunctions}).
+
+\item Execution routines to control the application monitoring
+(\specref{sec:control_tool})
 \end{itemize}
 
 Throughout this chapter, \plc{true} and \plc{false} are used as generic terms to simplify the 
@@ -128,6 +135,11 @@ provided in a header file named \code{omp.h}. This file defines the following:
 \item The type \code{omp\_sched\_t}.
 
 \item The type \code{omp\_proc\_bind\_t}.
+
+\item The type \code{omp\_control\_tool\_t}.
+
+\item The type \code{omp\_control\_tool\_result\_t}.
+
 \end{itemize}
 
 % was: C.1 on page 288 
@@ -338,7 +350,7 @@ number of threads that could be used to form a new team if a parallel region wit
 \code{num\_threads} clause were encountered after execution returns from this routine.
 
 \notestart
-\noteheader – The return value of the \code{omp\_get\_max\_threads} routine can be used to 
+\noteheader -- The return value of the \code{omp\_get\_max\_threads} routine can be used to 
 dynamically allocate sufficient storage for all threads in the team formed at the 
 subsequent active \code{parallel} region.
 \noteend
@@ -406,7 +418,7 @@ thread number is an integer between 0 and one less than the value returned by
 team is 0. The routine returns 0 if it is called from the sequential part of a program.
 
 \notestart
-\noteheader – The thread number may change during the execution of an untied task. The 
+\noteheader -- The thread number may change during the execution of an untied task. The 
 value returned by \code{omp\_get\_thread\_num} is not generally useful during the execution 
 of such a task region.
 \noteend
@@ -662,7 +674,6 @@ This routine returns \plc{true} if cancellation is enabled. It returns \plc{fals
 \item \code{OMP\_CANCELLATION} environment variable, see 
 \specref{sec:OMP_CANCELLATION}
 \end{itemize}
-
 
 
 
@@ -1171,7 +1182,7 @@ thread. If the requested nest level is outside the range of 0 and the nest level
 current thread, as returned by the \code{omp\_get\_level} routine, the routine returns -1.
 
 \notestart
-\noteheader – When the \code{omp\_get\_ancestor\_thread\_num} routine is called with a value 
+\noteheader -- When the \code{omp\_get\_ancestor\_thread\_num} routine is called with a value 
 of \code{level}=0, the routine always returns 0. If \code{level}=\code{omp\_get\_level()}, the routine 
 has the same effect as the \code{omp\_get\_thread\_num} routine. 
 \noteend
@@ -1231,7 +1242,7 @@ routine, the routine returns -1. Inactive parallel regions are regarded like act
 regions executed with one thread. 
 
 \notestart
-\noteheader – When the \code{omp\_get\_team\_size} routine is called with a value of \code{level}=0, 
+\noteheader -- When the \code{omp\_get\_team\_size} routine is called with a value of \code{level}=0, 
 the routine always returns 1. If \code{level}=\code{omp\_get\_level()}, the routine has the same 
 effect as the\linebreak \code{omp\_get\_num\_threads} routine. 
 \noteend
@@ -2226,6 +2237,29 @@ is non-conforming.
 The effect of these routines is to initialize the lock to the unlocked state; that is, no task 
 owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
+\events
+
+The \plc{lock-init} or \plc{nest-lock-init} event occurs in the thread 
+executing a \code{omp\_init\_lock} or \code{omp\_init\_nest\_lock} region
+after initialization of the lock, but before before finishing the region.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_lock\_init}
+callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_lock\_init\_t}.
+The callbacks occur in the task encountering the routine.
+The callback receives \code{omp\_lock\_hint\_none} as
+\plc{hint} argument and
+\code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_lock\_init\_t}, see
+\specref{sec:ompt_callback_lock_init_t}.
+\end{itemize}
+
 
 
 
@@ -2316,7 +2350,7 @@ restrictions results in unspecified behavior:
 
 
 \notestart
-\noteheader – Future OpenMP specifications may add additional hints to the 
+\noteheader -- Future OpenMP specifications may add additional hints to the 
 \code{omp\_lock\_hint\_t} type and the \code{omp\_lock\_hint\_kind} kind.  
 Implementers are advised to add implementation-defined hints starting from 
 the most significant bit of the \code{omp\_lock\_hint\_t} type and
@@ -2330,6 +2364,28 @@ with other OpenMP implementations.
 The effect of these routines is to initialize the lock to the unlocked state and, optionally, to choose a specific lock implementation based on the hint. 
 After initialization no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
 
+\events
+
+The \plc{lock-init} or \plc{nest-lock-init} event occurs in the thread 
+executing a \code{omp\_init\_lock\_with\_hint} or \code{omp\_init\_nest\_lock\_with\_hint} region
+after initialization of the lock, but before before finishing the region.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_lock\_init}
+callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_lock\_init\_t}.
+The callbacks occur in the task encountering the routine. 
+The callback receives the function's \plc{hint} argument as
+\plc{hint} argument and
+\code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_lock\_init\_t}, see
+\specref{sec:ompt_callback_lock_init_t}.
+\end{itemize}
 
 
 
@@ -2365,6 +2421,27 @@ non-conforming.
 \effect
 The effect of these routines is to change the state of the lock to uninitialized.
 
+\events
+
+The \plc{lock-destroy} or \plc{nest-lock-destroy} event occurs in the thread 
+executing a \code{omp\_init\_destroy} or \code{omp\_init\_nest\_destroy} region
+before finishing the region.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_lock\_destroy}
+callback for each occurrence of a \plc{lock-destroy} or \plc{nest-lock-destroy} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_lock\_destroy\_t}.
+The callbacks occur in the task encountering the routine.
+The callbacks receive \code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument as appropriate.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_lock\_destroy\_t}, see 
+\specref{sec:ompt_callback_lock_destroy_t}.
+\end{itemize}
 
 
 
@@ -2417,7 +2494,7 @@ executing the routine until the specified lock is available.
 
 % A note because it's only explanatory. The as-ifness already allows
 % this via the ``equivalent to''
-\notestart \noteheader – The semantics of these routines is specified
+\notestart \noteheader -- The semantics of these routines is specified
 \emph{as if} they serialize execution of the region guarded by the
 lock. However, implementations may implement them in other ways
 provided that the isolation properties are respected so that the
@@ -2432,6 +2509,53 @@ A nestable lock is available if it is unlocked or if it is already owned by
 the task executing the routine. The task executing the routine is granted, 
 or retains, ownership of the lock, and the nesting count for the lock is 
 incremented.
+
+\events
+
+The \plc{lock-acquire} or \plc{nest-lock-acquire} event occurs in the thread 
+executing a \code{omp\_set\_lock} or \code{omp\_set\_nest\_lock} region
+before the associated lock is requested.
+
+The \plc{lock-acquired} or \plc{nest-lock-acquired} event occurs in the thread 
+executing a \code{omp\_set\_lock} or \code{omp\_set\_nest\_lock} region
+after acquiring the associated lock, if the thread did not already own the lock, 
+but before finishing the region.
+
+The \plc{nest-lock-owned} event occurs in the thread 
+executing a \code{omp\_set\_nest\_lock} region
+when the thread already owned the lock, 
+before finishing the region.
+
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquire}
+callback for each occurrence of a \plc{lock-acquire} or \plc{nest-lock-acquire} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_acquire\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquired}
+callback for each occurrence of a \plc{lock-acquired} or \plc{nest-lock-acquired} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_nest\_lock}
+callback for each occurrence of a \plc{nest-lock-owned} event 
+in that thread. This callback has the type signature \code{ompt\_callback\_nest\_lock\_t}.
+The callback receives \code{ompt\_scope\_begin} as its \plc{endpoint} argument.
+
+The callbacks occur in the task encountering
+the lock function.  The callbacks receive \code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument, as appropriate.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see 
+\specref{sec:ompt_callback_mutex_acquire_t}.
+\item \code{ompt\_callback\_mutex\_t}, see 
+\specref{sec:ompt_callback_mutex_t}.
+\item \code{ompt\_callback\_nest\_lock\_t}, see
+\specref{sec:ompt_callback_nest_lock_t}.
+\end{itemize}
 
 
 
@@ -2480,6 +2604,39 @@ For either routine, if the lock becomes unlocked, and if one or more task
 regions were effectively suspended because the lock was unavailable, the 
 effect is that one task is chosen and given ownership of the lock. 
 
+\events
+
+The \plc{lock-release} or \plc{nest-lock-release} event occurs in the thread 
+executing a \code{omp\_unset\_lock} or \code{omp\_unset\_nest\_lock} region
+after releasing the associated lock, but before before finishing the region.
+
+The \plc{nest-lock-held} event occurs in the thread 
+executing a \code{omp\_unset\_nest\_lock} region
+when the thread still owns the lock, 
+before before finishing the region.
+
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_release}
+callback for each occurrence of a \plc{lock-release} or \plc{nest-lock-release} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+The callback occurs in the task encountering
+the routine. The callback receives \code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_nest\_lock}
+callback for each occurrence of a \plc{nest-lock-held} event 
+in that thread. This callback has the type signature \code{ompt\_callback\_nest\_lock\_t}.
+The callback receives \code{ompt\_scope\_end} as its \plc{endpoint} argument.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+\item \code{ompt\_callback\_nest\_lock\_t}, see
+\specref{sec:ompt_callback_nest_lock_t}.
+\end{itemize}
 
 
 
@@ -2584,7 +2741,7 @@ returned is a ``per-thread time'', so it is not required to be globally consiste
 threads participating in an application.
 
 \notestart
-\noteheader – It is anticipated that the routine will be used to measure elapsed times as shown 
+\noteheader -- It is anticipated that the routine will be used to measure elapsed times as shown 
 in the following example:
 
 \ccppspecificstart
@@ -2698,6 +2855,17 @@ Pointer arithmetic is not supported on the device address returned by
 Freeing the storage returned by \code{omp\_target\_alloc} with any routine
 other than \code{omp\_target\_free} results in unspecified behavior.
 
+\events
+The \plc{target-data-allocation} event occurs when a thread allocates data on a target device.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-data-allocation} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
+
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see 
@@ -2711,6 +2879,10 @@ other than \code{omp\_target\_free} results in unspecified behavior.
 
 \item \code{omp\_target\_free} routine, see 
 \specref{subsec:omp_target_free}
+
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
+
 \end{itemize}
 
 
@@ -2749,6 +2921,17 @@ Synchronization must be inserted to ensure that all accesses to
 When called from within a \code{target} region the effect of this routine
 is unspecified.
 
+\events
+The \plc{target-data-free} event occurs when a thread frees data on a target device.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-data-free} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
+
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see 
@@ -2762,6 +2945,10 @@ is unspecified.
 
 \item \code{omp\_target\_alloc} routine, see 
 \specref{subsec:omp_target_alloc}
+
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
+
 \end{itemize}
 
 
@@ -2852,6 +3039,17 @@ scheduling point.
 When called from within a \code{target} region 
 the effect of this routine is unspecified.
 
+\events
+The \plc{target-data-transfer} event occurs when a thread transfer data on a target device.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-data-transfer} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
+
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see \specref{subsec:target Construct}
@@ -2860,6 +3058,10 @@ the effect of this routine is unspecified.
 \specref{subsec:omp_get_initial_device}
 
 \item \code{omp\_target\_alloc} routine, see \specref{subsec:omp_target_alloc}
+
+
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
 \end{itemize}
 
 
@@ -2954,6 +3156,17 @@ the effect of this routine is unspecified.
 %%\end{boxedcode}
 %%\end{samepage}
 
+\events
+The \plc{target-data-transfer} event occurs when a thread transfer data on a target device.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-data-transfer} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
+
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see \specref{subsec:target Construct}
@@ -2962,6 +3175,11 @@ the effect of this routine is unspecified.
 \specref{subsec:omp_get_initial_device}
 
 \item \code{omp\_target\_alloc} routine, see \specref{subsec:omp_target_alloc}
+
+
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
+
 \end{itemize}
 
 \subsection{\code{omp\_target\_associate\_ptr}}
@@ -3014,8 +3232,18 @@ device number pair. Attempting to associate a second buffer will return
 non-zero. Associating the same pair of pointers on the same device with the
 same offset has no effect and returns zero.  Associating pointers that share
 underlying storage will result in unspecified behavior. The
-\code{omp\_target\_is\_present} function can be used to test whether a given
+\code{omp\_target\_is\_present} region can be used to test whether a given
 host pointer has a corresponding variable in the device data environment.
+
+\events
+The \plc{target-data-associate} event occurs when a thread associate data on a target device.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-data-associate} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
 
 \crossreferences
 \begin{itemize}
@@ -3027,6 +3255,10 @@ host pointer has a corresponding variable in the device data environment.
 
 \item \code{omp\_target\_disassociate\_ptr} routine, see 
 \specref{subsec:omp_target_associate_ptr}
+
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
+
 \end{itemize}
 
 \pagebreak
@@ -3067,15 +3299,204 @@ the effect of this routine is unspecified.
 After a call to \code{omp\_target\_disassociate\_ptr}, the contents of the device
 buffer are invalidated.
 
+\events
+The \plc{target-data-diassociate} event occurs when a thread diassociate data on a target device.
+
+\tools
+
+A thread invokes a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-data-diassociate} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
+
 \crossreferences
 \begin{itemize}
 \item \code{target} construct, see 
 \specref{subsec:target Construct}
 \item \code{omp\_target\_associate\_ptr} routine, see 
 \specref{subsec:omp_target_associate_ptr}
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
+
 \end{itemize}
 
 \ccppspecificend
+
+\section{Tool Control Routines}
+\index{tool control}
+\label{sec:control_tool}
+
+\summary
+The \code{omp\_control\_tool} routine enables a program to 
+pass commands to an active tool.
+
+\format
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+int omp\_control\_tool(int \plc{command}, int \plc{modifier}, void *\plc{arg});
+\end{boxedcode}
+\ccppspecificend
+}
+
+\fortranspecificstart
+\begin{boxedcode}
+integer function omp\_control\_tool(\plc{command}, \plc{modifier})
+integer (kind=omp\_control\_tool\_kind) \plc{command}
+integer (kind=omp\_control\_tool\_kind) \plc{modifier}
+\end{boxedcode}
+\fortranspecificend
+
+\descr
+
+An OpenMP program may use \code{omp\_control\_tool} to pass commands to 
+a tool. 
+Using \code{omp\_control\_tool}, an application can request that
+a tool start or restart data collection when a code
+region of interest is encountered, pause data collection when 
+leaving the region of interest, 
+flush any data that it has collected so far, or
+end data collection. 
+Additionally, \code{omp\_control\_tool} can be used to pass 
+tool-specific commands to a particular tool.
+
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum omp_control_tool_result_t \{
+  omp_control_tool_notool = -2,
+  omp_control_tool_nocallback = -1,
+  omp_control_tool_success = 0,
+  omp_control_tool_ignored = 1
+\} omp_control_tool_result_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\fortranspecificstart
+\begin{boxedcode}
+integer (kind=omp\_control\_tool\_result\_kind), &
+        parameter :: omp\_control\_tool\_notool = -2 
+integer (kind=omp\_control\_tool\_result\_kind), &
+        parameter :: omp\_control\_tool\_nocallback = -1
+integer (kind=omp\_control\_tool\_result\_kind), &
+        parameter :: omp\_control\_tool\_success = 0
+integer (kind=omp\_control\_tool\_result\_kind), &
+        parameter :: omp\_control\_tool\_ignored = 1
+\end{boxedcode}
+\fortranspecificend
+}
+
+If no tool is active, the OpenMP implementation will return
+\code{omp\_control\_tool\_notool}. If a tool is active, but it has not
+registered a callback for the \plc{tool-control} event, the OpenMP
+implementation will return \code{omp\_control\_tool\_nocallback}.  
+An OpenMP implementation may return other implementation-defined negative
+values $< -64$; an application may assume that any negative return value
+indicates that a tool has not received the command.  A return value of
+\code{omp\_control\_tool\_success} indicates that the tool has performed the
+specified command.  A return value of \code{omp\_control\_tool\_ignored}
+indicates that the tool has ignored the specified command.
+A tool may return other positive values $> 64$ that are tool-defined. 
+
+\constraints
+
+The following enumeration type defines four standard commands.
+Table~\ref{table:std-tool-cmds} describes the 
+actions that these commands request from a tool.
+
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum omp_control_tool_t \{
+  omp_control_tool_start = 1,
+  omp_control_tool_pause = 2,
+  omp_control_tool_flush = 3,
+  omp_control_tool_end = 4
+\} omp_control_tool_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\vbox{
+\fortranspecificstart
+\begin{boxedcode}
+integer (kind=omp\_control\_tool\_kind), &
+          parameter :: omp\_control\_tool\_start = 1
+integer (kind=omp\_control\_tool\_kind), &
+          parameter :: omp\_control\_tool\_pause = 2
+integer (kind=omp\_control\_tool\_kind), &
+          parameter :: omp\_control\_tool\_flush = 3
+integer (kind=omp\_control\_tool\_kind), &
+          parameter :: omp\_control\_tool\_end = 4
+\end{boxedcode}
+\fortranspecificend
+}
+
+Tool-specific values for \plc{command} must be $\geq$ 64.
+Tools must ignore \plc{command} values that they are not
+explicitly designed to handle.
+Other values accepted by a tool for \plc{command}, 
+and any values for \plc{modifier} and \plc{arg} are tool-defined.
+
+
+\begin{table}
+\begin{center}
+\begin{tabular}{|l|p{3.5in}|}\hline
+Command & Action\\\hline\hline
+\code{omp\_control\_tool\_start} & Start or 
+restart monitoring if it is off. If monitoring is already on, this 
+command is idempotent. If monitoring has already been turned off 
+permanently, this command will have no effect.\\\hline
+\code{omp\_control\_tool\_pause} & Temporarily
+turn monitoring off. If monitoring is already off, it is idempotent.\\\hline
+\code{omp\_control\_tool\_flush} & Flush any data buffered by a tool.
+This command may be applied whether monitoring is on or off.\\\hline
+\code{omp\_control\_tool\_end} & Turn monitoring off permanently; 
+the tool finalizes itself and flushes all output.\\\hline
+\end{tabular}
+\vskip 1ex
+\caption{Standard tool control commands.}
+\label{table:std-tool-cmds}
+\end{center}
+\end{table}
+
+\events
+
+The \plc{tool-control} event occurs in the thread encountering a call
+to \code{omp\_control\_tool} at a point inside its associated OpenMP region.
+
+\tools
+
+An OpenMP implementation dispatches a registered
+\code{ompt\_callback\_control\_tool} callback for each occurrence of a
+\plc{tool-control} event.  The callback executes in the context of the
+call that occurs in the user program.  This callback has type
+signature \code{ompt\_callback\_control\_tool\_t}.The callback may return
+any non-negative value, which will be returned to the application by
+the OpenMP implementation as the return value of the
+\code{omp\_control\_tool} call that triggered the callback.
+
+
+Arguments passed to the callback are those passed by the user to
+\code{omp\_control\_tool}. If the call is made in Fortran, the tool
+will be passed a \code{NULL} as the third argument to the callback. If
+any of the four standard commands is presented to a tool, the tool
+will ignore the \plc{modifier} and \plc{arg} argument values.
+
+
+
+\crossreferences
+\begin{itemize}
+\item Tool Interface, see
+\specchapterref{chap:ToolsSupport}
+\item \code{ompt\_callback\_control\_tool\_t}, see 
+\specref{sec:ompt_callback_control_tool_t}
+\end{itemize}
+
 
 % This is the end of chapter 3 - Runtime Library
 

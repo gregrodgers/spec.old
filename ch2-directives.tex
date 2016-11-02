@@ -31,7 +31,6 @@
 %             This is a \emph{definition}, not a placeholder.
 %             This is a \plc{var-name}.
 %
-
 \chapter{Directives}
 \index{directives}
 \label{chap:Directives}
@@ -51,9 +50,9 @@ into the following sections:
 \item How to specify and to use array sections for all base languages 
 (\specref{sec:Array Sections}) 
 
-\item Details of each OpenMP directive 
+\item Details of each OpenMP directive, including associated events and tool callbacks 
 (\specref{sec:parallel Construct} to 
-\specref{sec:Nesting of Regions})
+\specref{sec:Nesting of Regions}) 
 \end{itemize}
 
 \ccppspecificstart
@@ -215,7 +214,7 @@ line and is ignored. If the first non-blank character after the directive sentin
 initial or continuation directive line is an exclamation point, the line is ignored.
 
 \notestart
-\noteheader – in the following example, the three formats for specifying the directive are 
+\noteheader -- in the following example, the three formats for specifying the directive are 
 equivalent (the first line represents the position of the first 9 columns):
 
 \begin{alltt}
@@ -357,7 +356,7 @@ teams distribute simd
 \end{indentedcodelist}
 
 \notestart
-\noteheader – in the following example the three formats for specifying the directive are 
+\noteheader -- in the following example the three formats for specifying the directive are 
 equivalent (the first line represents the position of the first 9 columns):
 
 \begin{alltt}\code{!23456789
@@ -465,7 +464,7 @@ If these criteria are met, the sentinel is replaced by two spaces. If these crit
 met, the line is left unchanged.
 
 \notestart
-\noteheader – in the following example, the two forms for specifying conditional compilation 
+\noteheader -- in the following example, the two forms for specifying conditional compilation 
 in fixed source form are equivalent (the first line represents the position of the first 9 
 columns):
 
@@ -521,7 +520,7 @@ If these criteria are met, the sentinel is replaced by two spaces. If these crit
 met, the line is left unchanged. 
 
 \notestart
-\noteheader – in the following example, the two forms for specifying conditional compilation 
+\noteheader -- in the following example, the two forms for specifying conditional compilation 
 in free source form are equivalent (the first line represents the position of the first 9 
 columns):
 
@@ -640,6 +639,18 @@ per data environment.
 
 \end{itemize}
 
+The following ICVs store values that affect the operation of the tool interface.
+
+\begin{itemize}
+
+\item \plc{tool-var} - determines whether an OpenMP implementation will 
+try to register a tool.  There is one copy of this ICV for the whole program.
+
+\item \plc{tool-libraries-var} - specifies a list of absolute paths to tool libraries for OpenMP devices.
+There is one copy of this ICV for the whole program.
+
+\end{itemize}
+
 
 
 
@@ -686,7 +697,9 @@ environment variables, and initial values.
 \plc{place-partition-var} & \code{OMP\_PLACES} & Implementation defined\\
 \plc{cancel-var} & \code{OMP\_CANCELLATION} & \plc{false}\\
 \plc{default-device-var} & \code{OMP\_DEFAULT\_DEVICE} & Implementation defined\\
-\plc{max-task-priority-var} & \code{OMP\_MAX\_TASK\_PRIORITY} & zero\\
+\plc{max-task-priority-var} & \code{OMP\_MAX\_TASK\_PRIORITY} & \plc{zero}\\
+\plc{tool-var} & \code{OMP\_TOOL} & \plc{enabled}\\
+\plc{tool-libraries-var} & \code{OMP\_TOOL\_LIBRARIES} & \plc{empty string}\\
 \end{supertabular}
 \linenumbers
 
@@ -739,6 +752,10 @@ device's ICVs is implementation defined.
 \item \code{OMP\_DEFAULT\_DEVICE} environment variable, see \specref{sec:OMP_DEFAULT_DEVICE}.
 
 \item \code{OMP\_MAX\_TASK\_PRIORITY} environment variable, see \specref{sec:OMP_MAX_TASK_PRIORITY}.
+
+\item \code{OMP\_TOOL} environment variable, see \specref{sec:OMP_TOOL}.
+
+\item \code{OMP\_TOOL\_LIBRARIES} environment variable, see \specref{sec:OMP_TOOL_LIBRARIES}.
 \end{itemize}
 
 
@@ -806,6 +823,8 @@ through OpenMP API routines.
 \plc{default-device-var} & \code{omp\_set\_default\_device()} & \code{omp\_get\_default\_device()}\\
 
 \plc{max-task-priority-var} & (none) & \code{omp\_get\_max\_task\_priority()}\\
+\plc{tool-var} & (none) & (none)\\
+\plc{tool-libraries-var} & (none) & (none)\\
 
 \end{supertabular}
 \linenumbers} % end of \small block
@@ -921,6 +940,8 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \plc{cancel-var} & global\\
 \plc{default-device-var} & data environment\\
 \plc{max-task-priority-var} & global\\
+\plc{tool-var} & global\\
+\plc{tool-libraries-var} & global\\
 \end{supertabular}
 \renewcommand{\arraystretch}{1.5} % restore the previous value
 
@@ -1017,6 +1038,8 @@ among construct clauses and ICVs.
 \plc{cancel-var} & (none)\\
 \plc{default-device-var} & (none)\\
 \plc{max-task-priority-var} & (none)\\
+\plc{tool-var} & (none)\\
+\plc{tool-libraries-var} & (none)\\
 \end{supertabular}
 \linenumbers
 
@@ -1099,7 +1122,7 @@ When the \plc{length} is absent, it defaults to the size of the array dimension 
 When the \plc{lower-bound} is absent it defaults to 0.
 
 \notestart
-\noteheader – The following are examples of array sections:
+\noteheader -- The following are examples of array sections:
 
 \begin{indentedcodelist}
 a[0:6]
@@ -1281,6 +1304,89 @@ work done by a team prior to any barrier that the team has passed in the program
 guaranteed to be complete. The amount of work done by each thread after the last 
 barrier that it passed and before it terminates is unspecified.
 
+\events
+
+The \plc{parallel-begin} event occurs in a thread encountering a
+\code{parallel} construct before any implicit task is created by the
+region.
+
+Upon creation of each implicit task, an \plc{implicit-task-begin} event
+occurs in the thread executing the implicit task after the implicit
+task is fully initialized but before the thread begins to execute the
+structured block of the \code{parallel} construct.
+
+If the \code{parallel} region creates a thread, a \plc{thread-begin}
+event occurs as the first event in the context of the new thread
+prior to the
+\plc{implicit-task-begin}. 
+
+If the \code{parallel} region activates an idle thread to create the implicit
+task, an \plc{idle-end}
+event occurs in the newly activated thread prior to the
+\plc{implicit-task-begin}. 
+
+Events associated with implicit barriers occur at the end of a
+\code{parallel} region. Section~\ref{subsec:implict-barrier} describes events
+associated with implicit barriers.
+
+When a thread finishes an implicit task, an \plc{implicit-task-end}
+event occurs in the thread after events associated with implicit
+barrier synchronization in the implicit task.
+
+The \plc{parallel-end} event occurs in the thread encountering the
+\code{parallel} construct after the thread
+executes its \plc{implicit-task-end} event 
+but before resuming execution of the parent task.  
+
+If a thread is destroyed at the end of a \code{parallel} region, a
+\plc{thread-end} event occurs in the thread as the last
+event prior to the thread's destruction.
+
+If a non-master thread is not destroyed at the end of a \code{parallel}
+region, an \plc{idle-begin} event occurs after the thread's
+\plc{implicit-task-end} event for the \code{parallel} region.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_parallel\_begin}
+callback for each occurrence of a \plc{parallel-begin} event in that
+thread.  The callback occurs in the task encountering
+the \code{parallel} construct.  This callback has the type signature
+\code{ompt\_callback\_parallel\_begin\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_implicit\_task}
+callback for each occurrence of a \plc{implicit-begin} and
+\plc{implicit-end} event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_implicit\_task\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_parallel\_end}
+callback for each occurrence of a \plc{parallel-end} event in that
+thread.  The callback occurs in the task encountering
+the \code{parallel} construct.  This callback has the type signature
+\code{ompt\_callback\_parallel\_end\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_idle}
+callback for each occurrence of a \plc{idle-begin} and
+\plc{idle-end} event in that thread. The callback occurs in the
+context of the idling thread.  The callback has type signature
+\code{ompt\_callback\_idle\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_thread\_begin}
+callback for the \plc{thread-begin} event in that thread. 
+The callback occurs in the
+context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread\_begin\_t}. 
+
+A thread dispatches a registered \code{ompt\_callback\_thread\_end}
+callback for the \plc{thread-end} event in that thread. 
+The callback occurs in the context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread\_end\_t}. 
+
 \restrictions
 Restrictions to the \code{parallel} construct are as follows:
 
@@ -1321,6 +1427,28 @@ has unspecified behavior.
 
 \item \code{omp\_get\_thread\_num} routine, see 
 \specref{subsec:omp_get_thread_num}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_callback\_thread\_begin\_t}, see
+  \specref{sec:ompt_callback_thread_begin_t}.
+
+\item \code{ompt\_callback\_thread\_end\_t}, see
+  \specref{sec:ompt_callback_thread_end_t}.
+
+\item \code{ompt\_callback\_idle\_t}, see 
+\specref{sec:ompt_callback_idle_t}.
+
+\item \code{ompt\_callback\_parallel\_begin\_t}, see
+  \specref{sec:ompt_callback_parallel_begin_t}.
+
+\item \code{ompt\_callback\_parallel\_end\_t}, 
+  see \specref{sec:ompt_callback_parallel_end_t}.
+
+\item \code{ompt\_callback\_implicit\_task\_t}, see
+  \specref{sec:ompt_callback_implicit_task_t}.
+
 \end{itemize}
 
 
@@ -1411,7 +1539,7 @@ expression;
 \bigskip
 
 \notestart
-\noteheader – Since the initial value of the \plc{dyn-var} ICV is implementation defined, programs 
+\noteheader -- Since the initial value of the \plc{dyn-var} ICV is implementation defined, programs 
 that depend on a specific number of threads for correct execution should explicitly 
 disable dynamic adjustment of the number of threads.
 \noteend
@@ -1474,7 +1602,7 @@ contains $\blfloor P/T \brfloor$ or $\blceil P/T \brceil$ consecutive places. A 
 The determination of whether the affinity request can be fulfilled is implementation defined. If the affinity request cannot be fulfilled, then the affinity of threads in the team is implementation defined.
 
 \notestart
-\noteheader - Wrap around is needed if the end of a place partition is reached before all thread assignments are done. For example, wrap around may be needed in the case of \code{close} and $T\leq P$, if the master thread is assigned to a place other than the first place in the place partition. In this case, thread 1 is assigned to the place after the place of the master place, thread 2 is assigned to the place after that, and so on. The end of the place partition may be reached before all threads are assigned. In this case, assignment of threads is resumed with the first place in the place partition.
+\noteheader -- Wrap around is needed if the end of a place partition is reached before all thread assignments are done. For example, wrap around may be needed in the case of \code{close} and $T\leq P$, if the master thread is assigned to a place other than the first place in the place partition. In this case, thread 1 is assigned to the place after the place of the master place, thread 2 is assigned to the place after that, and so on. The end of the place partition may be reached before all threads are assigned. In this case, assignment of threads is resumed with the first place in the place partition.
 \noteend
 
 
@@ -1571,7 +1699,7 @@ expressions. It is unspecified whether, in what order, or how many times any sid
 within the \plc{lb}, \plc{b}, or \plc{incr} expressions occur.
 
 \notestart
-\noteheader – Random access iterators are required to support random access to elements in 
+\noteheader -- Random access iterators are required to support random access to elements in 
 constant time. Other iterators are precluded by the restrictions since they can take linear 
 time or offer limited functionality. It is therefore advisable to use tasks to parallelize 
 those cases. 
@@ -1909,7 +2037,7 @@ defined.\\
 
 
 \notestart
-\noteheader – For a team of $p$ threads and a loop of $n$ iterations, let $\blceil n/p \brceil$ be the integer $q$ 
+\noteheader -- For a team of $p$ threads and a loop of $n$ iterations, let $\blceil n/p \brceil$ be the integer $q$ 
 that satisfies $n = p*q - r$, with $0 <= r < p$. One compliant implementation of the \code{static} 
 schedule (with no specified \plc{chunk\_size}) would behave as though \plc{chunk\_size} had been 
 specified with value $q$. Another compliant implementation would assign $q$ iterations to 
@@ -1947,6 +2075,31 @@ that it is assigned in increasing logical iteration order.\\
 in any order and the behavior of an application that depends on any execution order of the chunks is unspecified.\\
 \code{simd} & When the \code{simd} modifier is specified and the loop is associated with a SIMD construct, the \plc{chunk\_size} for all chunks except the first and last chunks  is  $new\_chunk\_size = \blceil chunk\_size / simd\_width \brceil * simd\_width $ where \plc{simd\_width} is an implementation-defined value. The first chunk will have at least \plc{new\_chunk\_size} iterations except if it is also the last chunk. The last chunk may have fewer iterations than \plc{new\_chunk\_size}. If the \code{simd} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
 \end{supertabular}
+
+
+\def\omptWorksharing#1#2
+{
+\events
+
+The \plc{#1{-begin}} event occurs after an implicit task encounters a 
+\code{#1} construct but before the task starts the execution of the structured 
+block of the \code{#1} region.
+
+The \plc{#1{-end}} event occurs after a \code{#1} region finishes execution 
+but before resuming execution of the encountering task.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_work}
+callback for each occurrence of a \plc{#1{-begin}} and
+\plc{#1{-end}} event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_work\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate, and 
+\code{#2} as its \plc{wstype} argument.
+}
+\omptWorksharing{loop}{ompt\_work\_loop}
 
 \restrictions
 Restrictions to the loop construct are as follows:
@@ -2038,6 +2191,14 @@ out of the loops.
 
 \item \code{depend} clause, see
 \specref{subsec:depend Clause}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+\item \code{ompt\_work\_loop}, see \specref{sec:ompt_work_type_t}.
+
+\item \code{ompt\_callback\_work\_t}, see 
+\specref{sec:ompt_callback_work_t}.
+
 \end{itemize}
 
 
@@ -2170,6 +2331,9 @@ implementation defined.
 There is an implicit barrier at the end of a \code{sections} construct unless a \code{nowait} 
 clause is specified.
 
+%\tools
+\omptWorksharing{sections}{ompt\_work\_sections}
+
 \restrictions
 Restrictions to the \code{sections} construct are as follows:
 
@@ -2193,6 +2357,14 @@ exception must catch it.
 \begin{itemize}
 \item \code{private}, \code{firstprivate}, \code{lastprivate}, and \code{reduction} clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_work\_sections}, see \specref{sec:ompt_work_type_t}.
+
+\item \code{ompt\_callback\_work\_t}, see 
+\specref{sec:ompt_callback_work_t}.
 \end{itemize}
 
 
@@ -2272,6 +2444,27 @@ The method of choosing a thread to execute the structured block is implementatio
 defined. There is an implicit barrier at the end of the \code{single} construct unless a 
 \code{nowait} clause is specified. 
 
+\events
+
+The \plc{single-begin} event occurs after an \code{implicit task} encounters a 
+\code{single} construct but before the task starts the execution of the structured 
+block of the \code{single} region.
+
+The \plc{single-end} event occurs after a \code{single} region finishes execution of the structured block 
+but before resuming execution of the encountering implicit task.
+
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_work}
+callback for each occurrence of a \plc{single-begin} and
+\plc{single-end} events in that thread. The callback has type signature
+\code{ompt\_callback\_work\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate, and
+\code{ompt\_work\_single\_executor} or or \code{ompt\_work\_single\_other} 
+as its \plc{wstype} argument.
+
 \restrictions
 Restrictions to the \code{single} construct are as follows: 
 
@@ -2294,6 +2487,16 @@ same \code{single} region, and the same thread that threw the exception must cat
 
 \item \code{copyprivate} clause, see 
 \specref{subsubsec:copyprivate clause}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_work\_single\_executor} and \code{ompt\_work\_single\_other}, see
+\specref{sec:ompt_work_type_t}.
+
+\item \code{ompt\_callback\_work\_t},
+\specref{sec:ompt_callback_work_t}.
+
 \end{itemize}
 
 
@@ -2437,6 +2640,9 @@ assignment assigns to a private variable in the block, the result is unspecified
 The \code{workshare} directive causes the sharing of work to occur only in the \code{workshare} 
 construct, and not in the remainder of the \code{workshare} region.
 
+%\tools
+\omptWorksharing{workshare}{ompt\_work\_workshare}
+
 \begin{samepage}
 \restrictions
 The following restrictions apply to the \code{workshare} construct:
@@ -2451,6 +2657,14 @@ intrinsic assignments.
 \fortranspecificend
 \end{samepage}
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+\item \code{ompt\_work\_workshare}, see \specref{sec:ompt_work_type_t}.
+\item \code{ompt\_callback\_work\_t}, see
+\specref{sec:ompt_callback_work_t}.
+\end{itemize}
 
 
 
@@ -2902,6 +3116,14 @@ that apply to the loop construct. The resulting chunks of iterations will then b
 to a SIMD loop in a manner consistent with any clauses that apply to the \code{simd} 
 construct. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
 
+\events
+
+This composite construct generates the same events as the \code{for} or \code{do} worksharing construct.
+
+\tools
+
+This composite construct generates the same callbacks as the \code{for} or \code{do} worksharing construct.
+
 \restrictions
 All restrictions to the loop construct and the \code{simd} construct apply to the loop SIMD 
 construct. In addition, the following restrictions apply:
@@ -2922,6 +3144,9 @@ construct. In addition, the following restrictions apply:
 
 \item Data attribute clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}. 
+
+\item Events and tool callbacks for worksharing construct, see
+\specref{subsec:Loop Construct} and \specref{subsec:workshare Construct}.
 \end{itemize}
 \end{samepage}
 
@@ -3055,10 +3280,23 @@ implementation will use the value of that ICV. A program that relies on task exe
 being determined by this \plc{priority-value} may have unspecified behavior.
 
 \notestart
-\noteheader – When storage is shared by an explicit \code{task} region, the 
+\noteheader -- When storage is shared by an explicit \code{task} region, the 
 programmer must ensure, by adding proper synchronization, that the storage does not 
 reach the end of its lifetime before the explicit \code{task} region completes its execution.
 \noteend
+
+\events
+
+The \plc{task-create} event occurs when a thread encounters a construct 
+that causes a new explicit, non-merged task to be created. The event occurs after the task is initialized but before 
+it begins execution or is deferred. 
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_task\_create}
+callback for each occurrence of a \plc{task-create} event
+in the context of the encountering task.  This callback has the type signature
+\code{ompt\_callback\_task\_create\_t}.
 
 \restrictions
 Restrictions to the \code{task} construct are as follows:
@@ -3092,6 +3330,10 @@ unspecified behavior
 \item \code{depend} clause, see \specref{subsec:depend Clause}.
 \item \code{if} Clause, see \specref{sec:if Clause}.
 \item Data-sharing attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}.
+\item \code{ompt\_callback\_task\_create\_t}, see
+\specref{sec:ompt_callback_task_create_t}.
+%\item \code{ompt\_callback\_task\_schedule\_t}, see
+%\specref{sec:ompt_callback_task_schedule_t}.
 \end{itemize}
 
 
@@ -3231,8 +3473,57 @@ For \code{firstprivate} variables of class type, the number of invocations of co
 \cppspecificend
 
 \notestart
-\noteheader – When storage is shared by a \code{taskloop} region, the programmer must ensure, by adding proper synchronization, that the storage does not reach the end of its lifetime before the \code{taskloop} region and its descendant tasks complete their execution.
+\noteheader -- When storage is shared by a \code{taskloop} region, the programmer must ensure, by adding proper synchronization, that the storage does not reach the end of its lifetime before the \code{taskloop} region and its descendant tasks complete their execution.
 \noteend
+
+\def\omptWorksharingLoop#1#2
+{
+\events
+
+The \plc{#1{-begin}} event occurs after a task encounters a 
+\code{#1} construct but before the task starts the execution of the structured 
+block of the \code{#1} region.
+
+The \plc{#1{-end}} event occurs after a \code{#1} region finishes execution 
+but before resuming execution of the encountering task.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_work}
+callback for each occurrence of a \plc{#1{-begin}} and
+\plc{#1{-end}} event in that thread. The callback occurs in the
+context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_work\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate, and 
+\code{#2} as its \plc{wstype} argument.
+}
+% \omptWorksharingLoop{taskloop}{ompt\_work\_taskloop}
+
+\events
+
+The \plc{taskloop-begin} event occurs after a task encounters a
+\code{taskloop} construct but before any other events that may 
+trigger as a consequence of executing the \code{taskloop}.
+Specifically, a \plc{taskloop-begin} event for a \code{taskloop}
+will precede the \plc{taskgroup-begin} that occurs unless a
+\code{nogroup} clause is present.  Regardless of whether an implicit
+taskgroup is present, a \plc{taskloop-begin} will always precede
+any \plc{task-create} events for generated tasks.
+
+The \plc{taskloop-end} event occurs after a \code{taskloop} region finishes execution
+but before resuming execution of the encountering task.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_work}
+callback for each occurrence of a \plc{taskloop-begin} and
+\plc{taskloop-end} event in that thread. The callback occurs in the
+context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_work\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end}
+as its \plc{endpoint} argument, as appropriate, and
+\code{ompt\_work\_taskloop} as its \plc{wstype} argument.
 
 \restrictions
 The restrictions of the \code{taskloop} construct are as follows:
@@ -3256,6 +3547,12 @@ The restrictions of the \code{taskloop} construct are as follows:
 \item \code{taskgroup} construct, \specref{subsec:taskgroup Construct}.
 \item Data-sharing attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}. 
 \item \code{if} Clause, see \specref{sec:if Clause}.
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+\item \code{ompt\_work\_taskloop}, see \specref{sec:ompt_work_type_t}.
+\item \code{ompt\_callback\_work\_t}, see
+\specref{sec:ompt_callback_work_t}.
+
 \end{itemize}
 
 
@@ -3303,6 +3600,14 @@ The binding thread set of the \code{taskloop}~\code{simd} region is the current 
 \descr
 The \code{taskloop}~\code{simd} construct will first distribute the iterations of the associated loop(s) across tasks in a manner consistent with any clauses that apply to the \code{taskloop} construct. The resulting tasks will then be converted to a SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct, except for the \code{collapse} clause. For the purposes of each task's conversion to a SIMD loop, the \code{collapse} clause is ignored and the effect of any \code{in\_reduction} clause is as if a \code{reduction} clause with the same reduction operator and list items is present on the construct.
 
+\events
+
+This composite construct generates the same events as the \code{taskloop} construct.
+
+\tools
+
+This composite construct generates the same callbacks as the \code{taskloop} construct.
+
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{taskloop} and \code{simd} constructs apply.
@@ -3313,6 +3618,9 @@ The \code{taskloop}~\code{simd} construct will first distribute the iterations o
 \item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
 \item \code{simd} construct, see \specref{subsec:simd Construct}.
 \item Data-sharing attribute clauses, see \specref{subsec:Data-Sharing Attribute Clauses}. 
+\item Events and tool callbacks for \code{taskloop} construct, see
+\specref{subsec:taskloop Construct}.
+
 \end{itemize}
 
 
@@ -3370,7 +3678,56 @@ region.
 
 
 
+\subsection{Initial Task}
 
+\events
+No events are associated with the \emph{implicit parallel region} in each \emph{initial thread}.
+
+The \plc{initial-thread-begin} event occurs in an \emph{initial thread} after the OpenMP runtime invokes the tool initializer 
+but before the \emph{initial thread} begins to execute the first OpenMP \emph{region}. 
+
+The \plc{initial-task-create} event occurs after an \plc{initial-thread-begin} event 
+but before the first OpenMP \emph{region} begins to execute.
+
+The \plc{initial-thread-end} event occurs as the final event in an \emph{initial thread} at the end of an \emph{initial task} 
+immediately prior to invocation of the tool finalizer.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_thread\_begin}
+callback for the \plc{initial-thread-begin} event in an \emph{initial thread}. 
+The callback occurs in the context of the \emph{initial thread}.  
+The callback has type signature \code{ompt\_callback\_thread\_begin\_t}. 
+The callback receives \code{ompt\_thread\_initial} as its \plc{thread\_type} argument.
+
+A thread dispatches a registered \code{ompt\_callback\_task\_create}
+callback for each occurrence of a \plc{initial-task-create} event
+in the context of the encountering task.  This callback has the type signature
+\code{ompt\_callback\_task\_create\_t}. 
+The callback receives \code{ompt\_task\_initial} as its \plc{type} argument.
+
+A thread dispatches a registered \code{ompt\_callback\_thread\_end}
+callback for the \plc{initial-thread-end} event in that thread. 
+The callback occurs in the context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread\_end\_t}. 
+
+\crossreferences
+\begin{itemize}
+
+\item \code{ompt\_task\_initial}, see
+\specref{sec:ompt_task_type_t}.
+
+\item \code{ompt\_callback\_thread\_begin\_t}, see
+  \specref{sec:ompt_callback_thread_begin_t}.
+
+\item \code{ompt\_callback\_thread\_end\_t}, see
+  \specref{sec:ompt_callback_thread_end_t}.
+
+\item \code{ompt\_callback\_task\_create\_t}, see
+\specref{sec:ompt_callback_task_create_t}.
+
+
+\end{itemize}
 
 \subsection{Task Scheduling}
 \index{task scheduling}
@@ -3445,7 +3802,7 @@ executed immediately after generation of the task.
 A program relying on any other assumption about task scheduling is non-conforming.
 
 \notestart
-\noteheader – Task scheduling points dynamically divide task regions into parts. Each part is 
+\noteheader -- Task scheduling points dynamically divide task regions into parts. Each part is 
 executed uninterrupted from start to end. Different parts of the same task region are 
 executed in the order in which they are encountered. In the absence of task 
 synchronization constructs, the order in which a thread executes parts of different 
@@ -3470,15 +3827,59 @@ task with an \code{if} clause must take into account that when the \code{if} cla
 \plc{false}, the task is executed immediately, without regard to \emph{Task Scheduling Constraint}~2.
 \noteend
 
+\events
 
+The \plc{task-schedule} event occurs in a thread when the thread switches tasks at a task scheduling point;
+no event occurs when switching to or from a merged task.
 
+\tools
 
+A thread dispatches a registered \code{ompt\_callback\_task\_schedule}
+callback for each occurrence of a \plc{task-schedule} event in 
+the context of the task that begins or resumes. This callback has the type signature
+\code{ompt\_callback\_task\_schedule\_t}. 
+The argument  \plc{prior\_task\_status} is used to indicate the cause for suspending the prior task. 
+This cause may be the completion of the prior task region, the encountering of a 
+\code{taskyield} construct, or the encountering of an active cancellation point.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_task\_schedule\_t}, see
+\specref{sec:ompt_callback_task_schedule_t}.
+\end{itemize}
 
 \section{Device Constructs}
 \label{sec:Device Constructs}
 \index{device constructs}
 \index{constructs!device constructs}
 \index{device constructs!device constructs}
+
+\events
+
+The \plc{device-initialize} event occurs in a thread that encounters
+the first \code{target}, \code{target data}, or \code{target enter
+data} construct associated with a particular target device 
+after the thread initiates initialization of OpenMP on the device and the
+device's OpenMP initialization, which may include device-side tool
+initialization, completes. 
+
+\tools 
+
+A thread dispatches a registered \code{ompt\_callback\_device\_initialize}
+callback for each occurrence of a \plc{device-initialize} event in
+that thread.  This callback has type signature
+\code{ompt\_callback\_device\_initialize\_t}.
+
+\restrictions
+No thread may offload execution of an OpenMP construct to a device until any  
+callback associated with a \plc{device-initialize} event completes.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_device\_initialize\_t}, see
+\specref{sec:ompt_callback_device_initialize_t}.
+\end{itemize}
+
 
 \subsection{\code{target}~\code{data} Construct}
 \index{target data@{\code{target}~\code{data}}}
@@ -3542,6 +3943,37 @@ If a \code{use\_device\_ptr} clause and one or more \code{map} clauses are
 present on the same construct, this conversion will occur as if performed after
 all variables are mapped according to those \code{map} clauses.
 
+\def\omptTargetRegionEvents#1#2#3
+{
+The \plc{#3{-begin}} event occurs after a thread enters a
+\code{#1} region.
+
+The \plc{#3{-end}} event occurs when a thread exits a
+\code{#1} region.
+}
+
+\def\omptTargetRegionTools#1#2#3#4
+{
+A thread dispatches a registered \code{ompt\_callback\_target}
+callback for each occurrence of a \plc{#3{-begin}} and
+\plc{#3{-end}} event in that thread in the context of #4.
+The callback has type signature
+\code{ompt\_callback\_target\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate, and 
+\code{#2} as its \plc{kind} argument.
+}
+
+\def\omptTargetRegion#1#2#3#4
+{
+\events
+\omptTargetRegionEvents{#1}{#2}{#3}
+
+\tools
+\omptTargetRegionTools{#1}{#2}{#3}{#4}
+}
+\omptTargetRegion{\code{target}~\code{data}}{ompt\_target}{target-data}{the task encountering the construct}
+
 \restrictions
 \begin{itemize}
     \item A program must not depend on any ordering of the evaluations of the clauses of the
@@ -3566,6 +3998,7 @@ all variables are mapped according to those \code{map} clauses.
     \code{use\_device\_ptr} clause must be to the address of the list item.
 \end{itemize}
 
+
 \crossreferences
 \begin{itemize}
 \item \plc{default-device-var}, see 
@@ -3575,6 +4008,10 @@ all variables are mapped according to those \code{map} clauses.
 
 \item \code{map} clause, see 
 \specref{subsec:map Clause}.
+
+\item \code{ompt\_callback\_target\_t}, see
+\specref{sec:ompt_callback_target_t}.
+
 \end{itemize}
 
 
@@ -3636,7 +4073,7 @@ The \code{target}~\code{enter}~\code{data} construct is a task generating constr
 
 All clauses are evaluated when the \code{target}~\code{enter}~\code{data} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target}~\code{enter}~\code{data} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target}~\code{enter}~\code{data} construct.  A variable that is mapped in the \code{target}~\code{enter}~\code{data} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
 
-Assignment operations associated with mapping a variable ({see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
 If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
 
@@ -3645,6 +4082,25 @@ If a \code{depend} clause is present, it is associated with the \plc{target task
 If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
+
+
+%\tools 
+\def\omptTarget#1#2#3#4
+{
+
+\events
+Events associated with a \plc{target task} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
+
+\omptTargetRegionEvents{#1}{#2}{#3}
+
+\tools
+Callbacks associated with events for \plc{target tasks} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
+
+\omptTargetRegionTools{#1}{#2}{#3}{#4}
+}
+\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}{target-enter-data}{the target task on the host}
+
+
 
 \restrictions
 \begin{itemize}
@@ -3672,6 +4128,13 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
 \item \code{map} clause, see \specref{subsec:map Clause}.
+
+\item \code{ompt\_callback\_task\_create\_t}, see
+\specref{sec:ompt_callback_task_create_t}.
+
+\item \code{ompt\_callback\_target\_t}, see
+\specref{sec:ompt_callback_target_t}.
+
 \end{itemize}
 
 
@@ -3732,7 +4195,7 @@ All clauses are evaluated when the \code{target}~\code{exit}~\code{data} constru
 
 \end{samepage}
 
-Assignment operations associated with mapping a variable ({see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
 If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
 
@@ -3741,6 +4204,9 @@ If a \code{depend} clause is present, it is associated with the \plc{target task
 If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host. 
+%\tools
+\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}{target-exit}{the target task on the host}
+
 \restrictions
 \begin{itemize}
 \item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{exit}~\code{data} directive, or on any side effects of the evaluations of the clauses.
@@ -3767,6 +4233,13 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
 \item \code{map} clause, see \specref{subsec:map Clause}.
+
+\item \code{ompt\_callback\_task\_create\_t}, see
+\specref{sec:ompt_callback_task_create_t}.
+
+\item \code{ompt\_callback\_target\_t}, see
+\specref{sec:ompt_callback_target_t}.
+
 \end{itemize}
 
 
@@ -3856,7 +4329,7 @@ The \code{target} construct is a task generating construct.  The generated task 
 
 All clauses are evaluated when the \code{target} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target} construct.  A variable that appears as a list item in a \code{reduction} clause on the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}. Likewise, a variable that is mapped in the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
 
-Assignment operations associated with mapping a variable ({see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
 If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
 
@@ -3880,6 +4353,23 @@ If an array section is a list item in a \code{map} clause and the array section 
 
 If a zero-length array section is a list item in a \code{map} clause, and the array section is derived from a variable for the which the type is pointer then that variable is initialized with the address of the corresponding storage location in the device data environment.  If the corresponding storage location is not present in the device data environment then the private variable is initialized to NULL.  
 \ccppspecificend
+
+%\tools
+
+\events
+\omptTargetRegionEvents{\code{target}}{ompt\_target}{target}
+
+The \plc{target-submit} event occurs prior to creating an initial task on a target device for a target
+region. 
+
+% target task
+\tools
+\omptTargetRegionTools{\code{target}}{ompt\_target}{target}{target task on the host}
+
+A thread dispatches a registered \code{ompt\_callback\_target\_submit}
+callback for each occurrence of a \plc{target-submit} event
+in that thread. The callback has type signature
+\code{ompt\_callback\_target\_submit\_t}. 
 
 \restrictions
 \begin{itemize}
@@ -3948,6 +4438,13 @@ same \code{target} region, and the same thread that threw the exception must cat
 
 \item Data-mapping Attribute Rules and Clauses, see 
 \specref{subsec:Data-mapping Attribute Rules and Clauses}.
+
+\item \code{ompt\_callback\_task\_create\_t}, see
+\specref{sec:ompt_callback_task_create_t}.
+
+\item \code{ompt\_callback\_target\_t}, see 
+\specref{sec:ompt_callback_target_t}.
+
 \end{itemize}
 
 
@@ -4043,7 +4540,7 @@ The \code{target}~\code{update} construct is a task generating construct.  The g
 
 All clauses are evaluated when the \code{target}~\code{update} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target}~\code{update} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target}~\code{update} construct.  A variable that is mapped in the \code{target}~\code{update} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
 
-Assignment operations associated with mapping a variable ({see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
 If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
 
@@ -4052,6 +4549,9 @@ If a \code{depend} clause is present, it is associated with the \plc{target task
 The device is specified in the \code{device} clause. If there is no \code{device} clause, the device 
 is determined by the \plc{default-device-var} ICV. When an \code{if} clause is present and the \code{if} 
 clause expression evaluates to \plc{false} then no assignments occur.
+
+%\tools
+\omptTarget{\code{target}~\code{update}}{ompt\_target\_update}{target-update}{the target task on the host}
 
 \restrictions
 \begin{itemize}
@@ -4091,6 +4591,12 @@ clause expression evaluates to \plc{false} then no assignments occur.
 \specref{subsec:target data Construct}. 
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{ompt\_callback\_task\_create\_t}, see
+\specref{sec:ompt_callback_task_create_t}.
+
+\item \code{ompt\_callback\_target\_t}, see
+\specref{sec:ompt_callback_target_t}.
 
 
 \end{itemize}
@@ -4599,6 +5105,9 @@ chunks is unspecified in this case.
 
 When no \code{dist\_schedule} clause is specified, the schedule is implementation defined.
 
+%\tools
+\omptWorksharing{distribute}{ompt\_work\_distribute}{an initial thread}
+
 \restrictions
 Restrictions to the \code{distribute} construct are as follows:
 
@@ -4618,6 +5127,10 @@ strictly nested inside a \code{teams} region.
 
 \item \code{teams} construct, see 
 \specref{subsec:teams Construct}
+
+\item \code{ompt\_work\_distribute}, see \specref{sec:ompt_work_type_t}.
+\item \code{ompt\_callback\_work\_t}, see
+\specref{sec:ompt_callback_work_t}.
 \end{itemize}
 
 
@@ -4672,6 +5185,14 @@ apply to the distribute construct. The resulting chunks of iterations will then 
 converted to a SIMD loop in a manner consistent with any clauses that apply to the 
 \code{simd} construct. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
 
+\events
+
+This composite construct generates the same events as the \code{distribute} construct.
+
+\tools
+
+This composite construct generates the same callbacks as the \code{distribute} construct.
+
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
@@ -4689,6 +5210,10 @@ converted to a SIMD loop in a manner consistent with any clauses that apply to t
 
 \item Data attribute clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Events and tool callbacks for the \code{distribute} construct, see
+\specref{subsec:simd Construct}.
+
 \end{itemize}
 
 
@@ -4741,6 +5266,14 @@ If an \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is not sp
 The distribute parallel loop construct will first distribute the iterations of the associated loop(s) into chunks according to the semantics of the \code{distribute} construct and any clauses that apply to the \code{distribute} construct. Each of these chunks will form a loop. Each resulting loop will then be distributed across the threads within the teams region to which the \code{distribute} construct binds in a manner consistent with any clauses that apply to the parallel loop construct. 
 The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
 
+\events
+
+This composite construct generates the same events as the \code{distribute} and parallel loop constructs.
+
+\tools
+
+This composite construct generates the same callbacks as the \code{distribute} and parallel loop constructs.
+
 %% BRONIS: Ugly trick to avoid page starting with end c/C++ sentinel
 \vspace{-6pt}
 
@@ -4764,6 +5297,13 @@ The effect of any clause that applies to both constructs is as if it were applie
 
 \item Data attribute clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Events and tool callbacks for \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Events and tool callbacks for parallel loop construct, see
+\specref{subsec:Parallel Loop Construct}.
+
 \end{itemize}
 
 
@@ -4825,6 +5365,13 @@ parallel loop construct. The resulting chunks of iterations will then be convert
 SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct. 
 The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
 
+\events
+
+This composite construct generates the same events as the \code{distribute} and parallel loop constructs.
+
+\tools
+
+This composite construct generates the same callbacks as the \code{distribute} and parallel loop constructs.
 
 \restrictions
 \begin{itemize}
@@ -4842,6 +5389,13 @@ The effect of any clause that applies to both constructs is as if it were applie
 \specref{subsec:Parallel Loop SIMD Construct}.
 
 \item Data attribute clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Events and tool callbacks for \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Events and tool callbacks for parallel loop construct, see
+\specref{subsec:Parallel Loop Construct}.
+
 \end{itemize}
 
 
@@ -4866,9 +5420,8 @@ constructs. If not specified and applying the clause to one construct would resu
 different program behavior than applying the clause to the other construct then the
 program's behavior is unspecified.
 
-
-
-
+For combined constructs, tool callbacks shall be invoked as if the constructs were
+explicitly nested.
 
 
 
@@ -6268,6 +6821,26 @@ block of the \code{master} region.
 Other threads in the team do not execute the associated structured block. There is no 
 implied barrier either on entry to, or exit from, the \code{master} construct.
 
+\events
+
+The \plc{master-begin} event occurs in the thread encountering the \code{master}
+construct on entry to the master region, if it is the master thread of the team.
+
+The \plc{master-end} event occurs in the thread encountering the \code{master}
+construct on exit of the master region, if it is the master thread of the team.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_master}
+callback for each occurrence of a \plc{master-begin} and a
+\plc{master-end} event in that thread.  
+
+The callback occurs  in the context of the task executed by the master thread.
+This callback has the type signature
+\code{ompt\_callback\_master\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
 \restrictions
 \cppspecificstart
 \begin{itemize}
@@ -6276,6 +6849,17 @@ same \code{master} region, and the same thread that threw the exception must cat
 \end{itemize}
 \cppspecificend
 
+\crossreferences
+\begin{itemize}
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see 
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_callback\_master\_t}, see
+\specref{sec:ompt_callback_master_t}.
+
+
+\end{itemize}
 
 
 
@@ -6361,6 +6945,39 @@ had been specified.
 % \code{hint} clause is specified, the effect is as if \code{hint(none)}
 % has been specified.
 
+\def\omptMutex#1#2{
+\events
+The \plc{#1-acquire} event occurs in the thread encountering the
+\code{#1} construct on entry to the #1 region before 
+initiating synchronization for the region.
+
+The \plc{#1-acquired} event occurs in the thread encountering the
+\code{#1} construct after entering the region, but before executing the
+structured block of the \code{#1} region.
+
+The \plc{#1-release} event occurs in the thread encountering the
+\code{#1} construct after completing any synchronization 
+on exit from the \code{#1} region.
+
+\tools
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquire}
+callback for each occurrence of #2 \plc{#1-acquire} event 
+in that thread.  
+This callback has the type signature \code{ompt\_callback\_mutex\_acquire\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquired}
+callback for each occurrence of #2 \plc{#1-acquired} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_release}
+callback for each occurrence of #2 \plc{#1-release} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+The callbacks occur in the task encountering
+the #1 construct.  The callbacks should receive \code{ompt\_mutex\_#1}
+as their \plc{kind} argument if practical, but a less specific kind is acceptable.
+}
+
+\omptMutex{critical}{a}
 
 \restrictions
 \begin{itemize}
@@ -6398,7 +7015,18 @@ specified on the \code{end}~\code{critical} directive.
 
 \crossreferences
 \begin{itemize}
-\item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint} routines, see \specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
+\item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint}, see 
+\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
+
+\item \code{ompt\_mutex\_critical}, see
+\specref{sec:ompt_mutex_kind_t}.
+
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+
 \end{itemize}
 
 
@@ -6446,6 +7074,65 @@ region before any are allowed to continue execution beyond the barrier.
 The \code{barrier} region includes an implicit task scheduling point in the current task 
 region.
 
+\def\omptSyncRegionEvents#1{
+The \plc{#1-begin} event occurs in each thread encountering the
+\code{#1} construct on entry to the \code{#1} region.
+
+The \plc{#1-wait-begin} event occurs when a task begins an interval of active or passive waiting
+in a \code{#1} region. 
+
+The \plc{#1-wait-end} event occurs when a task ends an interval of active or passive waiting
+and resumes execution in a \code{#1} region. 
+
+The \plc{#1-end} event occurs in each thread encountering the
+\code{#1} construct after the #1 synchronization on exit from the
+\code{#1} region.
+}
+
+\def\omptSyncRegionTools#1{
+A thread dispatches a registered \code{ompt\_callback\_sync\_region}
+callback for each occurrence of a \plc{#1-begin} and \plc{#1-end} event 
+in that thread.  The callback occurs in the task encountering
+the #1 construct.  This callback has the type signature
+\code{ompt\_callback\_sync\_region\_t}. 
+The callback receives
+\code{ompt\_sync\_region\_#1} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered
+\code{ompt\_callback\_sync\_region\_wait} callback
+for each occurrence of a \plc{#1-wait-begin} and \plc{#1-wait-end} event.
+This callback has type signature \code{ompt\_callback\_sync\_region\_t}. 
+This callback executes in the context of the task that encountered the
+\code{#1} construct. The callback receives
+\code{ompt\_sync\_region\_#1} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+}
+
+\def\omptSyncRegion#1{
+\events
+\omptSyncRegionEvents{#1}
+\tools
+\omptSyncRegionTools{#1}
+}
+
+\events
+\omptSyncRegionEvents{barrier}
+
+A \plc{cancellation} event occurs if cancellation is activated at an implicit cancellation point in an barrier region.
+
+\tools
+
+\omptSyncRegionTools{barrier}
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancellation} event in that thread. 
+The callback occurs in the context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_detected} as its \plc{flags} argument. 
+
 \restrictions
 The following restrictions apply to the \code{barrier} construct:
 
@@ -6455,6 +7142,116 @@ unless cancellation has been requested for the innermost enclosing parallel regi
 
 \item The sequence of worksharing regions and \code{barrier} regions encountered must be the 
 same for every thread in a team.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_barrier}, see  
+\specref{sec:ompt_sync_region_kind_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+\specref{sec:ompt_callback_sync_region_t}.
+
+\item \code{ompt\_callback\_cancel\_t}, see 
+\specref{sec:ompt_callback_cancel_t}.
+
+\end{itemize}
+
+
+
+
+
+
+\subsection{Implicit Barriers}
+\index{implicit barrier}
+\index{barrier, implicit}
+\label{subsec:implict-barrier}
+
+Implicit tasks in a parallel region synchronize with one another using
+implicit barriers at the end of worksharing constructs and at the end
+of the \code{parallel} region. This section describes the OMPT events and
+tool callbacks associated with implicit barriers.
+
+Implicit barriers are task scheduling points. For a description of
+task sheduling points, associated events, and tool callbacks, see
+\specref{subsec:Task Scheduling}.
+
+\events
+
+A \plc{cancellation} event occurs if cancellation is activated at an
+implicit cancellation point in an implicit barrier region.
+
+The \plc{implicit-barrier-begin} event occurs in each implicit task
+at the beginning of an implicit barrier.
+
+The \plc{implicit-barrier-wait-begin} event occurs when a task begins an interval of
+active or passive waiting while executing in an implicit barrier region.
+
+The \plc{implicit-barrier-wait-end} event occurs when a task ends an interval of 
+active or waiting and resumes execution of an implicit barrier region.
+
+The \plc{implicit-barrier-end} event occurs in each implicit task
+at the end of an implicit barrier.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_sync\_region}
+callback for each occurrence of a \plc{implicit-barrier-begin} and
+\plc{implicit-barrier-end} event in that thread.  The callback occurs
+in the implicit task executing in a parallel region.
+This callback has the type signature
+\code{ompt\_callback\_sync\_region\_t}.  The callback receives
+\code{ompt\_sync\_region\_barrier} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} as its
+\plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancellation} event in that thread.
+The callback occurs in the context of the encountering task.  The
+callback has type signature \code{ompt\_callback\_cancel\_t}.  The
+callback receives \code{ompt\_cancel\_detected} as its \plc{flags}
+argument.
+
+A thread dispatches a registered
+\code{ompt\_callback\_sync\_region\_wait} callback for each occurrence
+of a \plc{implicit-barrier-wait-begin} and
+\plc{implicit-barrier-wait-end} event.  This callback has type
+signature \code{ompt\_callback\_sync\_region\_t}.  The callback occurs
+in each implicit task participating in an implicit barrier.  The
+callback receives \code{ompt\_sync\_region\_barrier} as its \plc{kind}
+argument and \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} as
+its \plc{endpoint} argument, as appropriate.
+
+\restrictions
+If a thread is in the state \code{omp\_state\_wait\_barrier\_implicit\_parallel},
+a call to \code{ompt\_get\_parallel\_info}
+may return a pointer to a copy of the current parallel region's \plc{parallel\_data}
+rather than a pointer to the data word for the region itself. This convention enables the master thread
+for a parallel region to free storage for the region immediately after the region ends, yet
+avoid having some other thread in the region's team
+potentially reference the region's \plc{parallel\_data} object after it has been freed. 
+
+\crossreferences
+\begin{itemize}
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_barrier}, see
+  \specref{sec:ompt_sync_region_kind_t}
+
+\item \code{ompt\_cancel\_detected}, see
+  \specref{sec:ompt_cancel_flag_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+  \specref{sec:ompt_callback_sync_region_t}.
+
+\item \code{ompt\_callback\_cancel\_t}, see
+  \specref{sec:ompt_callback_cancel_t}.
+
 \end{itemize}
 
 
@@ -6531,8 +7328,23 @@ suspended until the \emph{predecessor tasks} of this task complete execution.
 
 
 
+\omptSyncRegion{taskwait}
 
+\crossreferences
+\begin{itemize}
+\item Task scheduling, see 
+\specref{subsec:Task Scheduling}.
 
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_taskwait}, see
+\specref{sec:ompt_sync_region_kind_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+\specref{sec:ompt_callback_sync_region_t}.
+
+\end{itemize}
 
 
 
@@ -6596,11 +7408,23 @@ There is an implicit task scheduling point at the end of the \code{taskgroup}
 region. The current task is suspended at the task scheduling point until all 
 tasks in the \plc{taskgroup set} complete execution.
 
+\omptSyncRegion{taskgroup}
+
 \crossreferences
 \begin{itemize}
 \item Task scheduling, see 
 \specref{subsec:Task Scheduling}.
 \item \code{task\_reduction} Clause, see \specref{subsubsec:task_reduction clause}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_taskgroup}, see
+\specref{sec:ompt_sync_region_kind_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+\specref{sec:ompt_callback_sync_region_t}.
+
 \end{itemize}
 
 
@@ -6939,7 +7763,7 @@ Any \code{atomic} construct with a \code{seq\_cst} clause forces the atomically 
 operation to include an implicit flush operation without a list.
 
 \notestart
-\noteheader – As with other implicit flush regions, 
+\noteheader -- As with other implicit flush regions, 
 \specref{subsec:OpenMP Memory Consistency} 
 reduces the 
 ordering that must be enforced. The intent is that, when the analogous operation exists 
@@ -6984,6 +7808,9 @@ of \plc{x} is not a multiple of the size of \plc{x}), then the behavior of the \
 implementation defined.
 
 \needspace{16\baselineskip}\begin{samepage}
+
+\omptMutex{atomic}{an}
+
 \restrictions
 
 The following restrictions apply to the \code{atomic} construct:
@@ -7031,6 +7858,16 @@ are required to have the same type and type parameters.
 
 \item lock routines, see 
 \specref{sec:Lock Routines}.
+
+\item \code{ompt\_mutex\_atomic}, see
+\specref{sec:ompt_mutex_kind_t}.
+
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+
 \end{itemize}
 
 
@@ -7101,7 +7938,7 @@ allocated variable is flushed; otherwise the allocation status is flushed.
 
 \begin{samepage}
 \notestart
-\noteheader – Use of a \code{flush} construct with a list is extremely error prone and users are 
+\noteheader -- Use of a \code{flush} construct with a list is extremely error prone and users are 
 strongly discouraged from attempting it. The following examples illustrate the ordering 
 properties of the flush operation. In the following incorrect pseudocode example, the 
 programmer intends to prevent simultaneous execution of the protected section by the 
@@ -7194,7 +8031,7 @@ the \code{atomic} construct in
 \end{itemize}
 
 \notestart
-\noteheader – A \code{flush} region is not implied at the following locations:
+\noteheader -- A \code{flush} region is not implied at the following locations:
 
 \begin{itemize}
 \item At entry to worksharing regions.
@@ -7203,10 +8040,22 @@ the \code{atomic} construct in
 \end{itemize}
 \noteend
 
+\events
 
+The \plc{flush} event occurs in a thread encountering the
+\code{flush} construct.
 
+\tools
 
+A thread dispatches a registered \code{ompt\_callback\_flush} callback
+for each occurrence of a \plc{flush} event in that thread. This
+callback has the type signature \code{ompt\_callback\_flush\_t}.
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_flush\_t}, see
+\specref{sec:ompt_callback_flush_t}.
+\end{itemize}
 
 
 
@@ -7316,6 +8165,9 @@ are satisfied before it completes execution of the \code{ordered} region.
 A specific dependence is satisfied when a thread executing the corresponding
 iteration encounters an \code{ordered} construct with a \code{depend(source)} clause.
 
+\omptMutex{ordered}{an}
+
+
 \restrictions
 Restrictions to the \code{ordered} construct are as follows:
 
@@ -7377,6 +8229,16 @@ the exception must catch it.
 
 \item \code{depend} Clause, see
 \specref{subsec:depend Clause}
+
+\item \code{ompt\_mutex\_ordered}, see
+\specref{sec:ompt_mutex_kind_t}.
+
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+
 \end{itemize}
 
 
@@ -7459,7 +8321,7 @@ The list items that appear in the \code{depend} clause may include array section
 \fortranspecificend
 
 \notestart
-\noteheader – The enforced task dependence establishes a synchronization of memory 
+\noteheader -- The enforced task dependence establishes a synchronization of memory 
 accesses performed by a dependent task with respect to accesses performed by the 
 predecessor tasks. However, it is the responsibility of the programmer to synchronize properly with respect to other concurrent accesses that occur outside of those tasks.
 \noteend
@@ -7476,8 +8338,35 @@ the \code{depend} clause is ignored.  If all \code{depend} clauses on an
 \code{ordered} construct are ignored then the construct is ignored.
 
 \notestart
-\noteheader – If the iteration vector \plc{vec} does not indicate a lexicographically earlier iteration, it can cause a deadlock.
+\noteheader -- If the iteration vector \plc{vec} does not indicate a lexicographically earlier iteration, it can cause a deadlock.
 \noteend
+
+\events
+
+The \plc{task-dependences} event occurs in a thread encountering a
+tasking construct with a \code{depend} clause immediately after the
+\plc{task-create} event for the new task.  
+
+The \plc{task-dependence} event indicates an unfulfilled dependence for the generated task.
+This event occurs in a thread that observes the unfulfilled dependence before it is satisfied.
+%unfulfilled dependence... already implies that if the dependence is satisfied (not unfulfilled)
+% then there is no events... so can skip the sentence below.
+%A dependence will not cause an event if the
+%dependence producing task finishes before a dependence consuming task is created.
+
+\tools
+
+A thread dispatches the \code{ompt\_callback\_task\_dependences} callback
+for each occurrence of the \plc{task-dependences} event to 
+announce its dependences with respect to the list items in the \code{depend} clause.
+This callback has type signature
+\code{ompt\_callback\_task\_dependences\_t}.
+
+A thread dispatches the \code{ompt\_callback\_task\_dependence}
+callback for a \plc{task-dependence} event to to report a
+dependence between a predecessor task  (\plc{src\_task\_data}) and a dependent task
+(\plc{sink\_task\_data}).  This callback has type signature
+\code{ompt\_callback\_task\_dependence\_t}.
 
 \restrictions
 Restrictions to the \code{depend} clause are as follows:
@@ -7541,7 +8430,14 @@ type of x$_{i}$ without overflow.
 
 \item \code{ordered} construct, see
 \specref{subsec:ordered Construct}. 
+
+\item \code{ompt\_callback\_task\_dependences\_t}, see
+\specref{sec:ompt_callback_task_dependences_t}.
+
+\item \code{ompt\_callback\_task\_dependence\_t}, see
+\specref{sec:ompt_callback_task_dependence_t}.
 \end{itemize}
+
 
 
 
@@ -7661,7 +8557,7 @@ continues execution at the end of the canceled region.
 \end{itemize}
 
 \notestart
-\noteheader – If one thread activates cancellation and another thread encounters a cancellation 
+\noteheader -- If one thread activates cancellation and another thread encounters a cancellation 
 point, the order of execution between the two threads is non-deterministic. 
 Whether the thread that encounters a cancellation point detects the activated cancellation 
 depends on the underlying hardware and operating system.
@@ -7707,13 +8603,26 @@ associated with the \code{cancel} construct is always encountered regardless of 
 the \code{if} expression.
 
 \notestart
-\noteheader – The programmer is responsible for releasing locks and
+\noteheader -- The programmer is responsible for releasing locks and
 other synchronization data structures that might cause a deadlock when
 a \code{cancel} construct is encountered and blocked threads cannot be
 canceled. The programmer is also responsible for ensuring proper
 synchronizations to avoid deadlocks that might arise from cancellation
 of OpenMP regions that contain OpenMP synchronization constructs.
 \noteend
+
+\events
+
+The \plc{cancel} event occurs after a task encounters a 
+\code{cancel} construct if the \plc{cancel-var} ICV is \plc{true}.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancel} event in that thread. 
+The callback occurs in the context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_activated} as its \plc{flags} argument. 
 
 \restrictions
 The restrictions to the \code{cancel} construct are as follows:
@@ -7753,6 +8662,8 @@ not be encountered elsewhere in its region.
 
 \item \code{omp\_get\_cancellation} routine, see 
 \specref{subsec:omp_get_cancellation}.
+
+\item \code{ompt\_callback\_cancel\_t}, see \specref{sec:ompt_callback_cancel_t}.
 \end{itemize}
 
 
@@ -7837,6 +8748,20 @@ encountering task belongs and continues execution at the end of the current
 task region if cancellation has been activated for any of them.
 \end{itemize}
 
+
+\events
+
+The \plc{cancellation} event occurs if a task encounters a 
+cancellation point and detected the activation of cancellation.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancellation} event in that thread. 
+The callback occurs in the context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_detected} as its \plc{flags} argument. 
+
 \restrictions
 \begin{itemize}
 \item A \code{cancellation}~\code{point} construct for which
@@ -7862,6 +8787,9 @@ an OpenMP construct that matches the type specified in
 
 \item \code{omp\_get\_cancellation} routine, see 
 \specref{subsec:omp_get_cancellation}.
+
+\item \code{ompt\_callback\_cancel\_t}, see \specref{sec:ompt_callback_cancel_t}.
+
 \end{itemize}
 \end{samepage}
 
@@ -8562,7 +9490,7 @@ is associated with a target or a  subobject of a target that is in a \code{priva
 
 
 \notestart
-\noteheader – Passing a shared variable to a procedure may result in the use of
+\noteheader -- Passing a shared variable to a procedure may result in the use of
 temporary storage in place of the actual argument when the corresponding dummy
 argument does not have the \code{VALUE} attribute and its data-sharing attribute
 is implementation-defined as per the rules in
@@ -9868,7 +10796,7 @@ The order in which any final subroutines for different variables of a finalizabl
 \fortranspecificend
 
 \notestart
-\noteheader – The \code{copyprivate} clause is an alternative to using a shared variable for the 
+\noteheader -- The \code{copyprivate} clause is an alternative to using a shared variable for the 
 value when providing such a shared variable would be difficult (for example, in a 
 recursion requiring a different variable at each level). 
 \noteend
@@ -10048,6 +10976,23 @@ rank is allocated.
 The \plc{map-type} determines how the new list item is initialized.
 
 If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofrom}.
+
+\events
+The \plc{target-map} event occurs when a thread maps data to or from a target device.
+
+The \plc{target-transfer} event occurs when a thread initiates a data transfer to or from a target device.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_target\_map}
+callback for each occurrence of a \plc{target-map} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_map\_t}. 
+
+A thread dispatches a registered \code{ompt\_callback\_target\_transfer}
+callback for each occurrence of a \plc{target-transfer} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_transfer\_t}. 
 
 \restrictions
 \begin{itemize}
