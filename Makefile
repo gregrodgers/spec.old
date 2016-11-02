@@ -15,6 +15,7 @@ CHAPTERS=titlepage.tex \
 	appendix-B-grammar.tex \
 	appendix-C-InterfaceDeclarations.tex \
 	appendix-D-ImplementationDefined.tex \
+	appendix-frames.tex \
 	appendix-E-FeaturesHistory.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png Makefile
