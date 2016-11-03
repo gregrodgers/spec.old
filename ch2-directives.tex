@@ -1314,7 +1314,7 @@ barrier that it passed and before it terminates is unspecified.
 \events
 
 The \plc{parallel-begin} event occurs in a thread encountering a
-\code{parallel} construct before any implicit task is created by the
+\code{parallel} construct before any implicit task is created for the associated parallel
 region.
 
 Upon creation of each implicit task, an \plc{implicit-task-begin} event
@@ -1362,8 +1362,8 @@ the \code{parallel} construct.  This callback has the type signature
 \code{ompt\_callback\_parallel\_begin\_t}.
 
 A thread dispatches a registered \code{ompt\_callback\_implicit\_task}
-callback for each occurrence of a \plc{implicit-begin} and
-\plc{implicit-end} event in that thread. The callback occurs in the
+callback for each occurrence of a \plc{implicit-task-begin} and
+\plc{implicit-task-end} event in that thread. The callback occurs in the
 context of the implicit task.  The callback has type signature
 \code{ompt\_callback\_implicit\_task\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
@@ -2466,7 +2466,7 @@ but before resuming execution of the encountering implicit task.
 \tools
 
 A thread dispatches a registered \code{ompt\_callback\_work}
-callback for each occurrence of a \plc{single-begin} and
+callback for each occurrence of \plc{single-begin} and
 \plc{single-end} events in that thread. The callback has type signature
 \code{ompt\_callback\_work\_t}. The callback receives
 \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
@@ -3127,11 +3127,11 @@ construct. The effect of any clause that applies to both constructs is as if it 
 
 \events
 
-This composite construct generates the same events as the \code{for} or \code{do} worksharing construct.
+This composite construct generates the same events as the loop construct.
 
 \tools
 
-This composite construct generates the same callbacks as the \code{for} or \code{do} worksharing construct.
+This composite construct dispatches the same callbacks as the loop construct.
 
 \restrictions
 All restrictions to the loop construct and the \code{simd} construct apply to the loop SIMD 
@@ -3154,8 +3154,8 @@ construct. In addition, the following restrictions apply:
 \item Data attribute clauses, see 
 \specref{subsec:Data-Sharing Attribute Clauses}. 
 
-\item Events and tool callbacks for worksharing construct, see
-\specref{subsec:Loop Construct} and \specref{subsec:workshare Construct}.
+\item Events and tool callbacks for the loop construct, see
+\specref{subsec:Loop Construct}.
 \end{itemize}
 \end{samepage}
 
@@ -3615,7 +3615,7 @@ This composite construct generates the same events as the \code{taskloop} constr
 
 \tools
 
-This composite construct generates the same callbacks as the \code{taskloop} construct.
+This composite construct dispatches the same callbacks as the \code{taskloop} construct.
 
 \restrictions
 \begin{itemize}
@@ -3690,22 +3690,22 @@ region.
 \subsection{Initial Task}
 
 \events
-No events are associated with the \emph{implicit parallel region} in each \emph{initial thread}.
+No events are associated with the implicit parallel region in each initial thread.
 
-The \plc{initial-thread-begin} event occurs in an \emph{initial thread} after the OpenMP runtime invokes the tool initializer 
-but before the \emph{initial thread} begins to execute the first OpenMP \emph{region}. 
+The \plc{initial-thread-begin} event occurs in an initial thread after the OpenMP runtime invokes the tool initializer 
+but before the initial thread begins to execute the first OpenMP region in the initial task. 
 
 The \plc{initial-task-create} event occurs after an \plc{initial-thread-begin} event 
-but before the first OpenMP \emph{region} begins to execute.
+but before the first OpenMP region in the initial task begins to execute.
 
-The \plc{initial-thread-end} event occurs as the final event in an \emph{initial thread} at the end of an \emph{initial task} 
+The \plc{initial-thread-end} event occurs as the final event in an initial thread at the end of an initial task 
 immediately prior to invocation of the tool finalizer.
 
 \tools
 
 A thread dispatches a registered \code{ompt\_callback\_thread\_begin}
-callback for the \plc{initial-thread-begin} event in an \emph{initial thread}. 
-The callback occurs in the context of the \emph{initial thread}.  
+callback for the \plc{initial-thread-begin} event in an initial thread. 
+The callback occurs in the context of the initial thread.  
 The callback has type signature \code{ompt\_callback\_thread\_begin\_t}. 
 The callback receives \code{ompt\_thread\_initial} as its \plc{thread\_type} argument.
 
@@ -3863,6 +3863,8 @@ This cause may be the completion of the prior task region, the encountering of a
 \index{constructs!device constructs}
 \index{device constructs!device constructs}
 
+\subsection{Device Initialization}
+
 \events
 
 The \plc{device-initialize} event occurs in a thread that encounters
@@ -3954,7 +3956,7 @@ all variables are mapped according to those \code{map} clauses.
 
 \def\omptTargetRegionEvents#1#2#3
 {
-The \plc{#3{-begin}} event occurs after a thread enters a
+The \plc{#3{-begin}} event occurs when a thread enters a
 \code{#1} region.
 
 The \plc{#3{-end}} event occurs when a thread exits a
@@ -3981,7 +3983,7 @@ as its \plc{endpoint} argument, as appropriate, and
 \tools
 \omptTargetRegionTools{#1}{#2}{#3}{#4}
 }
-\omptTargetRegion{\code{target}~\code{data}}{ompt\_target}{target-data}{the task encountering the construct}
+\omptTargetRegion{\code{target}~\code{data}}{ompt\_target\_enter\_data}{target-data}{the task encountering the construct}
 
 \restrictions
 \begin{itemize}
@@ -4138,9 +4140,6 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 
 \item \code{map} clause, see \specref{subsec:map Clause}.
 
-\item \code{ompt\_callback\_task\_create\_t}, see
-\specref{sec:ompt_callback_task_create_t}.
-
 \item \code{ompt\_callback\_target\_t}, see
 \specref{sec:ompt_callback_target_t}.
 
@@ -4238,9 +4237,6 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
 \item \code{map} clause, see \specref{subsec:map Clause}.
-
-\item \code{ompt\_callback\_task\_create\_t}, see
-\specref{sec:ompt_callback_task_create_t}.
 
 \item \code{ompt\_callback\_target\_t}, see
 \specref{sec:ompt_callback_target_t}.
@@ -4444,11 +4440,11 @@ same \code{target} region, and the same thread that threw the exception must cat
 \item Data-mapping Attribute Rules and Clauses, see 
 \specref{subsec:Data-mapping Attribute Rules and Clauses}.
 
-\item \code{ompt\_callback\_task\_create\_t}, see
-\specref{sec:ompt_callback_task_create_t}.
-
 \item \code{ompt\_callback\_target\_t}, see 
 \specref{sec:ompt_callback_target_t}.
+
+\item \code{ompt\_callback\_target\_submit\_t}, 
+\specref{sec:ompt_callback_target_submit_t}.
 
 \end{itemize}
 
@@ -5196,7 +5192,7 @@ This composite construct generates the same events as the \code{distribute} cons
 
 \tools
 
-This composite construct generates the same callbacks as the \code{distribute} construct.
+This composite construct dispatches the same callbacks as the \code{distribute} construct.
 
 \restrictions
 \begin{itemize}
@@ -5277,7 +5273,7 @@ This composite construct generates the same events as the \code{distribute} and 
 
 \tools
 
-This composite construct generates the same callbacks as the \code{distribute} and parallel loop constructs.
+This composite construct dispatches the same callbacks as the \code{distribute} and parallel loop constructs.
 
 %% BRONIS: Ugly trick to avoid page starting with end c/C++ sentinel
 \vspace{-6pt}
@@ -5376,7 +5372,7 @@ This composite construct generates the same events as the \code{distribute} and 
 
 \tools
 
-This composite construct generates the same callbacks as the \code{distribute} and parallel loop constructs.
+This composite construct dispatches the same callbacks as the \code{distribute} and parallel loop constructs.
 
 \restrictions
 \begin{itemize}
@@ -6974,7 +6970,7 @@ A thread dispatches a registered \code{ompt\_callback\_mutex\_acquired}
 callback for each occurrence of #2 \plc{#1-acquired} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
 
-A thread dispatches a registered \code{ompt\_callback\_mutex\_release}
+A thread dispatches a registered \code{ompt\_callback\_mutex\_released}
 callback for each occurrence of #2 \plc{#1-release} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
 The callbacks occur in the task encountering
@@ -7324,21 +7320,16 @@ a \code{task} construct with an empty associated structured block that
 generates a \emph{mergeable} and \emph{included task}. Thus, the current task region is
 suspended until the \emph{predecessor tasks} of this task complete execution.
 
-\crossreferences
-
-\begin{itemize}
-\item \code{task} construct, see \specref{subsec:task Construct}.
-\item \code{depend} clause, see \specref{subsec:depend Clause}.
-\end{itemize}
-
-
-
 \omptSyncRegion{taskwait}
 
 \crossreferences
 \begin{itemize}
+\item \code{task} construct, see \specref{subsec:task Construct}.
+
 \item Task scheduling, see 
 \specref{subsec:Task Scheduling}.
+
+\item \code{depend} clause, see \specref{subsec:depend Clause}.
 
 \item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
 \specref{sec:ompt_scope_endpoint_t}.
