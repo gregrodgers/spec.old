@@ -9,11 +9,13 @@ CHAPTERS=titlepage.tex \
 	ch1-introduction.tex \
 	ch2-directives.tex \
 	ch3-runtimeLibrary.tex \
-	ch4-environmentVariables.tex \
+	ch4-toolsSupport.tex \
+	ch5-environmentVariables.tex \
 	appendix-A-stubs.tex \
 	appendix-B-grammar.tex \
 	appendix-C-InterfaceDeclarations.tex \
 	appendix-D-ImplementationDefined.tex \
+	appendix-frames.tex \
 	appendix-E-FeaturesHistory.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png Makefile
@@ -59,9 +61,12 @@ DIFF_TO:=HEAD
 DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole \
-                  --append-safecmd=ld-safe.txt \
                   --append-textcmd=plc,code,glossaryterm \
-                  --exclude-textcmd=section,subsection,subsubsection,vcode
+                  --exclude-textcmd=chapter,section,subsection,subsubsection,vcode
+#COMMON_DIFF_OPTS:=--math-markup=whole \
+#                  --append-safecmd=ld-safe.txt \
+#                  --append-textcmd=plc,code,glossaryterm \
+#                  --exclude-textcmd=section,subsection,subsubsection,vcode
 
 GIT_DIFF_OPTS:=${COMMON_DIFF_OPTS} --config=latexdiff.cfg --ignore-latex-errors --main openmp.tex --latexdiff-flatten
 VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --type="${DIFF_TYPE}" --flatten --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}

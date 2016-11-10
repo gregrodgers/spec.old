@@ -97,6 +97,11 @@ An execution entity with a stack and associated static memory, called
 A \emph{thread} that is managed by the OpenMP runtime system.
 \glossarydefend
 
+\glossaryterm{idle thread}
+\glossarydefstart
+An \emph{OpenMP thread} that is not currently part of any \code{parallel} region. 
+\glossarydefend
+
 \glossaryterm{thread-safe routine}
 \glossarydefstart
 A routine that performs the intended function even when executed concurrently 
@@ -845,7 +850,7 @@ execution of a program.
 
 \begin{adjustwidth}{-0.75in}{0in}
 \notestart
-\noteheader – An array or structure element is a variable that is part of another variable.
+\noteheader -- An array or structure element is a variable that is part of another variable.
 \noteend
 \end{adjustwidth}
 \glossarydefend
@@ -1129,10 +1134,103 @@ are documented in Appendix~\ref{chap:OpenMP Implementation-Defined Behaviors}.
 Implies a construct, clause or other feature is normative in the current specification but is considered obsolescent and will be removed in the future.
 \glossarydefend
 
+\subsection{Tool Terminology}
+
+\glossaryterm{tool} 
+\glossarydefstart
+Executable code, distinct from application or runtime code, that can observe and/or modify the execution of an application.
+\glossarydefend
+
+\glossaryterm{first-party tool} 
+\glossarydefstart
+A tool that executes in the address space of the program it is monitoring.
+\glossarydefend
 
 
 
+\glossaryterm{activated tool} 
+\glossarydefstart
+A first-party tool that successfully completed its initialization.
+\glossarydefend
 
+\glossaryterm{event} 
+\glossarydefstart
+A point of interest in the execution of a thread where the condition
+defining that event is true. 
+\glossarydefend
+
+\glossaryterm{tool callback} 
+\glossarydefstart
+A function provided by a tool to an OpenMP implementation that can be invoked when needed.
+\glossarydefend
+
+\glossaryterm{registering a callback} 
+\glossarydefstart
+Providing a callback function to an OpenMP implementation for a particular purpose.
+\glossarydefend
+
+\glossaryterm{dispatching a callback at an event} 
+\glossarydefstart
+Processing a callback when an associated event occurs in a manner consistent with the return code
+provided when a \emph{first-party} tool registered the callback.
+\glossarydefend
+
+\glossaryterm{thread state} 
+\glossarydefstart
+An enumeration type that describes what an OpenMP thread is currently doing.  
+A thread can be in only one state at any time.
+\glossarydefend
+
+\glossaryterm{wait identifier} 
+\glossarydefstart
+A unique opaque handle associated with each data object (e.g., a lock) used by the OpenMP runtime
+to enforce mutual exclusion that may cause a thread to wait actively or passively.
+\glossarydefend
+
+\glossaryterm{frame} 
+\glossarydefstart
+A storage area on a thread's stack associated with a procedure invocation. A frame includes space for 
+one or more saved registers and often also includes space for saved arguments, local variables, 
+and padding for alignment.
+\glossarydefend
+
+\glossaryterm{canonical frame address} 
+\glossarydefstart
+An address associated with a procedure \emph{frame} on a call stack defined as the value of the stack pointer immediately prior 
+to calling the procedure whose invocation the frame represents.
+\glossarydefend
+
+\glossaryterm{runtime entry point} 
+\glossarydefstart
+A function interface provided by an OpenMP runtime for use by a tool. A runtime entry point is
+typically not associated with a global function symbol.
+\glossarydefend
+
+\glossaryterm{trace record} 
+\glossarydefstart
+A data structure to store information associated with an occurrence of an \emph{event}.
+\glossarydefend
+
+\glossaryterm{native trace record} 
+\glossarydefstart
+A \emph{trace record} for an OpenMP device that is in a device-specific format. 
+\glossarydefend
+
+\glossaryterm{signal} 
+\glossarydefstart
+A software interrupt delivered to a thread.
+\glossarydefend
+
+\glossaryterm{signal handler} 
+\glossarydefstart
+A function called asynchronously when a \emph{signal} is delivered to a thread.
+\glossarydefend
+
+\glossaryterm{async signal safe} 
+\glossarydefstart
+Guaranteed not to interfere with operations that are being interrupted by \emph{signal} delivery. 
+An async signal safe \emph{runtime entry point} is safe to call from a \emph{signal handler}.
+\glossarydefend
 
 
 
@@ -1414,7 +1512,7 @@ specified order:
 \end{enumerate}
 
 \notestart
-\noteheader – OpenMP synchronization operations, described in 
+\noteheader -- OpenMP synchronization operations, described in 
 \specref{sec:Master and Synchronization Constructs and Clauses} and in \specref{sec:Lock Routines}, 
 are recommended for enforcing this order. Synchronization 
 through variables is possible but is not recommended because the proper timing of 
@@ -1449,7 +1547,7 @@ The flush operation can be specified using the \code{flush} directive, and is al
 various locations in an OpenMP program: see \specref{subsec:flush Construct} for details.
 
 \notestart
-\noteheader – Since flush operations by themselves cannot prevent data races, explicit flush 
+\noteheader -- Since flush operations by themselves cannot prevent data races, explicit flush 
 operations are only useful in combination with non-sequentially consistent atomic 
 directives.
 \noteend
@@ -1477,17 +1575,64 @@ directives.
 
 
 
+\section{Tool Interface}
+\label{subsec:Tool Support}
 
+To enable development of high-quality, portable, \emph{first-party}
+tools that support monitoring and performance
+analysis of OpenMP programs developed using any implementation of 
+the OpenMP API, the OpenMP API includes a tool interface 
+known as OMPT.
 
+The OMPT interface provides the following: 
+\begin{itemize}
+\item a mechanism to initialize a first-party tool,
+\item routines that enable a tool to determine the capabilities of an
+  OpenMP implementation,
+\item routines that enable a tool to examine OpenMP state information associated with a thread,
+\item mechanisms that enable a tool to map implementation-level calling
+  contexts back to their source-level representations,
+\item a callback interface that enables a tool to receive notification
+  of OpenMP \emph{events},
+\item a tracing interface that enables a tool to trace activity on OpenMP target devices, and
+\item a runtime library routine that an application can use to control a tool.
+\end{itemize}
 
+OpenMP implementations may differ with respect to the \emph{thread states} that
+they support, the mutual exclusion implementations they employ, 
+and the OpenMP events for which tool callbacks are invoked. For some OpenMP events,
+OpenMP implementations must guarantee that a registered callback will be invoked for each occurrence of the
+event. For other OpenMP events, OpenMP implementations are permitted to invoke a registered callback for some
+or no occurrences of the event; for such
+OpenMP events, however,
+OpenMP implementations are encouraged to invoke tool callbacks on as
+many occurrences of the event as is practical to do so.
+Section~\ref{sec:ompt-register-callbacks} specifies the subset of OMPT
+callbacks that an OpenMP implementation must support for a minimal
+implementation of the OMPT interface.
+
+An implementation of the OpenMP API may differ from the
+abstract execution model described by its specification.  The ability
+of tools using the OMPT interface to observe such differences does not constrain
+implementations of the OpenMP API in any way. 
+
+With the exception of the \code{omp\_control\_tool} runtime library routine for tool control, 
+all other routines in the OMPT interface are intended for use only by tools and
+are not visible to applications.
+For that reason, a Fortran binding is provided only 
+for \code{omp\_control\_tool};
+all other OMPT functionality is described with C syntax only.
 
 \section{OpenMP Compliance}
 \label{sec:OpenMP Compliance}
 \index{OpenMP compliance}
 \index{compliance}
-An implementation of the OpenMP API is compliant if and only if it compiles and 
-executes all conforming programs according to the syntax and semantics laid out in 
-Chapters 1, 2, 3 and 4. Appendices A, B, C and D and sections designated as Notes 
+An implementation of the OpenMP API is compliant if and only if it compiles and
+executes all conforming programs, and supports the tool interface,
+according to the syntax and semantics laid out in 
+Chapters 1, 2, 3, 4 and 5. 
+% Note, though, that \specref{chap:ToolsSupport} contains both mandatory and optional features; the OpenMP API is compliant if at least the mandatory features are provided.
+Appendices A, B, C, D, and E, as well as sections designated as Notes 
 (see \specref{sec:Organization of this document}) 
 are for information purposes only and are not part of the 
 specification.
@@ -1598,6 +1743,8 @@ The remainder of this document is structured as follows:
 
 \item Chapter \ref{chap:Runtime Library Routines} ``Runtime Library Routines''
 
+\item Chapter \ref{chap:ToolsSupport} ``Tool Interface''
+
 \item Chapter \ref{chap:Environment Variables} ``Environment Variables''
 
 \item Appendix \ref{chap:Appendix A} ``Stubs for Runtime Library Routines''
@@ -1605,6 +1752,8 @@ The remainder of this document is structured as follows:
 \item Appendix \ref{chap:Interface Declarations} ``Interface Declarations'' 
 
 \item Appendix \ref{chap:OpenMP Implementation-Defined Behaviors} ``OpenMP Implementation-Defined Behaviors''
+
+\item Appendix \ref{chap:frames} ``Task Frame Management for the Tool Interface''
 
 \item Appendix \ref{chap:Features History} ``Features History''
 \end{itemize}
@@ -1661,7 +1810,7 @@ Some text is for information only, and is not part of the normative specificatio
 text is designated as a note, like this: 
 
 \needspace{6\baselineskip}\notestart
-\noteheader – Non-normative text....
+\noteheader -- Non-normative text....
 \noteend
 
 
