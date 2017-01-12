@@ -6,19 +6,19 @@ all: openmp.pdf
 .PHONY: clean quick all git-diff-all
 
 CHAPTERS=titlepage.tex \
-	ch1-introduction.tex \
-	ch2-directives.tex \
-	ch3-runtimeLibrary.tex \
-	ch4-toolsSupport.tex \
-	ch5-environmentVariables.tex \
-	appendix-A-stubs.tex \
-	appendix-B-grammar.tex \
-	appendix-C-InterfaceDeclarations.tex \
-	appendix-D-ImplementationDefined.tex \
-	appendix-frames.tex \
-	appendix-E-FeaturesHistory.tex
+	introduction/introduction.tex \
+	directives/directives.tex \
+	runtime_library/runtime_library.tex \
+	tool_support/tool_support.tex \
+	environment_variables/environment_variables.tex \
+	appendices/stubs.tex \
+	appendices/grammar.tex \
+	appendices/interface_declarations.tex \
+	appendices/implementation_defined.tex \
+	appendices/tool_support_frames.tex \
+	appendices/features_history.tex
 
-openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png Makefile
+openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist directives/worksharing-schedule-loop.tex openmp-logo.png Makefile
 	-pdflatex -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -interaction=batchmode -file-line-error openmp.tex
