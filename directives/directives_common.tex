@@ -1,0 +1,1651 @@
+\section{Directive Format}
+\label{sec:Directive Format}
+\index{directive format}
+\ccppspecificstart
+OpenMP directives for C/C++ are specified with the \code{pragma} preprocessing directive. 
+The syntax of an OpenMP directive is as follows:
+
+\begin{boxedcode}
+\#pragma\plc{ }omp\plc{ directive-name [clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+
+Each directive  starts with \code{\#pragma} \code{omp}. The remainder of the directive follows the 
+conventions of the C and C++ standards for compiler directives. In particular, white 
+space can be used before and after the \code{\#}, and sometimes white space must be used to 
+separate the words in a directive. Preprocessing tokens following the \code{\#pragma} \code{omp}
+are subject to macro replacement. 
+
+Some OpenMP directives may be composed of consecutive \code{\#pragma} preprocessing 
+directives if specified in their syntax.
+
+Directives are case-sensitive. 
+
+An OpenMP executable directive applies to at most one succeeding statement, which 
+must be a structured block.
+\ccppspecificend
+
+\fortranspecificstart
+OpenMP directives for Fortran are specified as follows:
+
+\begin{boxedcode}
+\plc{sentinel directive-name [clause[ [},\plc{] clause]...]}
+\end{boxedcode}
+
+All OpenMP compiler directives must begin with a directive \emph{sentinel}. The format of a 
+sentinel differs between fixed and free-form source files, as described in 
+\specref{subsec:Fixed Source Form Directives} and \specref{subsec:Free Source Form Directives}.
+
+Directives are case insensitive. Directives cannot be embedded within continued 
+statements, and statements cannot be embedded within directives.
+
+In order to simplify the presentation, free form is used for the syntax of OpenMP 
+directives for Fortran in the remainder of this document, except as noted.
+\fortranspecificend
+
+Only one \emph{directive-name} can be specified per directive (note that this includes combined 
+directives, see \specref{sec:Combined Constructs}).  The order in which clauses appear on directives 
+is not significant. Clauses on directives may be repeated as needed, subject to the 
+restrictions listed in the description of each clause.
+
+Some data-sharing attribute clauses (\specref{subsec:Data-Sharing Attribute Clauses}), 
+data copying clauses (\specref{subsec:Data Copying Clauses}), the 
+\code{threadprivate} directive (\specref{subsec:threadprivate Directive}), 
+the \code{flush} directive (\specref{subsec:flush Construct}), and the 
+\code{link} clause of the \code{declare}~\code{target} directive 
+(\specref{subsec:declare target Directive}) accept a \emph{list}. The 
+\code{to} clause of the \code{declare}~\code{target} directive 
+(\specref{subsec:declare target Directive}) accepts an \plc{extended-list}. 
+The \code{depend} clause (\specref{subsec:depend Clause}), when used to specify task dependences,
+accepts a \plc{locator-list}.  A \plc{list} consists of a
+comma-separated collection of one or more \plc{list items}. A
+\plc{extended-list} consists of a comma-separated collection of one or more
+\plc{extended list items}. A \plc{locator-list} consists of a comma-separated
+collection of one or more \plc{locator list items}.
+
+\ccppspecificstart
+A \plc{list item} is a variable or array section. An \plc{extended list item} is a \plc{list
+item} or a function name.  A \plc{locator list item} is any \plc{lvalue}
+expression, including variables, or an array section.
+\ccppspecificend
+
+\fortranspecificstart
+A \plc{list item} is a variable, array section or common block name 
+(enclosed in slashes). An \plc{extended list item} is a \plc{list item} 
+or a procedure name. A \plc{locator list item} is a \plc{list item}.
+
+When a named common block appears in a \plc{list}, it has the same
+meaning as if every explicit member of the common block appeared in
+the list.  An explicit member of a common block is a variable that is
+named in a \code{COMMON} statement that specifies the common block
+name and is declared in the same scoping unit in which the clause
+appears.
+
+Although variables in common blocks can be accessed by use association
+or host association, common block names cannot.  As a result, a common
+block name specified in a data-sharing attribute, a data copying or
+a data-mapping attribute clause must be declared to be a common block in
+the same scoping unit in which the clause appears.
+\fortranspecificend
+
+For all base languages, a \plc{list item}  or an \plc{extended list item}
+is subject to the restrictions specified in \specref{sec:Array Sections} 
+and in each of the sections describing clauses and directives for which 
+the \plc{list} or \plc{extended-list} appears.
+
+
+
+\pagebreak
+% Force the blue floater bar down, and force the subsection header up, to
+% bring the blue bar closer to the header:
+\vspace{2\baselineskip}
+\fortranspecificstart
+\vspace{-3\baselineskip}
+\subsection{Fixed Source Form Directives}
+\label{subsec:Fixed Source Form Directives}
+\index{fixed source form directives}
+The following sentinels are recognized in fixed form source files:
+
+\begin{boxedcode}
+!\$omp \textnormal{|} c\$omp \textnormal{|} *\$omp
+\end{boxedcode}
+
+Sentinels must start in column 1 and appear as a single word with no intervening 
+characters. Fortran fixed form line length, white space, continuation, and column rules 
+apply to the directive line. Initial directive lines must have a space or zero in column 6, 
+and continuation directive lines must have a character other than a space or a zero in 
+column 6.
+
+Comments may appear on the same line as a directive. The exclamation point initiates a 
+comment when it appears after column 6. The comment extends to the end of the source 
+line and is ignored. If the first non-blank character after the directive sentinel of an 
+initial or continuation directive line is an exclamation point, the line is ignored.
+
+\notestart
+\noteheader -- in the following example, the three formats for specifying the directive are 
+equivalent (the first line represents the position of the first 9 columns):
+
+\begin{alltt}
+\code{c23456789
+!\$omp parallel do shared(a,b,c)
+
+c\$omp parallel do
+c\$omp+shared(a,b,c)
+
+c\$omp paralleldoshared(a,b,c)}
+\end{alltt}
+\noteend
+
+
+
+
+
+
+
+
+
+
+\subsection{Free Source Form Directives}
+\label{subsec:Free Source Form Directives}
+\index{free source form directives}
+
+The following sentinel is recognized in free form source files:
+
+\begin{boxedcode}
+!\$omp
+\end{boxedcode}
+
+The sentinel can appear in any column as long as it is preceded only by white space 
+(spaces and tab characters). It must appear as a single word with no intervening 
+character. Fortran free form line length, white space, and continuation rules apply to the 
+directive line. Initial directive lines must have a space after the sentinel. Continued 
+directive lines must have an ampersand (\code{\&}) as the last non-blank character on the line, 
+prior to any comment placed inside the directive. Continuation directive lines can have 
+an ampersand after the directive sentinel with optional white space before and after the 
+ampersand.
+
+Comments may appear on the same line as a directive. The exclamation point (\code{!}) 
+initiates a comment. The comment extends to the end of the source line and is ignored. 
+If the first non-blank character after the directive sentinel is an exclamation point, the 
+line is ignored.
+
+One or more blanks or horizontal tabs must be used to separate adjacent keywords in 
+directives in free source form, except in the following cases, where white space is 
+optional between the given set of keywords:
+
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
+\end{figure}
+
+\begin{indentedcodelist}
+declare reduction
+declare simd
+declare target
+distribute parallel do
+distribute parallel do simd
+distribute simd
+do simd
+end atomic
+end critical
+end distribute 
+end distribute parallel do
+end distribute parallel do simd
+\end{indentedcodelist}
+\pagebreak
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
+\end{figure}
+\begin{indentedcodelist}
+end distribute simd
+end do
+end do simd
+end master
+end ordered
+end parallel
+end parallel do
+end parallel do simd
+end parallel sections
+end parallel workshare
+end sections
+end simd
+end single
+end target
+end target data
+end target parallel
+end target parallel do
+end target parallel do simd
+end target simd
+end target teams
+end target teams distribute
+end target teams distribute parallel do
+end target teams distribute parallel do simd
+end target teams distribute simd
+end task
+end taskgroup
+end taskloop
+\end{indentedcodelist}
+\pagebreak
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
+\end{figure}
+\begin{indentedcodelist}
+end taskloop simd
+end teams
+end teams distribute
+end teams distribute parallel do
+end teams distribute parallel do simd
+end teams distribute simd
+end workshare
+parallel do
+parallel do simd
+parallel sections
+parallel workshare
+target data
+target enter data
+target exit data
+target parallel
+target parallel do
+target parallel do simd
+target simd
+target teams
+target teams distribute
+target teams distribute parallel do
+target teams distribute parallel do simd
+target teams distribute simd
+target update
+taskloop simd
+teams distribute
+teams distribute parallel do
+teams distribute parallel do simd
+teams distribute simd
+\end{indentedcodelist}
+
+\notestart
+\noteheader -- in the following example the three formats for specifying the directive are 
+equivalent (the first line represents the position of the first 9 columns):
+
+\begin{alltt}\code{!23456789
+       !\$omp parallel do \&
+                 !\$omp shared(a,b,c)
+
+       !\$omp parallel \&
+      !\$omp\&do shared(a,b,c)
+
+!\$omp paralleldo shared(a,b,c)}
+\end{alltt}
+\noteend
+\bigskip
+\fortranspecificend
+
+
+
+
+
+
+
+
+\subsection{Stand-Alone Directives}
+\label{subsec:Stand-Alone Directives}
+\index{stand-alone directives}
+\summary
+Stand-alone directives are executable directives that have no associated user code.
+
+\descr
+Stand-alone directives do not have any associated executable user code. Instead, they 
+represent executable statements that typically do not have succinct equivalent statements 
+in the base languages. There are some restrictions on the placement of a stand-alone 
+directive within a program. A stand-alone directive may be placed only at a point where 
+a base language executable statement is allowed.
+
+\restrictions
+\ccppspecificstart
+For C/C++, a stand-alone directive may not be used in place of the statement following 
+an \code{if}, \code{while}, \code{do}, \code{switch}, or \code{label}. 
+\ccppspecificend
+
+\fortranspecificstart
+For Fortran, a stand-alone directive may not be used as the action statement in an \code{if} 
+statement or as the executable statement following a label if the label is referenced in 
+the program.
+\fortranspecificend
+
+
+
+
+
+
+
+
+
+\section{Conditional Compilation}
+\label{sec:Conditional Compilation}
+\index{conditional compilation}
+\index{_OPENMP@{\code{\_OPENMP} macro}}
+In implementations that support a preprocessor, the \code{\_OPENMP} macro name is defined to 
+have the decimal value \plc{yyyymm} where \plc{yyyy} and \plc{mm} are the year and month designations 
+of the version of the OpenMP API that the implementation supports. 
+
+If this macro is the subject of a \code{\#define} or a \code{\#undef} preprocessing directive, the 
+behavior is unspecified.
+
+\fortranspecificstart
+The OpenMP API requires Fortran lines to be compiled conditionally, as described in 
+the following sections.
+
+
+
+
+
+
+
+
+\subsection{Fixed Source Form Conditional Compilation Sentinels}
+\label{subsec:Fixed Source Form Conditional Compilation Sentinels}
+\index{fixed source form conditional compilation sentinels}
+\index{compilation sentinels}
+The following conditional compilation sentinels are recognized in fixed form source 
+files:
+
+\begin{boxedcode}
+!\$ \textnormal{|} *\$ \textnormal{|} c\$
+\end{boxedcode}
+
+To enable conditional compilation, a line with a conditional compilation sentinel must 
+satisfy the following criteria: 
+
+\begin{itemize}
+\item The sentinel must start in column 1 and appear as a single word with no intervening 
+white space. 
+
+\item After the sentinel is replaced with two spaces, initial lines must have a space or zero 
+in column 6 and only white space and numbers in columns 1 through 5.
+
+\item After the sentinel is replaced with two spaces, continuation lines must have a 
+character other than a space or zero in column 6 and only white space in columns 1 
+through 5.
+\end{itemize}
+
+If these criteria are met, the sentinel is replaced by two spaces. If these criteria are not 
+met, the line is left unchanged.
+
+\notestart
+\noteheader -- in the following example, the two forms for specifying conditional compilation 
+in fixed source form are equivalent (the first line represents the position of the first 9 
+columns):
+
+\begin{alltt}\code{c23456789
+!\$ 10 iam = omp\_get\_thread\_num() +
+!\$   \&          index
+
+\#ifdef \_OPENMP
+   10 iam = omp\_get\_thread\_num() +
+     \&            index
+\#endif}
+\end{alltt}
+\noteend
+
+
+
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
+\end{figure}
+
+
+
+
+
+\subsection{Free Source Form Conditional Compilation Sentinel}
+\label{subsec:Free Source Form Conditional Compilation Sentinel}
+\index{free source form conditional compilation sentinel}
+\index{compilation sentinels}
+The following conditional compilation sentinel is recognized in free form source files:
+
+\begin{boxedcode}
+!\$
+\end{boxedcode}
+
+To enable conditional compilation, a line with a conditional compilation sentinel must 
+satisfy the following criteria: 
+
+\begin{itemize}
+\item The sentinel can appear in any column but must be preceded only by white space.
+
+\item The sentinel must appear as a single word with no intervening white space. 
+
+\item Initial lines must have a space after the sentinel. 
+
+\item Continued lines must have an ampersand as the last non-blank character on the line, 
+prior to any comment appearing on the conditionally compiled line. Continuation lines 
+can have an ampersand after the sentinel, with optional white space before and after 
+the ampersand. 
+\end{itemize}
+
+If these criteria are met, the sentinel is replaced by two spaces. If these criteria are not 
+met, the line is left unchanged. 
+
+\notestart
+\noteheader -- in the following example, the two forms for specifying conditional compilation 
+in free source form are equivalent (the first line represents the position of the first 9 
+columns):
+
+\begin{alltt}\code{c23456789
+ !\$ iam = omp\_get\_thread\_num() +     \&
+ !\$\&    index
+
+\#ifdef \_OPENMP
+    iam = omp\_get\_thread\_num() +     \&
+        index
+\#endif}
+\end{alltt}
+\noteend
+\bigskip
+\fortranspecificend
+
+
+
+
+
+
+
+
+
+\section{Internal Control Variables}
+\label{sec:Internal Control Variables}
+\index{internal control variables (ICVs)}
+\index{ICVs (internal control variables)}
+An OpenMP implementation must act as if there are internal control variables (ICVs) 
+that control the behavior of an OpenMP program. These ICVs store information such as 
+the number of threads to use for future \code{parallel} regions, the schedule to use for 
+worksharing loops and whether nested parallelism is enabled or not. The ICVs are given 
+values at various times (described below) during the execution of the program. They are 
+initialized by the implementation itself and may be given values through OpenMP 
+environment variables and through calls to OpenMP API routines. The program can 
+retrieve the values of these ICVs only through OpenMP API routines.
+
+For purposes of exposition, this document refers to the ICVs by certain names, but an 
+implementation is not required to use these names or to offer any way to access the 
+variables other than through the ways shown in 
+\specref{subsec:ICV Initialization}.
+
+
+
+
+
+
+
+
+\subsection{ICV Descriptions}
+\label{subsec:ICV Descriptions}
+The following ICVs store values that affect the operation of \code{parallel} regions.
+
+\begin{itemize}
+\item \plc{dyn-var} - controls whether dynamic adjustment of the number of threads is enabled 
+for encountered \code{parallel} regions. There is one copy of this ICV per data 
+environment. 
+
+\item \plc{nest-var} - controls whether nested parallelism is enabled for encountered \code{parallel} 
+regions. There is one copy of this ICV per data environment. 
+
+\item \plc{nthreads-var} - controls the number of threads requested for encountered \code{parallel} 
+regions. There is one copy of this ICV per data environment. 
+
+\item \plc{thread-limit-var} - controls the maximum number of threads participating in the 
+contention group. There is one copy of this ICV per data environment. 
+
+\item \plc{max-active-levels-var} - controls the maximum number of nested active \code{parallel} 
+regions. There is one copy of this ICV per device.
+
+\item \plc{place-partition-var} – controls the place partition available to the execution 
+environment for encountered \code{parallel} regions. There is one copy of this ICV per 
+implicit task.
+
+\item \plc{active-levels-var} - the number of nested, active parallel regions enclosing the current 
+task such that all of the \code{parallel} regions are enclosed by the outermost initial task 
+region on the current device. There is one copy of this ICV per data environment.
+
+\item \plc{levels-var} - the number of nested parallel regions enclosing the current task such that 
+all of the \code{parallel} regions are enclosed by the outermost initial task region on the 
+current device. There is one copy of this ICV per data environment. 
+
+\item \plc{bind-var} - controls the binding of OpenMP threads to places. When binding is 
+requested, the variable indicates that the execution environment is advised not to 
+move threads between places. The variable can also provide default thread affinity 
+policies. There is one copy of this ICV per data environment. 
+\end{itemize}
+
+The following ICVs store values that affect the operation of loop regions.
+
+\begin{itemize}
+\item \plc{run-sched-var} - controls the schedule that the \code{runtime} schedule clause uses for 
+loop regions. There is one copy of this ICV per data environment.
+
+\item \plc{def-sched-var} - controls the implementation defined default scheduling of loop 
+regions. There is one copy of this ICV per device. 
+\end{itemize}
+
+The following ICVs store values that affect program execution.
+
+\begin{itemize}
+\item \plc{stacksize-var} - controls the stack size for threads that the OpenMP implementation 
+creates. There is one copy of this ICV per device. 
+
+\item \plc{wait-policy-var} - controls the desired behavior of waiting threads. There is one copy 
+of this ICV per device. 
+
+\item \plc{cancel-var} - controls the desired behavior of the \code{cancel} construct and cancellation 
+points. There is one copy of this ICV for the whole program.
+
+\item \plc{default-device-var} - controls the default target device. There is one copy of this ICV 
+per data environment.
+
+\item \plc{max-task-priority-var} - controls the maximum priority value that can be specified in the
+\code{priority} clause of the \code{task} construct. There is one copy of this ICV for the whole program.
+
+\end{itemize}
+
+The following ICVs store values that affect the operation of the tool interface.
+
+\begin{itemize}
+
+\item \plc{tool-var} - determines whether an OpenMP implementation will 
+try to register a tool.  There is one copy of this ICV for the whole program.
+
+\item \plc{tool-libraries-var} - specifies a list of absolute paths to tool libraries for OpenMP devices.
+There is one copy of this ICV for the whole program.
+
+\end{itemize}
+
+
+
+
+
+
+\subsection{ICV Initialization}
+\label{subsec:ICV Initialization}
+\index{modifying ICV's}
+Table~\ref{tab:ICV Initial Values} shows the ICVs, associated 
+environment variables, and initial values.
+
+%% HACK ADDED TO KEEP TABLE HEADING WITH THE TABLE
+\newpage
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{Environment Variable}} & \textsf{\textbf{Initial value}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{Environment Variable}} & \textsf{\textbf{Initial value}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{ICV Initial Values\label{tab:ICV Initial Values}}
+\begin{supertabular}{p{1.3in} p{1.7in} p{1.5in}}
+\plc{dyn-var} & \code{OMP\_DYNAMIC} & See description below\\
+\plc{nest-var} & \code{OMP\_NESTED} & \plc{false}\\
+\plc{nthreads-var} & \code{OMP\_NUM\_THREADS} & Implementation defined\\
+\plc{run-sched-var} & \code{OMP\_SCHEDULE} & Implementation defined\\
+\plc{def-sched-var} & (none) & Implementation defined\\
+\plc{bind-var} & \code{OMP\_PROC\_BIND} & Implementation defined\\
+\plc{stacksize-var} & \code{OMP\_STACKSIZE} & Implementation defined\\
+\plc{wait-policy-var} & \code{OMP\_WAIT\_POLICY} & Implementation defined\\
+\plc{thread-limit-var} & \code{OMP\_THREAD\_LIMIT} & Implementation defined\\
+\plc{max-active-levels-var} & \code{OMP\_MAX\_ACTIVE\_LEVELS} & See description below\\
+\plc{active-levels-var} & (none) & \plc{zero}\\
+\plc{levels-var} & (none) & \plc{zero}\\
+\plc{place-partition-var} & \code{OMP\_PLACES} & Implementation defined\\
+\plc{cancel-var} & \code{OMP\_CANCELLATION} & \plc{false}\\
+\plc{default-device-var} & \code{OMP\_DEFAULT\_DEVICE} & Implementation defined\\
+\plc{max-task-priority-var} & \code{OMP\_MAX\_TASK\_PRIORITY} & \plc{zero}\\
+\plc{tool-var} & \code{OMP\_TOOL} & \plc{enabled}\\
+\plc{tool-libraries-var} & \code{OMP\_TOOL\_LIBRARIES} & \plc{empty string}\\
+\end{supertabular}
+\linenumbers
+
+\descr
+\begin{itemize}
+\item Each device has its own ICVs.
+
+\item The value of the \plc{nthreads-var} ICV is a list. 
+
+\item The value of the \plc{bind-var} ICV is a list. 
+
+\item The initial value of \plc{dyn-var} is implementation defined if the implementation supports 
+dynamic adjustment of the number of threads; otherwise, the initial value is \plc{false}. 
+
+\item The initial value of \plc{max-active-levels-var} is the number of levels of parallelism that 
+the implementation supports. See the definition of \emph{supporting n levels of parallelism}
+in \specref{subsec:Implementation Terminology} for further details.
+\end{itemize}
+
+The host and target device ICVs are initialized before any OpenMP API construct or 
+OpenMP API routine executes. After the initial values are assigned, the values of any 
+OpenMP environment variables that were set by the user are read and the associated 
+ICVs for the host device are modified accordingly. The method for initializing a target 
+device's ICVs is implementation defined.
+
+\crossreferences
+\begin{itemize}
+\item \code{OMP\_SCHEDULE} environment variable, see \specref{sec:OMP_SCHEDULE}.
+
+\item \code{OMP\_NUM\_THREADS} environment variable, see \specref{sec:OMP_NUM_THREADS}.
+
+\item \code{OMP\_DYNAMIC} environment variable, see \specref{sec:OMP_DYNAMIC}.
+
+\item \code{OMP\_PROC\_BIND} environment variable, see \specref{sec:OMP_PROC_BIND}.
+
+\item \code{OMP\_PLACES} environment variable, see \specref{sec:OMP_PLACES}.
+
+\item \code{OMP\_NESTED} environment variable, see \specref{sec:OMP_NESTED}.
+
+\item \code{OMP\_STACKSIZE} environment variable, see \specref{sec:OMP_STACKSIZE}. 
+
+\item \code{OMP\_WAIT\_POLICY} environment variable, see \specref{sec:OMP_WAIT_POLICY}. 
+
+\item \code{OMP\_MAX\_ACTIVE\_LEVELS} environment variable, see \specref{sec:OMP_MAX_ACTIVE_LEVELS}.
+
+\item \code{OMP\_THREAD\_LIMIT} environment variable, see \specref{sec:OMP_THREAD_LIMIT}.
+
+\item \code{OMP\_CANCELLATION} environment variable, see \specref{sec:OMP_CANCELLATION}.
+
+\item \code{OMP\_DEFAULT\_DEVICE} environment variable, see \specref{sec:OMP_DEFAULT_DEVICE}.
+
+\item \code{OMP\_MAX\_TASK\_PRIORITY} environment variable, see \specref{sec:OMP_MAX_TASK_PRIORITY}.
+
+\item \code{OMP\_TOOL} environment variable, see \specref{sec:OMP_TOOL}.
+
+\item \code{OMP\_TOOL\_LIBRARIES} environment variable, see \specref{sec:OMP_TOOL_LIBRARIES}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{Modifying and Retrieving ICV Values}
+\label{subsec:Modifying and Retrieving ICV Values}
+\index{modifying and retrieving ICV values}
+Table~\ref{tab:Ways to Modify and to Retrieve ICV Values} shows the method for modifying and retrieving the values of ICVs 
+through OpenMP API routines.
+
+\newpage %% HACK
+{\small%
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{Ways to modify value}} & \textsf{\textbf{Ways to retrieve value}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{Ways to modify value}} & \textsf{\textbf{Ways to retrieve value}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Ways to Modify and to Retrieve ICV Values\label{tab:Ways to Modify and to Retrieve ICV Values}}
+\begin{supertabular}{ p{1.2in} p{2.0in} p{1.5in}}
+\plc{dyn-var} & \code{omp\_set\_dynamic()} & \code{omp\_get\_dynamic()}\\
+
+\plc{nest-var} & \code{omp\_set\_nested()} & \code{omp\_get\_nested()}\\
+
+\plc{nthreads-var} & \code{omp\_set\_num\_threads()} & \code{omp\_get\_max\_threads()}\\
+
+\plc{run-sched-var} & \code{omp\_set\_schedule()} & \code{omp\_get\_schedule()}\\
+
+\plc{def-sched-var} & (none) & (none)\\
+
+\plc{bind-var} & (none) & \code{omp\_get\_proc\_bind()}\\
+
+\plc{stacksize-var} & (none) & (none)\\
+
+\plc{wait-policy-var} & (none) & (none)\\
+
+\plc{thread-limit-var} & \code{thread\_limit} clause & \code{omp\_get\_thread\_limit()}\\
+
+\plc{max-active-levels-var} & \code{omp\_set\_max\_active\_levels()} & \code{omp\_get\_max\_active\_levels()}\\
+
+\plc{active-levels-var} & (none) & \code{omp\_get\_active\_level()}\\
+
+\plc{levels-var} & (none) & \code{omp\_get\_level()}\\
+
+\plc{place-partition-var} & (none) & See description below \\
+
+\plc{cancel-var} & (none) & \code{omp\_get\_cancellation()}\\
+
+\plc{default-device-var} & \code{omp\_set\_default\_device()} & \code{omp\_get\_default\_device()}\\
+
+\plc{max-task-priority-var} & (none) & \code{omp\_get\_max\_task\_priority()}\\
+\plc{tool-var} & (none) & (none)\\
+\plc{tool-libraries-var} & (none) & (none)\\
+
+\end{supertabular}
+\linenumbers} % end of \small block
+
+\descr
+\begin{itemize}
+\item The value of the \plc{nthreads-var} ICV is a list. The runtime call 
+\code{omp\_set\_num\_threads()} sets the value of the first element of this list, and 
+\code{omp\_get\_max\_threads()} retrieves the value of the first element of this list.
+
+\item The value of the \plc{bind-var} ICV is a list. The runtime call \code{omp\_get\_proc\_bind()} 
+retrieves the value of the first element of this list. 
+
+\item 
+Detailed values in the \plc{place-partition-var} ICV are retrieved using the runtime calls  
+\code{omp\_get\_partition\_num\_places()}, \code{omp\_get\_partition\_place\_nums()}, 
+\code{omp\_get\_place\_num\_procs()}, and \code{omp\_get\_place\_proc\_ids()}.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{thread\_limit} clause of the \code{teams} construct, see \specref{subsec:teams Construct}.
+
+\item \code{omp\_set\_num\_threads} routine, see \specref{subsec:omp_set_num_threads}.
+
+\item \code{omp\_get\_max\_threads} routine, see \specref{subsec:omp_get_max_threads}.
+
+\item \code{omp\_set\_dynamic} routine, see \specref{subsec:omp_set_dynamic}.
+
+\item \code{omp\_get\_dynamic} routine, see \specref{subsec:omp_get_dynamic}.
+
+\item \code{omp\_get\_cancellation} routine, see \specref{subsec:omp_get_cancellation}.
+
+\item \code{omp\_set\_nested} routine, see \specref{subsec:omp_set_nested}.
+
+\item \code{omp\_get\_nested} routine, see \specref{subsec:omp_get_nested}.
+
+\item \code{omp\_set\_schedule} routine, see \specref{subsec:omp_set_schedule}.
+
+\item \code{omp\_get\_schedule} routine, see \specref{subsec:omp_get_schedule}.
+
+\item \code{omp\_get\_thread\_limit} routine, see \specref{subsec:omp_get_thread_limit}.
+
+\item \code{omp\_set\_max\_active\_levels} routine, see \specref{subsec:omp_set_max_active_levels}.
+
+\item \code{omp\_get\_max\_active\_levels} routine, see \specref{subsec:omp_get_max_active_levels}.
+
+\item \code{omp\_get\_level} routine, see \specref{subsec:omp_get_level}.
+
+\item \code{omp\_get\_active\_level} routine, see \specref{subsec:omp_get_active_level}.
+
+\item \code{omp\_get\_proc\_bind} routine, see \specref{subsec:omp_get_proc_bind}.
+
+\item \code{omp\_get\_place\_num\_procs()} routine, see \specref{subsec:omp_get_place_num_procs}.
+
+\item \code{omp\_get\_place\_proc\_ids()} routine, see \specref{subsec:omp_get_place_proc_ids}.
+
+\item \code{omp\_get\_partition\_num\_places()} routine, see \specref{subsec:omp_get_partition_num_places}.
+
+\item \code{omp\_get\_partition\_place\_nums()} routine, see \specref{subsec:omp_get_partition_place_nums}.
+
+\item \code{omp\_set\_default\_device} routine, see \specref{subsec:omp_set_default_device}.
+
+\item \code{omp\_get\_default\_device} routine, see \specref{subsec:omp_get_default_device}.
+
+\item \code{omp\_get\_max\_task\_priority} routine, see \specref{subsec:omp_get_max_task_priority}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+\vspace{-1.0\baselineskip}
+\subsection{How ICVs are Scoped}
+\label{subsec:How ICVs are Scoped}
+Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
+
+\newpage %% HACK
+
+\renewcommand{\arraystretch}{1.3}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{Scope}}\\
+\hline \\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{Scope}}\\
+\hline \\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Scopes of ICVs\label{tab:Scopes of ICVs}}
+\begin{supertabular}{p{1.5in} p{2.5in}}
+\plc{dyn-var} & data environment\\
+\plc{nest-var} & data environment\\
+\plc{nthreads-var} & data environment\\
+\plc{run-sched-var} & data environment\\
+\plc{def-sched-var} & device\\
+\plc{bind-var} & data environment\\
+\plc{stacksize-var} & device\\
+\plc{wait-policy-var} & device\\
+\plc{thread-limit-var} & data environment\\
+\plc{max-active-levels-var} & device\\
+\plc{active-levels-var} & data environment\\
+\plc{levels-var} & data environment\\
+\plc{place-partition-var} & implicit task\\
+\plc{cancel-var} & global\\
+\plc{default-device-var} & data environment\\
+\plc{max-task-priority-var} & global\\
+\plc{tool-var} & global\\
+\plc{tool-libraries-var} & global\\
+\end{supertabular}
+\renewcommand{\arraystretch}{1.5} % restore the previous value
+
+\descr
+\begin{itemize}
+\item There is one copy per device of each ICV with device scope
+
+\item Each data environment has its own copies of ICVs with data environment scope
+
+\item Each implicit task has its own copy of ICVs with implicit task scope 
+\end{itemize}
+
+Calls to OpenMP API routines retrieve or modify data environment scoped ICVs in the 
+data environment of their binding tasks.
+
+
+
+
+
+
+
+
+
+
+\subsubsection{How the Per-Data Environment ICVs Work}
+\label{subsubsec:How the Per-Data Environment ICVs Work}
+When a \code{task} construct or \code{parallel} construct is encountered, the generated task(s)
+inherit the values of the data environment scoped ICVs from the generating task's ICV
+values.
+
+When a \code{task} construct is encountered, the generated task inherits the value of
+\plc{nthreads-var} from the generating task's \plc{nthreads-var} value. When a \code{parallel}
+construct is encountered, and the generating task's \plc{nthreads-var} list contains a single
+element, the generated task(s) inherit that list as the value of \plc{nthreads-var}. When a
+\code{parallel} construct is encountered, and the generating task's \plc{nthreads-var} list contains 
+multiple elements, the generated task(s) inherit the value of \plc{nthreads-var} as the list 
+obtained by deletion of the first element from the generating task's \plc{nthreads-var} value. 
+The \plc{bind-var} ICV is handled in the same way as the \plc{nthreads-var} ICV.
+
+When a \plc{target task} executes a \code{target} region, the generated initial task uses the values of the data environment scoped ICVs from the device data environment ICV values of the device that will execute the region. 
+
+If a \code{teams} construct with a \code{thread\_limit} clause is encountered, 
+the \plc{thread-limit-var} ICV of the construct's data environment is instead set to a value that is less than or equal to the value specified in the clause.  
+
+When encountering a loop worksharing region with \code{schedule(runtime)}, all 
+implicit task regions that constitute the binding parallel region must have the same value 
+for \plc{run-sched-var} in their data environments. Otherwise, the behavior is unspecified.
+
+
+
+
+
+
+
+
+\subsection{ICV Override Relationships}
+\label{subsec:ICV Override Relationships}
+Table~\ref{tab:ICV Override Relationships} shows the override relationships 
+among construct clauses and ICVs.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{construct clause, if used}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{ICV}} & \textsf{\textbf{construct clause, if used}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{ICV Override Relationships\label{tab:ICV Override Relationships}}
+\begin{supertabular}{ p{1.3in} p{2.0in}}
+\plc{dyn-var} & (none)\\
+\plc{nest-var} & (none)\\
+\plc{nthreads-var} & \code{num\_threads}\\
+\plc{run-sched-var} & \code{schedule}\\
+\plc{def-sched-var} & \code{schedule}\\
+\plc{bind-var} & \code{proc\_bind}\\
+\plc{stacksize-var} & (none)\\
+\plc{wait-policy-var} & (none)\\
+\plc{thread-limit-var} & (none)\\
+\plc{max-active-levels-var} & (none)\\
+\plc{active-levels-var} & (none)\\
+\plc{levels-var} & (none)\\
+\plc{place-partition-var} & (none)\\
+\plc{cancel-var} & (none)\\
+\plc{default-device-var} & (none)\\
+\plc{max-task-priority-var} & (none)\\
+\plc{tool-var} & (none)\\
+\plc{tool-libraries-var} & (none)\\
+\end{supertabular}
+\linenumbers
+
+\descr
+\begin{itemize}
+\item The \code{num\_threads} clause overrides the value of the first element of the 
+\plc{nthreads-var} ICV.
+
+\item If \plc{bind-var} is not set to \plc{false} then the \code{proc\_bind} clause overrides the value of the 
+first element of the \plc{bind-var} ICV; otherwise, the \code{proc\_bind} clause has no effect. 
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{parallel} construct, see 
+\specref{sec:parallel Construct}.
+
+\item \code{proc\_bind} clause, 
+\specref{sec:parallel Construct}.
+
+\item \code{num\_threads} clause, see 
+\specref{subsec:Determining the Number of Threads for a parallel Region}.
+
+\item Loop construct, see 
+\specref{subsec:Loop Construct}.
+
+\item \code{schedule} clause, see 
+\specref{subsubsec:Determining the Schedule of a Worksharing Loop}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+%% \filbreak
+\section{Array Sections}
+\label{sec:Array Sections}
+\index{array sections}
+An array section designates a subset of the elements in an array. An array section can
+appear only in clauses where it is explicitly allowed.
+
+\ccppspecificstart
+To specify an array section in an OpenMP construct, array subscript expressions are 
+extended with the following syntax:
+
+\begin{quote}
+\code{[\plc{ lower-bound }:\plc{ length }]} or
+
+\code{[\plc{ lower-bound }:\plc{ }]} or
+
+\code{[ :\plc{ length }]} or
+
+\code{[\plc{ }:\plc{ }]}
+\end{quote}
+
+The array section must be a subset of the original array.
+
+Array sections are allowed on multidimensional arrays. Base language array subscript 
+expressions can be used to specify length-one dimensions of multidimensional array 
+sections.
+
+The \plc{lower-bound} and \plc{length} are integral type expressions. When evaluated they 
+represent a set of integer values as follows:
+
+\{ \plc{lower-bound}, \plc{lower-bound} + 1, \plc{lower-bound} + 2,... , \plc{lower-bound} + \plc{length} - 1 \}
+
+The \plc{length} must evaluate to a non-negative integer.
+
+When the size of the array dimension is not known, the \plc{length} must be specified 
+explicitly.
+
+When the \plc{length} is absent, it defaults to the size of the array dimension minus the 
+\plc{lower-bound}.
+
+When the \plc{lower-bound} is absent it defaults to 0.
+
+\notestart
+\noteheader -- The following are examples of array sections:
+
+\begin{indentedcodelist}
+a[0:6]
+a[:6]
+a[1:10]
+a[1:]
+b[10][:][:0]
+c[1:10][42][0:6]
+\end{indentedcodelist}
+
+The first two examples are equivalent. If \code{a} is declared to be an eleven element array, the 
+third and fourth examples are equivalent. The fifth example is a zero-length array 
+section. The last example is not contiguous.
+\noteend
+\medskip
+\ccppspecificend
+
+Fortran has built-in support for array sections although some
+restrictions apply to their use, as enumerated in the following section.
+
+\restrictions
+Restrictions to array sections are as follows:
+
+\begin{itemize}
+\item An array section can appear only in clauses where it is explicitly allowed.
+
+\ccppspecificstart
+\item An array section can only be specified for a base language identifier. 
+\ccppspecificend
+
+\cspecificstart
+\item The type of the variable appearing in an array section must be array or pointer.
+\cspecificend
+
+\cppspecificstart
+\item If the type of the variable appearing in an array section is a reference to a type \plc{T} then the type will be considered to be \plc{T} for all purposes of the array section.
+
+\item An array section cannot be used in a C++ user-defined \code{[]}-operator.
+\cppspecificend
+
+\fortranspecificstart
+
+\item A stride expression may not be specified.
+
+\item The upper bound for the last dimension of an assumed-size dummy
+  array must be specified.
+
+\item If a list item is an array section with vector subscripts, the
+  first array element must be the lowest in the array element order of
+  the array section.
+
+\fortranspecificend
+
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+\section{\code{parallel} Construct}
+\index{parallel@{\code{parallel}}}
+\index{constructs!parallel@{\code{parallel}}}
+\label{sec:parallel Construct}
+\summary
+This fundamental construct starts parallel execution. See 
+\specref{sec:Execution Model} 
+for a general description of the OpenMP execution model.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{parallel} construct is as follows:
+\begin{boxedcode}
+\#pragma omp parallel \plc{[clause[ [},\plc{] clause] ... ] new-line}
+   \plc{structured-block}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+if(\plc{[}parallel :\plc{] scalar-expression})
+num\_threads(\plc{integer-expression})
+default(shared \textnormal{|} none)
+private(\plc{list})
+firstprivate(\plc{list})
+shared(\plc{list})
+copyin(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
+proc\_bind(master \textnormal{|} close \textnormal{|} spread)
+\end{indentedcodelist}
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{parallel} construct is as follows:
+
+\begin{boxedcode}
+!\$omp parallel \plc{[clause[ [},\plc{] clause] ... ]}
+   \plc{structured-block}
+!\$omp end parallel
+\end{boxedcode}
+
+\begin{samepage}
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+if(\plc{[}parallel :\plc{] scalar-logical-expression})
+num\_threads(\plc{scalar-integer-expression})
+default(private \textnormal{|} firstprivate \textnormal{|} shared \textnormal{|} none)
+private(\plc{list})
+firstprivate(\plc{list})
+shared(\plc{list})
+copyin(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
+proc\_bind(master \textnormal{|} close \textnormal{|} spread)
+\end{indentedcodelist}
+\end{samepage}
+
+The \code{end}~\code{parallel} directive denotes the end of the \code{parallel} construct.
+\fortranspecificend
+
+\binding
+The binding thread set for a \code{parallel} region is the encountering thread. The 
+encountering thread becomes the master thread of the new team.
+
+\descr
+When a thread encounters a \code{parallel} construct, a team of threads is created to 
+execute the \code{parallel} region (see 
+\specref{subsec:Determining the Number of Threads for a parallel Region} 
+for more information about 
+how the number of threads in the team is determined, including the evaluation of the \code{if}
+and \code{num\_threads} clauses). The thread that encountered the \code{parallel} construct 
+becomes the master thread of the new team, with a thread number of zero for the 
+duration of the new \code{parallel} region. All threads in the new team, including the 
+master thread, execute the region. Once the team is created, the number of threads in the 
+team remains constant for the duration of that \code{parallel} region.
+
+The optional \code{proc\_bind} clause, described in 
+\specref{subsec:Controlling OpenMP Thread Affinity}, specifies the 
+mapping of OpenMP threads to places within the current place partition, that is, within 
+the places listed in the \plc{place-partition-var} ICV for the implicit task of the encountering 
+thread.
+
+Within a \code{parallel} region, thread numbers uniquely identify each thread. Thread 
+numbers are consecutive whole numbers ranging from zero for the master thread up to 
+one less than the number of threads in the team. A thread may obtain its own thread 
+number by a call to the \code{omp\_get\_thread\_num} library routine.
+
+A set of implicit tasks, equal in number to the number of threads in the team, is 
+generated by the encountering thread. The structured block of the \code{parallel} construct 
+determines the code that will be executed in each implicit task. Each task is assigned to 
+a different thread in the team and becomes tied. The task region of the task being 
+executed by the encountering thread is suspended and each thread in the team executes 
+its implicit task. Each thread can execute a path of statements that is different from that 
+of the other threads
+
+The implementation may cause any thread to suspend execution of its implicit task at a 
+task scheduling point, and switch to execute any explicit task generated by any of the 
+threads in the team, before eventually resuming execution of the implicit task (for more 
+details see \specref{sec:Tasking Constructs}).
+
+There is an implied barrier at the end of a \code{parallel} region. After the end of a 
+\code{parallel} region, only the master thread of the team resumes execution of the 
+enclosing task region.
+
+If a thread in a team executing a \code{parallel} region encounters another \code{parallel} 
+directive, it creates a new team, according to the rules in 
+\specref{subsec:Determining the Number of Threads for a parallel Region}, 
+and it becomes the master of that new team.
+
+If execution of a thread terminates while inside a \code{parallel} region, execution of all 
+threads in all teams terminates. The order of termination of threads is unspecified. All 
+work done by a team prior to any barrier that the team has passed in the program is 
+guaranteed to be complete. The amount of work done by each thread after the last 
+barrier that it passed and before it terminates is unspecified.
+
+\events
+
+The \plc{parallel-begin} event occurs in a thread encountering a
+\code{parallel} construct before any implicit task is created for the associated parallel
+region.
+
+Upon creation of each implicit task, an \plc{implicit-task-begin} event
+occurs in the thread executing the implicit task after the implicit
+task is fully initialized but before the thread begins to execute the
+structured block of the \code{parallel} construct.
+
+If the \code{parallel} region creates a thread, a \plc{thread-begin}
+event occurs as the first event in the context of the new thread
+prior to the
+\plc{implicit-task-begin}. 
+
+If the \code{parallel} region activates an idle thread to create the implicit
+task, an \plc{idle-end}
+event occurs in the newly activated thread prior to the
+\plc{implicit-task-begin}. 
+
+Events associated with implicit barriers occur at the end of a
+\code{parallel} region. Section~\ref{subsec:implict-barrier} describes events
+associated with implicit barriers.
+
+When a thread finishes an implicit task, an \plc{implicit-task-end}
+event occurs in the thread after events associated with implicit
+barrier synchronization in the implicit task.
+
+The \plc{parallel-end} event occurs in the thread encountering the
+\code{parallel} construct after the thread
+executes its \plc{implicit-task-end} event 
+but before resuming execution of the parent task.  
+
+If a thread is destroyed at the end of a \code{parallel} region, a
+\plc{thread-end} event occurs in the thread as the last
+event prior to the thread's destruction.
+
+If a non-master thread is not destroyed at the end of a \code{parallel}
+region, an \plc{idle-begin} event occurs after the thread's
+\plc{implicit-task-end} event for the \code{parallel} region.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_parallel\_begin}
+callback for each occurrence of a \plc{parallel-begin} event in that
+thread.  The callback occurs in the task encountering
+the \code{parallel} construct.  This callback has the type signature
+\code{ompt\_callback\_parallel\_begin\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_implicit\_task}
+callback for each occurrence of a \plc{implicit-task-begin} and
+\plc{implicit-task-end} event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt\_callback\_implicit\_task\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_parallel\_end}
+callback for each occurrence of a \plc{parallel-end} event in that
+thread.  The callback occurs in the task encountering
+the \code{parallel} construct.  This callback has the type signature
+\code{ompt\_callback\_parallel\_end\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_idle}
+callback for each occurrence of a \plc{idle-begin} and
+\plc{idle-end} event in that thread. The callback occurs in the
+context of the idling thread.  The callback has type signature
+\code{ompt\_callback\_idle\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_thread\_begin}
+callback for the \plc{thread-begin} event in that thread. 
+The callback occurs in the
+context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread\_begin\_t}. 
+
+A thread dispatches a registered \code{ompt\_callback\_thread\_end}
+callback for the \plc{thread-end} event in that thread. 
+The callback occurs in the context of the thread.  The callback has type signature
+\code{ompt\_callback\_thread\_end\_t}. 
+
+\restrictions
+Restrictions to the \code{parallel} construct are as follows:
+
+\begin{itemize}
+\item A program that branches into or out of a \code{parallel} region is non-conforming.
+
+\item A program must not depend on any ordering of the evaluations of the clauses of the 
+\code{parallel} directive, or on any side effects of the evaluations of the clauses.
+
+\item At most one \code{if} clause can appear on the directive.
+
+\item At most one \code{proc\_bind} clause can appear on the directive.
+
+\item At most one \code{num\_threads} clause can appear on the directive. The \code{num\_threads} 
+expression must evaluate to a positive integer value.
+\end{itemize}
+
+\ccppspecificstart
+A \code{throw} executed inside a \code{parallel} region must cause execution to resume 
+within the same \code{parallel} region, and the same thread that threw the exception 
+must catch it.
+\ccppspecificend
+
+\fortranspecificstart
+Unsynchronized use of Fortran I/O statements by multiple threads on the same unit 
+has unspecified behavior.
+\fortranspecificend
+
+\crossreferences
+\begin{itemize}
+\item \code{if} clause, see \specref{sec:if Clause}.
+
+\item \code{default}, \code{shared}, \code{private}, \code{firstprivate}, and \code{reduction} clauses, see 
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item \code{copyin} clause, see 
+\specref{subsec:Data Copying Clauses}.
+
+\item \code{omp\_get\_thread\_num} routine, see 
+\specref{subsec:omp_get_thread_num}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_callback\_thread\_begin\_t}, see
+  \specref{sec:ompt_callback_thread_begin_t}.
+
+\item \code{ompt\_callback\_thread\_end\_t}, see
+  \specref{sec:ompt_callback_thread_end_t}.
+
+\item \code{ompt\_callback\_idle\_t}, see 
+\specref{sec:ompt_callback_idle_t}.
+
+\item \code{ompt\_callback\_parallel\_begin\_t}, see
+  \specref{sec:ompt_callback_parallel_begin_t}.
+
+\item \code{ompt\_callback\_parallel\_end\_t}, 
+  see \specref{sec:ompt_callback_parallel_end_t}.
+
+\item \code{ompt\_callback\_implicit\_task\_t}, see
+  \specref{sec:ompt_callback_implicit_task_t}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+\subsection{Determining the Number of Threads for a \code{parallel} Region}
+\label{subsec:Determining the Number of Threads for a parallel Region}
+When execution encounters a \code{parallel} directive, the value of the \code{if} clause or 
+\code{num\_threads} clause (if any) on the directive, the current parallel context, and the 
+values of the \plc{nthreads-var}, \plc{dyn-var}, \plc{thread-limit-var}, 
+\plc{max-active-levels-var}, and \plc{nest-var} 
+ICVs are used to determine the number of threads to use in the region.
+
+Using a variable in an \code{if} or \code{num\_threads} clause expression of a 
+\code{parallel} construct causes an implicit reference to the variable in all enclosing 
+constructs. The \code{if} clause expression and the \code{num\_threads} clause expression are 
+evaluated in the context outside of the \code{parallel} construct, and no ordering of those 
+evaluations is specified. It is also unspecified whether, in what order, or how many times 
+any side effects of the evaluation of the \code{num\_threads} or \code{if} clause expressions occur.
+
+When a thread encounters a \code{parallel} construct, the number of threads is determined 
+according to Algorithm 2.1.
+
+%% HACK ADDED BECAUSE samepage IS NOT WORKING
+\newpage
+
+\begin{samepage}
+\nolinenumbers\line(1,0){400}\\[.4\baselineskip]
+\hspace{1.6in}{\Large \textbf{Algorithm 2.1}}\\[-0.5\baselineskip]
+\line(1,0){400}\linenumbers
+
+\begin{quote}
+\textbf{let} \plc{ThreadsBusy} be the number of OpenMP threads currently executing in 
+this contention group;
+
+\textbf{let} \plc{ActiveParRegions} be the number of enclosing active parallel regions;
+
+\textbf{if} an \code{if} clause exists
+
+\textbf{then let} \plc{IfClauseValue} be the value of the \code{if} clause expression; 
+
+\textbf{else let} \plc{IfClauseValue} = \plc{true}; 
+
+\textbf{if} a \code{num\_threads} clause exists 
+
+\textbf{then let} \plc{ThreadsRequested} be the value of the \code{num\_threads} clause 
+expression; 
+
+\textbf{else let} \plc{ThreadsRequested} = value of the first element of \plc{nthreads-var}; 
+
+\textbf{let} \plc{ThreadsAvailable} = (\plc{thread-limit-var} - \plc{ThreadsBusy} + 1);
+
+\textbf{if} (\plc{IfClauseValue} = \plc{false}) 
+
+\textbf{then} number of threads = 1; 
+
+\textbf{else if} (\plc{ActiveParRegions} >= 1) \textbf{and} (\plc{nest-var} = \plc{false}) 
+
+\textbf{then} number of threads = 1; 
+
+\textbf{else if} (\plc{ActiveParRegions} = \plc{max-active-levels-var}) 
+
+\textbf{then} number of threads = 1; 
+
+\textbf{else if} (\plc{dyn-var} = \plc{true}) \textbf{and} (\plc{ThreadsRequested} <= \plc{ThreadsAvailable})
+
+\textbf{then} number of threads = [ 1 : \plc{ThreadsRequested} ];
+
+\textbf{else if} (\plc{dyn-var} = \plc{true}) \textbf{and} (\plc{ThreadsRequested} > \plc{ThreadsAvailable})
+
+\textbf{then} number of threads = [ 1 : \plc{ThreadsAvailable} ];
+
+\textbf{else if} (\plc{dyn-var} = \plc{false}) \textbf{and} (\plc{ThreadsRequested} <= \plc{ThreadsAvailable})
+
+\textbf{then} number of threads = \plc{ThreadsRequested};
+
+\textbf{else if} (\plc{dyn-var} = \plc{false}) \textbf{and} (\plc{ThreadsRequested} > \plc{ThreadsAvailable})
+
+\textbf{then} behavior is implementation defined;
+\end{quote}
+
+\nolinenumbers\line(1,0){400}\linenumbers
+\end{samepage}
+\bigskip
+
+\notestart
+\noteheader -- Since the initial value of the \plc{dyn-var} ICV is implementation defined, programs 
+that depend on a specific number of threads for correct execution should explicitly 
+disable dynamic adjustment of the number of threads.
+\noteend
+
+\crossreferences
+\begin{itemize}
+\item \plc{nthreads-var}, \plc{dyn-var}, \plc{thread-limit-var}, 
+\plc{max-active-levels-var}, and \plc{nest-var} ICVs, see 
+\specref{sec:Internal Control Variables}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Controlling OpenMP Thread Affinity}
+\label{subsec:Controlling OpenMP Thread Affinity}
+\index{controlling OpenMP thread affinity}
+\index{thread affinity}
+\index{affinity}
+
+When a thread encounters a \code{parallel} directive without a \code{proc\_bind} clause, the \plc{bind-var} ICV is used to determine the policy for assigning OpenMP threads to places within the current place partition, that is, the places listed in the \plc{place-partition-var} ICV for the implicit task of the encountering thread. If the \code{parallel} directive has a \code{proc\_bind} clause then the binding policy specified by the \code{proc\_bind} clause overrides the policy specified by the first element of the \plc{bind-var} ICV. Once a thread in the team is assigned to a place, the OpenMP implementation should not move it to another place. 
+
+The \code{master} thread affinity policy instructs the execution environment to assign every thread in the team to the same place as the master thread. The place partition is not changed by this policy, and each implicit task inherits the \plc{place-partition-var} ICV of the parent implicit task.
+
+The \code{close} thread affinity policy instructs the execution environment to assign the threads in the team to places close to the place of the parent thread. The place partition is not changed by this policy, and each implicit task inherits the \plc{place-partition-var} ICV of the parent implicit task. If $T$ is the number of threads in the team, and $P$ is the number of places in the parent's place partition, then the assignment of threads in the team to places is as follows:
+
+\begin{itemize}
+\item $T\leq P$.
+The master thread executes on the place of the parent thread. The thread with the next smallest thread number executes on the next place in the place partition, and so on, with wrap around with respect to the place partition of the master thread.
+\item $T>P$.
+Each place $P$ will contain $S_{p}$ threads with consecutive thread numbers, 
+where $\blfloor T/P \brfloor \leq Sp \leq \blceil T/P \brceil$. The first $S_{0}$ threads (including the master thread) are assigned to the place of the parent thread. The next $S_{1}$ threads are assigned to the next place in the place partition, and so on, with wrap around with respect to the place partition of the master thread. When $P$ does not divide $T$ evenly, the exact number of threads in a particular place is implementation defined.
+\end{itemize}
+
+
+The purpose of the \code{spread} thread affinity policy is to create a sparse distribution for a 
+team of $T$ threads among the $P$ places of the parent's place partition. A sparse distribution is achieved 
+by first subdividing the parent partition into $T$ subpartitions if 
+$T\leq P$, or $P$ subpartitions if $T>P$. Then one thread ($T\leq P$) or a 
+set of threads ($T>P$) is assigned to each subpartition. The 
+\plc{place-partition-var} ICV of each implicit task is set to its subpartition.
+The subpartitioning is not only a mechanism for achieving a sparse 
+distribution, it also defines a subset of places for a thread to use when 
+creating a nested \code{parallel} region. The assignment of threads to places is as 
+follows:
+
+\begin{itemize}
+\item $T\leq P$. The parent thread's place partition is split into $T$ subpartitions, where each subpartition 
+contains $\blfloor P/T \brfloor$ or $\blceil P/T \brceil$ consecutive places. A single thread is assigned to each subpartition. The master thread executes on the place of the parent thread and is assigned to the subpartition that includes that place. The thread with the next smallest thread number is assigned to the first place in the next subpartition, and so on, with wrap around with respect to the original place partition of the master thread.
+
+\item $T>P$. The parent thread's place partition is split into $P$ subpartitions, each consisting of a single place. Each subpartition is assigned $S_{p}$ threads with consecutive thread numbers, where $\blfloor T/P \brfloor \leq S_{p} \leq \blceil T/P \brceil$. The first $S_{0}$ threads (including the master thread) are assigned to the subpartition containing the place of the parent thread. The next $S_{1}$ threads are assigned to the next subpartition, and so on, with wrap around with respect to the original place partition of the master thread. When P does not divide $T$ evenly, the exact number of threads in a particular subpartition is implementation defined. 
+\end{itemize}
+
+The determination of whether the affinity request can be fulfilled is implementation defined. If the affinity request cannot be fulfilled, then the affinity of threads in the team is implementation defined.
+
+\notestart
+\noteheader -- Wrap around is needed if the end of a place partition is reached before all thread assignments are done. For example, wrap around may be needed in the case of \code{close} and $T\leq P$, if the master thread is assigned to a place other than the first place in the place partition. In this case, thread 1 is assigned to the place after the place of the master place, thread 2 is assigned to the place after that, and so on. The end of the place partition may be reached before all threads are assigned. In this case, assignment of threads is resumed with the first place in the place partition.
+\noteend
+
+
+%% \pagebreak
+\section{Canonical Loop Form}
+\label{sec:Canonical Loop Form}
+\index{canonical loop form}
+\ccppspecificstart
+A loop has \emph{canonical loop form} if it conforms to the following:
+
+\medskip
+\nolinenumbers
+\renewcommand{\arraystretch}{1.0}
+\tablefirsthead{%
+    \hline\\[-2ex]
+    \multicolumn{2}{l}{\hspace*{-5pt}%
+        \code{for (\plc{init-expr}; \plc{test-expr}; \plc{incr-expr}) \plc{structured-block}}}\\[2pt]
+    \hline\\[-2ex]
+}
+\tablehead{%
+    \multicolumn{2}{l}{\small\slshape continued from previous page}\\
+    \hline\\[-2ex]
+}
+\tabletail{%
+    \hline\\[-2ex]
+    \multicolumn{2}{l}{\small\slshape continued on next page}\\
+}
+\tablelasttail{\hline}
+\begin{supertabular}{ p{0.8in} p{4.5in}}
+    \plc{init-expr} & One of the following:\\
+    & \plc{var} = \plc{lb}\\
+    & \plc{integer-type} \plc{var} = \plc{lb}\\
+    & \plc{random-access-iterator-type} \plc{var} = \plc{lb}\\
+    & \plc{pointer-type} \plc{var} = \plc{lb}\\
+    & \\
+    \plc{test-expr} & One of the following:\\
+    & \plc{var} \plc{relational-op} \plc{b}\\
+    & \plc{b} \plc{relational-op} \plc{var}\\
+    & \\
+    \plc{incr-expr} & One of the following:\\
+    & ++\plc{var}\\
+    & \plc{var}++\\
+    & {-} {-} \plc{var}\\
+    & \plc{var {-} {-}}\\
+    & \plc{var} += \plc{incr}\\
+    & \plc{var} {-} = \plc{incr}\\
+    & \plc{var} = \plc{var} + \plc{incr}\\
+    & \plc{var} = \plc{incr} + \plc{var}\\
+    & \plc{var} = \plc{var} - \plc{incr}\\
+    & \\
+    \plc{var} & One of the following:\\
+    & \hspace{1.5em}A variable of a signed or unsigned integer type.\\
+    & \hspace{1.5em}For C++, a variable of a random access iterator type.\\
+    & \hspace{1.5em}For C, a variable of a pointer type.\\
+    & If this variable would otherwise be shared, it is implicitly made private in the loop 
+    construct. This variable must not be modified during the execution of the \plc{for-loop} 
+    other than in \plc{incr-expr}. Unless the variable is specified \code{lastprivate}
+    or \code{linear} on the loop construct, its value after the loop is unspecified.\\
+    \plc{relational-op} & One of the following:\\
+    & \code{<}\\
+    & \code{<=}\\
+    & \code{>}\\
+    & \code{>=}\\
+    & \\
+    \plc{lb} and \plc{b} & Loop invariant expressions of a type compatible with the type of \plc{var}.\\
+    & \\
+    \plc{incr} & A loop invariant integer expression.\\
+\end{supertabular}
+\linenumbers
+\medskip
+
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+    \linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\end{figure}
+The canonical form allows the iteration count of all associated loops to be computed 
+before executing the outermost loop. The computation is performed for each loop in an 
+integer type. This type is derived from the type of \plc{var} as follows:
+
+\begin{itemize}
+    \item If \plc{var} is of an integer type, then the type is the type of \plc{var}.
+    
+    \item For C++, if \plc{var} is of a random access iterator type, then the type is the type that 
+    would be used by \plc{std::distance} applied to variables of the type of \plc{var}.
+    
+    \item For C, if \plc{var} is of a pointer type, then the type is \code{ptrdiff\_t}.
+\end{itemize}
+
+The behavior is unspecified if any intermediate result required to compute the iteration 
+count cannot be represented in the type determined above.
+
+There is no implied synchronization during the evaluation of the \plc{lb}, \plc{b}, or \plc{incr} 
+expressions. It is unspecified whether, in what order, or how many times any side effects 
+within the \plc{lb}, \plc{b}, or \plc{incr} expressions occur.
+
+\notestart
+\noteheader -- Random access iterators are required to support random access to elements in 
+constant time. Other iterators are precluded by the restrictions since they can take linear 
+time or offer limited functionality. It is therefore advisable to use tasks to parallelize 
+those cases. 
+
+% The word "Restrictions" seems out of place; was it meant to be a header outside of the Note?
+
+%Restrictions
+\noteend
+
+\restrictions
+The following restrictions also apply:
+
+\begin{itemize}
+    \item If \plc{test-expr} is of the form \plc{var} \plc{relational-op} 
+    \plc{b} and \plc{relational-op} is < or <= then \plc{incr-expr} must cause \plc{var} to increase on each 
+    iteration of the loop. If \plc{test-expr} is of 
+    the form \plc{var} \plc{relational-op} \plc{b} and \plc{relational-op} 
+    is > or >= then \plc{incr-expr} must cause \plc{var} to decrease on each iteration of the loop.
+    
+    \item If \plc{test-expr} is of the form \plc{b} \plc{relational-op} 
+    \plc{var} and \plc{relational-op} is < or <= then 
+    \plc{incr-expr} must cause \plc{var} to decrease on each iteration of the loop. If \plc{test-expr} is of 
+    the form \plc{b} \plc{relational-op} \plc{var} and \plc{relational-op} 
+    is > or >= then \plc{incr-expr} must cause \plc{var} to increase on each iteration of the loop.
+    
+    \item For C++, in the \code{simd} construct the only random access iterator types that are 
+    allowed for \plc{var} are pointer types.
+    
+    \item The \plc{b}, \plc{lb} and \plc{incr} expressions may not reference
+    \plc{var} of any of the associated loops.
+\end{itemize}
+\ccppspecificend
