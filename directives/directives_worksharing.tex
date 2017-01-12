@@ -1,3 +1,133 @@
+\section{Canonical Loop Form}
+\label{sec:Canonical Loop Form}
+\index{canonical loop form}
+\ccppspecificstart
+A loop has \emph{canonical loop form} if it conforms to the following:
+
+\medskip
+\nolinenumbers
+\renewcommand{\arraystretch}{1.0}
+\tablefirsthead{%
+    \hline\\[-2ex]
+    \multicolumn{2}{l}{\hspace*{-5pt}%
+        \code{for (\plc{init-expr}; \plc{test-expr}; \plc{incr-expr}) \plc{structured-block}}}\\[2pt]
+    \hline\\[-2ex]
+}
+\tablehead{%
+    \multicolumn{2}{l}{\small\slshape continued from previous page}\\
+    \hline\\[-2ex]
+}
+\tabletail{%
+    \hline\\[-2ex]
+    \multicolumn{2}{l}{\small\slshape continued on next page}\\
+}
+\tablelasttail{\hline}
+\begin{supertabular}{ p{0.8in} p{4.5in}}
+    \plc{init-expr} & One of the following:\\
+    & \plc{var} = \plc{lb}\\
+    & \plc{integer-type} \plc{var} = \plc{lb}\\
+    & \plc{random-access-iterator-type} \plc{var} = \plc{lb}\\
+    & \plc{pointer-type} \plc{var} = \plc{lb}\\
+    & \\
+    \plc{test-expr} & One of the following:\\
+    & \plc{var} \plc{relational-op} \plc{b}\\
+    & \plc{b} \plc{relational-op} \plc{var}\\
+    & \\
+    \plc{incr-expr} & One of the following:\\
+    & ++\plc{var}\\
+    & \plc{var}++\\
+    & {-} {-} \plc{var}\\
+    & \plc{var {-} {-}}\\
+    & \plc{var} += \plc{incr}\\
+    & \plc{var} {-} = \plc{incr}\\
+    & \plc{var} = \plc{var} + \plc{incr}\\
+    & \plc{var} = \plc{incr} + \plc{var}\\
+    & \plc{var} = \plc{var} - \plc{incr}\\
+    & \\
+    \plc{var} & One of the following:\\
+    & \hspace{1.5em}A variable of a signed or unsigned integer type.\\
+    & \hspace{1.5em}For C++, a variable of a random access iterator type.\\
+    & \hspace{1.5em}For C, a variable of a pointer type.\\
+    & If this variable would otherwise be shared, it is implicitly made private in the loop 
+    construct. This variable must not be modified during the execution of the \plc{for-loop} 
+    other than in \plc{incr-expr}. Unless the variable is specified \code{lastprivate}
+    or \code{linear} on the loop construct, its value after the loop is unspecified.\\
+    \plc{relational-op} & One of the following:\\
+    & \code{<}\\
+    & \code{<=}\\
+    & \code{>}\\
+    & \code{>=}\\
+    & \\
+    \plc{lb} and \plc{b} & Loop invariant expressions of a type compatible with the type of \plc{var}.\\
+    & \\
+    \plc{incr} & A loop invariant integer expression.\\
+\end{supertabular}
+\linenumbers
+\medskip
+
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+    \linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\end{figure}
+The canonical form allows the iteration count of all associated loops to be computed 
+before executing the outermost loop. The computation is performed for each loop in an 
+integer type. This type is derived from the type of \plc{var} as follows:
+
+\begin{itemize}
+    \item If \plc{var} is of an integer type, then the type is the type of \plc{var}.
+    
+    \item For C++, if \plc{var} is of a random access iterator type, then the type is the type that 
+    would be used by \plc{std::distance} applied to variables of the type of \plc{var}.
+    
+    \item For C, if \plc{var} is of a pointer type, then the type is \code{ptrdiff\_t}.
+\end{itemize}
+
+The behavior is unspecified if any intermediate result required to compute the iteration 
+count cannot be represented in the type determined above.
+
+There is no implied synchronization during the evaluation of the \plc{lb}, \plc{b}, or \plc{incr} 
+expressions. It is unspecified whether, in what order, or how many times any side effects 
+within the \plc{lb}, \plc{b}, or \plc{incr} expressions occur.
+
+\notestart
+\noteheader -- Random access iterators are required to support random access to elements in 
+constant time. Other iterators are precluded by the restrictions since they can take linear 
+time or offer limited functionality. It is therefore advisable to use tasks to parallelize 
+those cases. 
+
+% The word "Restrictions" seems out of place; was it meant to be a header outside of the Note?
+
+%Restrictions
+\noteend
+
+\restrictions
+The following restrictions also apply:
+
+\begin{itemize}
+    \item If \plc{test-expr} is of the form \plc{var} \plc{relational-op} 
+    \plc{b} and \plc{relational-op} is < or <= then \plc{incr-expr} must cause \plc{var} to increase on each 
+    iteration of the loop. If \plc{test-expr} is of 
+    the form \plc{var} \plc{relational-op} \plc{b} and \plc{relational-op} 
+    is > or >= then \plc{incr-expr} must cause \plc{var} to decrease on each iteration of the loop.
+    
+    \item If \plc{test-expr} is of the form \plc{b} \plc{relational-op} 
+    \plc{var} and \plc{relational-op} is < or <= then 
+    \plc{incr-expr} must cause \plc{var} to decrease on each iteration of the loop. If \plc{test-expr} is of 
+    the form \plc{b} \plc{relational-op} \plc{var} and \plc{relational-op} 
+    is > or >= then \plc{incr-expr} must cause \plc{var} to increase on each iteration of the loop.
+    
+    \item For C++, in the \code{simd} construct the only random access iterator types that are 
+    allowed for \plc{var} are pointer types.
+    
+    \item The \plc{b}, \plc{lb} and \plc{incr} expressions may not reference
+    \plc{var} of any of the associated loops.
+\end{itemize}
+\ccppspecificend
+
+
+
+
+
 \section{Worksharing Constructs}
 \label{sec:Worksharing Constructs}
 \index{worksharing constructs}
