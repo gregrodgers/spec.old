@@ -44,16 +44,16 @@ clean:
 #      make DIFF_FROM=upstream/master make openmp-diff.pdf
 #
 ifdef DIFF_TO
-VC_DIFF_TO := -r ${DIFF_TO}
-ifndef DIFF_FROM
-	#need a from to get to right, probably want master?
-	VC_DIFF_FROM := -r master
-endif
+    VC_DIFF_TO := -r ${DIFF_TO}
+    ifndef DIFF_FROM
+        # need a from to get to right, probably want master?
+        VC_DIFF_FROM := -r master
+    endif
 endif
 ifdef DIFF_FROM
-VC_DIFF_FROM := -r ${DIFF_FROM}
+    VC_DIFF_FROM := -r ${DIFF_FROM}
 else
-VC_DIFF_FROM := -r HEAD
+    VC_DIFF_FROM := -r HEAD
 endif
 
 DIFF_FROM:=master
