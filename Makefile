@@ -6,11 +6,11 @@ all: openmp.pdf
 .PHONY: clean quick all git-diff-all
 
 CHAPTERS=titlepage.tex \
-	introduction/introduction.tex \
-	directives/directives.tex \
-	runtime_library/runtime_library.tex \
-	tool_support/tool_support.tex \
-	environment_variables/environment_variables.tex \
+	introduction.tex \
+	directives.tex \
+	runtime_library.tex \
+	tool_support.tex \
+	environment_variables.tex \
 	appendices/stubs.tex \
 	appendices/grammar.tex \
 	appendices/interface_declarations.tex \
