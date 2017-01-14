@@ -1,0 +1,1670 @@
+\section{Master and Synchronization Constructs and Clauses}
+\label{sec:Master and Synchronization Constructs and Clauses}
+\index{master and synchronization constructs and clauses}
+\index{synchronization constructs}
+OpenMP provides the following synchronization constructs:
+\begin{itemize}
+\item the \code{master} construct;
+
+\item the \code{critical} construct;
+
+\item the \code{barrier} construct;
+
+\item the \code{taskwait} construct;
+
+\item the \code{taskgroup} construct;
+
+\item the \code{atomic} construct;
+
+\item the \code{flush} construct;
+
+\item the \code{ordered} construct.
+\end{itemize}
+
+
+\subsection{\code{master} Construct}
+\index{maste@{\code{master}}}
+\index{constructs!master@{\code{master}}}
+\label{subsec:master Construct}
+\summary
+The \code{master} construct specifies a structured block that is executed by the master thread 
+of the team.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{master} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp master \plc{new-line}
+   \plc{structured-block}
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{master} construct is as follows:
+
+\begin{boxedcode}
+!\$omp master
+   \plc{structured-block}
+!\$omp end master
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for a \code{master} region is the current team. A \code{master} region 
+binds to the innermost enclosing \code{parallel} region. Only the master thread of the team 
+executing the binding \code{parallel} region participates in the execution of the structured 
+block of the \code{master} region.
+
+\descr
+Other threads in the team do not execute the associated structured block. There is no 
+implied barrier either on entry to, or exit from, the \code{master} construct.
+
+\events
+
+The \plc{master-begin} event occurs in the thread encountering the \code{master}
+construct on entry to the master region, if it is the master thread of the team.
+
+The \plc{master-end} event occurs in the thread encountering the \code{master}
+construct on exit of the master region, if it is the master thread of the team.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_master}
+callback for each occurrence of a \plc{master-begin} and a
+\plc{master-end} event in that thread.  
+
+The callback occurs  in the context of the task executed by the master thread.
+This callback has the type signature
+\code{ompt\_callback\_master\_t}. The callback receives
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+\restrictions
+\cppspecificstart
+\begin{itemize}
+\item A throw executed inside a \code{master} region must cause execution to resume within the 
+same \code{master} region, and the same thread that threw the exception must catch it
+\end{itemize}
+\cppspecificend
+
+\crossreferences
+\begin{itemize}
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see 
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_callback\_master\_t}, see
+\specref{sec:ompt_callback_master_t}.
+
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{critical} Construct}
+\index{critical@{\code{critical}}}
+\index{constructs!critical@{\code{critical}}}
+\label{subsec:critical Construct}
+\summary
+The \code{critical} construct restricts execution of the associated structured block to a 
+single thread at a time.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{critical} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ] new-line}
+    \plc{structured-block}
+\end{boxedcode}
+
+where \plc{hint-expression} is an integer constant expression that
+evaluates to a valid lock hint (as described 
+in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{critical} construct is as follows:
+
+\begin{boxedcode}
+!\$omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ]}
+    \plc{structured-block}
+!\$omp end critical \plc{[}(\plc{name})\plc{]}  
+\end{boxedcode}
+
+where \plc{hint-expression} is a constant expression that evaluates to
+a scalar value with kind \code{omp\_lock\_hint\_kind} and  a value
+that is a valid lock hint (as described 
+in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
+\fortranspecificend
+
+\binding
+The binding thread set for a \code{critical} region is all threads in the contention group. 
+The region is executed as if only a single thread at a time among all threads in the 
+contention group is entering the region for execution, without regard to the team(s) to which the threads belong. 
+
+\descr
+An optional \plc{name} may be used to identify the \code{critical} construct. All \code{critical} 
+constructs without a name are considered to have the same unspecified name. 
+
+\ccppspecificstart
+Identifiers used to identify a \code{critical} construct have external linkage and are in a 
+name space that is separate from the name spaces used by labels, tags, members, and 
+ordinary identifiers.
+\ccppspecificend
+
+\fortranspecificstart
+The names of \code{critical} constructs are global entities of the program. If a name 
+conflicts with any other entity, the behavior of the program is unspecified.
+\fortranspecificend
+
+The threads of a contention group execute the \code{critical} region as if only one thread of the contention group is executing the \code{critical} region at a time.
+The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all 
+threads in the contention group, not just those threads in the current team.
+
+The presence of a \code{hint} clause does not affect the isolation
+guarantees provided by the \code{critical} construct. If no
+\code{hint} clause is specified, the effect is as if \code{hint(omp\_lock\_hint\_none)}
+had been specified.
+
+% Replaced by the above paragraph
+% If the \code{hint} clause is present, the effect of the \code{critical} 
+% construct is implementation defined, but retains the mutual exclusion 
+% semantics. If no
+% \code{hint} clause is specified, the effect is as if \code{hint(none)}
+% has been specified.
+
+\def\omptMutex#1#2{
+\events
+The \plc{#1-acquire} event occurs in the thread encountering the
+\code{#1} construct on entry to the #1 region before 
+initiating synchronization for the region.
+
+The \plc{#1-acquired} event occurs in the thread encountering the
+\code{#1} construct after entering the region, but before executing the
+structured block of the \code{#1} region.
+
+The \plc{#1-release} event occurs in the thread encountering the
+\code{#1} construct after completing any synchronization 
+on exit from the \code{#1} region.
+
+\tools
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquire}
+callback for each occurrence of #2 \plc{#1-acquire} event 
+in that thread.  
+This callback has the type signature \code{ompt\_callback\_mutex\_acquire\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_acquired}
+callback for each occurrence of #2 \plc{#1-acquired} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+
+A thread dispatches a registered \code{ompt\_callback\_mutex\_released}
+callback for each occurrence of #2 \plc{#1-release} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+The callbacks occur in the task encountering
+the #1 construct.  The callbacks should receive \code{ompt\_mutex\_#1}
+as their \plc{kind} argument if practical, but a less specific kind is acceptable.
+}
+
+\omptMutex{critical}{a}
+
+\restrictions
+\begin{itemize}
+\item If the \code{hint} clause is specified, the \code{critical} 
+      construct must have a \plc{name}.
+\item If the \code{hint} clause is specified, each of the
+  \code{critical} constructs with the same \plc{name} must have a
+  \code{hint} clause for which the \plc{hint-expression} evaluates to the same
+  value.
+
+% \item All \code{critical} constructs with the same \plc{name} must 
+%       have a \code{hint} clause for which the \plc{hint-expression} evaluates 
+%       to the same value if any of them has a \code{hint} clause. 
+\end{itemize}
+
+\cppspecificstart
+\begin{itemize}
+\item A throw executed inside a \code{critical} region must cause execution to resume within 
+the same \code{critical} region, and the same thread that threw the exception must catch 
+it.
+\end{itemize}
+\cppspecificend
+
+\fortranspecificstart
+The following restrictions apply to the critical construct:
+
+\begin{itemize}
+\item If a \plc{name} is specified on a \code{critical} directive, the same \plc{name} must also be 
+specified on the \code{end}~\code{critical} directive. 
+
+\item If no \plc{name} appears on the \code{critical} directive, no \plc{name} can appear on the 
+\code{end}~\code{critical} directive.
+\end{itemize}
+\fortranspecificend
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint}, see 
+\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
+
+\item \code{ompt\_mutex\_critical}, see
+\specref{sec:ompt_mutex_kind_t}.
+
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{barrier} Construct}
+\index{barrier@{\code{barrier}}}
+\index{constructs!barrier@{\code{barrier}}}
+\label{subsec:barrier Construct}
+\summary
+The \code{barrier} construct specifies an explicit barrier at the point at which the construct 
+appears. The \code{barrier} construct is a stand-alone directive.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{barrier} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp barrier \plc{new-line}
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{barrier} construct is as follows:
+
+\begin{boxedcode}
+!\$omp barrier
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for a \code{barrier} region is the current team. A \code{barrier} region 
+binds to the innermost enclosing \code{parallel} region. 
+
+\descr
+All threads of the team executing the binding \code{parallel} region must execute the 
+\code{barrier} region and complete execution of all explicit tasks bound to this \code{parallel} 
+region before any are allowed to continue execution beyond the barrier.
+
+The \code{barrier} region includes an implicit task scheduling point in the current task 
+region.
+
+\def\omptSyncRegionEvents#1{
+The \plc{#1-begin} event occurs in each thread encountering the
+\code{#1} construct on entry to the \code{#1} region.
+
+The \plc{#1-wait-begin} event occurs when a task begins an interval of active or passive waiting
+in a \code{#1} region. 
+
+The \plc{#1-wait-end} event occurs when a task ends an interval of active or passive waiting
+and resumes execution in a \code{#1} region. 
+
+The \plc{#1-end} event occurs in each thread encountering the
+\code{#1} construct after the #1 synchronization on exit from the
+\code{#1} region.
+}
+
+\def\omptSyncRegionTools#1{
+A thread dispatches a registered \code{ompt\_callback\_sync\_region}
+callback for each occurrence of a \plc{#1-begin} and \plc{#1-end} event 
+in that thread.  The callback occurs in the task encountering
+the #1 construct.  This callback has the type signature
+\code{ompt\_callback\_sync\_region\_t}. 
+The callback receives
+\code{ompt\_sync\_region\_#1} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered
+\code{ompt\_callback\_sync\_region\_wait} callback
+for each occurrence of a \plc{#1-wait-begin} and \plc{#1-wait-end} event.
+This callback has type signature \code{ompt\_callback\_sync\_region\_t}. 
+This callback executes in the context of the task that encountered the
+\code{#1} construct. The callback receives
+\code{ompt\_sync\_region\_#1} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} 
+as its \plc{endpoint} argument, as appropriate.
+}
+
+\def\omptSyncRegion#1{
+\events
+\omptSyncRegionEvents{#1}
+\tools
+\omptSyncRegionTools{#1}
+}
+
+\events
+\omptSyncRegionEvents{barrier}
+
+A \plc{cancellation} event occurs if cancellation is activated at an implicit cancellation point in an barrier region.
+
+\tools
+
+\omptSyncRegionTools{barrier}
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancellation} event in that thread. 
+The callback occurs in the context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_detected} as its \plc{flags} argument. 
+
+\restrictions
+The following restrictions apply to the \code{barrier} construct:
+
+\begin{itemize}
+\item Each \code{barrier} region must be encountered by all threads in a team or by none at all, 
+unless cancellation has been requested for the innermost enclosing parallel region.
+
+\item The sequence of worksharing regions and \code{barrier} regions encountered must be the 
+same for every thread in a team.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_barrier}, see  
+\specref{sec:ompt_sync_region_kind_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+\specref{sec:ompt_callback_sync_region_t}.
+
+\item \code{ompt\_callback\_cancel\_t}, see 
+\specref{sec:ompt_callback_cancel_t}.
+
+\end{itemize}
+
+
+
+
+
+
+\subsection{Implicit Barriers}
+\index{implicit barrier}
+\index{barrier, implicit}
+\label{subsec:implict-barrier}
+
+Implicit tasks in a parallel region synchronize with one another using
+implicit barriers at the end of worksharing constructs and at the end
+of the \code{parallel} region. This section describes the OMPT events and
+tool callbacks associated with implicit barriers.
+
+Implicit barriers are task scheduling points. For a description of
+task sheduling points, associated events, and tool callbacks, see
+\specref{subsec:Task Scheduling}.
+
+\events
+
+A \plc{cancellation} event occurs if cancellation is activated at an
+implicit cancellation point in an implicit barrier region.
+
+The \plc{implicit-barrier-begin} event occurs in each implicit task
+at the beginning of an implicit barrier.
+
+The \plc{implicit-barrier-wait-begin} event occurs when a task begins an interval of
+active or passive waiting while executing in an implicit barrier region.
+
+The \plc{implicit-barrier-wait-end} event occurs when a task ends an interval of 
+active or waiting and resumes execution of an implicit barrier region.
+
+The \plc{implicit-barrier-end} event occurs in each implicit task
+at the end of an implicit barrier.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_sync\_region}
+callback for each occurrence of a \plc{implicit-barrier-begin} and
+\plc{implicit-barrier-end} event in that thread.  The callback occurs
+in the implicit task executing in a parallel region.
+This callback has the type signature
+\code{ompt\_callback\_sync\_region\_t}.  The callback receives
+\code{ompt\_sync\_region\_barrier} as its \plc{kind} argument and
+\code{ompt\_scope\_begin} or \code{ompt\_scope\_end} as its
+\plc{endpoint} argument, as appropriate.
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancellation} event in that thread.
+The callback occurs in the context of the encountering task.  The
+callback has type signature \code{ompt\_callback\_cancel\_t}.  The
+callback receives \code{ompt\_cancel\_detected} as its \plc{flags}
+argument.
+
+A thread dispatches a registered
+\code{ompt\_callback\_sync\_region\_wait} callback for each occurrence
+of a \plc{implicit-barrier-wait-begin} and
+\plc{implicit-barrier-wait-end} event.  This callback has type
+signature \code{ompt\_callback\_sync\_region\_t}.  The callback occurs
+in each implicit task participating in an implicit barrier.  The
+callback receives \code{ompt\_sync\_region\_barrier} as its \plc{kind}
+argument and \code{ompt\_scope\_begin} or \code{ompt\_scope\_end} as
+its \plc{endpoint} argument, as appropriate.
+
+\restrictions
+If a thread is in the state \code{omp\_state\_wait\_barrier\_implicit\_parallel},
+a call to \code{ompt\_get\_parallel\_info}
+may return a pointer to a copy of the current parallel region's \plc{parallel\_data}
+rather than a pointer to the data word for the region itself. This convention enables the master thread
+for a parallel region to free storage for the region immediately after the region ends, yet
+avoid having some other thread in the region's team
+potentially reference the region's \plc{parallel\_data} object after it has been freed. 
+
+\crossreferences
+\begin{itemize}
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+  \specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_barrier}, see
+  \specref{sec:ompt_sync_region_kind_t}
+
+\item \code{ompt\_cancel\_detected}, see
+  \specref{sec:ompt_cancel_flag_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+  \specref{sec:ompt_callback_sync_region_t}.
+
+\item \code{ompt\_callback\_cancel\_t}, see
+  \specref{sec:ompt_callback_cancel_t}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{taskwait} Construct}
+\index{taskwait@{\code{taskwait}}}
+\index{constructs!taskwait@{\code{taskwait}}}
+\label{subsec:taskwait Construct}
+\summary
+The \code{taskwait} construct specifies a wait on the completion of child tasks
+of the current task. The \code{taskwait} construct is a stand-alone directive.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{taskwait} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp taskwait \plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+depend(\plc{dependence-type }:\plc{ locator-list})
+\end{indentedcodelist}
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{taskwait} construct is as follows:
+
+\begin{boxedcode}
+!\$omp taskwait \plc{[clause[ [},\plc{] clause] ... ]}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+depend(\plc{dependence-type }:\plc{ locator-list})
+\end{indentedcodelist}
+
+\fortranspecificend
+
+\binding
+The \code{taskwait} region binds to the current task region. The binding thread set of the 
+\code{taskwait} region is the current team.
+
+\descr
+
+If no \code{depend} clause is present on the \code{taskwait} construct, the
+current task region is suspended at an implicit task scheduling point
+associated with the construct. The current task region remains suspended until
+all child tasks that it generated before the \code{taskwait} region complete
+execution.
+
+Otherwise, if one or more \code{depend} clauses are present on the
+\code{taskwait} construct, the behavior is as if these clauses were applied to
+a \code{task} construct with an empty associated structured block that
+generates a \emph{mergeable} and \emph{included task}. Thus, the current task region is
+suspended until the \emph{predecessor tasks} of this task complete execution.
+
+\omptSyncRegion{taskwait}
+
+\crossreferences
+\begin{itemize}
+\item \code{task} construct, see \specref{subsec:task Construct}.
+
+\item Task scheduling, see 
+\specref{subsec:Task Scheduling}.
+
+\item \code{depend} clause, see \specref{subsec:depend Clause}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_taskwait}, see
+\specref{sec:ompt_sync_region_kind_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+\specref{sec:ompt_callback_sync_region_t}.
+
+\end{itemize}
+
+
+
+
+
+
+
+\subsection{\code{taskgroup} Construct}
+\index{taskgroup@{\code{taskgroup}}}
+\index{constructs!taskgroup@{\code{taskgroup}}}
+\label{subsec:taskgroup Construct}
+\summary
+The \code{taskgroup} construct specifies a wait on completion of child tasks of the current 
+task and their descendent tasks.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{taskgroup} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp taskgroup \plc{[clause[[,] clause] ...]} \plc{new-line}
+    \plc{structured-block}
+\end{boxedcode}
+\ccppspecificend
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+task_reduction(\plc{reduction-identifier }:\plc{ list})
+\end{indentedcodelist}
+
+\fortranspecificstart
+The syntax of the \code{taskgroup} construct is as follows:
+
+\begin{boxedcode}
+!\$omp taskgroup \plc{[clause [ [},\plc{] clause] ...]}
+    \plc{structured-block}
+!\$omp end taskgroup
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+task_reduction(\plc{reduction-identifier }:\plc{ list})
+\end{indentedcodelist}
+
+\fortranspecificend
+
+\binding
+A \code{taskgroup} region binds to the current task region. A \code{taskgroup} region binds to 
+the innermost enclosing \code{parallel} region. 
+
+\descr
+When a thread encounters a \code{taskgroup} construct, it starts executing 
+the region. All child tasks generated in the \code{taskgroup} region and all 
+of their descendants that bind to the same \code{parallel} region as the 
+\code{taskgroup} region are part of the \plc{taskgroup set} associated with 
+the \code{taskgroup} region.
+
+There is an implicit task scheduling point at the end of the \code{taskgroup} 
+region. The current task is suspended at the task scheduling point until all 
+tasks in the \plc{taskgroup set} complete execution.
+
+\omptSyncRegion{taskgroup}
+
+\crossreferences
+\begin{itemize}
+\item Task scheduling, see 
+\specref{subsec:Task Scheduling}.
+\item \code{task\_reduction} Clause, see \specref{subsubsec:task_reduction clause}.
+
+\item \code{ompt\_scope\_begin} and \code{ompt\_scope\_end}, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt\_sync\_region\_taskgroup}, see
+\specref{sec:ompt_sync_region_kind_t}.
+
+\item \code{ompt\_callback\_sync\_region\_t}, see
+\specref{sec:ompt_callback_sync_region_t}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{\code{atomic} Construct}
+\index{atomic@{\code{atomic}}}
+\index{constructs!atomic@{\code{atomic}}}
+\index{constructs!atomic@{\code{atomic}}}
+\index{write, atomic@{\code{write, atomic}}}
+\index{read, atomic@{\code{read, atomic}}}
+\index{update, atomic@{\code{update, atomic}}}
+\label{subsec:atomic Construct}
+\summary
+The \code{atomic} construct ensures that a specific storage location is accessed atomically, 
+rather than exposing it to the possibility of multiple, simultaneous reading and writing 
+threads that may result in indeterminate values.
+
+\syntax
+In the following syntax, \plc{atomic-clause} is a clause that indicates
+the semantics for which atomicity is enforced and is one of the following:
+
+\begin{indentedcodelist}
+read
+write
+update
+capture
+\end{indentedcodelist}
+
+\ccppspecificstart
+The syntax of the \code{atomic} construct takes one of the following forms:
+
+\begin{boxedcode}
+\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
+   \plc{expression-stmt}
+\end{boxedcode}
+
+%% where \plc{atomic-clause} is one of the following:
+%%
+%% \begin{indentedcodelist}
+%% read
+%% write
+%% update
+%% capture
+%% \end{indentedcodelist}
+
+or
+
+\begin{boxedcode}
+\#pragma omp atomic \plc{[}seq\_cst\plc{]} \plc{new-line} 
+   \plc{expression-stmt}
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
+    \plc{structured-block}
+\end{boxedcode}
+
+%% \needspace{6\baselineskip}
+where \plc{expression-stmt} is an expression statement with one of the following forms:
+
+\begin{itemize}
+\item If \plc{atomic-clause} is \code{read}:\\
+\code{\plc{v} = \plc{x};}
+
+\item If \plc{atomic-clause} is \code{write}:\\
+\code{\plc{x} = \plc{expr};}
+
+\item If \plc{atomic-clause} is \code{update} or not present:\\
+\code{\plc{x}++;}\\
+\code{\plc{x}\--\--;}\\
+\code{++\plc{x};}\\
+\code{\--\--\plc{x};}\\
+\code{\plc{x} \plc{binop}= \plc{expr};}\\
+\code{\plc{x} = \plc{x} \plc{binop} \plc{expr};}\\
+\code{\plc{x} = \plc{expr} \plc{binop} \plc{x};}
+
+\item If \plc{atomic-clause} is \code{capture}:\\
+\code{\plc{v} = \plc{x}++;}\\
+\code{\plc{v} = \plc{x}\--\--;}\\
+\code{\plc{v} = ++\plc{x};}\\
+\code{\plc{v} = \--\--\plc{x};}\\
+\code{\plc{v} = \plc{x} \plc{binop}= \plc{expr};}\\
+\code{\plc{v} = \plc{x} = \plc{x} \plc{binop} \plc{expr};}\\
+\code{\plc{v} = \plc{x} = \plc{expr} \plc{binop} \plc{x};}
+
+and where \plc{structured-block} is a structured block with one of the following forms:
+
+% blue line floater at top of this page for "C/C++, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{C/C++ (cont.)}{8em}
+\end{figure}
+
+\code{\{\plc{v} = \plc{x}; \plc{x} \plc{binop}= \plc{expr};\}}\\
+\code{\{\plc{x} \plc{binop}= \plc{expr}; \plc{v} = \plc{x};\}}\\
+\code{\{\plc{v} = \plc{x}; \plc{x} = \plc{x} \plc{binop} \plc{expr};\}}\\
+\code{\{\plc{v} = \plc{x}; \plc{x} = \plc{expr} \plc{binop} \plc{x};\}}\\
+\code{\{\plc{x} = \plc{x} \plc{binop} \plc{expr}; \plc{v} = \plc{x};\}}\\
+\code{\{\plc{x} = \plc{expr} \plc{binop} \plc{x}; \plc{v} = \plc{x};\}}\\
+\code{\{\plc{v} = \plc{x}; \plc{x} = \plc{expr};\}}\\
+\code{\{\plc{v} = \plc{x}; \plc{x}++;\}}\\
+\code{\{\plc{v} = \plc{x}; ++\plc{x};\}}\\
+\code{\{++\plc{x}; \plc{v} = \plc{x};\}}\\
+\code{\{\plc{x}++\code{;} \plc{v} = \plc{x};\}}\\
+\code{\{\plc{v} = \plc{x}; \plc{x}\--\--;\}}\\
+\code{\{\plc{v} = \plc{x}; \--\--\plc{x};\}}\\
+\code{\{\--\--\plc{x}; \plc{v} = \plc{x};\}}\\
+\code{\{\plc{x}\--\--; \plc{v} = \plc{x};\}}
+\end{itemize}
+
+In the preceding expressions:
+
+\begin{itemize}
+\item \plc{x} and \plc{v} (as applicable) are both \plc{l-value} expressions with scalar type.
+
+\item During the execution of an atomic region, multiple syntactic occurrences of \plc{x} must 
+designate the same storage location.
+
+\item Neither of \plc{v} and \plc{expr} (as applicable) may access the storage location designated by \plc{x}.
+
+\item Neither of \plc{x} and \plc{expr} (as applicable) may access the storage location designated by \plc{v}.
+
+\item \plc{expr} is an expression with scalar type. 
+
+\item \plc{binop} is one of \code{+}, \code{*}, \code{-}, \code{/}, 
+\code{\&}, \code{\^}, \code{|}, \code{\textless \hspace{0.05em}\textless}, or 
+\code{\textgreater \hspace{0.05em}\textgreater}.
+
+\item \plc{binop}, \plc{binop}\code{=}, \code{++}, and \code{\--\--} are not overloaded operators.
+
+\item The expression \plc{x} \plc{binop} \plc{expr} must be numerically equivalent to 
+\plc{x} \plc{binop} \plc{(expr)}. This 
+requirement is satisfied if the operators in \plc{expr} have precedence greater than \plc{binop}, 
+or by using parentheses around \plc{expr} or subexpressions of \plc{expr}.
+
+\item The expression \plc{expr} \plc{binop} \plc{x} must be numerically equivalent to 
+\plc{(expr)} \plc{binop} \plc{x}. This 
+requirement is satisfied if the operators in \plc{expr} have precedence equal to or greater 
+than \plc{binop}, or by using parentheses around \plc{expr} or subexpressions of \plc{expr}.
+
+\item For forms that allow multiple occurrences of \plc{x}, the number of times that \plc{x} is 
+evaluated is unspecified.
+\end{itemize}
+\ccppspecificend
+
+\begin{samepage}
+\fortranspecificstart
+The syntax of the \code{atomic} construct takes any of the following forms: 
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} read \plc{[[},\plc{]}seq\_cst\plc{]}
+    \plc{capture-statement }
+\plc{[}!\$omp end atomic\plc{]}
+\end{boxedcode}
+\end{samepage}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} write \plc{[[},\plc{]}seq\_cst\plc{]}
+    \plc{write-statement }
+\plc{[}!\$omp end atomic\plc{]}
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} update \plc{[[},\plc{]}seq\_cst\plc{]}
+    \plc{update-statement }
+\plc{[}!\$omp end atomic\plc{]}
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{]} 
+    \plc{update-statement }
+\plc{[}!\$omp end atomic\plc{]}
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
+    \plc{update-statement }
+    \plc{capture-statement}
+!\$omp end atomic
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
+    \plc{capture-statement}
+    \plc{update-statement}
+!\$omp end atomic
+\end{boxedcode}
+
+or
+
+\begin{boxedcode}
+!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
+    \plc{capture-statement}
+    \plc{write-statement}
+!\$omp end atomic
+\end{boxedcode}
+
+where \plc{write-statement} has the following form (if \plc{atomic-clause} 
+is \code{capture} or \code{write}):
+
+\begin{quote}
+\code{\plc{x} = \plc{expr}}
+\end{quote}
+
+where \plc{capture-statement} has the following form (if \plc{atomic-clause} 
+is \code{capture} or \code{read}):
+
+\begin{quote}
+\code{\plc{v} = \plc{x}}
+\end{quote}
+
+% blue line floater at top of this page for "Fortran, cont."
+\begin{figure}[t!]
+\linewitharrows{-1}{dashed}{Fortran (cont.)}{8em}
+\end{figure}
+and where \plc{update-statement} has one of the following forms (if \plc{atomic-clause} is \code{update}, 
+\code{capture}, or not present):
+
+\begin{quote}
+\code{\plc{x} = \plc{x operator expr}}
+
+\code{\plc{x} = \plc{expr operator x}}
+
+\code{\plc{x} = \plc{intrinsic\_procedure\_name} (\plc{x}, \plc{expr\_list})}
+
+\code{\plc{x} = \plc{intrinsic\_procedure\_name} (\plc{expr\_list}, \plc{x})}
+\end{quote}
+
+In the preceding statements:
+
+\begin{itemize}
+\item \plc{x} and \plc{v} (as applicable) are both scalar variables of intrinsic type.
+
+\item \plc{x} must not have the \code{ALLOCATABLE} attribute.
+
+\item During the execution of an atomic region, multiple syntactic occurrences of \plc{x} must 
+designate the same storage location.
+
+\item None of \plc{v}, \plc{expr}, and \plc{expr\_list} (as applicable) may access the same storage location as 
+\plc{x}. 
+
+\item None of \plc{x}, \plc{expr}, and \plc{expr\_list} (as applicable) may access the same storage location as 
+\plc{v}.
+
+\item \plc{expr} is a scalar expression.
+
+\item \plc{expr\_list} is a comma-separated, non-empty list of scalar expressions. If 
+\plc{intrinsic\_procedure\_name} refers to \code{IAND}, \code{IOR}, or \code{IEOR}, exactly one expression 
+must appear in \plc{expr\_list}.
+
+\item \plc{intrinsic\_procedure\_name} is one of \code{MAX}, \code{MIN}, \code{IAND}, \code{IOR}, or \code{IEOR}.
+
+\item \plc{operator} is one of \code{+}, \code{*}, \code{-}, \code{/}, \code{.AND.}, \code{.OR.}, \code{.EQV.}, or \code{.NEQV.}.
+
+\item The expression \plc{x operator expr} must be numerically equivalent to \plc{x operator (expr)}. 
+This requirement is satisfied if the operators in \plc{expr} have precedence greater than 
+\plc{operator}, or by using parentheses around \plc{expr} or subexpressions of \plc{expr}.
+
+\item The expression \plc{expr operator x} must be numerically equivalent to \plc{(expr) operator 
+x}. This requirement is satisfied if the operators in \plc{expr} have precedence equal to or 
+greater than \plc{operator}, or by using parentheses around \plc{expr} or subexpressions of \plc{expr}.
+
+\item \plc{intrinsic\_procedure\_name} must refer to the intrinsic procedure name and not to other 
+program entities.
+
+\item \plc{operator} must refer to the intrinsic operator and not to a user-defined operator.
+
+\item All assignments must be intrinsic assignments.
+
+\item For forms that allow multiple occurrences of \plc{x}, the number of times that \plc{x} is 
+evaluated is unspecified.
+\fortranspecificend
+
+%% \item In all \code{atomic} construct forms, the \code{seq\_cst} clause and the clause that denotes the 
+%% type of the atomic construct can appear in any order. In addition, an optional comma 
+%% may be used to separate the clauses
+\end{itemize}
+
+\begin{samepage}
+
+\binding
+If the size of \plc{x} is 8, 16, 32, or 64 bits and \plc{x} is aligned to a
+multiple of its size, the binding thread set for the \code{atomic} region is 
+all threads on the device. Otherwise, the binding thread set for the 
+\code{atomic} region is all threads in the contention group.  \code{atomic} 
+regions enforce exclusive access with respect to other \code{atomic} regions 
+that access the same storage location \plc{x} among all threads in the 
+binding thread set without regard to the teams to which the threads belong. 
+
+\descr
+The \code{atomic} construct with the \code{read} clause forces an atomic read of the location 
+designated by \plc{x} regardless of the native machine word size.
+\end{samepage}
+
+The \code{atomic} construct with the \code{write} clause forces an atomic write of the location 
+designated by \plc{x} regardless of the native machine word size.
+
+The \code{atomic} construct with the \code{update} clause forces an atomic update of the location 
+designated by \plc{x} using the designated operator or intrinsic. Note that when no clause is 
+present, the semantics are equivalent to atomic update. Only the read and write of the 
+location designated by \plc{x} are performed mutually atomically. The evaluation of \plc{expr} or 
+\plc{expr\_list} need not be atomic with respect to the read or write of the location designated 
+by \plc{x}. No task scheduling points are allowed between the read and the write of the 
+location designated by \plc{x}.
+
+The \code{atomic} construct with the \code{capture} clause forces an atomic update of the 
+location designated by \plc{x} using the designated operator or intrinsic while also capturing 
+the original or final value of the location designated by \plc{x} with respect to the atomic 
+update. The original or final value of the location designated by \plc{x} is written in the 
+location designated by \plc{v} depending on the form of the \code{atomic} construct structured 
+block or statements following the usual language semantics. Only the read and write of 
+the location designated by \plc{x} are performed mutually atomically. Neither the evaluation 
+of \plc{expr} or \plc{expr\_list}, nor the write to the location designated by \plc{v}, need be atomic with
+respect to the read or write of the location designated by \plc{x}. No task scheduling points 
+are allowed between the read and the write of the location designated by \plc{x}.
+
+Any \code{atomic} construct with a \code{seq\_cst} clause forces the atomically performed 
+operation to include an implicit flush operation without a list.
+
+\notestart
+\noteheader -- As with other implicit flush regions, 
+\specref{subsec:OpenMP Memory Consistency} 
+reduces the 
+ordering that must be enforced. The intent is that, when the analogous operation exists 
+in C++11 or C11, a sequentially consistent \code{atomic} construct has the same semantics as 
+a \code{memory\_order\_seq\_cst} atomic operation in C++11/C11. Similarly, a 
+non-sequentially consistent \code{atomic} construct has the same semantics as a 
+\code{memory\_order\_relaxed} atomic operation in C++11/C11.
+
+Unlike non-sequentially consistent \code{atomic} constructs, sequentially consistent \code{atomic} 
+constructs preserve the interleaving (sequentially consistent) behavior of correct, 
+data race free programs. However, they are not designed to replace the \code{flush} directive 
+as a mechanism to enforce ordering for non-sequentially consistent \code{atomic} constructs, 
+and attempts to do so require extreme caution. For example, a sequentially consistent 
+\code{atomic}~\code{write} construct may appear to be reordered with a subsequent 
+non-sequentially consistent \code{atomic}~\code{write} construct, since such reordering would not 
+be observable by a correct program if the second write were outside an \code{atomic} 
+directive.
+\noteend
+
+For all forms of the \code{atomic} construct, any combination of two or more
+of these \code{atomic} constructs enforces mutually exclusive access to the
+locations designated by \plc{x} among threads in the binding thread set.  To
+avoid race conditions, all accesses of the locations designated by \plc{x}
+that could potentially occur in parallel must be protected with an
+\code{atomic} construct. 
+
+\code{atomic} regions do not guarantee exclusive access with respect to any accesses outside 
+of \code{atomic} regions to the same storage location \plc{x} even if those accesses occur during a 
+\code{critical} or \code{ordered} region, while an OpenMP lock is owned by the executing 
+task, or during the execution of a \code{reduction} clause.
+
+However, other OpenMP synchronization can ensure the desired exclusive access. For 
+example, a barrier following a series of atomic updates to \plc{x} guarantees that subsequent 
+accesses do not form a race with the atomic accesses. 
+
+A compliant implementation may enforce exclusive access between \code{atomic} regions 
+that update different storage locations. The circumstances under which this occurs are 
+implementation defined. 
+
+If the storage location designated by \plc{x} is not size-aligned (that is, if the byte alignment 
+of \plc{x} is not a multiple of the size of \plc{x}), then the behavior of the \code{atomic} region is 
+implementation defined.
+
+\needspace{16\baselineskip}\begin{samepage}
+
+\omptMutex{atomic}{an}
+
+\restrictions
+
+The following restrictions apply to the \code{atomic} construct:
+
+\begin{itemize}
+\item At most one \code{seq\_cst} clause may appear on the construct.
+\end{itemize}
+
+\ccppspecificstart
+\begin{itemize}
+\item All atomic accesses to the storage locations designated by \plc{x} throughout the program 
+are required to have a compatible type. 
+\end{itemize}
+\ccppspecificend
+\end{samepage}
+
+\fortranspecificstart
+\begin{itemize}
+\item All atomic accesses to the storage locations designated by \plc{x} throughout the program 
+are required to have the same type and type parameters. 
+\end{itemize}
+\fortranspecificend
+
+\begin{itemize}
+\item OpenMP constructs may not be encountered during execution of an
+\code{atomic} region.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{critical} construct, see 
+\specref{subsec:critical Construct}. 
+
+\item \code{barrier} construct, see 
+\specref{subsec:barrier Construct}.
+
+\item \code{flush} construct, see 
+\specref{subsec:flush Construct}.
+
+\item \code{ordered} construct, see 
+\specref{subsec:ordered Construct}.
+
+\item \code{reduction} clause, see 
+\specref{subsubsec:reduction clause}.
+
+\item lock routines, see 
+\specref{sec:Lock Routines}.
+
+\item \code{ompt\_mutex\_atomic}, see
+\specref{sec:ompt_mutex_kind_t}.
+
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{flush} Construct}
+\index{flush@{\code{flush}}}
+\index{constructs!flush@{\code{flush}}}
+\label{subsec:flush Construct}
+\summary
+The \code{flush} construct executes the OpenMP flush operation. This operation makes a 
+thread’s temporary view of memory consistent with memory and enforces an order on 
+the memory operations of the variables explicitly specified or implied. See the memory 
+model description in \specref{sec:Memory Model} for more details. The \code{flush} construct is a 
+stand-alone directive.
+
+\syntax
+\ccppspecificstart
+The syntax of the \code{flush} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp flush \plc{[}(\plc{list})\plc{] new-line}
+\end{boxedcode}
+\ccppspecificend
+
+\fortranspecificstart
+The syntax of the \code{flush} construct is as follows:
+
+\begin{boxedcode}
+!\$omp flush \plc{[}(\plc{list})\plc{]}
+\end{boxedcode}
+\fortranspecificend
+
+\binding
+The binding thread set for a \code{flush} region is the encountering thread. Execution of a 
+\code{flush} region affects the memory and the temporary view of memory of only the thread 
+that executes the region. It does not affect the temporary view of other threads. Other 
+threads must themselves execute a flush operation in order to be guaranteed to observe 
+the effects of the encountering thread’s flush operation
+
+\descr
+A \code{flush} construct without a list, executed on a given thread, operates as if the whole 
+thread-visible data state of the program, as defined by the base language, is flushed. A 
+\code{flush} construct with a list applies the flush operation to the items in the list, and does 
+not return until the operation is complete for all specified list items. An implementation 
+may implement a \code{flush} with a list by ignoring the list, and treating it the same as a 
+\code{flush} without a list.
+
+\ccppspecificstart
+If a pointer is present in the list, the pointer itself is flushed, not the memory block to 
+which the pointer refers.
+\ccppspecificend
+
+\fortranspecificstart
+If the list item or a subobject of the list item has the \code{POINTER} attribute, the allocation 
+or association status of the \code{POINTER} item is flushed, but the pointer target is not. If the 
+list item is a Cray pointer, the pointer is flushed, but the object to which it points is not. 
+If the list item is of type \code{C\_PTR}, the variable is flushed, but the storage that corresponds 
+to that address is not flushed. If the list item or the subobject of the list item has the 
+\code{ALLOCATABLE} attribute and has an allocation status of allocated, the
+allocated variable is flushed; otherwise the allocation status is flushed.
+\fortranspecificend
+
+\begin{samepage}
+\notestart
+\noteheader -- Use of a \code{flush} construct with a list is extremely error prone and users are 
+strongly discouraged from attempting it. The following examples illustrate the ordering 
+properties of the flush operation. In the following incorrect pseudocode example, the 
+programmer intends to prevent simultaneous execution of the protected section by the 
+two threads, but the program does not work properly because it does not enforce the 
+proper ordering of the operations on variables \code{a} and \code{b}. Any shared data accessed in the 
+protected section is not guaranteed to be current or consistent during or after the 
+protected section. The atomic notation in the pseudocode in the following two examples 
+indicates that the accesses to \code{a} and \code{b} are \code{ATOMIC} writes and captures. Otherwise both 
+examples would contain data races and automatically result in unspecified behavior. 
+\end{samepage}
+
+% Outlined mixed code and text:
+
+\parbox{\linewidth}{%
+\begin{spacing}{0.90}\begin{framed}
+\emph{Incorrect example:}\\
+\hspace{0.3\textwidth}\code{a = b = 0}
+\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth}}\\
+\hspace{0.1\textwidth}\plc{thread 1} & \hspace{0.1\textwidth}\plc{thread 2}\\[1.0em]
+\code{atomic(b = 1)} & \code{atomic(a = 1)}\\
+\code{\plc{flush}(b)} & \code{\plc{flush}(a)}\\
+\code{\plc{flush}(a)} & \code{\plc{flush}(b)}\\
+\code{atomic(tmp = a)} & \code{atomic(tmp = b)}\\
+\code{if (tmp == 0) then} & \code{if (tmp == 0) then}\\
+\hspace{1.25em}\plc{protected section} & \hspace{1.25em}\plc{protected section}\\
+\code{end if} & \code{end if}\\
+\end{tabular}
+\end{framed}\end{spacing}} % use \parbox to keep the lines together for code only
+
+The problem with this example is that operations on variables \code{a} and \code{b} are not ordered 
+with respect to each other. For instance, nothing prevents the compiler from moving the 
+flush of \code{b} on thread 1 or the flush of \code{a} on thread 2 to a position completely after the 
+protected section (assuming that the protected section on thread 1 does not reference \code{b} and 
+the protected section on thread 2 does not reference \code{a}). If either re-ordering happens, both 
+threads can simultaneously execute the protected section.
+
+The following pseudocode example correctly ensures that the protected section is executed 
+by not more than one of the two threads at any one time. Execution of the 
+protected section by neither thread is considered correct in this example. This occurs if 
+both flushes complete prior to either thread executing its \code{if} statement.
+
+\parbox{\linewidth}{%
+\begin{spacing}{0.95}\begin{framed}
+\emph{Correct example:}\\
+\hspace{0.3\textwidth}\code{a = b = 0}
+\begin{tabular}{ p{0.5\textwidth} p{0.5\textwidth}}\\
+\hspace{0.1\textwidth}\plc{thread 1} & \hspace{0.1\textwidth}\plc{thread 2}\\[1.0em]
+\code{atomic(b = 1)} & \code{atomic(a = 1)}\\
+\code{\plc{flush}(a,b)} & \code{\plc{flush}(a,b)}\\
+\code{atomic(tmp = a)} & \code{atomic(tmp = b)}\\
+\code{if (tmp == 0) then} & \code{if (tmp == 0) then}\\
+\hspace{1.25em}\plc{protected section} & \hspace{1.25em}\plc{protected section}\\
+\code{end if} & \code{end if}\\
+\end{tabular}
+\end{framed}\end{spacing}} % use \parbox to keep lines together for code only
+\bigskip
+
+The compiler is prohibited from moving the flush at all for either thread, ensuring that the 
+respective assignment is complete and the data is flushed before the \code{if} statement is 
+executed.
+\noteend
+\bigskip
+
+A \code{flush} region without a list is implied at the following locations:
+\begin{itemize}
+\item During a barrier region.
+\item At entry to a \code{target update} region whose corresponding construct has a \code{to} clause.
+\item At exit from a \code{target update} region whose corresponding construct has a \code{from} clause.
+\item At entry to and exit from \code{parallel}, \code{critical}, \code{target} and \code{target data} regions.
+\item At entry to and exit from an \code{ordered} region, if a \code{threads} clause or a \code{depend} clause is present, or if no clauses are present.
+\item At entry to a \code{target enter data} region. 
+\item At exit from a \code{target exit data} region. 
+\item At exit from worksharing regions unless a \code{nowait} is present.
+\item At entry to and exit from the \code{atomic} operation (read, write, update, or capture) 
+performed in a sequentially consistent atomic region.
+\item During \code{omp\_set\_lock} and \code{omp\_unset\_lock} regions.
+\item During \code{omp\_test\_lock}, \code{omp\_set\_nest\_lock}, \code{omp\_unset\_nest\_lock} 
+and \code{omp\_test\_nest\_lock} regions, if the region causes the lock to be set or unset.
+\item Immediately before and immediately after every task scheduling point.
+\item During a \code{cancel} or \code{cancellation point} region, if the \plc{cancel-var} ICV is \plc{true} and cancellation has been activated.
+\end{itemize}
+
+A \code{flush} region with a list is implied at the following locations:
+\begin{itemize}
+\item At entry to and exit from the \code{atomic} operation (read, write, update, or capture) 
+performed in a non-sequentially consistent \code{atomic} region, where the list contains 
+only the storage location designated as x according to the description of the syntax of 
+the \code{atomic} construct in 
+\specref{subsec:atomic Construct}.
+\end{itemize}
+
+\notestart
+\noteheader -- A \code{flush} region is not implied at the following locations:
+
+\begin{itemize}
+\item At entry to worksharing regions.
+
+\item At entry to or exit from a \code{master} region.
+\end{itemize}
+\noteend
+
+\events
+
+The \plc{flush} event occurs in a thread encountering the
+\code{flush} construct.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_flush} callback
+for each occurrence of a \plc{flush} event in that thread. This
+callback has the type signature \code{ompt\_callback\_flush\_t}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_flush\_t}, see
+\specref{sec:ompt_callback_flush_t}.
+\end{itemize}
+
+
+
+
+
+\subsection{\code{ordered} Construct}
+\index{ordered@{\code{ordered}}}
+\index{constructs!ordered@{\code{ordered}}}
+\label{subsec:ordered Construct}
+\summary
+The \code{ordered} construct either specifies a structured block in a loop,
+\code{simd}, or loop SIMD region that will be executed in the order of the
+loop iterations, or it is a stand-alone directive that specifies
+cross-iteration dependences in a doacross loop nest. The \code{ordered}
+construct sequentializes and orders the execution of \code{ordered} regions
+while allowing code outside the region to run in parallel.
+
+\begin{samepage}
+\syntax
+\ccppspecificstart
+The syntax of the \code{ordered} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp ordered \plc{[clause[ [},\plc{] clause] ]} \plc{new-line}
+   \plc{structured-block}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+threads
+simd
+\end{indentedcodelist}
+
+or
+
+\begin{boxedcode}
+\#pragma omp ordered \plc{clause [[[},\plc{] clause] ... ]} \plc{new-line}
+\end{boxedcode}
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+depend(source)
+depend(sink : \plc{vec})
+\end{indentedcodelist}
+
+
+\ccppspecificend
+\end{samepage}
+
+\fortranspecificstart
+The syntax of the \code{ordered} construct is as follows:
+
+\begin{boxedcode}
+!\$omp ordered \plc{[clause[ [},\plc{] clause] ]}
+    \plc{structured-block}
+!\$omp end ordered
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+threads
+simd
+\end{indentedcodelist}
+
+or
+
+\begin{boxedcode}
+!\$omp ordered \plc{clause [[[},\plc{] clause] ... ]}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+depend(source)
+depend(sink : \plc{vec})
+\end{indentedcodelist}
+\fortranspecificend
+
+If the \code{depend} clause is specified, the \code{ordered} construct is a stand-alone directive.
+ 
+\binding
+The binding thread set for an \code{ordered} region is the current team. An \code{ordered} region 
+binds to the innermost enclosing \code{simd} or loop SIMD region if the
+\code{simd} clause is present, and otherwise it binds to the innermost
+enclosing loop region. \code{ordered} regions that bind to different regions
+execute independently of each other.
+
+\descr
+If no clause is specified, the \code{ordered} construct behaves as if the
+\code{threads} clause had been specified. If the \code{threads} clause is
+specified, the threads in the team executing the loop region execute
+\code{ordered} regions sequentially in the order of the loop iterations.
+If any \code{depend} clauses are specified then those clauses specify the 
+order in which the threads in the team execute \code{ordered} regions. If
+the \code{simd} clause is specified, the \code{ordered} regions encountered by
+any thread will use only a single SIMD lane to execute the \code{ordered}
+regions in the order of the loop iterations.
+
+When the thread executing the first iteration of the loop encounters an
+\code{ordered} construct, it can enter the \code{ordered} region without
+waiting. When a thread executing any subsequent iteration encounters an
+\code{ordered} construct without a \code{depend} clause, it waits at the
+beginning of the \code{ordered} region until execution of all \code{ordered}
+regions belonging to all previous iterations has completed. When a thread
+executing any subsequent iteration encounters an \code{ordered} construct with
+one or more \code{depend(sink:\plc{vec})} clauses, it waits until its dependences on 
+all valid iterations specified by the \code{depend} clauses
+are satisfied before it completes execution of the \code{ordered} region.
+A specific dependence is satisfied when a thread executing the corresponding
+iteration encounters an \code{ordered} construct with a \code{depend(source)} clause.
+
+\omptMutex{ordered}{an}
+
+
+\restrictions
+Restrictions to the \code{ordered} construct are as follows:
+
+\begin{itemize}
+\item At most one \code{threads} clause can appear on an \code{ordered} construct.
+
+\item At most one \code{simd} clause can appear on an \code{ordered} construct.
+
+\item At most one \code{depend(source)} clause can appear on an \code{ordered} construct.
+
+\item Either \code{depend(sink:\plc{vec})} clauses or \code{depend(source)}
+clauses may appear on an \code{ordered} construct, but not both.
+
+\item The loop or loop SIMD region to which an \code{ordered}
+region arising from an \code{ordered} construct without a \code{depend}
+clause binds must have an \code{ordered} clause without the parameter
+specified on the corresponding loop or loop SIMD directive.
+
+\item The loop region to which an \code{ordered} region arising from an
+\code{ordered} construct with any \code{depend}
+clauses binds must have an \code{ordered} clause with the parameter specified 
+on the corresponding loop directive. 
+
+\item An \code{ordered} construct with the \code{depend} clause specified must
+be closely nested inside a loop (or parallel loop) construct. 
+
+\item An \code{ordered} region arising from an \code{ordered} construct with
+the \code{simd} clause specified must be closely nested inside a
+\code{simd} or loop SIMD region.
+
+\item An \code{ordered} region arising from an \code{ordered} construct with
+  both the \code{simd} and \code{threads} clauses must be closely nested inside
+  a loop SIMD region.
+  
+\item During execution of an iteration of a loop or a loop nest within a loop, \code{simd}, or loop SIMD
+region, a thread must not execute more than one \code{ordered} region arising
+from an \code{ordered} construct without a \code{depend} clause. 
+\end{itemize}
+\cppspecificstart
+\begin{itemize}
+\item A throw executed inside a \code{ordered} region must cause execution to 
+resume within the same \code{ordered} region, and the same thread that threw 
+the exception must catch it.
+\end{itemize}
+\cppspecificend
+
+
+
+\crossreferences
+\begin{itemize}
+\item loop construct, see 
+\specref{subsec:Loop Construct}.
+
+\item \code{simd} construct, see
+\specref{subsec:simd Construct}.
+
+\item parallel loop construct, see 
+\specref{subsec:Parallel Loop Construct}.
+
+\item \code{depend} Clause, see
+\specref{subsec:depend Clause}
+
+\item \code{ompt\_mutex\_ordered}, see
+\specref{sec:ompt_mutex_kind_t}.
+
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+
+\item \code{ompt\_callback\_mutex\_t}, see
+\specref{sec:ompt_callback_mutex_t}.
+
+\end{itemize}
+
+
+\subsection{\code{depend} Clause}
+\index{depend@{\code{depend}}}
+\index{clauses!depend@{\code{depend}}}
+\label{subsec:depend Clause}
+\summary
+The \code{depend} clause enforces additional constraints on the scheduling of tasks or loop iterations.  These 
+constraints establish dependences only between sibling tasks or between loop iterations. 
+
+\syntax
+The syntax of the \code{depend} clause is as follows:
+
+\begin{boxedcode}
+depend(\plc{dependence-type }:\plc{ locator-list})
+\end{boxedcode}
+
+where \plc{dependence-type} is one of the following:
+\begin{indentedcodelist}
+in
+out
+inout
+\end{indentedcodelist}
+
+or
+
+\begin{boxedcode}
+depend(\plc{dependence-type})
+\end{boxedcode}
+
+where \plc{dependence-type} is:
+\begin{indentedcodelist}
+source
+\end{indentedcodelist}
+
+or
+
+\begin{boxedcode}
+depend(\plc{dependence-type} : \plc{vec})
+\end{boxedcode}
+
+where \plc{dependence-type} is:
+\begin{indentedcodelist}
+sink
+\end{indentedcodelist}
+
+and where \plc{vec} is the iteration vector, which has the form:
+
+x$_{1}$ [$\pm $ d$_{1}$], x$_{2}$ [$\pm $ d$_{2}$], \ldots, x$_{\plc{n}}$ [$\pm $ d$_{\plc{n}}$]
+
+where \plc{n} is the value specified by the \code{ordered} clause in the loop
+directive, x$_{\plc{i}}$ denotes the loop iteration variable of the \plc{i}-th
+nested loop associated with the loop directive, and d$_{\plc{i}}$ is a
+constant non-negative integer.
+
+\descr
+Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list 
+items when \plc{dependence-type} is \code{in}, \code{out}, or \code{inout}.
+
+For the \code{in} \plc{dependence-type}, if the storage location of at least one
+of the list items is the same as the storage location of a list item appearing
+in a \code{depend} clause with an \code{out} or \code{inout} \plc{dependence-type} on a construct
+from which a sibling task was previously generated, then the generated task
+will be a dependent task of that sibling task.
+
+For the \code{out} and \code{inout} \plc{dependence-types}, if the storage location of at least one
+of the list items is the same as the storage location of a list item appearing
+in a \code{depend} clause with an \code{in}, \code{out}, or \code{inout} \plc{dependence-type} on
+a construct from which a sibling task was previously generated, then the
+generated task will be a dependent task of that sibling task.
+
+\fortranspecificstart
+If a list item has the \code{ALLOCATABLE} attribute and its allocation
+status is unallocated, the behavior is unspecified. If a list item has
+the \code{POINTER} attribute and its association status is
+disassociated or undefined, the behavior is unspecified.
+
+The list items that appear in the \code{depend} clause may include array sections.
+\fortranspecificend
+
+\notestart
+\noteheader -- The enforced task dependence establishes a synchronization of memory 
+accesses performed by a dependent task with respect to accesses performed by the 
+predecessor tasks. However, it is the responsibility of the programmer to synchronize properly with respect to other concurrent accesses that occur outside of those tasks.
+\noteend
+
+The \code{source} \plc{dependence-type} specifies the satisfaction of
+cross-iteration dependences that arise from the current iteration.
+
+The \code{sink} \plc{dependence-type} specifies a cross-iteration dependence,
+where the iteration vector \plc{vec} indicates the iteration that satisfies
+the dependence.
+
+If the iteration vector \plc{vec} does not occur in the iteration space,
+the \code{depend} clause is ignored.  If all \code{depend} clauses on an
+\code{ordered} construct are ignored then the construct is ignored.
+
+\notestart
+\noteheader -- If the iteration vector \plc{vec} does not indicate a lexicographically earlier iteration, it can cause a deadlock.
+\noteend
+
+\events
+
+The \plc{task-dependences} event occurs in a thread encountering a
+tasking construct with a \code{depend} clause immediately after the
+\plc{task-create} event for the new task.  
+
+The \plc{task-dependence} event indicates an unfulfilled dependence for the generated task.
+This event occurs in a thread that observes the unfulfilled dependence before it is satisfied.
+%unfulfilled dependence... already implies that if the dependence is satisfied (not unfulfilled)
+% then there is no events... so can skip the sentence below.
+%A dependence will not cause an event if the
+%dependence producing task finishes before a dependence consuming task is created.
+
+\tools
+
+A thread dispatches the \code{ompt\_callback\_task\_dependences} callback
+for each occurrence of the \plc{task-dependences} event to 
+announce its dependences with respect to the list items in the \code{depend} clause.
+This callback has type signature
+\code{ompt\_callback\_task\_dependences\_t}.
+
+A thread dispatches the \code{ompt\_callback\_task\_dependence}
+callback for a \plc{task-dependence} event to report a
+dependence between a predecessor task  (\plc{src\_task\_data}) and a dependent task
+(\plc{sink\_task\_data}).  This callback has type signature
+\code{ompt\_callback\_task\_dependence\_t}.
+
+\restrictions
+Restrictions to the \code{depend} clause are as follows:
+
+\begin{itemize}
+\item List items used in \code{depend} clauses of the same task or sibling tasks must indicate 
+identical storage locations or disjoint storage locations. 
+
+\item List items used in \code{depend} clauses cannot be zero-length array sections. 
+
+\fortranspecificstart
+\item A common block name cannot appear in a \code{depend} clause.
+\fortranspecificend
+
+\item For a \plc{vec} element of \code{sink} \plc{dependence-type} of the form
+x$_{i}$ $+$ d$_{i}$ or x$_{i}$ $-$ d$_{i}$ if the loop iteration variable
+x$_{i}$ has an integral or pointer type, the expression x$_{i}$ $+$ d$_{i}$ or
+x$_{i}$ $-$ d$_{i}$ for any value of the loop iteration variable x$_{i}$ that
+can encounter the \code{ordered} construct must be computable in the
+loop iteration variable's type without overflow.
+
+\cppspecificstart
+\item For a \plc{vec} element of \code{sink} \plc{dependence-type} of the form
+x$_{i}$ $+$ d$_{i}$ or x$_{i}$ $-$ d$_{i}$ if the loop iteration variable
+x$_{i}$ is of a random access iterator type other than pointer type,
+the expression $($ x$_{i}$ - lb$_{i}$ $)$ $+$ d$_{i}$ or
+$($ x$_{i}$ - lb$_{i}$ $)$ $-$ d$_{i}$ for any value of the loop iteration variable
+x$_{i}$ that can encounter the \code{ordered} construct must be computable in the
+type that would be used by \plc{std::distance} applied to variables of the
+type of x$_{i}$ without overflow.
+\cppspecificend
+
+\ccppspecificstart
+\item A bit-field cannot appear in a \code{depend} clause.
+\ccppspecificend
+
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item Array sections, see
+\specref{sec:Array Sections}.
+
+\item \code{task} construct, see 
+\specref{subsec:task Construct}.
+
+\item \code{target}~\code{enter}~\code{data} construct, see 
+\specref{subsec:target enter data Construct}.
+
+\item \code{target}~\code{exit}~\code{data} construct, see 
+\specref{subsec:target exit data Construct}.
+
+\item \code{target} construct, see 
+\specref{subsec:target Construct}.
+
+\item \code{target}~\code{update} construct, see 
+\specref{subsec:target update Construct}.
+
+\item Task scheduling constraints, see
+\specref{subsec:Task Scheduling}. 
+
+\item \code{ordered} construct, see
+\specref{subsec:ordered Construct}. 
+
+\item \code{ompt\_callback\_task\_dependences\_t}, see
+\specref{sec:ompt_callback_task_dependences_t}.
+
+\item \code{ompt\_callback\_task\_dependence\_t}, see
+\specref{sec:ompt_callback_task_dependence_t}.
+\end{itemize}
