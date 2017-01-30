@@ -5,20 +5,39 @@ all: openmp.pdf
 
 .PHONY: clean quick all git-diff-all
 
-CHAPTERS=titlepage.tex \
-	ch1-introduction.tex \
-	ch2-directives.tex \
-	ch3-runtimeLibrary.tex \
-	ch4-toolsSupport.tex \
-	ch5-environmentVariables.tex \
-	appendix-A-stubs.tex \
-	appendix-B-grammar.tex \
-	appendix-C-InterfaceDeclarations.tex \
-	appendix-D-ImplementationDefined.tex \
-	appendix-frames.tex \
-	appendix-E-FeaturesHistory.tex
+CHAPTERS=openmp.tex \
+         titlepage.tex \
+         introduction.tex \
+         directives.tex \
+         directives/worksharing-schedule-loop.tex \
+         directives/directives_common.tex \
+         directives/directives_parallel.tex \
+         directives/directives_worksharing.tex \
+         directives/directives_simd.tex \
+         directives/directives_tasking.tex \
+         directives/directives_device.tex \
+         directives/directives_combined.tex \
+         directives/directives_if.tex \
+         directives/directives_synchronization.tex \
+         directives/directives_cancellation.tex \
+         directives/directives_data_environment.tex \
+         directives/directives_nesting.tex \
+         directives/directives_udr.tex \
+         runtime_library.tex \
+         runtime_library/runtime_library_execution.tex \
+         runtime_library/runtime_library_others.tex \
+         tool_support.tex \
+         tool_support/tool_support_common.tex \
+         tool_support/tool_support_callbacks.tex \
+         tool_support/tool_support_entrypoints.tex \
+         environment_variables.tex \
+         appendices/stubs.tex \
+         appendices/interface_declarations.tex \
+         appendices/implementation_defined.tex \
+         appendices/tool_support_frames.tex \
+         appendices/features_history.tex
 
-openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png Makefile
+openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
 	-pdflatex -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -interaction=batchmode -file-line-error openmp.tex
@@ -44,16 +63,16 @@ clean:
 #      make DIFF_FROM=upstream/master make openmp-diff.pdf
 #
 ifdef DIFF_TO
-VC_DIFF_TO := -r ${DIFF_TO}
-ifndef DIFF_FROM
-	#need a from to get to right, probably want master?
-	VC_DIFF_FROM := -r master
-endif
+    VC_DIFF_TO := -r ${DIFF_TO}
+    ifndef DIFF_FROM
+        # need a from to get to right, probably want master?
+        VC_DIFF_FROM := -r master
+    endif
 endif
 ifdef DIFF_FROM
-VC_DIFF_FROM := -r ${DIFF_FROM}
+    VC_DIFF_FROM := -r ${DIFF_FROM}
 else
-VC_DIFF_FROM := -r HEAD
+    VC_DIFF_FROM := -r HEAD
 endif
 
 DIFF_FROM:=master

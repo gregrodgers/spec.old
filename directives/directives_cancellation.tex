@@ -1,0 +1,390 @@
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+
+\section{Cancellation Constructs}
+\label{sec:Cancellation Constructs}
+\index{cancellation constructs}
+\index{constructs!cancellation constructs}
+\subsection{\code{cancel} Construct}
+\index{cancel@{\code{cancel}}}
+\index{constructs!cancel@{\code{cancel}}}
+\index{cancellation constructs!cancel@{\code{cancel}}}
+\label{subsec:cancel Construct}
+\summary
+The \code{cancel} construct activates cancellation of the innermost enclosing region of the 
+type specified. The \code{cancel} construct is a stand-alone directive.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{cancel} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp cancel \plc{construct-type-clause [ [},\plc{] if-clause] new-line}
+\end{boxedcode}
+
+\begin{samepage}
+where \plc{construct-type-clause} is one of the following:
+
+\begin{indentedcodelist}
+parallel
+sections
+for
+taskgroup
+\end{indentedcodelist}
+\end{samepage}
+
+and \plc{if-clause} is
+\begin{indentedcodelist}
+if (\plc{[} cancel :\plc{] scalar-expression})
+\end{indentedcodelist}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{cancel} construct is as follows:
+
+\begin{boxedcode}
+!\$omp cancel \plc{construct-type-clause [ [},\plc{] if-clause]}
+\end{boxedcode}
+\vspace{-1.5ex} %% HACK
+
+\begin{samepage}
+where \plc{construct-type-clause} is one of the following:
+\begin{indentedcodelist}
+parallel
+sections
+do
+taskgroup
+\end{indentedcodelist}
+\end{samepage}
+
+and \plc{if-clause} is
+\begin{indentedcodelist}
+if (\plc{[} cancel :\plc{] scalar-logical-expression})
+\end{indentedcodelist}
+\end{fortranspecific}
+
+
+\binding
+The binding thread set of the \code{cancel} region is the current team.
+The binding region of the \code{cancel} region 
+is the innermost enclosing region of the type corresponding to the \plc{construct-type-clause} 
+specified in the directive (that is, the innermost \code{parallel}, \code{sections}, loop, or 
+\code{taskgroup} region).
+
+\descr
+The \code{cancel} construct activates cancellation of the binding region only if the \plc{cancel-var} ICV
+is \plc{true}, in which case the \code{cancel} construct causes the encountering task to continue execution 
+at the end of the binding region if \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or \code{sections}. 
+If the \plc{cancel-var} ICV is \plc{true} and \plc{construct-type-clause} is \code{taskgroup}, the encountering task continues execution at the end of the current task region.
+If the \plc{cancel-var} ICV is \plc{false}, the \code{cancel} construct is 
+ignored.
+
+Threads check for active cancellation only at cancellation points that are 
+implied at the following locations:
+
+\begin{itemize}
+\item \code{cancel} regions;
+\item \code{cancellation}~\code{point} regions;
+\item \code{barrier} regions;
+\item implicit barriers regions.
+\end{itemize}
+
+When a thread reaches one of the above cancellation points and if the \plc{cancel-var} ICV is \plc{true},  then:
+\begin{itemize}
+\item If the thread is at a \code{cancel} or \code{cancellation point} region 
+and \plc{construct-type-clause} is \code{parallel}, \code{for}, \code{do}, or 
+\code{sections}, the thread continues execution at the end of the canceled 
+region if cancellation has been activated for the innermost enclosing region 
+of the type specified.
+
+\item If the thread is at a \code{cancel} or \code{cancellation point} region 
+and \plc{construct-type-clause} is \code{taskgroup}, the encountering task 
+checks for active cancellation of all of the \plc{taskgroup sets} to which the 
+encountering task belongs, and continues execution at the end of the current 
+task region if cancellation has been activated for any of the \plc{taskgroup sets}.
+
+\item If the encountering task is at a barrier region, the encountering task 
+checks for active cancellation of the innermost enclosing \code{parallel} 
+region. If cancellation has been activated, then the encountering task 
+continues execution at the end of the canceled region.
+\end{itemize}
+
+\newpage %% HACK
+\begin{note}
+If one thread activates cancellation and another thread encounters a cancellation 
+point, the order of execution between the two threads is non-deterministic. 
+Whether the thread that encounters a cancellation point detects the activated cancellation 
+depends on the underlying hardware and operating system.
+\end{note}
+
+When cancellation of tasks is activated through the
+\code{cancel}~\code{taskgroup} construct, the tasks that belong to the
+\plc{taskgroup set} of the innermost enclosing \code{taskgroup} region
+will be canceled. The task that encountered the
+\code{cancel}~\code{taskgroup} construct continues execution at the
+end of its \code{task} region, which implies completion of that
+task. Any task that belongs to the innermost enclosing
+\code{taskgroup} and has already begun execution must run to
+completion or until a cancellation point is reached. Upon reaching a
+cancellation point and if cancellation is active, the task continues
+execution at the end of its \code{task} region, which implies the
+task's completion. Any task that belongs to the innermost enclosing
+\code{taskgroup} and that has not begun execution may be discarded,
+which implies its completion.
+
+When cancellation is active for a \code{parallel}, \code{sections}, or loop region, each 
+thread of the binding thread set resumes execution at the end of the canceled region if a 
+cancellation point is encountered. If the canceled region is a \code{parallel} region, any 
+tasks that have been created by a \code{task} construct and their descendent tasks are 
+canceled according to the above \code{taskgroup} cancellation semantics. If the canceled 
+region is a \code{sections}, or loop region, no task cancellation occurs.
+
+\begin{cppspecific}
+The usual C++ rules for object destruction are followed when cancellation is performed.
+\end{cppspecific}
+
+\begin{fortranspecific}
+All private objects or subobjects with \code{ALLOCATABLE} attribute that are allocated inside 
+the canceled construct are deallocated.
+\end{fortranspecific}
+
+If the canceled construct contains a \code{reduction} or \code{lastprivate} clause, the final 
+value of the \code{reduction} or \code{lastprivate} variable is undefined.
+
+When an \code{if} clause is present on a \code{cancel} construct and the \code{if} expression evaluates 
+to \plc{false}, the \code{cancel} construct does not activate cancellation. The cancellation point 
+associated with the \code{cancel} construct is always encountered regardless of the value of 
+the \code{if} expression.
+
+\begin{note}
+The programmer is responsible for releasing locks and
+other synchronization data structures that might cause a deadlock when
+a \code{cancel} construct is encountered and blocked threads cannot be
+canceled. The programmer is also responsible for ensuring proper
+synchronizations to avoid deadlocks that might arise from cancellation
+of OpenMP regions that contain OpenMP synchronization constructs.
+\end{note}
+
+\events
+
+The \plc{cancel} event occurs after a task encounters a 
+\code{cancel} construct if the \plc{cancel-var} ICV is \plc{true}.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancel} event in that thread. 
+The callback occurs in the context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_activated} as its \plc{flags} argument. 
+
+\restrictions
+The restrictions to the \code{cancel} construct are as follows:
+
+\begin{itemize}
+\item The behavior for concurrent cancellation of a region and a region nested within it is 
+unspecified.
+
+\item If \plc{construct-type-clause} is \code{taskgroup}, the \code{cancel}
+construct must be closely nested inside a \code{task} construct and the
+\code{cancel} region must be closely nested inside a \code{taskgroup} region. If
+\plc{construct-type-clause} is \code{sections}, the \code{cancel} construct
+must be closely nested inside a \code{sections} or \code{section} construct.
+Otherwise, the \code{cancel} construct must be closely
+nested inside an OpenMP construct that matches the type specified in
+\plc{construct-type-clause} of the \code{cancel} construct.
+
+\item A worksharing construct that is canceled must not have a \code{nowait} clause.
+
+\item A loop construct that is canceled must not have an \code{ordered} clause.
+
+\item During execution of a construct that may be subject to cancellation, a
+thread must not encounter an orphaned cancellation point. That is, a
+cancellation point must only be encountered within that construct and must
+not be encountered elsewhere in its region.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \plc{cancel-var} ICV, see
+\specref{subsec:ICV Descriptions}.
+
+\item \code{cancellation}~\code{point} construct, see 
+\specref{subsec:cancellation point Construct}.
+
+\item \code{if} Clause, see \specref{sec:if Clause}.
+
+\item \code{omp\_get\_cancellation} routine, see 
+\specref{subsec:omp_get_cancellation}.
+
+\item \code{ompt\_callback\_cancel\_t}, see \specref{sec:ompt_callback_cancel_t}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{cancellation}~\code{point} Construct}
+\index{cancellation point@{\code{cancellation}~\code{point}}}
+\index{constructs!cancellation point@{\code{cancellation}~\code{point}}}
+\label{subsec:cancellation point Construct}
+\index{cancellation constructs!cancellation point@{\code{cancellation}~\code{point}}}
+\summary
+The \code{cancellation}~\code{point} construct introduces a user-defined cancellation point at 
+which implicit or explicit tasks check if cancellation of the innermost enclosing region 
+of the type specified has been activated. The \code{cancellation}~\code{point} construct is a 
+stand-alone directive.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{cancellation}~\code{point} construct is as follows:
+
+\begin{boxedcode}
+\#pragma omp cancellation point \plc{construct-type-clause new-line}
+\end{boxedcode}
+
+where \plc{construct-type-clause} is one of the following:
+
+\begin{indentedcodelist}
+parallel
+sections
+for
+taskgroup
+\end{indentedcodelist}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{cancellation}~\code{point} construct is as follows:
+
+\begin{boxedcode}
+!\$omp cancellation point \plc{construct-type-clause}
+\end{boxedcode}
+
+where \plc{construct-type-clause} is one of the following:
+
+\begin{indentedcodelist}
+parallel
+sections
+do
+taskgroup
+\end{indentedcodelist}
+\end{fortranspecific}
+
+\binding
+The binding thread set of the \code{cancellation point} construct is the current team.
+The binding region of the \code{cancellation point} region is the innermost enclosing region of the type corresponding to the \plc{construct-type-clause} 
+specified in the directive (that is, the innermost \code{parallel}, \code{sections}, loop, or 
+\code{taskgroup} region).
+
+\descr
+This directive introduces a user-defined cancellation point at which an implicit or 
+explicit task must check if cancellation of the innermost enclosing region of the type 
+specified in the clause has been requested. This construct does not implement any 
+synchronization between threads or tasks.
+
+When an implicit or explicit task reaches a user-defined cancellation point and if 
+the \plc{cancel-var} ICV is \plc{true}, then:
+\begin{itemize}
+\item If the \plc{construct-type-clause} of the encountered \code{cancellation
+point} construct is \code{parallel}, \code{for}, \code{do}, or \code{sections},
+the thread continues execution at the end of the canceled region if 
+cancellation has been activated for the innermost enclosing region of 
+the type specified.
+
+\item If the \plc{construct-type-clause} of the encountered 
+\code{cancellation point} construct is \code{taskgroup}, the encountering 
+task checks for active cancellation of all  \plc{taskgroup sets} to which the 
+encountering task belongs and continues execution at the end of the current 
+task region if cancellation has been activated for any of them.
+\end{itemize}
+
+
+\events
+
+The \plc{cancellation} event occurs if a task encounters a 
+cancellation point and detected the activation of cancellation.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_cancel}
+callback for each occurrence of a \plc{cancellation} event in that thread. 
+The callback occurs in the context of the encountering task.  The callback has type signature
+\code{ompt\_callback\_cancel\_t}. 
+The callback receives \code{ompt\_cancel\_detected} as its \plc{flags} argument. 
+
+\restrictions
+\begin{itemize}
+\item A \code{cancellation}~\code{point} construct for which
+\plc{construct-type-clause} is \code{taskgroup} must be closely nested
+inside a \code{task} construct, and the \code{cancellation}~\code{point}
+region must be closely nested inside a \code{taskgroup} region. A
+\code{cancellation}~\code{point} construct for which
+\plc{construct-type-clause} is \code{sections} must be closely nested
+inside a \code{sections} or \code{section} construct. Otherwise, a
+\code{cancellation}~\code{point} construct must be closely nested inside
+an OpenMP construct that matches the type specified in
+\plc{construct-type-clause}.
+\end{itemize}
+
+\begin{samepage}
+\crossreferences
+\begin{itemize}
+\item \plc{cancel-var} ICV, see
+\specref{subsec:ICV Descriptions}.
+
+\item \code{cancel} construct, see 
+\specref{subsec:cancel Construct}.
+
+\item \code{omp\_get\_cancellation} routine, see 
+\specref{subsec:omp_get_cancellation}.
+
+\item \code{ompt\_callback\_cancel\_t}, see \specref{sec:ompt_callback_cancel_t}.
+
+\end{itemize}
+\end{samepage}
