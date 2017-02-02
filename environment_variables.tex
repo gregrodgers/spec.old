@@ -1,4 +1,4 @@
-% This is ch4-environmentVariables.tex of the OpenMP specification.
+% This is environment_variables.tex (Chapter 5) of the OpenMP specification.
 % This is an included file. See the master file for more information.
 %
 % When editing this file:
@@ -14,7 +14,18 @@
 %         \code{}     % for bold monospace keywords, code, operators, etc.
 %         \plc{}      % for italic placeholder names, grammar, etc.
 %
-%    5. Other recommendations:
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
 %         Use the convenience macros defined in openmp.sty for the minor headers
 %         such as Comments, Syntax, etc.
 %
@@ -88,6 +99,12 @@ device number.
 
 \item \code{OMP\_MAX\_TASK\_PRIORITY} sets the \plc{max-task-priority-var} ICV that specifies the maximum
 value that can be specified in the \code{priority} clause of the \code{task} construct.
+
+\item \code{OMP\_TOOL} sets the \plc{tool-var} ICV that controls whether or not an OpenMP will try to register a performance tool.
+
+\item \code{OMP\_TOOL\_LIBRARIES} sets the \plc{tool-libraries-var} ICV 
+that contains a list of tool libraries that the runtime searches to find
+one appropriate for use on a device where an OpenMP implementation is being initialized.
 
 \end{itemize}
 
@@ -282,7 +299,7 @@ clauses on \code{parallel} constructs are ignored.
 
 Otherwise, the execution environment should not move OpenMP threads between 
 OpenMP places, thread affinity is enabled, and the initial thread is bound to the first 
-place in the OpenMP place list.
+place in the OpenMP place list prior to the first active parallel region.
 
 The behavior of the program is implementation defined if the value in the 
 \code{OMP\_PROC\_BIND} environment variable is not \code{true}, \code{false}, or a comma separated 
@@ -762,7 +779,7 @@ following form:
 
 \begin{boxedcode}
 OPENMP DISPLAY ENVIRONMENT BEGIN
-  \_OPENMP='201511'
+  \_OPENMP='201611'
   [host] OMP\_SCHEDULE='GUIDED,4'
   [host] OMP\_NUM\_THREADS='4,3,2'
   [device] OMP\_NUM\_THREADS='2'
@@ -817,5 +834,61 @@ Example:
 \item \code{omp\_get\_max\_task\_priority} routine, see \specref{subsec:omp_get_max_task_priority}.
 \end{itemize}
 
-% This is the end of ch4-environmentVariables.tex
+
+\section{\code{OMP\_TOOL}}
+\index{OMP\_TOOL@{\code{OMP\_TOOL}}}
+\index{environment variables!OMP\_TOOL@{\code{OMP\_TOOL}}}
+\label{sec:OMP_TOOL}
+
+The \code{OMP\_TOOL} environment variable sets the \plc{tool-var} ICV which controls whether an OpenMP runtime will try to register a performance tool.
+The value of this environment variable must be \code{enabled} or \code{disabled}.
+If \code{OMP\_TOOL} is set to any value other than \code{enabled} or \code{disabled}, the behavior is unspecified.
+If \code{OMP\_TOOL} is not defined, the default value for \plc{tool-var} is \code{enabled}.
+
+Example:
+\begin{boxedcode}
+\% setenv OMP\_TOOL enabled
+\end{boxedcode}
+
+\crossreferences
+\begin{itemize}
+\item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
+\item Tool Interface, see \specref{chap:ToolsSupport}.
+\end{itemize}
+
+
+
+
+\section{\code{OMP\_TOOL\_LIBRARIES}}
+\index{OMP\_TOOL\_LIBRARIES@{\code{OMP\_TOOL\_LIBRARIES}}}
+\index{environment variables!OMP\_TOOL\_LIBRARIES@{\code{OMP\_TOOL\_LIBRARIES}}}
+\label{sec:OMP_TOOL_LIBRARIES}
+
+The \code{OMP\_TOOL\_LIBRARIES} environment variable sets the
+\plc{tool-libraries-var} ICV to a list of tool libraries that will
+be considered for use on a device where an OpenMP implementation
+is being initialized.  The value of this environment variable must
+be a comma-separated list of dynamically-linked libraries, each
+specified by an absolute path. 
+
+If the \plc{tool-var} ICV is not enabled, 
+the value of \plc{tool-libraries-var} will be ignored.
+Otherwise, if \code{ompt\_start\_tool}, a global function symbol for a tool initializer,
+isn't visible in the address space on a device where OpenMP is being
+initialized or if \code{ompt\_start\_tool} returns \code{NULL}, an OpenMP implementation 
+will consider libraries in the \plc{tool-libraries-var} list 
+in a left to right order.  The OpenMP implementation will search the list for 
+a library that meets two criteria: it can be dynamically
+loaded on the current device and it defines the symbol \code{ompt\_start\_tool}.
+If an OpenMP implementation finds a suitable library, 
+no further libraries in the list will be considered.
+
+\crossreferences
+\begin{itemize}
+\item \plc{tool-libraries-var} ICV, see \specref{sec:Internal Control Variables}.
+\item Tool Interface, see \specref{chap:ToolsSupport}.
+\item \code{ompt\_start\_tool} routine, see \specref{sec:ompt_start_tool}.
+\end{itemize}
+
+% This is the end of ch5-environmentVariables.tex
 
