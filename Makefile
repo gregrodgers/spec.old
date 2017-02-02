@@ -31,6 +31,7 @@ CHAPTERS=openmp.tex \
          tool_support/tool_support_common.tex \
          tool_support/tool_support_callbacks.tex \
          tool_support/tool_support_entrypoints.tex \
+         tool_support/tool_support_debug.tex \
          environment_variables.tex \
          appendices/stubs.tex \
          appendices/stubs_ccpp.tex \
