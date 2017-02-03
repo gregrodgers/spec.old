@@ -46,26 +46,26 @@
 \section{Data Environment}
 \label{sec:Data Environment}
 \index{data environment}
-This section presents a directive and several clauses for controlling the data environment 
-during the execution of \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
+This section presents a directive and several clauses for controlling data environments. 
+% during the execution of \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
 
-\begin{itemize}
-\item \specref{subsec:Data-sharing Attribute Rules} 
-describes how the data-sharing attributes of variables
-referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
+% \begin{itemize}
+% \item \specref{subsec:Data-sharing Attribute Rules} 
+% describes how the data-sharing attributes of variables
+% referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
 
-\item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
-is described in \specref{subsec:threadprivate Directive}.
+% \item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
+% is described in \specref{subsec:threadprivate Directive}.
 
-\item Clauses that may be specified on directives to control the data-sharing attributes of 
-variables referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
+% \item Clauses that may be specified on directives to control the data-sharing attributes of 
+% variables referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
 
-\item Clauses that may be specified on directives to copy data values from private or 
-threadprivate variables on one thread to the corresponding variables on other threads 
-in the team are described in \specref{subsec:Data Copying Clauses}.
+% \item Clauses that may be specified on directives to copy data values from private or 
+% threadprivate variables on one thread to the corresponding variables on other threads 
+% in the team are described in \specref{subsec:Data Copying Clauses}.
 
-\item Clauses that may be specified on directives to control the data-mapping of variables to a device data environment are described in \specref{subsec:map Clause}.
-\end{itemize}
+% \item Clauses that may be specified on directives to control the data-mapping of variables to a device data environment are described in \specref{subsec:map Clause}.
+% \end{itemize}
 
 
 
@@ -80,8 +80,9 @@ in the team are described in \specref{subsec:Data Copying Clauses}.
 \label{subsec:Data-sharing Attribute Rules}
 \index{data-sharing attribute rules}
 \index{attributes, data-sharing}
-This section describes how the data-sharing attributes of variables referenced in 
-\code{target}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined. The following two cases are described separately:
+This section describes how the data-sharing attributes of variables in data environments are determined. 
+%\code{target}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined. 
+The following two cases are described separately:
 
 \begin{itemize}
 \item \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct} 
@@ -106,8 +107,8 @@ The data-sharing attributes of variables that are referenced in a construct can 
 \emph{predetermined}, \emph{explicitly determined}, or \emph{implicitly determined}, according to the rules 
 outlined in this section.
 
-Specifying a variable on a \code{firstprivate}, \code{lastprivate}, \code{linear}, \code{reduction}, 
-or \code{copyprivate} clause of an enclosed construct causes an implicit reference to the 
+Specifying a variable on a \code{firstprivate}, \code{lastprivate}, \code{linear}, \code{reduction}, \code{copyprivate},
+or \code{iterator} clause of an enclosed construct causes an implicit reference to the 
 variable in the enclosing construct. Specifying a variable on a \code{map} clause of an enclosed 
 construct may cause an implicit reference to the variable in the enclosing construct. 
 Such implicit references are also subject to the data-sharing attribute rules outlined in 
@@ -1335,10 +1336,84 @@ construct has a reference type then it must bind to the same object for all thre
 \end{itemize}
 
 
+\subsection{\code{iterator} Clause}
+\index{iterator@{\code{iterator}}}
+\index{clauses!iterator@{\code{iterator}}}
+\label{subsec:iterator clause}
 
+\summary
 
+The \code{iterator} clause specifies an identifier that will take a range of values in the directive on which it appears.
 
+\syntax
 
+The syntax of the \code{iterator} clause is as follows:
+
+\begin{boxedcode}
+iterator(iterator-specifier-or-list)
+\end{boxedcode}
+
+where iterator-specifier-or-list is either an iterator-specifier or an iterator-list.
+
+The syntax of an iterator-specifier is one of the following:
+
+[iterator-type ]identifier[=range-specification]
+
+or
+
+fwd(identifier)
+
+where
+
+identifier is a base language identifier
+iterator-type is an arithmetic type TODO:(and iterators)
+range-specification is of the form \plc{lower,upper[,step]}
+lower is an expression of the iterator-type type.
+upper is an expression of the iterator-type type.
+step is an expression of the iterator-type type.
+
+The syntax of an iterator-list is as follows:
+
+( iterator-specifier )[,( iterator-specifier )[,...]]
+
+\descr
+
+%If the iterator clause contains a list of iterator specifications, it will behave as if an iterator clause would have been specified for each %iterator specification.
+
+Each iterator-specifier specifies an iterator. If no range-specification is specified then the iterator is an implicit iterator. If a range-specification is specified then the iterator is an explicit iterator. If the identifier is of the form \code{fwd(identifier)} then the iterator is a forward iterator.
+
+If the identifier in the iterator-specifier is a variable, then it will be as if the variable had appeared in a \code{private} clause.
+
+An implicit iterator is bound to a loop appearing in the construct that uses the identifier as the induction variable of a loop that has canonical form.
+
+The iterator-type of an implicit iterator is that of the induction variable of the bound loop.
+
+The range-specification for an implicit iterator is obtained from the bound loop according to the clauses where it appears.
+
+The values of the iterator are the set of values i0...iN where i0=lb, i(j)=i(j-1)+step and 
+\begin{ccppspecific}
+\begin{itemize}
+\item iN < ub and iN+1 >= ub if step > 0 
+\item iN > ub and iN+1 <= ub if step < 0 
+\end{itemize}
+\end{ccppspecific}
+\begin{fortranspecific}
+\begin{itemize}
+\item iN <= ub and iN+1 > ub if step > 0 
+\item iN >= ub and iN+1 < ub if step < 0 
+\end{itemize}
+\end{fortranspecific}
+
+An expression containing an iterator identifier can only appear in clauses that explicitly allow expressions containing iterators. For those clauses, the effect of having an iterator identifier would be as if the clause would appear multiple times substituting the iterator identifier for each of the possible values that iterator can take.
+
+\restrictions
+
+\begin{itemize}
+\item An implicit iterator must not specify an iterator-type.
+\item If the iterator is a forward iterator then a variable with that identifier must be declared in the construct on which the \code{iterator} clause appears.
+\item If the step expression equals zero the behavior is unspecified.
+
+\end{itemize}
 
 
 
@@ -1866,12 +1941,6 @@ associated with a taskgroup region that includes the participating task in its
 this condition must specify the same \plc{reduction-identifier} as the
 \code{in\_reduction} clause.
 \end{itemize}
-
-
-
-
-
-
 
 
 
