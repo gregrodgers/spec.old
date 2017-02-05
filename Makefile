@@ -40,20 +40,21 @@ CHAPTERS=openmp.tex \
          appendices/features_history.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 quick:
-	pdflatex -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 debug:
-	pdflatex -file-line-error openmp.tex
+	pdflatex -synctex=1 -file-line-error openmp.tex
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf
+	rm -f openmp.synctex.gz
 	rm -rf *.tmpdir
 
 #NOTE: set these either as environment variables or on the command line, 
