@@ -32,6 +32,8 @@ CHAPTERS=openmp.tex \
          tool_support/tool_support_entrypoints.tex \
          environment_variables.tex \
          appendices/stubs.tex \
+         appendices/stubs_ccpp.tex \
+         appendices/stubs_fortran.tex \
          appendices/interface_declarations.tex \
          appendices/implementation_defined.tex \
          appendices/tool_support_frames.tex \
