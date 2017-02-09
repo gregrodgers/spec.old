@@ -2220,16 +2220,20 @@ duration, is allocated for the construct. The size and alignment of the new list
 item are determined by the static type of the variable. This allocation occurs if the region
 references the list item in any statement.
 
-If a list item in a map clause is a structure variable then it is treated as if
-each structure element variable appears as a list item in the clause with the
-structure variable's map-type.
+If a list item in a \code{map} clause is a structure variable then it is
+treated as if each structure element variable appears as a list item in the
+clause with the structure variable's map-type.
 
 NOTE: struct \{int a, b, c\} S; map(S) -> map(S.a, S.b, S.c)
 
+NOTE: This to make structure variables make sense in the mapping algorithm.
+According to the algorithm, each structure element gets a ref-count increment,
+but an implementation can optimize that to one reference count for the whole
+structure.
+
 If a variable appears as a list item in multiple map clauses on the same
 construct, the variable is treated as it if appeared in a single map clause
-where the map-type for the variable is the union of the map-types that
-appear in each clause.
+where the map-type is the union of the map-types that appear in each clause.
 
 NOTE: map(alloc:S) map(to:S.a) map(from:S.b) // to:S.a, from:S.b, alloc:S.c
 
@@ -2263,34 +2267,22 @@ If an array section is a list item in a map clause and the array section's
 lvalue expression is a pointer variable (a variable with type pointer) and
 the pointer variable has a reference count >= 1  then:
 
-NOTE: Attach top-down rule. The pointer is (must be) mapped 'first' and then attach when
-the array section is mapped.
+NOTE: Attach top-down rule. The pointer is (must be) mapped 'first', then
+map the array section and then attach. Then Detach bottom-up.
 
 \begin{enumerate}
 
-\item Prior to the execution of the construct, if the array section has a
-reference count of 0, the corresponding pointer variable is initialized with the
-address of the corresponding array section in the device data environment. 
-
-\item OR: When a corresponding array section is created in the device data
+\item When a corresponding array section is created in the device data
 enovironment, the corresponding pointer variable is initialized with the
-address of the corresponding arrary section.
+address of the corresponding array section.
 
-NOTE: detach bottom-up rule.
+\item When a corresponding array section is removed from a device data
+environment, the corresponding pointer variable is assigned the address of the
+original array section. (detach bottom-up) (door open for shadow pointers).
 
-\item Regardless of the map-type, the value of the corresponding pointer
-variable is never assigned to the original pointer variable. 
-
-\item Regardless of the map-type, and after initialization, the value of the
-original pointer variable is never assigned to the corresponding pointer
-variable. 
-
-\item OR: When a corresponding array section is removed from a device data
-environment, the corresponding pointer variable is assigned the address
-of the original array section. (The start of shadow pointers).
-
-\item The pointer variable cannot be modified while the array section is
-mapped. (until we support shadow pointers) 
+\item The corresponding pointer variable cannot be modified while it is assigned
+the address of the corresponding array section.  (until we support shadow
+pointers) 
 
 \end{enumerate}
 
