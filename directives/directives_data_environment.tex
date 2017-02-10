@@ -2220,25 +2220,27 @@ duration, is allocated for the construct. The size and alignment of the new list
 item are determined by the static type of the variable. This allocation occurs if the region
 references the list item in any statement.
 
+NOTE: Perhaps this new stuff should be placed before the above mapping algorithm.
+
 If a list item in a \code{map} clause is a structure variable then it is
 treated as if each structure element variable appears as a list item in the
 clause with the structure variable's map-type.
 
 NOTE: struct \{int a, b, c\} S; map(S) -> map(S.a, S.b, S.c)
 
-NOTE: This to make structure variables make sense in the mapping algorithm.
-According to the algorithm, each structure element gets a ref-count increment,
+NOTE: This enables structure variables to make sense in the mapping algorithm.
+According to the algorithm, each structure element would get a ref-count increment,
 but an implementation can optimize that to one reference count for the whole
-structure.
+structure.  We also need it to union map-types.
 
-If a variable appears as a list item in multiple map clauses on the same
-construct, the variable is treated as it if appeared in a single map clause
+If a variable appears as a list item in multiple \code{map} clauses on the same
+construct, the variable is treated as it if appeared in a single \code{map} clause
 where the map-type is the union of the map-types that appear in each clause.
 
 NOTE: map(alloc:S) map(to:S.a) map(from:S.b) // to:S.a, from:S.b, alloc:S.c
 
-If a variable with type pointer appears as a list item in a map clause and the
-variable is the lvalue expression in an array section that appears in a map
+If a variable with type pointer appears as a list item in a \code{map} clause and the
+variable is the lvalue expression in an array section that appears in a \code{map}
 clause on the same construct, then:
 
 \begin{itemize}
@@ -2263,7 +2265,7 @@ NOTE: map(S.a) map(S.a[:100])  // on entry 1) map(S.a) then 2) map(S.a[:100])
 NOTE: a variable that appears in the to clause of a declare target construct
 will be treated as if it had appeared in a map clause...
 
-If an array section is a list item in a map clause and the array section's
+If an array section is a list item in a \code{map} clause and the array section's
 lvalue expression is a pointer variable (a variable with type pointer) and
 the pointer variable has a reference count >= 1  then:
 
@@ -2278,27 +2280,33 @@ address of the corresponding array section.
 
 \item When a corresponding array section is removed from a device data
 environment, the corresponding pointer variable is assigned the address of the
-original array section. (detach bottom-up) (door open for shadow pointers).
+original array section. (NOTE: detach bottom-up, door open for shadow pointers).
 
 \item The corresponding pointer variable cannot be modified while it is assigned
-the address of the corresponding array section.  (until we support shadow
+the address of the corresponding array section.  (NOTE: until we support shadow
 pointers) 
 
 \end{enumerate}
 
-If structure elements from a variable with structure type are explicit list
-items in a map clause on a target data exit construct then a structure element
-not listed in a map clause is implicitly treated as if it had appeared in a
-map clause on the construct with a map-type of release.
+If a structure element from a strucure variable appears as a list item in a
+\code{map} clause on a \code{target}~\code{data}~\code{exit} construct then
+each structure element contained in the structure variable is treated as if it
+appears as a list item in a \code{map} clause on the construct with a map-type
+of release.
 
-NOTE: target data exit map(from:S.a) // map(release:S.b, S.c)
+NOTE: target data exit map(from:S.a) // map(release:S.a S.b, S.c)
+NOTE: map(from:S.a) UNION map(release:S.a) = map(from:S.a)
 
-If structure elements from a variable with structure type are explicit list
-items in a map clause on a target data exit construct and at least one of the
-structure element variables has a map-type of delete then all the structure
-elements are treated as if they had appeared in a map clause with a  map-type of delete.
+If a structure element from a structure variable appears as a list item in a 
+\code{map} clause on a \code{target}~\code{data}~\code{exit} construct and it 
+has a map-type of delete then each structure element contained in the structure
+vairable is treated as if it appears as a list item in \code{map} clause on
+the construct with a map-type of delete.
 
 NOTE: target data exit map(delete:S.a) // map(delete:S.b, S.c)
+
+NOTE: There is a problem here with delete union from (for example).  Delete
+union anything is delete?
 
 \end{ccppspecific}
 
