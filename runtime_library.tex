@@ -1,0 +1,203 @@
+% This is runtime_library.tex (Chapter 3) of the OpenMP specification.
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+\chapter{Runtime Library Routines}
+\index{runtime library routines}
+\label{chap:Runtime Library Routines}
+This chapter describes the OpenMP API runtime library routines and queryable runtime states, and is divided into the 
+following sections:
+
+\begin{itemize}
+\item Runtime library definitions 
+(\specref{sec:runtime library definitions}).
+
+\item Execution environment routines that can be used to control and to query the parallel 
+execution environment 
+(\specref{sec:Execution Environment Routines}).
+
+\item Lock routines that can be used to synchronize access to data 
+(\specref{sec:Lock Routines}). 
+
+\item Portable timer routines 
+(\specref{sec:Timing Routines}).
+
+\item Device memory routines that can be used to allocate memory and 
+to manage pointers on target devices (\specref{sec:Device Memory Routines}).
+
+%\item Runtime states (\specref{sec:runtimeStates}).
+
+% \item OMPT Query Functions (\specref{sec:omptFunctions}).
+
+\item Execution routines to control the application monitoring
+(\specref{sec:control_tool})
+\end{itemize}
+
+Throughout this chapter, \plc{true} and \plc{false} are used as generic terms to simplify the 
+description of the routines. 
+
+\begin{samepage}
+\begin{ccppspecific}
+\plc{true} means a nonzero integer value and \plc{false} means an integer value of zero. 
+\end{ccppspecific}
+\end{samepage}
+\bigskip
+
+\begin{samepage}
+\begin{fortranspecific}
+\plc{true} means a logical value of \code{.TRUE.} and \plc{false} means a logical value of \code{.FALSE.}.
+\end{fortranspecific}
+\end{samepage}
+\bigskip
+
+\begin{samepage}
+\vspace{1\baselineskip}
+\begin{fortranspecific}
+\vspace{-1\baselineskip}
+\restrictions
+
+The following restriction applies to all OpenMP runtime library routines:
+
+\begin{itemize}
+\item OpenMP runtime library routines may not be called from \code{PURE} or \code{ELEMENTAL} 
+procedures. 
+\end{itemize}
+\end{fortranspecific}
+\end{samepage}
+
+
+
+
+
+
+
+
+
+
+
+\section{Runtime Library Definitions}
+\index{runtime library definitions}
+\index{header files}
+\index{include files}
+\label{sec:runtime library definitions}
+For each base language, a compliant implementation must supply a set of definitions for 
+the OpenMP API runtime library routines and the special data types of their parameters. 
+The set of definitions must contain a declaration for each OpenMP API runtime library 
+routine and a declaration for the \emph{simple lock}, \emph{nestable lock}, \emph{schedule}, and \emph{thread affinity
+policy} data types. In addition, each set of definitions may specify other implementation 
+specific values.
+
+\begin{ccppspecific}
+The library routines are external functions with ``C'' linkage.
+
+Prototypes for the C/C++ runtime library routines described in this chapter shall be 
+provided in a header file named \code{omp.h}. This file defines the following: 
+
+\begin{itemize}
+\item The prototypes of all the routines in the chapter. 
+
+\item The type \code{omp\_lock\_t}. 
+
+\item The type \code{omp\_nest\_lock\_t}.
+
+\item The type \code{omp\_lock\_hint\_t}. 
+
+\item The type \code{omp\_sched\_t}.
+
+\item The type \code{omp\_proc\_bind\_t}.
+
+\item The type \code{omp\_control\_tool\_t}.
+
+\item The type \code{omp\_control\_tool\_result\_t}.
+
+\end{itemize}
+
+% was: C.1 on page 288 
+See Section \specref{sec:Example of the omp.h Header File} for an example of this file.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The OpenMP Fortran API runtime library routines are external procedures. The return 
+values of these routines are of default kind, unless otherwise specified.
+
+Interface declarations for the OpenMP Fortran runtime library routines described in this 
+chapter shall be provided in the form of a Fortran \code{include} file named \code{omp\_lib.h} or 
+a Fortran~90 \code{module} named \code{omp\_lib}. It is implementation defined whether the 
+\code{include} file or the \code{module} file (or both) is provided.
+
+These files define the following:
+
+\begin{itemize}
+\item The interfaces of all of the routines in this chapter.
+
+\item The \code{integer} \code{parameter} \code{omp\_lock\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_nest\_lock\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_lock\_hint\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_sched\_kind}.
+
+\item The \code{integer} \code{parameter} \code{omp\_proc\_bind\_kind}.
+
+\item The \code{integer} \code{parameter} \code{openmp\_version} with a value \plc{yyyymm} where \plc{yyyy} 
+and \plc{mm} are the year and month designations of the version of the OpenMP Fortran 
+API that the implementation supports. This value matches that of the C preprocessor 
+macro \code{\_OPENMP}, when a macro preprocessor is supported (see 
+\specref{sec:Conditional Compilation}).
+\end{itemize}
+
+See \specref{sec:Example of an Interface Declaration include File} 
+and \specref{sec:Example of a Fortran Interface Declaration module} 
+for examples of these files.
+
+It is implementation defined whether any of the OpenMP runtime library routines that 
+take an argument are extended with a generic interface so arguments of different \code{KIND} 
+type can be accommodated. See Appendix~\ref{sec:Example of a Generic Interface for a Library Routine}
+for an example of such an extension. 
+\end{fortranspecific}
+
+\input{runtime_library/runtime_library_execution}
+\input{runtime_library/runtime_library_others}
+

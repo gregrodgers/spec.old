@@ -1,4 +1,4 @@
-% This is appendix-C-InterfaceDeclarations.tex of the OpenMP specification.
+% This is interface_declarations.tex (Appendix B) of the OpenMP specification.
 % This is an included file. See the master file for more information.
 %
 % When editing this file:
@@ -14,7 +14,18 @@
 %         \code{}     % for bold monospace keywords, code, operators, etc.
 %         \plc{}      % for italic placeholder names, grammar, etc.
 %
-%    5. Other recommendations:
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
 %         Use the convenience macros defined in openmp.sty for the minor headers
 %         such as Comments, Syntax, etc.
 %
@@ -108,7 +119,18 @@ typedef enum omp\_proc\_bind\_t
  omp\_proc\_bind\_close = 3,
  omp\_proc\_bind\_spread = 4
 \} omp\_proc\_bind\_t; 
-
+\begin{samepage}
+/*
+ * define the tool control commands 
+ */
+typedef omp\_control\_tool\_t 
+\{
+  omp\_control\_tool\_start = 1,
+  omp\_control\_tool\_pause = 2,
+  omp\_control\_tool\_flush = 3,
+  omp\_control\_tool\_end = 4,
+\} omp\_control\_tool\_t;
+\end{samepage}
 /*
  * exported OpenMP functions
  */
@@ -197,6 +219,8 @@ extern int omp\_target\_associate\_ptr(void * host\_ptr,
 extern int omp\_target\_disassociate\_ptr(void * ptr,
                                           int device\_num);
 
+extern void omp\_control\_tool(int command, int modifier, void *arg);
+
 \#ifdef _\_cplusplus
 \}
 \#endif
@@ -213,9 +237,12 @@ extern int omp\_target\_disassociate\_ptr(void * ptr,
 \label{sec:Example of an Interface Declaration include File}
 \emph{omp\_lib\_kinds.h:}
 {\small \begin{codepar}
+
      integer omp\_lock\_kind
      integer omp\_nest\_lock\_kind
      integer omp\_lock\_hint\_kind
+     integer omp\_control\_tool\_kind
+     integer omp\_control\_tool\_result\_kind
 ! this selects an integer that is large enough to hold a 64 bit integer
      parameter ( omp\_lock\_kind = selected\_int\_kind( 10 ) )
      parameter ( omp\_nest\_lock\_kind = selected\_int\_kind( 10 ) )
@@ -256,6 +283,28 @@ extern int omp\_target\_disassociate\_ptr(void * ptr,
      parameter ( omp\_lock\_hint\_nonspeculative = 4 )
      integer ( omp\_lock\_hint\_kind ) omp\_lock\_hint\_speculative
      parameter ( omp\_lock\_hint\_speculative = 8 )
+\begin{samepage}
+     parameter ( omp\_control\_tool\_kind = selected\_int\_kind( 8 ) )
+     integer ( omp\_control\_tool\_kind ) omp\_control\_tool\_start 
+     parameter ( omp\_control\_tool\_start = 1 )
+     integer ( omp\_control\_tool\_kind ) omp\_control\_tool\_pause 
+     parameter ( omp\_control\_tool\_pause = 2 )
+     integer ( omp\_control\_tool\_kind ) omp\_control\_tool\_flush 
+     parameter ( omp\_control\_tool\_flush = 3 )
+     integer ( omp\_control\_tool\_kind ) omp\_control\_tool\_end 
+     parameter ( omp\_control\_tool\_end = 4 )
+\end{samepage}
+\begin{samepage}
+     parameter ( omp\_control\_tool\_result\_kind = selected\_int\_kind( 8 ) )
+     integer ( omp\_control\_tool\_result\_kind ) omp_control_tool_notool 
+     parameter ( omp_control_tool_notool = -2 )
+     integer ( omp\_control\_tool\_result\_kind ) omp_control_tool_nocallback
+     parameter ( omp_control_tool_nocallback = -1 )
+     integer ( omp\_control\_tool\_result\_kind ) omp_control_tool_success
+     parameter ( omp_control_tool_success = 0 )
+     integer ( omp\_control\_tool\_result\_kind ) omp_control_tool_ignored 
+     parameter ( omp_control_tool_ignored = 1 )
+\end{samepage}
 \end{codepar}}
 
 \emph{omp\_lib.h:}
@@ -263,11 +312,11 @@ extern int omp\_target\_disassociate\_ptr(void * ptr,
 {\small \begin{codepar}
 ! default integer type assumed below
 ! default logical type assumed below
-! OpenMP API v4.5
+! OpenMP API v5.0 Preview 1 (TR4)
 
      include 'omp\_lib\_kinds.h'
      integer openmp\_version
-     parameter ( openmp\_version = 201511 )
+     parameter ( openmp\_version = 201611 )
 
      external omp\_set\_num\_threads
      external omp\_get\_num\_threads
@@ -355,6 +404,9 @@ extern int omp\_target\_disassociate\_ptr(void * ptr,
      double precision omp\_get\_wtick
      external omp\_get\_wtime
      double precision omp\_get\_wtime
+
+     integer  omp\_control\_tool
+     external omp\_control\_tool
 \end{codepar}}
 
 
@@ -404,14 +456,37 @@ extern int omp\_target\_disassociate\_ptr(void * ptr,
       \&   omp\_proc\_bind\_close = 3
         integer (kind=omp\_proc\_bind\_kind), parameter ::
       \&   omp\_proc\_bind\_spread = 4
-         end module omp\_lib\_kinds
+\begin{samepage}
+        integer, parameter :: omp\_control\_tool\_kind = selected\_int\_kind( 8 )
+        integer (kind=omp\_control\_tool\_kind), parameter :: 
+      \&   omp\_control\_tool\_start = 1
+        integer (kind=omp\_control\_tool\_kind), parameter :: 
+      \&   omp\_control\_tool\_pause = 2
+        integer (kind=omp\_control\_tool\_kind), parameter :: 
+      \&   omp\_control\_tool\_flush = 3
+        integer (kind=omp\_control\_tool\_kind), parameter :: 
+      \&   omp\_control\_tool\_end = 4
+        end module omp\_lib\_kinds
+\end{samepage}
+\begin{samepage}
+        integer, parameter :: omp\_control\_tool\_result\_kind = 
+      \&   selected\_int\_kind( 8 )
+        integer ( omp\_control\_tool\_result\_kind ), parameter :: 
+      \&   omp_control_tool_notool = -2 
+        integer ( omp\_control\_tool\_result\_kind ), parameter ::
+      \&   omp_control_tool_nocallback = -1
+        integer ( omp\_control\_tool\_result\_kind ), parameter ::
+      \&   omp_control_tool_success = 0
+        integer ( omp\_control\_tool\_result\_kind ), parameter ::
+      \&   omp_control_tool_ignored = 1
+\end{samepage}
 
         module omp\_lib
 
           use omp\_lib\_kinds
 
-!                                     OpenMP API v4.5
-          integer, parameter :: openmp\_version = 201511
+!                                     OpenMP API v5.0 Preview 1 (TR4)
+          integer, parameter :: openmp\_version = 201611
 
          interface
 
@@ -640,7 +715,14 @@ extern int omp\_target\_disassociate\_ptr(void * ptr,
           function omp\_get\_wtime ()
            double precision :: omp\_get\_wtime
           end function omp\_get\_wtime
-
+\begin{samepage}
+          function omp\_control\_tool (command, modifier)
+           use omp\_lib\_kinds
+           integer :: omp\_control\_tool 
+           integer(kind=omp\_control\_tool\_kind), intent(in) :: command
+           integer(kind=omp\_control\_tool\_kind), intent(in) :: modifier
+          end function omp\_control\_tool
+\end{samepage}
           end interface
 
         end module omp\_lib
