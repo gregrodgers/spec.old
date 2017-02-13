@@ -2220,56 +2220,73 @@ duration, is allocated for the construct. The size and alignment of the new list
 item are determined by the static type of the variable. This allocation occurs if the region
 references the list item in any statement.
 
-NOTE: Perhaps this new stuff should be placed before the above mapping algorithm.
+If a variable is a list item in multiple \code{map} clauses on the same
+construct, the variable is treated as it if appeared in a single \code{map}
+clause where the \plc{map-type} is a combination of the \plc{map-types} that appear
+in each clause.
 
-NOTE: The following text enables structure variables to make sense in the
-mapping algorithm.  According to the algorithm, each structure element would
-get a ref-count increment, but an implementation can optimize that to one
-reference count for the whole structure.  We also need it to union map-types.
+The rules for combining \plc{map-types} are as follows:
 
-If a list item in a \code{map} clause is a variable of type structure then it is
+\begin{itemize}
+\item map(alloc, x) and map(to, x) is map(to,x)
+\item map(alloc, x) and map(from, x) is map(from, x)
+\item map(to, x) and map(from, x) is map(tofrom, x)
+\item map(release, x) and map(from, x) is map(from,x)
+\item map(delete, x) and map(from,x) is map(delete,x)
+\item map(delete, x) and map(release,x) is map(delete,x)
+\end{itemize}
+
+NOTE: map(alloc:S.a,S.b.S.c) map(to:S.a) map(from:S.b) // to:S.a, from:S.b, alloc:S.c
+
+NOTE: is the combining rule c/c++ specific?
+
+If a list item in a \code{map} clause is a variable of structure type then it is
 treated as if each structure element contained in the variable
-is a list item in the clause with the variable's \plc{map-type}.
+is a list item in the clause.
 
 NOTE: struct \{int a, b, c\} S; map(S) -> map(S.a, S.b, S.c)
 
-If a variable is a list item in multiple \code{map} clauses on the same
-construct, the variable is treated as it if appeared in a single \code{map}
-clause where the \plc{map-type} is the union of the \plc{map-types} that appear
-in each clause.
+If a structure element is a list item in a \code{map} clause then all the other
+structure elements from the containing structure variable form a \pcl{structure
+sibling list}.  The list items in a structure sibling list are treated as
+follows:
 
-NOTE: map(alloc:S) map(to:S.a) map(from:S.b) // to:S.a, from:S.b, alloc:S.c
+\begin{itemize}
 
-NOTE: maybe this is not c/c++ specific comment.
+  \item If a structure sibling list item has a reference count >= 1 before a
+  \code{target}, \code{target}~\code{data} or
+  \code{target}~\code{data}~\code{enter} construct is encountered then, the
+  structure sibling list item is treated as if it is a list item in a
+  \code{map} clause on the construct with a \plc{map-type} of \code{alloc}.
 
-If a structure element is a list item in a \code{map} clause on a
-\code{target}~\code{data}~\code{exit} construct then each structure element in
-the structure variable that contained the list item is treated as if it is a
-list item in a \code{map} clause on the construct with a \plc{map-type} of
-\code{release}.
+  \item If a structure sibling list item has a reference count >= 1 before a
+  \code{target}~\code{data}~\code{exit} construct is encountered then the
+  structure sibling list item is treated as if it is a list item in a
+  \code{map} clause on the construct with a \plc{map-type} of \code{release}.
 
-NOTE: target data exit map(from:S.a) // map(release:S.a S.b, S.c)
+\end{itemize}
 
-NOTE: map(from:S.a) UNION map(release:S.a) = map(from:S.a)
+NOTE: target data enter map(S) // map(S.a, S.b, S.c)
+
+NOTE: target data enter map(to:S.b) // map(to:S.b) map(alloc:S.a, S.c)
+
+NOTE: target data exit map(from:S.a) // map(from:S.a) map(release:S.b, S.c)
 
 If a structure element is a list item in a \code{map} clause on a
 \code{target}~\code{data}~\code{exit} construct and it has a \plc{map-type} of
-\code{delete} then each structure element in the structure vairable that
-contained the list item is treated as if it is a list item in a \code{map}
-clause on the construct with a \plc{map-type} of \code{delete}.
+\code{delete} then each list item in its associated structure sibling list is
+treated as if it is a list item in a \code{map} clause on the construct with a
+\plc{map-type} of \code{delete}.
 
-NOTE: target data exit map(delete:S.a) // map(delete:S.b, S.c)
-
-NOTE: There is a problem here with delete union from (for example).  Delete
-union anything is delete?
+NOTE: target data exit map(delete:S.a) // map(delete:S.a, S.b, S.c)
 
 NOTE: BEGIN ARRAY SECTION POINTER ATTACH HERE:
 
-If a list item in a \code{map} clause is a variable of type pointer, the
-variable is the lvalue expression in an array section, and the array section is
-a list item in a \code{map} clause on the same construct then the effects of a
-\code{map} clause on the pointer variable and a \code{map} clause on the array
-section are ordered as follows:
+If a list item in a \code{map} clause is a variable of type pointer, and the
+variable is the lvalue expression in an array section that is a list item in a
+\code{map} clause on the same construct then the effects of a \code{map} clause
+on the pointer variable and a \code{map} clause on the array section are
+ordered as follows:
 
 \begin{itemize}
 
@@ -2288,7 +2305,7 @@ pointer variable.
 \end{itemize}
 
 NOTE: map(S.a) map(S.a[:100])  // on entry 1) map(S.a) then 2) map(S.a[:100])
-                               // on exit  1) unmap(S.a[:100]) then 2) unmap(S.a)
+NOTE:                          // on exit  1) unmap(S.a[:100]) then 2) unmap(S.a)
 
 NOTE: a variable that appears in the to clause of a declare target construct
 will be treated as if it had appeared in a map clause...
