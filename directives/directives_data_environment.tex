@@ -2201,7 +2201,7 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \end{enumerate}
 \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{tofrom}, then the original list item is assigned the value of the corresponding list item. 
+\item If the \plc{map-type} is \code{from} or \code{tofrom}, [and the corresponding list item is not a attached corresponding pointer (see below)] then the original list item is assigned the value of the corresponding list item. 
 \end{enumerate}
 \item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
 \end{enumerate}
@@ -2236,18 +2236,12 @@ The rules for combining \plc{map-types} are as follows:
 \item map(delete, x) and map(release,x) is map(delete,x)
 \end{itemize}
 
-NOTE: map(alloc:S.a,S.b.S.c) map(to:S.a) map(from:S.b) // to:S.a, from:S.b, alloc:S.c
-
-NOTE: is the combining rule c/c++ specific?
-
 If a list item in a \code{map} clause is a variable of structure type then it is
 treated as if each structure element contained in the variable
 is a list item in the clause.
 
-NOTE: struct \{int a, b, c\} S; map(S) -> map(S.a, S.b, S.c)
-
 If a structure element is a list item in a \code{map} clause then all the other
-structure elements from the containing structure variable form a \pcl{structure
+structure elements from the containing structure variable form a \plc{structure
 sibling list}.  The list items in a structure sibling list are treated as
 follows:
 
@@ -2266,19 +2260,11 @@ follows:
 
 \end{itemize}
 
-NOTE: target data enter map(S) // map(S.a, S.b, S.c)
-
-NOTE: target data enter map(to:S.b) // map(to:S.b) map(alloc:S.a, S.c)
-
-NOTE: target data exit map(from:S.a) // map(from:S.a) map(release:S.b, S.c)
-
 If a structure element is a list item in a \code{map} clause on a
 \code{target}~\code{data}~\code{exit} construct and it has a \plc{map-type} of
 \code{delete} then each list item in its associated structure sibling list is
 treated as if it is a list item in a \code{map} clause on the construct with a
 \plc{map-type} of \code{delete}.
-
-NOTE: target data exit map(delete:S.a) // map(delete:S.a, S.b, S.c)
 
 NOTE: BEGIN ARRAY SECTION POINTER ATTACH HERE:
 
@@ -2304,41 +2290,46 @@ pointer variable.
 
 \end{itemize}
 
-NOTE: map(S.a) map(S.a[:100])  // on entry 1) map(S.a) then 2) map(S.a[:100])
-NOTE:                          // on exit  1) unmap(S.a[:100]) then 2) unmap(S.a)
-
-NOTE: a variable that appears in the to clause of a declare target construct
-will be treated as if it had appeared in a map clause...
-
 If an array section is a list item in a \code{map} clause, the array
 section's lvalue expression is a variable of type pointer, and the variable has
 a reference count >= 1  then:
 
-NOTE: Attach top-down rule. The pointer is (must be) mapped 'first', then
-map the array section and then attach. Then Detach bottom-up.
-
-NOTE: Unless the lvalue-expression is a variable of type array, array sections
-only map the array section (the pointed-to memory)!  Not the lvalue-expression.
-Even if the lvalue is a simple pointer variable.  The pointer variable must
-appear in map clause or declare target - mapped explicitly.  Of course, on
-the target construct, if the pointer variable is a scalar (not a struct member)
-it is private in the target region.  But this text here is about attachment
-to mapped pointers.
-
 \begin{itemize}
 
+%\item When a corresponding array section is created in the device data
+%enovironment, the corresponding pointer variable is assigned the address of the
+%corresponding array section.
+
 \item When a corresponding array section is created in the device data
-enovironment, the corresponding pointer variable is assigned the address of the
-corresponding array section.
-
-\item When a corresponding array section is removed from a device data
 environment, the corresponding pointer variable is assigned the address of the
-original array section. (NOTE: detach bottom-up, door open for shadow
-pointers).
+corresponding array section. The corresponding pointer variable is now defined
+as an \emph{attached corresponding pointer} variable in the device data
+environment.
 
-\item The corresponding pointer variable cannot be modified while it is assigned
-the address of the corresponding array section.  (NOTE: until we support shadow
-pointers) 
+%[NOTE: after copying the address, the pointer on the device get a new property
+%"attached", and that attached property remains on the pointer as long as the
+%pointer is mapped. This is longer than between attach/detach, because we
+%permanently erased the original value on the device]
+
+%\item When a corresponding array section is removed from a device data
+%environment, the corresponding pointer variable is assigned the address of the
+%original array section. (NOTE: detach bottom-up, door open for shadow
+%pointers).
+
+\item The value of an attached corresponding pointer variable is never assigned
+to the original pointer variable.
+
+%[Note attached value are never brought back]
+
+%\item The corresponding pointer variable cannot be modified while it is assigned
+%the address of the corresponding array section.  (NOTE: until we support shadow
+%pointers) 
+
+\item An attached corresponding pointer variable cannot be modified.
+
+%[NOTE: address cannot be changed. It could be weakened, but its probably better
+%to be stronger, at least initially ]
+
 
 \end{itemize}
 
