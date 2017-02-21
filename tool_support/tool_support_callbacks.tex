@@ -256,7 +256,6 @@ typedef void (*ompt_callback_parallel_begin_t) (
   const ompt_frame_t *\plc{parent_frame},
   ompt_data_t *\plc{parallel_data},
   unsigned int \plc{requested_team_size},
-  unsigned int \plc{actual_team_size},
   ompt_invoker_t \plc{invoker},
   const void *\plc{codeptr_ra}
 );
@@ -292,9 +291,6 @@ region that is beginning.
 
 The \callbackarg{} \plc{requested\_team\_size}
 indicates the number of threads requested by the user. 
-
-The \callbackarg{} \plc{actual\_team\_size} indicates the number of
-threads in the team.
 
 The \callbackarg{} \plc{invoker} indicates whether the code for the
 parallel region is inlined into the application or invoked by the
@@ -627,6 +623,7 @@ typedef void (*ompt_callback_implicit_task_t) (
   ompt_scope_endpoint_t \plc{endpoint},
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{task_data},
+  unsigned int \plc{team_size},
   unsigned int \plc{thread_num}
 );
 \end{boxedcode}
@@ -641,6 +638,7 @@ typedef struct ompt_record_implicit_s \{
   ompt_scope_endpoint_t \plc{endpoint};
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{task_id};
+  unsigned int \plc{team_size},
   unsigned int \plc{thread_num};
 \} ompt_record_implicit_t;
 \end{boxedcode}
@@ -656,6 +654,9 @@ parallel region.
 
 The binding of \callbackarg{} \plc{task\_data} is the implicit task
 executing the parallel region's structured block.
+
+The \callbackarg{} \plc{team\_size} indicates the number of
+threads in the team.
 
 The \callbackarg{} \plc{thread\_num} indicates
 the thread number of the calling thread, within the team executing the parallel
@@ -1047,6 +1048,7 @@ which may be the result of collapsing several associated loops.
 For a \code{sections} construct, \plc{count} represents the number of sections. 
 For a \code{workshare} construct, \plc{count} represents the units of work, as defined by the \code{workshare} construct.
 For a \code{single} construct, \plc{count} is always 1.
+When the \plc{endpoint} argument is signaling the end of a scope, a \plc{count} value of 0 indicates that the actual \plc{count} value is not available. 
 
 \codeptrdesc
 
@@ -1112,7 +1114,7 @@ typedef struct ompt_record_flush_s \{
 typedef void (*ompt_callback_target_t) (
   ompt_target_type_t \plc{kind},
   ompt_scope_endpoint_t \plc{endpoint},
-  int \plc{device_id},
+  uint64_t \plc{device_num},
   ompt_data_t *\plc{task_data},
   ompt_id_t \plc{target_id},
   const void *\plc{codeptr_ra}
@@ -1128,8 +1130,8 @@ typedef void (*ompt_callback_target_t) (
 typedef struct ompt_record_target_s \{
   ompt_target_type_t \plc{kind};
   ompt_scope_endpoint_t \plc{endpoint};
-  int \plc{device_id};
-  ompt_id_t \plc{task_id};
+  uint64_t \plc{device_num};
+  ompt_data_t *\plc{task_data};
   ompt_id_t \plc{target_id};
   const void *\plc{codeptr_ra};
 \} ompt_record_target_t;
@@ -1143,7 +1145,7 @@ The \callbackarg{} \plc{kind} indicates the kind of target region.
 
 \epdesc
 
-The \callbackarg{} \plc{device\_id} indicates the id of the device
+The \callbackarg{} \plc{device\_num} indicates the id of the device
 which will execute the target region.
 
 The binding of \callbackarg{} \plc{task\_data} is the target task.
@@ -1358,7 +1360,7 @@ buffer to store event records for a device.
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef void (*ompt_callback_buffer_request_t) (
-  int \plc{device_id},
+  uint64_t \plc{device_num},
   ompt_buffer_t **\plc{buffer},
   size_t *\plc{bytes}
 );
@@ -1381,7 +1383,7 @@ The buffer request callback is not required to be \emph{async signal safe}.
 
 \argdesc
 
-The \callbackarg{} \plc{device\_id} specifies the device. 
+The \callbackarg{} \plc{device\_num} specifies the device. 
 
 A tool should set \plc{*buffer} to point to a buffer where device events
 may be recorded and \plc{*bytes} to the length of that buffer.  
@@ -1403,7 +1405,7 @@ A device triggers a call to \code{ompt\_callback\_buffer\_complete\_t} when no f
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef void (*ompt_callback_buffer_complete_t) (
-  int \plc{device_id},
+  uint64_t \plc{device_num},
   const ompt_buffer_t *\plc{buf},
   size_t \plc{bytes},
   ompt_buffer_cursor_t \plc{begin},
@@ -1429,7 +1431,7 @@ required to be \emph{async signal safe}.
 
 \argdesc
 
-The \callbackarg{} \plc{device\_id} indicates the device whose events
+The \callbackarg{} \plc{device\_num} indicates the device whose events
 the buffer contains.
 
 The \callbackarg{} \plc{buffer} is the address of a buffer previously
@@ -1465,7 +1467,8 @@ may not delete the buffer.
 typedef int (*ompt_callback_control\_tool_t) (
   \longlongint{} \plc{command},
   \longlongint{} \plc{modifier},
-  void *\plc{arg}
+  void *\plc{arg},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \end{ccppspecific}
@@ -1494,6 +1497,7 @@ The \callbackarg{} \plc{arg} is a void pointer that enables a tool and
 an application to pass arbitrary state back and forth. 
 The \callbackarg{} \plc{arg} may be \code{NULL}.
 
+\codeptrdesc
 
 
 \constraints
@@ -1556,7 +1560,7 @@ tool's tracing interface for a device.
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef void (*ompt_callback_device_initialize_t) (
-  int \plc{device_id},
+  uint64_t \plc{device_num},
   const char *\plc{type},
   ompt_device_t *\plc{device},
   ompt_function_lookup_t *\plc{lookup},
@@ -1578,7 +1582,7 @@ OpenMP construct on the device.
 
 \argdesc
 
-The \callbackarg{} \plc{device\_id} identifies the logical device
+The \callbackarg{} \plc{device\_num} identifies the logical device
 being initialized.
 
 The \callbackarg{} \plc{type} is a character string indicating the
