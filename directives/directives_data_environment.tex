@@ -2165,39 +2165,87 @@ The list items that appear in a \code{map} clause may include array sections and
 
 The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
-If a variable is a list item in multiple \code{map} clauses on the same
-construct, the variable is treated as if it appeared in a single \code{map}
-clause where the \plc{map-type} is a combination of the \plc{map-types} that
-appear in each clause.
+%If a variable is a list item in multiple \code{map} clauses on the same
+%construct, the variable is treated as if it appeared in a single \code{map}
+%clause where the \plc{map-type} is a combination of the \plc{map-types} that
+%appear in each clause.  
 
-The rules for combining \plc{map-types} are as follows:
+If on the same construct a variable is a list item in a \code{map} clause with
+a \plc{map-type} of \code{alloc} and a list item in a \code{map} clause with a
+\plc{map-type} of \code{to}, \code{from} or \code{tofrom} then the variable is
+treated as if it is a list item in single \code{map} clause with a
+\plc{map-type} of \code{to}, \code{from} or \code{tofrom}, respectively.
+
+If on the same construct a variable is a list item in a \code{map} clause with a
+\plc{map-type} of \code{release} and a list item in a \code{map} clause with a
+\plc{map-type} of \code{from} or \code{delete} then the variable is
+treated as if it is a list item in single \code{map} clause with a
+\plc{map-type} of \code{from} or \code{delete}, respectively.
+
+If on the same construct a variable is a list item in \code{map} clause with a
+\plc{map-type} of \code{from} and a list item in a \code{map} clause with a
+\plc{map-type} of \code{delete} then the effects of the \code{map} clause
+with the \plc{map-type} of \code{from} are ordered to occur before the
+effects of the \code{map} clause with the \plc{map-type} of \code{delete}.
+
+%The rules for combining \plc{map-types} are as follows:
+
+%\begin{itemize}
+%\item \code{map(alloc:x)} and \code{map(to:x)} is \code{map(to:x)}
+%\item \code{map(alloc:x)} and \code{map(from:x)} is \code{map(from:x)}
+%\item \code{map(to:x)} and \code{map(from:x)} is \code{map(tofrom:x)}
+%\item \code{map(release:x)} and \code{map(from:x)} is \code{map(from:x)}
+%\item \code{map(delete:x)} and \code{map(from:x)} is \code{map(delete:x)}
+%\item \code{map(delete:x)} and \code{map(release:x)} is \code{map(delete:x)}
+%\end{itemize}
+
+If a list item in a \code{map} clause is a variable of structure type then it
+is treated as if each structure element contained in the variable is a list
+item in the clause.
+
+%If a structure element is a list item in a \code{map} clause then all the other
+%structure elements from the containing structure variable form a \plc{structure
+%sibling list}.  
+
+If a list item in a \code{map} clause is a structure element then all the other
+structure elements from the containing structure variable form a \plc{structure
+sibling list}.  The \code{map} clause and the strucuture sibling list are
+associated with the same construct.  If a corresponding list item of the
+structure sibling list item is present in the device data environment when the
+construct is encountered then:
 
 \begin{itemize}
-\item \code{map(alloc:x)} and \code{map(to:x)} is \code{map(to:x)}
-\item \code{map(alloc:x)} and \code{map(from:x)} is \code{map(from:x)}
-\item \code{map(to:x)} and \code{map(from:x)} is \code{map(tofrom:x)}
-\item \code{map(release:x)} and \code{map(from:x)} is \code{map(from:x)}
-\item \code{map(delete:x)} and \code{map(from:x)} is \code{map(delete:x)}
-\item \code{map(delete:x)} and \code{map(release:x)} is \code{map(delete:x)}
+
+    \item If a structure sibling list items does not appear in a \code{map}
+    clause on the construct then: \begin{itemize} 
+    
+        \item If the construct is a \code{target}, \code{target}~\code{data},
+        or \code{target}~\code{enter}~\code{data} construct then the structure
+        sibling list item is treated as if it is a list item in a \code{map}
+        clause on the construct with a \plc{map-type} of \code{alloc}.
+
+        \item If the construct is \code{target}~\code{exit}~\code{data}
+        construct, then the structure sibling list item is treated as if it is
+        a list item in a \code{map} clause on the construct with a
+        \plc{map-type} of \code{release}.
+
+    \end{itemize}
+
+    \item If the structure element is a list item in a \code{map} clause with a
+    plc{map-type} of \code{delete} and the strucuture sibling list item does
+    not appear in a \code{map} clause on the construct with a \plc{map-type} of
+    \code{delete} then the structure sibling list item is treated as if it is a
+    list item in a \code{map} clause on the construct with a \plc{map-type} of
+    \code{delete}.
+
 \end{itemize}
 
-If a list item in a \code{map} clause is a variable of structure type then it is
-treated as if each structure element contained in the variable
-is a list item in the clause.
-
-If a structure element is a list item in a \code{map} clause then all the other
-structure elements from the containing structure variable form a \plc{structure
-sibling list}.  The list items in a structure sibling list are treated as
-follows:
-
-\begin{itemize}
-
-  \item If a corresponding list item of a structure sibling list item is
-  present in the device data environment when a \code{target},
-  \code{target}~\code{data} or \code{target}~\code{data}~\code{enter} construct
-  is encountered, then the structure sibling list item is treated as if it is a
-  list item in a \code{map} clause on the construct with a \plc{map-type} of
-  \code{alloc}.
+  %\item If a corresponding list item of the structure sibling list item is
+  %present in the device data environment when a \code{target},
+  %\code{target}~\code{data} or \code{target}~\code{data}~\code{enter} construct
+  %is encountered, then the structure sibling list item is treated as if it is a
+  %list item in a \code{map} clause on the construct with a \plc{map-type} of
+  %\code{alloc}.
 
   %\item If a structure sibling list item has a reference count >= 1 before a
   %\code{target}, \code{target}~\code{data} or
@@ -2205,11 +2253,11 @@ follows:
   %structure sibling list item is treated as if it is a list item in a
   %\code{map} clause on the construct with a \plc{map-type} of \code{alloc}.
 
-  \item If a corresponding list item of a structure sibling list item is
-  present in the device data environment when a
-  \code{target}~\code{exit}~\code{data} construct is encountered, then the
-  structure sibling list item is treated as if it is a list item in a
-  \code{map} clause on the construct with a \plc{map-type} of \code{release}.
+  %\item If a corresponding list item of the structure sibling list item is
+  %present in the device data environment when a
+  %\code{target}~\code{exit}~\code{data} construct is encountered, then the
+  %structure sibling list item is treated as if it is a list item in a
+  %\code{map} clause on the construct with a \plc{map-type} of \code{release}.
 
   %\item If a structure sibling list item has a reference count >= 1 before a
   %\code{target}~\code{data}~\code{exit} construct is encountered then the
@@ -2218,11 +2266,11 @@ follows:
 
 \end{itemize}
 
-If a structure element is a list item in a \code{map} clause on a
-\code{target}~\code{exit}~\code{data} construct and it has a \plc{map-type} of
-\code{delete} then each list item in its associated structure sibling list is
-treated as if it is a list item in a \code{map} clause on the construct with a
-\plc{map-type} of \code{delete}.
+%If a structure element is a list item in a \code{map} clause on a
+%\code{target}~\code{exit}~\code{data} construct and it has a \plc{map-type} of
+%\code{delete} then each list item in its associated structure sibling list is
+%treated as if it is a list item in a \code{map} clause on the construct with a
+%\plc{map-type} of \code{delete}.
 
 \begin{ccppspecific}
 If a list item in a \code{map} clause is a variable of type pointer, and the
