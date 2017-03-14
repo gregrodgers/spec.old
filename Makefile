@@ -100,8 +100,9 @@ git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png)
-	mkdir -p $@
+	mkdir -p $@/appendices
 	cp -f $^ "$@/" || true
+	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
