@@ -727,7 +727,9 @@ threads that may result in indeterminate values.
 
 \syntax
 In the following syntax, \plc{atomic-clause} is a clause that indicates
-the semantics for which atomicity is enforced and is one of the following:
+the semantics for which atomicity is enforced and \plc{memory-order-clause} is
+a clause that indicates the memory ordering behavior of the construct.
+Specifically, \plc{atomic-clause} is one of the following:
 
 \begin{indentedcodelist}
 read
@@ -736,11 +738,20 @@ update
 capture
 \end{indentedcodelist}
 
+and \plc{memory-order-clause} is one of the following:
+
+\begin{indentedcodelist}
+seq\_cst
+acq\_rel
+release
+acquire
+\end{indentedcodelist}
+
 \begin{ccppspecific}
 The syntax of the \code{atomic} construct takes one of the following forms:
 
-\begin{boxedcode}
-\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
+\begin{boxedcode}[fontsize=\small]
+\#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
    \plc{expression-stmt}
 \end{boxedcode}
 
@@ -756,14 +767,14 @@ The syntax of the \code{atomic} construct takes one of the following forms:
 or
 
 \begin{boxedcode}
-\#pragma omp atomic \plc{[}seq\_cst\plc{]} \plc{new-line} 
+\#pragma omp atomic \plc{[memory-order-clause]} \plc{new-line}
    \plc{expression-stmt}
 \end{boxedcode}
 
 or
 
-\begin{boxedcode}
-\#pragma omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]} \plc{new-line}
+\begin{boxedcode}[fontsize=\small]
+\#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
     \plc{structured-block}
 \end{boxedcode}
 
@@ -858,7 +869,7 @@ evaluated is unspecified.
 The syntax of the \code{atomic} construct takes any of the following forms: 
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} read \plc{[[},\plc{]}seq\_cst\plc{]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} read \plc{[[},\plc{]memory-order-clause]}
     \plc{capture-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -866,7 +877,7 @@ The syntax of the \code{atomic} construct takes any of the following forms:
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} write \plc{[[},\plc{]}seq\_cst\plc{]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} write \plc{[[},\plc{]memory-order-clause]}
     \plc{write-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -874,7 +885,7 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} update \plc{[[},\plc{]}seq\_cst\plc{]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} update \plc{[[},\plc{]memory-order-clause]}
     \plc{update-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -882,7 +893,7 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{]} 
+!\$omp atomic \plc{[memory-order-clause]}
     \plc{update-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -890,7 +901,7 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]}
     \plc{update-statement }
     \plc{capture-statement}
 !\$omp end atomic
@@ -899,7 +910,7 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]}
     \plc{capture-statement}
     \plc{update-statement}
 !\$omp end atomic
@@ -908,7 +919,7 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[}seq\_cst\plc{[},\plc{]]} capture \plc{[[},\plc{]}seq\_cst\plc{]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]}
     \plc{capture-statement}
     \plc{write-statement}
 !\$omp end atomic
@@ -1007,12 +1018,20 @@ that access the same storage location \plc{x} among all threads in the
 binding thread set without regard to the teams to which the threads belong. 
 
 \descr
+All \code{atomic} constructs force an atomic memory operation to be performed
+by the encountering thread, preceded and/or followed by implicit
+flush operations as described in this section. Each non-synchronizing implicit flush is
+a global flush. If \plc{memory-order-clause} is present and is
+\code{seq\_cst}, each synchronizing implicit flush is also a global flush.
+
 The \code{atomic} construct with the \code{read} clause forces an atomic read of the location 
-designated by \plc{x} regardless of the native machine word size.
+designated by \plc{x} regardless of the native machine word size. The atomic
+read is immediately preceded by a non-synchronizing acquire flush of \plc{x}.
 \end{samepage}
 
 The \code{atomic} construct with the \code{write} clause forces an atomic write of the location 
-designated by \plc{x} regardless of the native machine word size.
+designated by \plc{x} regardless of the native machine word size. The atomic
+write is immediately followed by a non-synchronizing release flush of \plc{x}.
 
 The \code{atomic} construct with the \code{update} clause forces an atomic update of the location 
 designated by \plc{x} using the designated operator or intrinsic. Note that when no clause is 
@@ -1020,9 +1039,12 @@ present, the semantics are equivalent to atomic update. Only the read and write 
 location designated by \plc{x} are performed mutually atomically. The evaluation of \plc{expr} or 
 \plc{expr\_list} need not be atomic with respect to the read or write of the location designated 
 by \plc{x}. No task scheduling points are allowed between the read and the write of the 
-location designated by \plc{x}.
+location designated by \plc{x}. The atomic update is immediately preceded by
+a non-synchronizing acquire flush of \plc{x} and immediately followed by a
+non-synchronizing release flush of \plc{x}.
 
-The \code{atomic} construct with the \code{capture} clause forces an atomic update of the 
+The \code{atomic} construct with the \code{capture} clause forces an atomic
+\emph{captured update} --- an atomic update of the 
 location designated by \plc{x} using the designated operator or intrinsic while also capturing 
 the original or final value of the location designated by \plc{x} with respect to the atomic 
 update. The original or final value of the location designated by \plc{x} is written in the 
@@ -1031,10 +1053,20 @@ block or statements following the usual language semantics. Only the read and wr
 the location designated by \plc{x} are performed mutually atomically. Neither the evaluation 
 of \plc{expr} or \plc{expr\_list}, nor the write to the location designated by \plc{v}, need be atomic with
 respect to the read or write of the location designated by \plc{x}. No task scheduling points 
-are allowed between the read and the write of the location designated by \plc{x}.
+are allowed between the read and the write of the location designated by
+\plc{x}. The atomic captured update is immediately preceded by a non-synchronizing acquire
+flush of \plc{x} and immediately followed by a non-synchronizing release flush of
+\plc{x}.
 
-Any \code{atomic} construct with a \code{seq\_cst} clause forces the atomically performed 
-operation to include an implicit flush operation without a list.
+A synchronizing release flush operation applied to all variables, with
+a sync-set containing the variable that is atomically operated on, is implied
+at entry to the \code{atomic} region when the \code{read} clause is not
+present and the \code{release}, \code{acq\_rel}, or \code{seq\_cst} clause is
+present.  A synchronizing acquire flush operation applied to all
+variables, with a sync-set containing the variable that is atomically operated
+on, is implied at exit from an \code{atomic} region when the \code{read} or
+\code{capture} clause is present and the \code{acquire}, \code{acq\_rel}, or
+\code{seq\_cst} clause is present. 
 
 \begin{note}
 As with other implicit flush regions, 
@@ -1090,7 +1122,17 @@ implementation defined.
 The following restrictions apply to the \code{atomic} construct:
 
 \begin{itemize}
-\item At most one \code{seq\_cst} clause may appear on the construct.
+\item At most one \plc{memory-order-clause} may appear on the construct.
+
+\item If the \code{read} clause appears on the construct then
+\plc{memory-order-clause} must not be \code{acq\_rel} or \code{release}.
+
+\item If the \code{write} clause appears on the construct then
+\plc{memory-order-clause} must not be \code{acq\_rel} or \code{acquire}.
+
+\item If the \code{read}, \code{write}, and \code{capture} clauses do not
+appear on the construct then \plc{memory-order-clause} must not be \code{acq\_rel}
+or \code{acquire}.
 \end{itemize}
 
 \begin{ccppspecific}
@@ -1168,16 +1210,34 @@ stand-alone directive.
 The syntax of the \code{flush} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp flush \plc{[}(\plc{list})\plc{] new-line}
+\#pragma omp flush \plc{[memory-order-clause]} \plc{[}(\plc{list})\plc{] new-line}
 \end{boxedcode}
+\begin{samepage}
+where \plc{memory-order-clause} is one of the following:
+
+\begin{indentedcodelist}
+acq\_rel
+release
+acquire
+\end{indentedcodelist}
+\end{samepage}
 \end{ccppspecific}
 
 \begin{fortranspecific}
 The syntax of the \code{flush} construct is as follows:
 
 \begin{boxedcode}
-!\$omp flush \plc{[}(\plc{list})\plc{]}
+!\$omp flush \plc{[memory-order-clause]} \plc{[}(\plc{list})\plc{]}
 \end{boxedcode}
+\begin{samepage}
+where \plc{memory-order-clause} is one of the following:
+
+\begin{indentedcodelist}
+acq\_rel
+release
+acquire
+\end{indentedcodelist}
+\end{samepage}
 \end{fortranspecific}
 
 \binding
@@ -1194,6 +1254,15 @@ thread-visible data state of the program, as defined by the base language, is fl
 not return until the operation is complete for all specified list items. An implementation 
 may implement a \code{flush} with a list by ignoring the list, and treating it the same as a 
 \code{flush} without a list.
+
+If \plc{memory-order-clause} is not specified, the flush operation has the
+global, release, and acquire flush properties. If \plc{memory-order-clause} is
+\code{acq\_rel}, the flush operation has the release and acquire properties.
+If \plc{memory-order-clause} is \code{release}, the flush operation has the
+release flush property. If \plc{memory-order-clause} is \code{acquire}, the
+flush operation has the acquire flush property. The sync-set for a flush
+operation that arises from a \code{flush} construct is the same as its
+specified flush-set.
 
 \begin{ccppspecific}
 If a pointer is present in the list, the pointer itself is flushed, not the memory block to 
@@ -1274,6 +1343,9 @@ executed.
 \end{note}
 \bigskip
 
+Flush operations implied when executing an \code{atomic} region are described in
+Section \ref{subsec:atomic Construct}. 
+
 A \code{flush} region without a list is implied at the following locations:
 \begin{itemize}
 \item During a barrier region.
@@ -1284,22 +1356,11 @@ A \code{flush} region without a list is implied at the following locations:
 \item At entry to a \code{target enter data} region. 
 \item At exit from a \code{target exit data} region. 
 \item At exit from worksharing regions unless a \code{nowait} is present.
-\item At entry to and exit from the \code{atomic} operation (read, write, update, or capture) 
-performed in a sequentially consistent atomic region.
 \item During \code{omp\_set\_lock} and \code{omp\_unset\_lock} regions.
 \item During \code{omp\_test\_lock}, \code{omp\_set\_nest\_lock}, \code{omp\_unset\_nest\_lock} 
 and \code{omp\_test\_nest\_lock} regions, if the region causes the lock to be set or unset.
 \item Immediately before and immediately after every task scheduling point.
 \item During a \code{cancel} or \code{cancellation point} region, if the \plc{cancel-var} ICV is \plc{true} and cancellation has been activated.
-\end{itemize}
-
-A \code{flush} region with a list is implied at the following locations:
-\begin{itemize}
-\item At entry to and exit from the \code{atomic} operation (read, write, update, or capture) 
-performed in a non-sequentially consistent \code{atomic} region, where the list contains 
-only the storage location designated as x according to the description of the syntax of 
-the \code{atomic} construct in 
-\specref{subsec:atomic Construct}.
 \end{itemize}
 
 \begin{note}
@@ -1708,4 +1769,80 @@ type of x$_{i}$ without overflow.
 
 \item \code{ompt\_callback\_task\_dependence\_t}, see
 \specref{sec:ompt_callback_task_dependence_t}.
+\end{itemize}
+
+
+\subsection{Synchronization in OpenMP Regions}
+\label{subsec:Synchronization in OpenMP Regions}
+\index{synchronization in openmp regions}
+
+
+Synchronization between two threads is achieved by performing synchronizing
+flush operations.  Synchronization using atomic constructs or explicit flush
+operations in combination with non-sequentially consistent atomic constructs
+is described in Section \ref{subsec:The Flush Operation} and Section
+\ref{subsec:OpenMP Memory Consistency}. Synchronizing flush operations that
+are implied on other OpenMP regions are described in Section \ref{subsec:flush Construct}.
+These OpenMP regions provide the following synchronization
+behavior:
+
+\begin{itemize}
+    \item When executing a \code{barrier} region, each thread in the team
+	performs a release flush and an acquire flush, and the
+	behavior is as if each thread's release flush synchronizes with
+	every other thread's acquire flush.
+
+    \item When executing a \code{critical} region, each thread in a contention
+	group performs an acquire flush on entry to the \code{critical}
+	region and a release flush on exit from the \code{critical} region,
+	and the behavior is as if the release flush executed by one thread synchronizes
+	with the acquire flush executed by the next thread to execute the
+	\code{critical} region.
+
+    \item When executing a \code{taskwait} region, the behavior is as if each
+	remaining child task performs a release flush upon its completion
+	that synchronizes with an acquire flush performed during the
+	\code{taskwait} region.
+
+    \item When executing a \code{taskgroup} region, the behavior is as if each
+	remaining descendant task performs a release flush upon its
+	completion that synchronizes with an acquire flush performed on
+	exit from the \code{taskgroup} region.
+
+    \item When executing an \code{ordered} region that does not arise from
+	stand-alone \code{ordered} directive, a thread performs an acquire
+        flush on entry to the \code{ordered} region and a
+	release flush on exit from the \code{ordered} region,
+	and the behavior is as if the release flush executed by one thread synchronizes
+	with the acquire flush executed by the next thread to execute
+	the \code{ordered} region. 
+
+    \item When executing an \code{ordered} region that arises from a
+	stand-alone \code{ordered} directive, a release flush is performed
+	when the directive has a \code{depend} clause with a \code{source}
+	dependence-type, and an acquire flush is performed when the
+	directive has a \code{depend} clause with a \code{sink}
+	dependence-type. The behavior is as if the release flush
+	performed by the \code{ordered} region from a given source iteration
+	synchronizes with the acquire flush performed by all
+	\code{ordered} regions waiting for dependences on that iteration to be
+	satisfied.
+
+    \item When executing dependent sibling tasks, the behavior is as if each
+	release flush performed on completion of a task with
+	one or more dependent tasks synchronizes with the acquire flush
+	performed when scheduling its dependent tasks.
+
+    \item When executing an \code{omp\_unset\_lock} region that causes the
+	specified lock to be unset, a release flush is
+	performed that synchronizes with an acquire flush that
+	is performed by the next \code{omp\_set\_lock} or
+	\code{omp\_test\_lock} region that causes the specified lock to be set.
+
+    \item When executing an \code{omp\_unset\_nest\_lock} region that causes
+	the specified nested lock to be unset, a release flush 
+	is performed that synchronizes with an acquire flush
+	that is performed by the next \code{omp\_set\_nest\_lock} or
+	\code{omp\_test\_nest\_lock} region that causes the specified nested
+	lock to be set.
 \end{itemize}
