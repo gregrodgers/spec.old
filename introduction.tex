@@ -1540,19 +1540,19 @@ temporary view, unless it is forced to read from memory. The OpenMP flush operat
 enforces consistency between the temporary view and memory.
 
 The flush operation is applied to a set of variables called the
-\emph{flush-set}. Every flush operation also has an associated \emph{sync-set}
-that is either the same as its flush-set, consists of a single variable from
-its flush-set, or is empty. The flush operation may restrict reordering of
-memory operations that an implementation might otherwise do. For a given
-release flush, an implementation must not reorder after it any prior code for
-a memory operation or acquire flush on a variable in its flush-set, and it
-must also not reorder before it any subsequent writes to a variable in its
-sync-set.  Similarly, for a given acquire flush, an implementation must not
-reorder before it any subsequent code for a memory operation or release flush
-on a variable in its flush-set, and it must also not reorder after it any
-prior reads from a variable in its sync-set. All flushes occurring
-within an \code{atomic} region must be performed along with the atomic memory
-operation as a single atomic action.
+\emph{flush-set}. It also has an associated \emph{sync-set}
+containing a set of synchronization variables that may be used to synchronize
+it with another flush operation.  The flush operation may
+restrict reordering of memory operations that an implementation might
+otherwise do. For a given release flush, an implementation must not reorder
+after it any prior code for a memory operation or acquire flush on a variable
+in its flush-set, and it must also not reorder before it any subsequent writes
+to a variable in its sync-set.  Similarly, for a given acquire flush, an
+implementation must not reorder before it any subsequent code for a memory
+operation or release flush on a variable in its flush-set, and it must also
+not reorder after it any prior reads from a variable in its sync-set. All
+flushes occurring within an \code{atomic} region must be performed along with
+the atomic memory operation as a single atomic action.
 
 If a thread has performed a write to its temporary view of
 a shared variable since its last release flush of that variable, then when it
@@ -1573,21 +1573,6 @@ completion will be ordered in some sequential manner with respect to all other
 global flushes applied to the same variable. A global flush also imposes
 stronger ordering requirements for memory operations performed on variables in
 its flush-set, as described in the following section.
-
-Synchronization may only occur between a release flush and an acquire flush
-through a synchronization variable that is in the sync-sets of both flushes.
-For every variable in the sync-set of a release flush, there exists a
-\emph{release flush sequence} that is a sequence of consecutive modifications
-to the variable taken from its modification order. It is defined to be the
-maximal such sequence that is headed by a modification that follows the
-release flush in its thread's program order and contains only subsequent
-modifications performed on the same thread or read-modify-write atomic
-modifications performed by a different thread.  A release flush synchronizes
-with an acquire flush on a different thread if there exists a variable in the
-sync-sets of both flushes and the value written to it by some modification in
-a release flush sequence associated with the release flush is read by an
-access to the variable preceding the acquire flush in its thread's
-program order.
 
 Flush operations enable a program to provide a guarantee of consistency
 between a thread’s temporary view and memory. Therefore, flush operations can
@@ -1611,18 +1596,40 @@ order:
 OpenMP synchronization operations, described in 
 \specref{sec:Master and Synchronization Constructs and Clauses} and in \specref{sec:Lock Routines}, 
 are recommended for enforcing this order. Synchronization 
-through variables is possible but is not recommended because the proper timing of 
-flushes is difficult.
+through variables, described in \specref{subsec:happens-before}, is possible
+but is not recommended because the proper timing of flushes is difficult.
 \end{note}
 
 
 
+\subsection{Flush Synchronization and Happens Before}
+\label{subsec:happens-before}
 
+A synchronizable release flush may synchronize with a synchronizable acquire
+flush using a variable that is in the sync-sets of both flushes.
 
+For every variable in the sync-set of a release flush, there exists a
+\emph{release flush sequence} that is a sequence of consecutive modifications
+to the variable taken from its modification order. It is defined to be the
+maximal such sequence that is headed by a modification that follows the
+release flush in its thread's program order and contains only subsequent
+modifications performed on the same thread or read-modify-write atomic
+modifications performed by a different thread.  A release flush synchronizes
+with an acquire flush on a different thread if there exists a variable in the
+sync-sets of both flushes and the value written to it by some modification in
+a release flush sequence associated with the release flush is read by an
+access to the variable preceding the acquire flush in its thread's
+program order.
 
+\begin{note}
+The conditions in which a release flush synchronizes with an acquire flush
+are intended to match the conditions for when release operations
+synchronize with acquire operations in C11/C++11. A read-modify-write atomic
+modification includes all atomic update or atomic captured update operations
+specified with the \code{atomic} construct, as described in
+\specref{subsec:atomic Construct}.
+\end{note}
 
-\subsection{OpenMP Memory Consistency}
-\label{subsec:OpenMP Memory Consistency}
 If there exists a sequence of operations executed in a program where the
 following conditions are satisfied, each operation in the sequence
 \emph{happens before} all subsequent operations in the sequence:
@@ -1639,13 +1646,27 @@ synchronizes with, and both operations must flush a variable operated on by the
 initial operation in the sequence.
 \end{enumerate}
 
-Additionally, a variable with an initial value is treated as if the value is
+A variable with an initial value is treated as if the value is
 stored to the variable by an operation that happens before all operations
 occurring in the program. 
 
-Given the happens before relation as defined above and the restrictions in
-\specref{subsec:The Flush Operation} on reordering with respect to flush
-operations, OpenMP guarantees the following:
+\begin{note}
+The happens before relation as defined here differs from the definition of
+happens before in C11/C++11 in two respects. First, operations that are performed by
+the same thread but are not ordered through some intervening sequence of data
+dependences do not have a happens before order. A thread may observe any two
+such operations completing out of program order. Second, the happens before
+relation need not be transitive, due to the presence of synchronizing flushes
+with explicit flush-sets. However, the happens before relation in any program
+which does not use such flushes will be transitive (i.e. if X happens before Y
+and Y happens before Z, then X happens before Z).
+\end{note}
+
+\subsection{OpenMP Memory Consistency}
+\label{subsec:OpenMP Memory Consistency}
+Given the happens before relation defined in \specref{subsec:happens-before}
+and the restrictions in \specref{subsec:The Flush Operation} on reordering
+with respect to flush operations, OpenMP guarantees the following:
 
 \begin{itemize}
 \item If the intersection of the flush-sets of two global flushes performed by
