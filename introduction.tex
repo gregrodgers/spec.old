@@ -691,11 +691,16 @@ The set of variables that a given \emph{flush} operation is applied to.
 \glossaryterm{flush property}
 \glossarydefstart
 Properties that determine the manner in which a \emph{flush} operation enforces
-memory consistency. These properties are: release, acquire, and global.
+memory consistency. These properties are: global, release, and acquire.
 
 \begin{quote}
 COMMENT: A given \emph{flush} operation can have one or more \emph{flush properties}.
 \end{quote}
+\glossarydefend
+
+\glossaryterm{global flush}
+\glossarydefstart
+A \emph{flush} operation that has the global \emph{flush property}.
 \glossarydefend
 
 \glossaryterm{release flush}
@@ -706,11 +711,6 @@ A \emph{flush} operation that has the release \emph{flush property}.
 \glossaryterm{acquire flush}
 \glossarydefstart
 A \emph{flush} operation that has the acquire \emph{flush property}.
-\glossarydefend
-
-\glossaryterm{global flush}
-\glossarydefstart
-A \emph{flush} operation that has the global \emph{flush property}.
 \glossarydefend
 
 \glossaryterm{sync-set}
@@ -1541,18 +1541,28 @@ enforces consistency between the temporary view and memory.
 
 The flush operation is applied to a set of variables called the
 \emph{flush-set}. It also has an associated \emph{sync-set}
-containing a set of synchronization variables that may be used to synchronize
-it with another flush operation.  The flush operation may
-restrict reordering of memory operations that an implementation might
-otherwise do. For a given release flush, an implementation must not reorder
-after it any prior code for a memory operation or acquire flush on a variable
-in its flush-set, and it must also not reorder before it any subsequent writes
-to a variable in its sync-set.  Similarly, for a given acquire flush, an
-implementation must not reorder before it any subsequent code for a memory
-operation or release flush on a variable in its flush-set, and it must also
-not reorder after it any prior reads from a variable in its sync-set. All
-flushes occurring within an \code{atomic} region must be performed along with
-the atomic memory operation as a single atomic action.
+containing a set of synchronization variables that may be used to force
+synchronization between the flush operation and another flush operation.  A flush operation
+must be a release flush, an acquire flush, or both a release flush and an
+acquire flush; accordingly, it restricts reordering of memory operations that
+an implementation might otherwise do as follows:
+
+\begin{itemize}
+
+\item An implementation must not reorder after a release flush any prior code
+    that reads or write to a variable in its flush-set, and it must also not
+    reorder before a release flush any subsequent code that writes to a
+    variable in its sync-set.
+
+\item An implementation must not reorder before an acquire flush any
+    subsequent code that reads or writes to a variable in its flush-set, and
+    it must also not reorder after an acquire flush any prior code that reads
+    from a variable in its sync-set.
+
+\item An implementation must not reorder before an acquire flush any
+    subsequent release flush applied to a variable in its flush-set.
+
+\end{itemize}
 
 If a thread has performed a write to its temporary view of
 a shared variable since its last release flush of that variable, then when it
@@ -1560,7 +1570,7 @@ executes another release flush of the variable, the completion of the flush
 ensures the written value propagates to memory so that it can be read by
 another thread.  If a thread performs multiple writes to the same variable
 between two release flushes of that variable, the release flush ensures that
-it is the value of the last write that propagates to memory.  If an acquire flush
+it is the value of the last write that propagates to memory.  An acquire flush
 of a variable executed by a thread causes its temporary view of the variable
 to be discarded, so that if its next memory operation for that variable is a
 read, then the thread will read from memory when it may again capture the
@@ -1572,10 +1582,10 @@ If a flush operation is a global flush applied to a given variable, its
 completion will be ordered in some sequential manner with respect to all other
 global flushes applied to the same variable. A global flush also imposes
 stronger ordering requirements for memory operations performed on variables in
-its flush-set, as described in the following section.
+its flush-set, as described in \specref{subsec:OpenMP Memory Consistency}.
 
 Flush operations enable a program to provide a guarantee of consistency
-between a thread’s temporary view and memory. Therefore, flush operations can
+between a thread’s temporary view and memory. Therefore, the flush operation can
 be used to guarantee that a value written to a variable by one thread may be
 read by a second thread. To accomplish this, the programmer must ensure that
 the second thread has not written to the variable since its last flush of the
@@ -1624,7 +1634,7 @@ program order.
 \begin{note}
 The conditions in which a release flush synchronizes with an acquire flush
 are intended to match the conditions for when release operations
-synchronize with acquire operations in C11/C++11. A read-modify-write atomic
+synchronize with acquire operations in C++11 and C11. A read-modify-write atomic
 modification includes all atomic update or atomic captured update operations
 specified with the \code{atomic} construct, as described in
 \specref{subsec:atomic Construct}.
@@ -1652,14 +1662,16 @@ occurring in the program.
 
 \begin{note}
 The happens before relation as defined here differs from the definition of
-happens before in C11/C++11 in two respects. First, operations that are performed by
+happens before in C++11 and C11 in two respects. First, operations that are performed by
 the same thread but are not ordered through some intervening sequence of data
 dependences do not have a happens before order. A thread may observe any two
 such operations completing out of program order. Second, the happens before
 relation need not be transitive, due to the presence of synchronizing flushes
 with explicit flush-sets. However, the happens before relation in any program
-which does not use such flushes will be transitive (i.e. if X happens before Y
-and Y happens before Z, then X happens before Z).
+which does not use such flushes will be transitive such that, for any
+operations \emph{X}, \emph{Y}, and \emph{Z}, if \emph{X} happens before
+\emph{Y} and \emph{Y} happens before \emph{Z}, then \emph{X} happens before
+\emph{Z}.
 \end{note}
 
 \subsection{OpenMP Memory Consistency}
