@@ -1,0 +1,118 @@
+\ompdsection{Activating a Third-Party Tool}
+\label{sec:ompd:activating}
+
+The third-party tool and the OpenMP program the tool is to examine
+exist as separate processes.
+Some coordination is required between the OpenMP runtime resident
+in the OpenMP program and the external tool if OMPD is to be used
+successfully.
+
+\subsection{Enabling the Runtime for OMPD}
+\label{sec:ompd:enabling-ompd}
+
+In order to support external tools, the OpenMP runtime may need to collect
+and maintain information that it might otherwise not do, perhaps
+for performance reasons, or because it is not otherwise needed.
+The OpenMP runtime will collect whatever information is necessary
+to support OMPD if:
+\begin{enumerate}
+\item
+  the environment variable \code{OMP\_DEBUG} is set to \code{on}
+\item
+  the OpenMP program calls the
+  \code{void omp\_debug\_enable~(~void~)}
+  function defined in the OpenMP runtime.
+  This function may be called by the main executable, or any of the
+  shared libraries the executable loads, and may be made in an
+  initializer executed when a shared library is loaded
+  (\textit{e.g.}, those in the \code{.init} section of an ELF DLL).
+  However, if it is called, it must be called before the OpenMP program
+  executes its first OMP construct.
+\end{enumerate}
+These methods are equivalent, and either can be used.
+In some cases it may not be possible to control an OpenMP program's
+environment.
+\code{omp\_debug\_enable} allows an OpenMP program itself to turn on
+data collection for OMPD.
+Allowing the function to be called from an initializer allows
+the call to be positioned in an otherwise empty DLL that the
+programmer can link with the OpenMP program.
+This leaves the OpenMP program code unmodified.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{OMP\_DEBUG}, \specref{sec:OMP_DEBUG}
+\item
+  \code{omp\_debug\_enable}, \specref{sec:ompd:omp_debug_enable}
+\end{itemize}
+
+\subsection{Finding the OMPD plugin}
+\label{sec:ompd:finding-the-ompd}
+
+An OpenMP runtime will have one or more matching OMPD plugins for third-party
+tools to use.
+The third-party tool must be able to locate the right plugin to use
+for the OpenMP program it is examining.
+
+As part of the OpenMP interface, OMPD requires that the OpenMP
+runtime system provides a public variable \code{ompd\_dll\_locations},
+which is an \code{argv}-style vector of filename string pointers that
+provides the pathnames(s) of any compatible OMPD plugin implementations.
+\code{ompd\_dll\_locations} must have \code{C} linkage.
+The third-party tool uses the name of the variable verbatim,
+and in particular, will not apply any name mangling before
+performing the look up.
+The pathnames may be relative or absolute.
+
+\code{ompd\_dll\_locations} points to a NULL-terminated
+vector of zero or more NULL-terminated pathname strings.
+There are no filename conventions for pathname strings.
+The last entry in the vector is NULL.
+The vector of string pointers must be fully initialized \emph{before}
+\code{ompd\_dll\_locations} is set to a non-NULL value,
+such that if the third-party tool, such as a debugger,
+stops execution of the OpenMP program at any point where
+\code{ompd\_dll\_locations} is non-NULL,
+then the vector of strings it points to is valid and complete.
+
+The programming model or architecture of the third-party tool (and hence
+that of the required OMPD) might not match that of the OpenMP program
+being examined.
+It is the responsibility of the third-party tool to interpret the contents
+of \code{ompd\_dll\_locations} to find a suitable OMPD that matches
+its own architectural characteristics.
+On platforms that support different programming models
+(\textit{e.g.}, 32- v. 64-bit), OpenMP implementers are encouraged
+to provide OMPD implementations for all models, and which can handle
+OpenMP programs of any model.
+Thus, for example, a 32-bit debugger using OMPD should be able
+to debug a 64-bit OpenMP program
+by loading a 32-bit OMPD that can manage a 64-bit OpenMP runtime.
+
+Depending on how the OpenMP runtime is implemented, \code{ompd\_dll\_locations}
+may not be a static variable, and therefore needs to be initialized
+at runtime.
+The OpenMP runtime notifies third-party tools that \code{ompd\_dll\_locations}
+is valid by allowing execution to pass through a location identified
+by the symbol \code{ompd\_dll\_locations\_valid}.
+This symbol must have external, \code{C}, linkage.
+Conceptually, \code{ompd\_dll\_locations\_valid} has the signature
+\code{void ompd\_dll\_locations\_valid~(~void~);}.
+If \code{ompd\_dll\_locations} is NULL, a third-party tool like a debugger
+can place a breakpoint at \code{ompd\_dll\_locations\_valid} to be notified
+when the vector of name strings has been setup, and is valid.
+
+Note that \code{ompd\_dll\_locations\_valid} need not be a function,
+and can instead be a labeled location in the code through which
+execution passes once the vector is valid.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd\_dll\_locations}, \specref{sec:ompd:ompd_dll_locations}
+\item
+  \code{ompd\_dll\_locations\_valid}, \specref{sec:ompd:ompd_dll_locations_valid}
+\end{itemize}
+
+
