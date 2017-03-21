@@ -2274,6 +2274,11 @@ unmapping the list item from the device data environment it can cause an
 assignment to occur between the original list item and the corresponding list
 item as detailed below.
 
+If a list item has original storage that is fully contained by the original
+storage of a previous list item that has a corresponding list item present in
+the device data environment, the behavior is as if the list item was replaced
+in the \code{map} clause with the previous list item.
+
 Each \plc{map-type}, with an optional \plc{map-type-modifier}, has
 the following precedence ordering as indicated by the $\prec$ operator:
 
@@ -2505,7 +2510,8 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \item The new list item becomes the corresponding list item to the original list item in the device data environment.
 \item The corresponding list item has a reference count that is initialized to zero. 
 \end{enumerate}
-\item The corresponding list item's reference count is incremented by one.
+\item The corresponding list item's reference count is incremented by one if
+    it has not yet been incremented on entry to the region.
 \item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{to} or \code{tofrom}, then the corresponding list item is assigned the value of the original list item. 
@@ -2524,7 +2530,9 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \item If the corresponding list item's reference count is finite, then:
 \begin{enumerate}
 %\item the corresponding list item's reference count is decremented by one.
-\item If the \plc{map-type} is not \code{delete}, then the corresponding list item's reference count is decremented by one.
+\item If the \plc{map-type} is not \code{delete}, then the corresponding list
+    item's reference count is decremented by one if it has not yet been
+    decremented on exit from the region.
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
 \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
@@ -2580,21 +2588,32 @@ The callback occurs in the context of the target task.  The callback has type si
 
 \item If a list item is an array section, it must specify contiguous storage.
 
-\item Two list items appearing in \code{map} clauses on the same construct
-    must not be array sections having base expressions that are lvalues with
-    the same address, except that list items indicating identical original
-    storage are permitted to appear once in a \code{map} clause with the
-    \code{from} \plc{map-type} and once in a \code{map} clause with the
-    \code{delete} \plc{map-type}.
+%\item Two list items appearing in \code{map} clauses on the same construct
+%    must not be array sections having base expressions that are lvalues with
+%    the same address, except that list items indicating identical original
+%    storage are permitted to appear once in a \code{map} clause with the
+%    \code{from} \plc{map-type} and once in a \code{map} clause with the
+%    \code{delete} \plc{map-type}.
 
-\item Two list items appearing in \code{map} clauses on the same construct
-    must not be array items derived from the same variable of array type,
-    except that list items indicating identical original storage are permitted
-    to appear once in a \code{map} clause with the \code{from} \plc{map-type}
-    and once in a \code{map} clause with the \code{delete} \plc{map-type}.
+\item If two different variables are list items appearing in \code{map} clauses on
+    the same construct, they must not share storage.
 
-\item If two list item of \code{map} clauses on the same construct share
-    original storage, they must be the same list item.
+\item If two different array items are list items appearing in \code{map} clauses on
+    the same construct and they are derived from the same variable of array
+    type, they must indicate identical storage.
+
+\item If two different array items are list items appearing in \code{map} clauses on
+    the same construct and they share storage, they must indicate identical
+    storage.
+
+%\item Two list items appearing in \code{map} clauses on the same construct
+%    must not be array items derived from the same variable of array type,
+%    except that list items indicating identical original storage are permitted
+%    to appear once in a \code{map} clause with the \code{from} \plc{map-type}
+%    and once in a \code{map} clause with the \code{delete} \plc{map-type}.
+
+%\item If two list item of \code{map} clauses on the same construct share
+%    original storage, they must be the same list item.
 
 \item If any part of the original storage of a list item with a predetermined or
 explicit data-mapping attribute has corresponding storage in the device data
