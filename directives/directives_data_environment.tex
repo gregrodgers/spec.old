@@ -2227,80 +2227,89 @@ and \plc{map-type-modifier} is \code{always}.
 %
 %\end{itemize}
 
-The \code{map} clause determines whether each of its list items will have a
-corresponding list item in the device data environment of the device specified
-by the construct on which it is present.
+The \code{map} clause on a given construct controls the mapping between a list
+item and its corresponding list item in the device data environment of the
+device specified by the construct.
 
 The list items that appear in a \code{map} clause may include array sections and structure elements.
 
-The \code{target} and \code{target}~\code{data} constructs permit
-\code{alloc}, \code{to}, \code{from}, and \code{tofrom} to be the specified
-\plc{map-type} for a \code{map} clause; if a \plc{map-type} is not specified,
-the \plc{map-type} defaults to \code{tofrom}.  The
-\code{target}~\code{enter}~\code{data} construct permits \code{alloc} and
-\code{to} to be the specified \plc{map-type} for a \code{map} clause.  The
+The original and corresponding list items may share storage such that writes to either
+item by one task followed by a read or write of the other item by another task without
+intervening synchronization can result in data races.
+
+The \plc{map-type} and \plc{map-type-modifier} specify the effect of the
+\code{map} clause, as detailed later in this section.  The \code{target} and
+\code{target}~\code{data} constructs permit \code{alloc}, \code{to},
+\code{from}, and \code{tofrom} to be the specified \plc{map-type} for a
+\code{map} clause; if a \plc{map-type} is not specified, the \plc{map-type}
+defaults to \code{tofrom}.  The \code{target}~\code{enter}~\code{data}
+construct permits \code{alloc} and \code{to} to be the specified
+\plc{map-type} for a \code{map} clause.  The
 \code{target}~\code{exit}~\code{data} construct permits \code{release},
 \code{from}, and \code{delete} to be the specified \plc{map-type} for a
 \code{map} clause.  An \code{always} \plc{map-type-modifier} may appear with
-the the \code{to}, \code{from}, or \code{tofrom} \plc{map-type} in a
+the \code{to}, \code{from}, or \code{tofrom} \plc{map-type} in a
 \code{map} clause.
 
 
-%If a list item appears in a \code{map} clause with the \code{tofrom}
-%\plc{map-type}, the behavior is as if, instead, the list item appeared in a
-%\code{map} clause with the \code{to} \plc{map-type} and once in a \code{map}
-%clause with the \code{from} \plc{map-type}. If the \code{always}
-%\plc{map-type-modifier} was specified, the behavior is as if it is applied to
-%both \code{map} clauses.
+%The \plc{map-type} and \plc{map-type-modifier} specify the effect of the
+%\code{map} clause.  For each target device, a \emph{reference count}
+%associated with the list item indicates the number of times the list item has
+%been mapped to a device data environment minus the number of times the list
+%item has been unmapped from the device data environment. The list item will
+%have a corresponding list item in the device data environment as long as its
+%reference count is greater than zero.  The \code{alloc} \plc{map-type} maps
+%the list item to the device on entry to the \code{target},
+%\code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} region,
+%and it causes the list item to be unmapped on exit from the \code{target} or
+%\code{target}~\code{data} region. The \code{release} \plc{map-type} unmaps the
+%list item from the device on exit from the
+%\code{target}~\code{exit}~\code{data} region. The \code{delete} \plc{map-type}
+%ensures that the corresponding list item, if it exists, is removed from the
+%device data environment on exit from the \code{target}~\code{exit}~\code{data}
+%region, and its reference count is set to zero. If the \code{to}, \code{from},
+%and \code{tofrom} \plc{map-type} is specified, in addition to mapping or
+%unmapping the list item from the device data environment it can cause an
+%assignment to occur between the original list item and the corresponding list
+%item as detailed below.
 
-The \plc{map-type} and \plc{map-type-modifier} specify the effect of the
-\code{map} clause.  For each target device, a \emph{reference count}
-associated with the list item indicates the number of times the list item has
-been mapped to a device data environment minus the number of times the list
-item has been unmapped from the device data environment. The list item will
-have a corresponding list item in the device data environment as long as its
-reference count is greater than zero.  The \code{alloc} \plc{map-type} maps
-the list item to the device on entry to the \code{target},
-\code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} region,
-and it causes the list item to be unmapped on exit from the \code{target} or
-\code{target}~\code{data} region. The \code{release} \plc{map-type} unmaps the
-list item from the device on exit from the
-\code{target}~\code{exit}~\code{data} region. The \code{delete} \plc{map-type}
-ensures that the corresponding list item, if it exists, is removed from the
-device data environment on exit from the \code{target}~\code{exit}~\code{data}
-region, and its reference count is set to zero. If the \code{to}, \code{from},
-and \code{tofrom} \plc{map-type} is specified, in addition to mapping or
-unmapping the list item from the device data environment it can cause an
-assignment to occur between the original list item and the corresponding list
-item as detailed below.
+%Each \plc{map-type}, with an optional \plc{map-type-modifier}, has the
+%following precedence ordering as indicated by the $\prec$ operator:
+%
+%\begin{itemize}
+%    \item \code{alloc} $\prec$ \code{to}
+%    \item \code{release} $\prec$ \code{from}, \code{delete}
+%    \item \code{to} $\prec$ \code{tofrom}, \code{always}~\code{to}, \code{always}~\code{tofrom}
+%    \item \code{from} $\prec$ \code{tofrom},  \code{always}~\code{from}, \code{always}~\code{tofrom}
+%    \item \code{tofrom} $\prec$ \code{always}~\code{tofrom}
+%    \item \code{always}~\code{to} $\prec$ \code{always}~\code{tofrom}
+%    \item \code{always}~\code{from} $\prec$ \code{always}~\code{tofrom}
+%\end{itemize}
+%
+%A list item is treated as if it did not appear in the \code{map} clause if the
+%specified \plc{map-type} and optional \plc{map-type-modifier} has less
+%precedence than the \plc{map-type} and optional \plc{map-type-modifier}
+%specified in another \code{map} clause on the same construct in which the list
+%item also appears.
 
-If a list item has original storage that is fully contained by the original
-storage of a previous list item that has a corresponding list item present in
-the device data environment, the behavior is as if the list item was replaced
-in the \code{map} clause with the previous list item.
-
-Each \plc{map-type}, with an optional \plc{map-type-modifier}, has
-the following precedence ordering as indicated by the $\prec$ operator:
-
+If a list item appears in a \code{map} clause with the \code{tofrom}
+\plc{map-type}, then:
 \begin{itemize}
-    \item \code{alloc} $\prec$ \code{to}
-    \item \code{release} $\prec$ \code{from}, \code{delete}
-    \item \code{to} $\prec$ \code{tofrom}, \code{always}~\code{to}, \code{always}~\code{tofrom}
-    \item \code{from} $\prec$ \code{tofrom},  \code{always}~\code{from}, \code{always}~\code{tofrom}
-    \item \code{tofrom} $\prec$ \code{always}~\code{tofrom}
-    \item \code{always}~\code{to} $\prec$ \code{always}~\code{tofrom}
-    \item \code{always}~\code{from} $\prec$ \code{always}~\code{tofrom}
+    \item If the \code{always} \plc{map-type-modifier} appears in the clause, the
+        behavior is as if the list item appears in a \code{map} clause with the
+        \code{to} \plc{map-type} and \code{always} \plc{map-type-modifier} and
+        in a \code{map} clause with the \code{from} \plc{map-type} and
+        \code{always} \plc{map-type-modifier}.
+
+    \item If the \code{always} \plc{map-type-modifier} does not appear in the
+        clause, the behavior is as if the list item appears in a \code{map}
+        clause with the \code{to} \plc{map-type} and in a \code{map} clause
+        with the \code{from} \plc{map-type}.
 \end{itemize}
 
-A list item is treated as if it did not appear in the \code{map} clause if the
-specified \plc{map-type} and optional \plc{map-type-modifier} has less
-precedence than the \plc{map-type} and optional \plc{map-type-modifier}
-specified in another \code{map} clause on the same construct in which the list
-item also appears.
-
-If a list item appears more than once in \code{map} clauses on the same
-construct having the same \plc{map-type} and optional \plc{map-type-modifier},
-all but one of the appearances are ignored.
+%If a list item appears more than once in \code{map} clauses on the same
+%construct having the same \plc{map-type} and optional \plc{map-type-modifier},
+%all but one of the appearances are ignored.
 
 %If the same list item appears in a \code{map} clause with the \code{to}
 %\plc{map-type} and in a \code{map} clause with the \code{from} \plc{map-type}
@@ -2315,6 +2324,10 @@ If the same list item appears in a \code{map} clause with the \code{from}
 the \code{from} \plc{map-type} is ordered before the effect of the \code{map}
 clause with the \code{delete} \plc{map-type}.
 
+If the same list item appears in a \code{map} clause with the \code{release}
+\plc{map-type} and in a \code{map} clause with the \code{from}
+\plc{map-type}, the behavior is as if the list item is ignored in the
+\code{map} clause with the \code{release} \plc{map-type}.
 
 If a list item in a \code{map} clause is a variable of structure type then it
 is treated as if the list item did not appear and instead each structure
@@ -2324,32 +2337,32 @@ element that is part of the structure variable is a list item in the clause.
 %structure elements from the containing structure variable form a \plc{structure
 %sibling list}.  
 
-If a list item in a \code{map} clause is a structure element that is part of a
-given structure variable, the list item has an associated \plc{structure
-sibling list} consisting of all other structure elements that are part of the
-same structure variable, referred to as sibling structure elements. For each
-sibling structure element in the structure sibling list that
-has a reference count greater than zero when the construct on which the
-\code{map} clause appears is encountered:
-\begin{itemize}
-    \item If the construct is \code{target}, \code{target}~\code{data}, or
-        \code{target}~\code{enter}~\code{data} and the sibling structure element does
-        not appear as a list item in a \code{map} clause on the construct, it
-        is treated as if it is a list item in a \code{map} clause on the
-        construct with the \code{alloc} \plc{map-type}.
-    \item If the construct is \code{target}~\code{exit}~\code{data} and the
-        sibling structure element does not appear as a list item in a \code{map}
-        clause on the construct:
-        \begin{itemize}
-            \item If the list item appears in a \code{map} clause with the
-                \code{delete} \plc{map-type}, the sibling structure element is
-                treated as if it appears in the same \code{map} clause.
-            \item If the list item does not appear in a \code{map} clause with
-                the \code{delete} \plc{map-type}, the sibling structure
-                element is treated as if it appears in a \code{map} clause
-                with the \code{release} \plc{map-type}.
-        \end{itemize}
-\end{itemize}
+%If a list item in a \code{map} clause is a structure element that is part of a
+%given structure variable, the list item has an associated \plc{structure
+%sibling list} consisting of all other structure elements that are part of the
+%same structure variable, referred to as sibling structure elements. For each
+%sibling structure element in the structure sibling list that
+%has a reference count greater than zero when the construct on which the
+%\code{map} clause appears is encountered:
+%\begin{itemize}
+%    \item If the construct is \code{target}, \code{target}~\code{data}, or
+%        \code{target}~\code{enter}~\code{data} and the sibling structure element does
+%        not appear as a list item in a \code{map} clause on the construct, it
+%        is treated as if it is a list item in a \code{map} clause on the
+%        construct with the \code{alloc} \plc{map-type}.
+%    \item If the construct is \code{target}~\code{exit}~\code{data} and the
+%        sibling structure element does not appear as a list item in a \code{map}
+%        clause on the construct:
+%        \begin{itemize}
+%            \item If the list item appears in a \code{map} clause with the
+%                \code{delete} \plc{map-type}, the sibling structure element is
+%                treated as if it appears in the same \code{map} clause.
+%            \item If the list item does not appear in a \code{map} clause with
+%                the \code{delete} \plc{map-type}, the sibling structure
+%                element is treated as if it appears in a \code{map} clause
+%                with the \code{release} \plc{map-type}.
+%        \end{itemize}
+%\end{itemize}
 
 % If a list item in a \code{map} clause is a structure element then all the other
 % structure elements from the containing structure variable form a \plc{structure sibling list}.
@@ -2497,26 +2510,32 @@ variable is modified on the device, the behavior is unspecified.
 
 \end{ccppspecific}
 
-
-The original and corresponding list items may share storage such that writes to either
-item by one task followed by a read or write of the other item by another task without
-intervening synchronization can result in data races.
+The \emph{corresponding enclosing list item} of a given list item is the
+corresponding list item to a mapped list item, where the given list item is
+part of the mapped list item but the mapped list item is not part of another
+mapped list item.
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs as if performed as a single atomic operation:
 \begin{enumerate}
-\item If a corresponding list item of the original list item is not present in the device data environment, then:
+\item If a corresponding enclosing list item of the original list item is present in the device data environment, then:
+\begin{enumerate}
+    \item The part of the corresponding enclosing list item that has corresponding storage to the original
+        list item's storage becomes the corresponding list item to the original list item.
+\end{enumerate}
+\item If a corresponding enclosing list item of the original list item is not present in the device data environment, then:
 \begin{enumerate}
 \item A new list item with language-specific attributes is derived from the original list item and created in the device data environment.
-\item The new list item becomes the corresponding list item to the original list item in the device data environment.
-\item The corresponding list item has a reference count that is initialized to zero. 
+\item The new list item becomes the corresponding list item to the original list item in the device data environment and is treated as the corresponding
+    enclosing list item of the original list item.
+\item The corresponding enclosing list item has a reference count that is initialized to zero. 
 \end{enumerate}
-\item The corresponding list item's reference count is incremented by one if
+\item The corresponding enclosing list item's reference count is incremented by one if
     it has not yet been incremented on entry to the region.
-\item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
+\item If the corresponding enclosing list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{to} or \code{tofrom}, then the corresponding list item is assigned the value of the original list item. 
 \end{enumerate}
-\item If the corresponding list item's reference count is one, then:
+\item If the corresponding enclosing list item's reference count is one, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
 \end{enumerate}
@@ -2524,22 +2543,24 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs as if performed as a single atomic operation:
 \begin{enumerate}
-\item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
-\item If a corresponding list item of the original list item is present in the device data environment, then:
+\item If a corresponding enclosing list item of the original list item is not present in the device data environment, then the list item is ignored.
+\item If a corresponding enclosing list item of the original list item is present in the device data environment, then:
 \begin{enumerate}
-\item If the corresponding list item's reference count is finite, then:
+    \item The part of the corresponding enclosing list item that has corresponding storage to the original
+        list item's storage becomes the corresponding list item to the original list item.
+\item If the corresponding enclosing list item's reference count is finite, then:
 \begin{enumerate}
 %\item the corresponding list item's reference count is decremented by one.
-\item If the \plc{map-type} is not \code{delete}, then the corresponding list
-    item's reference count is decremented by one if it has not yet been
+\item If the \plc{map-type} is not \code{delete}, then the corresponding
+    enclosing list item's reference count is decremented by one if it has not yet been
     decremented on exit from the region.
-\item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
+\item If the \plc{map-type} is \code{delete}, then the corresponding enclosing list item's reference count is set to zero. 
 \end{enumerate}
-\item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
+\item If the corresponding enclosing list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{from} or \code{tofrom} and the corresponding list item is not an attached corresponding pointer, then the original list item is assigned the value of the corresponding list item. 
 \end{enumerate}
-\item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
+\item If the corresponding enclosing list item's reference count is zero, then the corresponding enclosing list item is removed from the device data environment 
 \end{enumerate}
 \end{enumerate}
 
