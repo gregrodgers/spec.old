@@ -139,10 +139,10 @@ multiple associated \plc{for-loops} are lastprivate.
 \item Variables with static storage duration that are declared in a scope inside the construct 
 are shared.
 
-\item It an array section is a list item in a \code{map} clause on the
-\code{target} constructr, the array section is derived from a variable for
-which the type is pointer and that variable is not present in the device data
-environment then the variable is firstprivate
+\item If an array section is a list item in a \code{map} clause on the
+\code{target} construct, the base expression of the array section is a scalar
+variable for which the type is pointer, and that variable does not appear in a
+\code{map} clause on the construct then the variable is firstprivate.
 
 \end{itemize}
 \end{ccppspecific}
@@ -2392,35 +2392,35 @@ item by one task followed by a read or write of the other item by another task w
 intervening synchronization can result in data races.
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs as if performed as a single atomic operation:
+
+% allocate storage
 \begin{enumerate}
 \item If a corresponding list item of the original list item is not present in the device data environment, then:
 \begin{enumerate}
 \item A new list item with language-specific attributes is derived from the original list item and created in the device data environment.
 \item The new list item becomes the corresponding list item to the original list item in the device data environment.
 \item The corresponding list item has a reference count that is initialized to zero. 
+\item The value of the corresponding list item is undefined.
 \end{enumerate}
 
+% incremenent the reference counter
 \item If the corresponding list item's reference count was not already
-incremented because of the effects of another \code{map} clause on the
+incremented because of the effects of a \code{map} clause on the
 construct then:
 \begin{enumerate}
 \item The corresponding list item's reference count is incremented by one
 \end{enumerate}
 
-\item If the corresponding list item was not already assigned the value of the
-the original list item because of the effects of another \code{map} clause on
-the construct then:
-\begin{enumerate}
+% assign the corresponding variable
 \item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{to} or \code{tofrom}, then the
     corresponding list item is assigned the value of the original list item.
 \end{enumerate}
-\item If the corresponding list item's reference count is one, then:
-\begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
-\end{enumerate}
-\end{enumerate}
+%\item If the corresponding list item's reference count is one, then:
+%\begin{enumerate}
+%\item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
+%\end{enumerate}
 
 \end{enumerate}
 
@@ -2429,30 +2429,31 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
 \item If a corresponding list item of the original list item is present in the device data environment, then:
 \begin{enumerate}
+
+% decrement the ref count
 \item If the corresponding list item's reference count is finite, then:
 \begin{enumerate}
 %\item the corresponding list item's reference count is decremented by one.
 \item If the corresponding list item's reference count was not already
-decremented because of the effects of another \code{map} clause on the
+decremented because of the effects of a \code{map} clause on the
 construct then:
 \begin{enumerate}
 \item If the \plc{map-type} is not \code{delete}, then the corresponding list
-    item's reference count is decremented by one, if it has not yet been
-    updated on exit from the region.
+    item's reference count is decremented by one.
 \end{enumerate}
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
+
+% assign the original variable
 \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
-\item If the orignal list item was not already assigned the value of the the
-corresponding list item because of the effects of another \code{map} clause on
-the construct then:
+\item If the \plc{map-type} is \code{from} or \code{tofrom} then:
 \begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{tofrom} and the
-    corresponding list item is not an attached corresponding pointer, then the
-    original list item is assigned the value of the corresponding list item.
+If the corresponding list item is not an attached corresponding pointer, then the original list item is assigned the value of the corresponding list item.
 \end{enumerate}
 \end{enumerate}
+
+% release the storage
 \item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
 \end{enumerate}
 \end{enumerate}
