@@ -139,6 +139,11 @@ multiple associated \plc{for-loops} are lastprivate.
 \item Variables with static storage duration that are declared in a scope inside the construct 
 are shared.
 
+\item It an array section is a list item in a \code{map} clause on the
+\code{target} constructr, the array section is derived from a variable for
+which the type is pointer and that variable is not present in the device data
+environment then the variable is firstprivate
+
 \end{itemize}
 \end{ccppspecific}
 
@@ -2394,18 +2399,29 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \item The new list item becomes the corresponding list item to the original list item in the device data environment.
 \item The corresponding list item has a reference count that is initialized to zero. 
 \end{enumerate}
-\item The corresponding list item's reference count is incremented by one, if
-    it has not yet been updated on entry to the region.
+
+\item If the corresponding list item's reference count was not already
+incremented because of the effects of another \code{map} clause on the
+construct then:
+\begin{enumerate}
+\item The corresponding list item's reference count is incremented by one
+\end{enumerate}
+
+\item If the corresponding list item was not already assigned the value of the
+the original list item because of the effects of another \code{map} clause on
+the construct then:
+\begin{enumerate}
 \item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{to} or \code{tofrom}, then the
-    corresponding list item is assigned the value of the original list item,
-    if it has not yet been assigned to on entry to the region.
+    corresponding list item is assigned the value of the original list item.
 \end{enumerate}
 \item If the corresponding list item's reference count is one, then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
 \end{enumerate}
+\end{enumerate}
+
 \end{enumerate}
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs as if performed as a single atomic operation:
@@ -2416,17 +2432,26 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 \item If the corresponding list item's reference count is finite, then:
 \begin{enumerate}
 %\item the corresponding list item's reference count is decremented by one.
+\item If the corresponding list item's reference count was not already
+decremented because of the effects of another \code{map} clause on the
+construct then:
+\begin{enumerate}
 \item If the \plc{map-type} is not \code{delete}, then the corresponding list
     item's reference count is decremented by one, if it has not yet been
     updated on exit from the region.
+\end{enumerate}
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
 \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
+\item If the orignal list item was not already assigned the value of the the
+corresponding list item because of the effects of another \code{map} clause on
+the construct then:
+\begin{enumerate}
 \item If the \plc{map-type} is \code{from} or \code{tofrom} and the
     corresponding list item is not an attached corresponding pointer, then the
-    original list item is assigned the value of the corresponding list item,
-    if it has not yet been assigned to on exit from the region. 
+    original list item is assigned the value of the corresponding list item.
+\end{enumerate}
 \end{enumerate}
 \item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
 \end{enumerate}
@@ -2479,9 +2504,12 @@ The callback occurs in the context of the target task.  The callback has type si
 
 \item If a list item is an array section, it must specify contiguous storage.
 
-\item If more than one list item of \code{map} clauses on the same construct
-are array items that refer to the same array, they must indicate identical
-original storage.
+%\item At most one list item can be an array item derived from a given variable
+%in map clauses of the same construct.
+
+%\item If more than one list item of \code{map} clauses on the same construct
+%are array items that refer to the same array, they must indicate identical
+%original storage.
 % Examples:
 % map(a, a)          ok
 % map(a[10],a[10])   ok
@@ -2489,15 +2517,22 @@ original storage.
 % map(a, a[10])      not ok
 % map(a[:], a[10])   not ok
 
-\item List items of \code{map} clauses on the same construct must not share
-original storage, unless they indicate identical storage and refer to the
-same variable.
+\item If more than one list item of \code{map} clauses on the same construct
+are array items that refer to the same array variable, they must indicate
+identical original storage.
+
+%\item List items of \code{map} clauses on the same construct must not share
+%original storage, unless they indicate identical storage and refer to the
+%same variable.
 % Examples:
 % map(x, x)              ok
 % map(x, y)              not ok if x and y alias eachother
 % map(S, S.a)            ok, since S is treated as if its replaced with each of its
 %                        structure elements.
 % map(a[0:10], b[10:10]) ok if storage doesn't overlap, even if a = b.
+
+\item List items of \code{map} clauses on the same construct must not share
+original storage, unless they are the same variable or array section.
 
 \item If any part of the original storage of a list item with a predetermined or
 explicit data-mapping attribute has corresponding storage in the device data
