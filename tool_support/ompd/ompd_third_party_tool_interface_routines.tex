@@ -1,0 +1,142 @@
+
+\ompdsection{Third Party Tool Interface Routines}
+\label{sec:ompd-api}
+
+\subsubsection{Per OMPD Library Initialization}
+
+The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
+before it is unloaded. Per target process or core file initialization and finalization are also required. 
+A third-party tool starts the initialization by calling \code{ompd\_initialize}. Once loaded, the 
+debugger can determine the version of the OMPD API supported by the DLL by 
+calling \code{ompd\_rc\_t ompd\_get\_version}:
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t
+		ompd_get_version ( int *version );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+On success this should return \code{ompd\_rc\_ok}; \code{ompd\_rc\_bad\_input} indicates that the 
+argument is invalid. Other errors could be reported by \code{ompd\_rc\_error}. A descriptive string 
+describing the OMPD implementation is returned by the function \code{ompd\_get\_version\_string}:
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t
+		ompd_get_version_string ( 
+		          const char **string );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+The return values are the same as \code{ompd\_get\_version\_string}. The string returned by the 
+OMPD library is `owned' by the library, and it must not be modified or released by the tool.
+It is guaranteed to remain valid for as long as the library is loaded. 
+\code{ompd\_get\_version\_string} 
+may be called before \code{ompd\_initialize}. Accordingly, the OMPD library must not use heap or 
+stack memory for the string it returns to the debugger.
+
+The signatures of \code{ompd\_get\_version} and \code{ompd\_get\_version\_string} are 
+guaranteed not to change in future versions of the API. In contrast, the type definitions and 
+prototypes in the rest of the API do not carry the same guarantee. Therefore a third-party tool 
+should check the version of the API of a loaded OMPD library before calling any other function of 
+the API.
+
+The third-party tool must provide the OMPD library with a set of callback functions 
+that enable OMPD to allocate and deallocate memory in the tool's address space, to lookup the 
+sizes of basic primitive types in the target, to lookup symbols in the target, as well as to read and 
+write memory in the target. These callback functions are provided to the OMPD library via a 
+table---a list of function pointers---of type \code{ompd\_callbacks\_t}.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_initialize ( const ompd_callbacks_t *callbacks );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+%The type \refdef{\texttt{ompd\_callbacks\_t}}{callbacks-t:def} is defined in
+%Section~\ref{sec:ompd_data_types}. The argument is guaranteed to be valid for the duration of 
+%the call.
+%The OMPD library cannot assume that \texttt{callbacks} will remain valid
+%after the call returns back to the debugger.
+%\begin{notes}
+%ilaguna: We need to be more specific here. What does the previous sentence 
+%mean?	
+%\end{notes}
+
+On success, \code{ompd\_initialize} returns \code{ompd\_rc\_ok}. If the \code{data} argument is 
+invalid, \code{ompd\_rc\_bad\_input} should be returned. All other errors will be reported by 
+\code{ompd\_rc\_error}.
+
+The above initialization is performed for each OMPD library that is loaded by a third-party tool. 
+There may more than one library present in a thid-party tool, such as a debugger, because the tool 
+may be controlling a number of targets that may be using different runtime systems which require 
+different OMPD libraries. This initialization must be performed exactly once before the tool
+can begin operating on a target process or core file.
+
+\subsubsection{Per Target Initialization}
+
+The debugger initializes a session working on a target process or core
+file by calling \codeptrdesc{ompd_process_initialize}:
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_process_initialize (
+		ompd_address_space_context_t  *context,  /* IN */
+		ompd_address_space_handle_t  **handle    /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+The \codeptrdesc{context} argument is the pointer to the third-party tool's host
+address space context object for the target process or core file. The OMPD implementation 
+returns a pointer to the address space handle in \code{*handle}, which the tool is responsible for 
+releasing when it is no longer needed. This function must be called before any OMPD operations 
+are performed on the target.
+\code{ompd\_process\_initialize} gives the OMPD library an opportunity to confirm that it is capable 
+of handling the target process or core file identified by the context. Incompatibility is signaled by a 
+return value of \code{ompd\_rc\_incompatible}. On return, the handle is owned by the debugger, 
+which must release it using \code{ompd\_release\_address\_space\_handle}.
+
+\subsubsection{Per Target Finalization}
+
+When the tool is finished working on the target address space for a process or core file, it calls
+\code{ompd\_release\_address\_space\_handle}
+to tell the OMPD implementation that it not longer needs the address space,
+and to give the OMPD implementation an opportunity to release any
+resources it may have related to the handle.
+
+\subsubsection{Per OMPD Library Finalization}
+
+When the debugger is finished with the OMPD DLL it should call \code{ompd\_finalize} before 
+unloading the library.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+      ompd_rc_t ompd_finalize ( void );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+This must be the last call the tool makes to the library before
+unloading it. The call to \codeptrdesc{ompd\_finalize} gives the OMPD library a chance to
+free up any remaining resources it may be holding.
+
+The OMPD library may implement a \emph{finalizer} section. This will execute as the library is 
+unloaded, and therefore after the tool's call to \code{ompd\_finalize}. The OMPD library is allowed 
+to use the callbacks (provided to it earlier by the third-party tool after the call to 
+\code{ompd\_initialize}) during finalization.
