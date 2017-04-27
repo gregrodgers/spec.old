@@ -2,7 +2,7 @@
 \ompdsection{Third Party Tool Interface Routines}
 \label{sec:ompd-api}
 
-\subsubsection{Per OMPD Library Initialization}
+\ompdsubsection{Per OMPD Library Initialization}
 
 The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
 before it is unloaded. Per target process or core file initialization and finalization are also required. 
@@ -40,7 +40,7 @@ OMPD library is `owned' by the library, and it must not be modified or released 
 It is guaranteed to remain valid for as long as the library is loaded. 
 \code{ompd\_get\_version\_string} 
 may be called before \code{ompd\_initialize}. Accordingly, the OMPD library must not use heap or 
-stack memory for the string it returns to the debugger.
+stack memory for the string it returns to the tool.
 
 The signatures of \code{ompd\_get\_version} and \code{ompd\_get\_version\_string} are 
 guaranteed not to change in future versions of the API. In contrast, the type definitions and 
@@ -83,9 +83,9 @@ may be controlling a number of targets that may be using different runtime syste
 different OMPD libraries. This initialization must be performed exactly once before the tool
 can begin operating on a target process or core file.
 
-\subsubsection{Per Target Initialization}
+\ompdsubsection{Per Target Initialization}
 
-The debugger initializes a session working on a target process or core
+A third-party tool initializes a session working on a target process or core
 file by calling \codeptrdesc{ompd_process_initialize}:
 
 \format
@@ -107,10 +107,10 @@ releasing when it is no longer needed. This function must be called before any O
 are performed on the target.
 \code{ompd\_process\_initialize} gives the OMPD library an opportunity to confirm that it is capable 
 of handling the target process or core file identified by the context. Incompatibility is signaled by a 
-return value of \code{ompd\_rc\_incompatible}. On return, the handle is owned by the debugger, 
+return value of \code{ompd\_rc\_incompatible}. On return, the handle is owned by the tool, 
 which must release it using \code{ompd\_release\_address\_space\_handle}.
 
-\subsubsection{Per Target Finalization}
+\ompdsubsection{Per Target Finalization}
 
 When the tool is finished working on the target address space for a process or core file, it calls
 \code{ompd\_release\_address\_space\_handle}
@@ -118,9 +118,9 @@ to tell the OMPD implementation that it not longer needs the address space,
 and to give the OMPD implementation an opportunity to release any
 resources it may have related to the handle.
 
-\subsubsection{Per OMPD Library Finalization}
+\ompdsubsection{Per OMPD Library Finalization}
 
-When the debugger is finished with the OMPD DLL it should call \code{ompd\_finalize} before 
+When the tool is finished with the OMPD library it should call \code{ompd\_finalize} before 
 unloading the library.
 
 \format
@@ -140,3 +140,736 @@ The OMPD library may implement a \emph{finalizer} section. This will execute as 
 unloaded, and therefore after the tool's call to \code{ompd\_finalize}. The OMPD library is allowed 
 to use the callbacks (provided to it earlier by the third-party tool after the call to 
 \code{ompd\_initialize}) during finalization.
+
+\ompdsubsection{Memory Management}
+
+The OMPD library must not access the heap manager directly. Instead, if it needs heap memory it 
+must use the memory allocation and deallocation callback functions provided by the third-party tool 
+to obtain and release heap memory. This will ensure that the library does not interfere with any 
+custom memory management scheme that the tool may use.
+
+If the OMPD library is implemented in \code{C++}, memory management operators like \code{new} 
+and \code{delete} in all their variants, \emph{must all} be overloaded and implemented in terms of 
+the callbacks provided by the third-party tool. The OMPD library must be coded so that any of its 
+definitions of \code{new} or \code{delete} do not interfere with any defined by the tool.
+
+In some cases, the OMPD library will need to allocate memory to return results to the third-party 
+tool. This memory will then be `owned' by the tool, which will be responsible for releasing it. It is 
+therefore vital that the OMPD library and the tool use the same memory manager.
+
+OMPD handles are created by the OMPD implementation. These are opaque to the 
+third-party tool, and depending on the specific implementation of OMPD may have complex 
+internal structure. The tool cannot know whether the handle pointers returned by the API 
+correspond to discrete heap allocations. Consequently, the tool must not simply deallocate a 
+handle by passing an address it receives from the OMPD library to its own memory manager. 
+Instead, the API includes functions that the tool must use when it no longer needs a handle.
+
+Contexts are created by a third-party tool and passed to the OMPD implementation. The OMPD 
+library does not need to release contexts; instead this will be done by the tool after it releases any 
+handles that may be referencing the contexts.
+
+\ompdsubsection{Thread and Signal Safety}
+
+The OMPD implementation does not need to be reentrant. It is the responsibility 
+of the third-party tool to ensure that only one thread enters the OMPD library at a time. The OMPD 
+implementation must not install signal handlers or otherwise interfere with the tool's signal 
+configuration.
+
+\ompdsubsection{ Initialization}
+
+\ompdcallbacksignature{ompd\_process\_initialize}
+\summary
+A tool obtains an address space handle when it initializes
+a session on a live process or core file by calling \code{ompd\_process\_initialize}.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_initialize (
+	const ompd_callbacks_t *callbacks
+	);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+On return from \code{ompd\_process\_initialize} the address
+space handle is owned by the tool.
+
+\argdesc
+\crossreferences
+
+\ompdcallbacksignature{ompd\_release\_address\_space\_handle}
+\summary
+A third-party tool calls \code{ompd\_release\_address\_space\_handle} to release an address space 
+handle.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_release_address_space_handle (
+    ompd_address_space_handle_t  *handle     /* IN */
+     );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+When the debugger is finished with the target address space handle it
+should call \texttt{ompd\_release\_address\_space\_handle} to release
+the handle and give the OMPD implementation the opportunity to release
+any resources it may have related to the target.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdsubsection{Thread Handles}
+
+\ompdcallbacksignature{ompd\_get\_threads}
+\summary
+The \codeptrdesc{ompd\_get\_threads} enables a tool to
+to obtain pointers to handles for all OpenMP threads associated
+with an address space handle.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_get_threads (
+    ompd_address_space_handle_t  *handle,                     /* IN */
+    ompd_thread_handle_t       ***thread_handle_vector,      /* OUT */
+    int                          *num_handles                /* OUT */
+    );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+A successful invocation of  \code{|ompd\_get\_threads} returns
+a pointer to a vector of pointers to handles in \code{*thread\_handle\_vector}
+and returns the number of handle pointers in \code{*num\_handles}.
+This call yields meaningful results only if all OpenMP threads in
+the target process are stopped; otherwise, the OpenMP runtime may be creating and/or destroying
+threads during or after the call, rendering useless the
+vector of handles returned.
+
+The \code{num\_handles} pointer argument must be valid.
+The \code{thread\_handle\_vector} pointer argument may be NULL,
+in which case the number of handles that would have been returned
+had the argument not been NULL is returned in \code{*num\_handles}.
+This allows the debugger to find out how many OpenMP threads are
+running in the address space when it is not interested in the handles 
+themselves.
+
+The OMPD library gets the memory required for the vector of pointers to thread 
+handles using the memory allocation routine in the callbacks it received during
+the call to \code{ompd\_initialize}. If the OMPD implementation needs to allocate heap memory for 
+the thread handles, it must use the callbacks to acquire this memory. On return, the vector and the 
+thread handles are `owned' by the debugger, and the debugger is responsible for releasing them 
+when they are no longer required.
+
+The thread handles must be released by calling 
+\code{ompd\_release\_thread\_handle}. The vector was allocated by the OMPD implementation 
+using the allocation routine in the callbacks it received during initialization (see 
+\refdef{\texttt{ompt\_initialize}}{initialize:def}); the debugger must deallocate the vector in a 
+compatible manner.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdcallbacksignature{ompd\_get\_thread\_in\_parallel}
+\summary
+The  \code{ompd\_get\_thread\_in\_parallel} operation enables a tools to obtain handles for all 
+OpenMP threads associated with a parallel region.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_get_thread_in_parallel (
+    ompd_parallel_handle_t   *parallel_handle,                        /* IN */
+    ompd_thread_handle_t   ***thread_handle_vector,                  /* OUT */
+    int                      *num_handles                            /* OUT */
+    );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+A successful invocation of  \code{ompd\_get\_thread\_in\_parallel} returns a pointer to a vector of 
+pointers to thread handles in \code{*thread\_handle\_vector}, and returns the number of handles in 
+\code{*num\_handles}. This call yields meaningful results only if all OpenMP threads in the parallel 
+region are stopped; otherwise, the OpenMP runtime may be creating and/or destroying threads 
+during or after the call, rendering useless the vector of handles returned.
+
+The \code{num\_handles} pointer argument must be valid. The \code{thread\_handle\_vector} 
+pointer argument may be NULL, in which case the number of handles that would have been 
+returned had the argument not been NULL is returned in \code{*num\_handles}.
+
+The OMPD library must obtain the memory for the vector of pointers to thread handles
+using the memory allocation callback function that was passed to it during \code{ompd\_initialize}.
+If the OMPD implementation needs to allocate heap memory for the thread handles it must use the 
+callbacks to acquire this memory. After the call the vector and the thread handles are `owned' by 
+the third-party tool, which is responsible for releasing them. The thread handles must be released 
+by calling \code{ompd\_thread\_handle}. The vector was allocated by the OMPD implementation 
+using the allocation routine in the callbacks; the debugger must deallocate  the vector in a 
+compatible manner.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdcallbacksignature{ ompd\_get\_master\_thread\_in\_parallel }
+\summary
+The  \code{ompd\_get\_master\_thread\_in\_parallel} operation
+enables a third-party tool to obtain a handle for the OpenMP master thread in a parallel region. 
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	    ompd_rc_t ompd_get_master_thread_in_parallel (
+		ompd_parallel_handle_t  *parallel_handle,                        /* IN */
+		ompd_thread_handle_t   **thread_handle                          /* OUT */
+		); 
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+A successful invocation of \code{ompd\_get\_master\_thread\_in\_parallel} returns a handle
+for the thread that encountered the parallel construct. This call yields meaningful results only if an 
+OpenMP thread in the parallel region is stopped; otherwise, the parallel region is not guaranteed to 
+be alive. 
+
+On success \code{ompd\_get\_master\_thread\_in\_parallel} returns \code{ompd\_rc\_ok}.
+A pointer to the thread handle is returned in \code{*thread\_handle}. After the call the thread 
+handle is owned by the tool, which must release it when it is no longer required by calling
+\code{ompd\_release\_thread\_handle}.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdcallbacksignature{ ompd\_release\_thread\_handle  }
+\summary
+This operation releases a thread handle.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_release_thread_handle (
+   ompd_thread_handle_t  *thread_handle                              /* IN */
+   );
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+Thread handles are opaque to third-party tools, which therefore cannot release them directly.
+Instead, when the tool is finished with a thread handle it must pass it to the OMPD 
+\code{ompd\_release\_thread\_handle} routine for disposal.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdcallbacksignature{ ompd\_thread\_handle\_compare  }
+\summary
+The \codeptrdesc{ompd\_thread\_handle\_compare} operation allows third-party tools to compare 
+two thread handles.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_thread_handle_compare (
+		ompd_thread_handle_t   *thread_handle_1,                          /* IN */
+		ompd_thread_handle_t   *thread_handle_2,                          /* IN */
+		int                    *cmp_value                                /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+The internal structure of thread handles is opaque to a tool. While the tool can easily compare 
+pointers to thread handles, it cannot determine whether handles of two different addresses
+refer to the same underlying thread. This function can be used to compare thread handles.
+
+On success, \code{ompd\_thread\_handle\_compare} returns in \code{*cmp\_value} a signed 
+integer value that indicates how the underlying threads compare: a value less than, equal to, or 
+greater than 0 indicates that the thread corresponding to \code{thread\_handle\_1} is, respectively, 
+less than, equal to, or greater than that corresponding to \code{thread\_handle\_2}.
+
+\begin{notes}
+	ilaguna: do we need to give intuition about what we mean by thread1 < thread2 
+	(or vice versa)? Will the OMPD DLL maintain a total order or a partial order of 
+	thread handles? If thread1 < thread2, and thread2 < thread3, is thread1 < 
+	thread3 or can thread1 > thread3?
+\end{notes}
+
+For OMPD implementations that always have a single, unique, underlying thread handle for a given 
+thread, this operation reduces to a simple comparison of the pointers. However, other 
+implementations may take a different approach, and therefore the only reliable way of determining 
+whether two different pointers to thread handles refer the same or distinct threads is to use
+\compare{ompd\_thread\_handle\_compare}.
+
+Allowing thread handles to be compared allows the tool to hold them in ordered collections.
+The means by which thread handles are ordered is implementation-defined.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{  ompd\_get\_thread\_handle\_string\_id }
+\summary
+The \code{ompd\_get\_thread\_handle\_string\_id} function returns a string
+that contains a unique printable value that identifies the thread.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_thread_handle_string_id (
+		ompd_thread_handle_t   *thread_handle,                            /* IN */
+		char                  **string_id                                /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+The string that is returned by the function should be a single sequence of alphanumeric or 
+underscore characters, and NULL terminated.
+\begin{notes}
+	ilaguna: Why allowing only alphanumeric or underscore characters? As an 
+	implementer I may want to use colon or slash characters for more structured 
+	names.
+\end{notes}
+
+The OMPD implementation allocates the string returned in \code{*string\_id} using the allocation 
+routine in the callbacks passed to it during initialization. On return the string is owned by the 
+debugger, which is responsible for deallocating it. The contents of the strings returned for thread 
+handles which compare as equal with \code{ompd\_thread\_handle\_compare} must be the same.
+
+\argdesc
+
+\crossreferences
+
+\ompdsubsection{Parallel Region Handles}
+
+\ompdcallbacksignature{  ompd\_get\_top\_parallel\_region }
+\summary
+The  \code{ompd\_get\_top\_parallel\_region} operation enables the debugger to obtain a pointer to 
+the parallel handle for the innermost, or topmost, parallel region associated with an OpenMP thread.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_top_parallel_region (
+		ompd_thread_handle_t        *thread_handle,                       /* IN */
+		ompd_parallel_handle_t     **parallel_handle                     /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+This call is meaningful only if the thread whose handle is provided is stopped. The parallel handle 
+must be released by calling \code{ompd\_release\_parallel\_handle}.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{ ompd\_get\_enclosing\_parallel\_handle  }
+\summary
+The  \code{ompd\_get\_enclosing\_parallel\_handle}  operation enables a third-party tool to obtain a 
+pointer to the parallel handle for the parallel region enclosing the parallel region specified by 
+\code{parallel\_handle}.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_get_enclosing_parallel_handle (
+	ompd_parallel_handle_t        *parallel_handle,                   /* IN */
+	ompd_parallel_handle_t       **enclosing_parallel_handle         /* OUT */
+	);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+This call is meaningful only if at least one thread in the parallel region is stopped. On success 
+\code{ompd\_get\_enclosing\_parallel\_handle} returns \code{ompd\_rc\_ok}.
+A pointer to the parallel handle for the enclosing region is returned in 
+\code{*enclosing\_parallel\_handle}. After the call the handle is owned by the tool, which must 
+release it when it is no longer required by calling \code{ompd\_release\_parallel\_handle}.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{ ompd\_get\_task\_parallel\_handle  }
+\summary
+The  \code{ompd\_get\_task\_parallel\_handle}  operation enables a third-party tool to obtain a 
+pointer to the parallel handle for the parallel region enclosing the task region specified by 
+\code{task\_handle}.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_task_parallel_handle (
+		ompd_task_handle_t            *task_handle,                       /* IN */
+		ompd_parallel_handle_t       **task_parallel_handle              /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+This call is meaningful only if at least one thread in the parallel region is stopped. On success 
+\code{ompd\_get\_task\_parallel\_handle} returns \code{ompd\_rc\_ok}. A pointer to the parallel 
+regions handle is returned in \code{*task\_parallel\_handle}. The parallel handle is owned by the 
+tool, which must release it by calling \code{ompd\_release\_parallel\_handle}.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{ ompd\_release\_parallel\_handle  }
+\summary
+This operation allows releasing a parallel region handle.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_release_parallel_handle (
+		ompd_parallel_handle_t  *parallel_handle                          /* IN */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+Parallel region handles are opaque to the third-party tool, which therefore
+cannot release them directly. Instead, when the tool is finished with a parallel region handle
+it must must pass it to the OMPD \code{ompd\_release\_parallel\_handle}
+routine for disposal.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{ ompd\_parallel\_handle\_compare  }
+\summary
+The \code{ompd\_parallel\_handle\_compare} operation allows a third-party tool to compare two 
+parallel region handles.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+	ompd_rc_t ompd_parallel_handle_compare (
+	ompd_parallel_handle_t  *parallel_handle_1,                       /* IN */
+	ompd_parallel_handle_t  *parallel_handle_2,                       /* IN */
+	int                     *cmp_value                               /* OUT */
+	);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+The internal structure of parallel region handles is opaque to the tool. While the tool can easily 
+compare pointers to parallel region handles, it cannot determine whether handles at two different 
+addresses refer to the same underlying parallel region.
+
+On success, \code{ompd\_parallel\_handle\_compare} returns in \code{*cmp\_value} a signed 
+integer value that indicates how the underlying parallel regions compare: a value less than, equal 
+to, or greater than 0 indicates that the region corresponding to \code{parallel\_handle\_1} is,
+respectively, less than, equal to, or greater than that corresponding to \code{parallel\_handle\_2}.
+
+For OMPD implementations that always have a single, unique, underlying parallel region handle for 
+a given parallel region, this operation reduces to a simple comparison of the pointers. However, 
+other implementations may take a different approach, and therefore the only reliable way of 
+determining whether two different pointers to parallel regions handles refer the same or distinct
+parallel regions is to use \code{ompd\_parallel\_handle\_compare}.
+
+Allowing parallel region handles to be compared allows the debugger to hold them in ordered 
+collections. The means by which parallel region handles are ordered is implementation-defined.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{  ompd\_get\_parallel\_handle\_string\_id }
+\summary
+The \code{ompd\_get\_parallel\_handle\_string\_id} function returns a string that contains a unique 
+printable value that identifies the parallel region.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_parallel_handle_string_id (
+		ompd_parallel_handle_t   *parallel_handle,                        /* IN */
+		char                    **string_id                              /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+The returned string should be a single sequence of alphanumeric or underscore characters, and 
+NULL terminated. The OMPD implementation allocates the string returned in \code{*string\_id}
+using the allocation routine in the callbacks passed to it during initialization. On return the string is 
+owned by the tool, which is responsible for deallocating it.
+
+The contents of the strings returned for parallel regions handles which compare as equal with
+\code{ompd\_parallel\_handle\_compare} must be the same.
+
+\argdesc
+
+\crossreferences
+
+\ompdsubsection{Task Handles}
+
+\ompdcallbacksignature{  ompd\_get\_top\_task\_region }
+\summary
+A third-party tool uses the \code{ompd\_get\_top\_task\_region} operation to obtain a pointer to the 
+task handle for the innermost, or topmost, task region associated with an OpenMP thread.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_top_task_region (
+		ompd_thread_handle_t        *thread_handle,                       /* IN */
+		ompd_task_handle_t         **task_handle                         /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+This call is meaningful only if the thread whose handle is provided is stopped.
+The task handle must be released by calling \code{ompd\_release\_task\_handle}.
+
+\argdesc
+
+\crossreferences
+
+% ilaguna: I'm not sure where to place this text.
+\paragraph{Retrieve the handle for an enclosing task.}
+The OMPD API includes operations to obtain the handle of the parent of a task represented by a 
+given task handle. There are two notions of parenthood. The \emph{scheduling} parent task is the 
+task that was active when the child task was scheduled to run. The \emph{generating} is the task 
+that encountered the OpenMP that caused the child task to be created.
+
+The generating and scheduling parents need not be the same. This might happen if the thread 
+executing a task encounters an OpenMP construct. When this happens, the thread will enter the 
+runtime. The runtime will set up the tasks to implement the OpenMP program construct, and then 
+call its schedular to choose a task to execute. If the scheduler chooses a task other than one of 
+these newly created tasks to run, the scheduling parent of the selected task will not be the same 
+as its generating parent. The former is the task that the thread was executing most recently,
+and from which it entered the runtime. The later is the task which encountered the OpenMP 
+construct it is executing.
+
+\ompdcallbacksignature{  ompd\_get\_generating\_ancestor\_task\_region }
+\summary
+A third-party tool uses \code{ompd\_get\_generating\_ancestor\_task\_region} to obtain
+a pointer to the task handle for the task that encountered the OpenMP construct which caused the 
+task represented by \code{task\_handle} to be created.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t  ompd_get_generating_ancestor_task_region (
+		ompd_task_handle_t         *task_handle,                          /* IN */
+		ompd_task_handle_t        **parent_task_handle                   /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+This call is meaningful only if the thread executing the task specified by
+\verb|task_handle|  is stopped.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdcallbacksignature{  ompd\_get\_scheduling\_ancestor\_task\_region }
+\summary
+The \code{ompd\_get\_scheduling\_ancestor\_task\_region} returns the
+scheduling parent of the task represented \code{task\_handle}.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t  ompd_get_scheduling_ancestor_task_region (
+		ompd_task_handle_t         *task_handle,                          /* IN */
+		ompd_task_handle_t        **parent_task_handle                   /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+In this operation, the scheduling parent task is the OpenMP task that was active when
+the child task was scheduled. This call is meaningful only if the thread executing the task specified 
+by \code{task\_handle}  is stopped. The parent task handle must be released by calling 
+\code{ompd\_release\_task\_handle}.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{ ompd\_get\_implicit\_task\_in\_parallel  }
+\summary
+The  code{ompd\_get\_implicit\_task\_in\_parallel}  operation enables a third-party tool to obtain a 
+vector of pointers to task handles for all implicit tasks associated with a parallel region.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_implicit_task_in_parallel (
+		ompd_parallel_handle_t          *parallel_handle,                 /* IN */
+		ompd_task_handle_t            ***task_handle_vector,             /* OUT */
+		int                             *num_handles                     /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+This call is meaningful only if all threads associated with the parallel region are stopped.
+The OMPD library must use the memory allocation callback to obtain the memory for the vector of 
+pointers to task handles returned by the operation. If the OMPD implementation needs to allocate 
+heap memory for the task handles it returns, it must use the callbacks to acquire this memory.
+After the call the vector and the task handles are `owned' by the tool, which is responsible for 
+deallocating them. The task handles must be released calling \code{ompd\_release\_task\_handle}.
+The vector was allocated by the OMPD implementation using the
+allocation routine passed to it during the call to \code{ompd\_initialize}.
+The tool itself must deallocate the vector in a compatible manner.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{  ompd\_release\_task\_handle }
+\summary
+This operation releases a task handle.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_release_task_handle (
+		ompd_task_handle_t  *task_handle                                  /* IN */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+Task handles are opaque to the third-party tool, which therefore cannot release
+them directly. Instead, when the debugger is finished with a task handle it must
+pass it to the OMPD \code{ompd\_release\_task\_handle} routine
+for disposal.
+
+\argdesc
+
+\crossreferences
+
+
+\ompdcallbacksignature{  ompd\_task\_handle\_compare }
+\summary
+The \code{ompd\_task\_handle\_compare} operations allows a third-party tool to compare task 
+handles.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_task_handle_compare (
+		ompd_task_handle_t  *task_handle_1,                               /* IN */
+		ompd_task_handle_t  *task_handle_2,                               /* IN */
+		int                 *cmp_value                                   /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+The internal structure of task handles is opaque to the tool. While the tool can easily compare 
+pointers to task handles, it cannot determine whether handles at two different addresses refer
+to the same underlying task.
+
+On success, \code{ompd\_task\_handle\_compare} returns in \code{*cmp\_value} a signed integer 
+value that indicates how the underlying tasks compare: a value less than, equal to, or greater than 
+0 indicates that the task corresponding to \texttt{task\_handle\_1} is, respectively, less than, equal 
+to, or greater than that corresponding to \texttt{task\_handle\_2}.
+
+For OMPD implementations that always have a single, unique, underlying task handle for a given 
+task, this operation reduces to a simple comparison of the pointers. However, other 
+implementations may take a different approach, and therefore the only reliable way of determining 
+whether two different pointers to task handles refer the same or distinct task is to use 
+\code{ompd\_task\_handle\_compare}.
+
+Allowing task handles to be compared allows the tool to hold them in ordered collections.
+The means by which task handles are ordered is implementation-defined.
+
+\argdesc
+
+\crossreferences
+
+\ompdcallbacksignature{  ompd\_get\_task\_handle\_string\_id }
+\summary
+The \code{ompd\_get\_task\_handle\_string\_id} function returns a string that contains a unique 
+printable value that identifies the task.
+
+\format
+\vbox{
+	\ccppspecificstart
+	\begin{boxedcode}
+		ompd_rc_t ompd_get_task_handle_string_id (
+		ompd_task_handle_t   *task_handle,                                /* IN */
+		char                **string_id                                  /* OUT */
+		);
+	\end{boxedcode}
+	\ccppspecificend
+}
+
+\descr
+The returned string should be a single sequence of alphanumeric or underscore characters, and 
+NULL terminated. The OMPD implementation allocates the string returned in \code{*string\_id}
+using the allocation routine in the callbacks passed to it during initialization. On return the string is 
+owned by the tool, which is responsible for deallocating it.
+
+The contents of the strings returned for task handles which compare as equal with
+\code{ompd\_task\_handle\_compare} must be the same.
+
+\argdesc
+
+\crossreferences
