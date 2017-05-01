@@ -1332,7 +1332,7 @@ A tool that executes in the address space of the program it is monitoring.
 
 \glossaryterm{third-party tool}
 \glossarydefstart
-A tool that executes as a separate process from that which it is monitoring.
+A tool that executes as a separate process from that which it is monitoring and potentially controlling.
 \glossarydefend
 
 \glossaryterm{activated tool} 
@@ -1427,31 +1427,33 @@ A contiguous region of memory that contains code of an OpenMP program to be exec
 
 % ilaguna
 {\color{blue}
+
+\glossaryterm{OMPT}
+\glossarydefstart
+An interface that enables a first-party tool to monitor the execution of an OpenMP program.
+\glossarydefend
 	
 \glossaryterm{OMPD}
 \glossarydefstart
-A programing interface that allows third-party tools to inspect the state of OpenMP programs.
+An interface that enables third-party tools to inspect the OpenMP state of a program that has begun execution.
 \glossarydefend
 
-\glossaryterm{OMPD Library}
+\glossaryterm{OMPD library}
 \glossarydefstart
-A dynamic link library (DLL) that implements the OMPD interface.
+A shared library that implements the OMPD interface.
 \glossarydefend
 
-\glossaryterm{Process}
+\glossaryterm{image file}
 \glossarydefstart
-A collection of one or more threads and address spaces.
-%The collection may be homogeneous or heterogeneous, containing, for example, threads or 
-%address spaces from host programs or accelerator devices.
-A process may be a ``live'' operating system process, or a core file.
+An executable or shared library.
 \glossarydefend
 
 % ilaguna: not sure if we need this one
-%\paragraph{Thread}
+%\paragraph{thread}
 %A thread is an execution entity running within a specific address
 %space within a process.
 
-\glossaryterm{Address Space}
+\glossaryterm{address space}
 \glossarydefstart
 %An address space is a collection of logical, virtual, or physical memory address ranges containing 
 %code, stack, and data. The memory address ranges within an address space need not be
@@ -1462,18 +1464,21 @@ A process may be a ``live'' operating system process, or a core file.
 %for each GPU device. In practical terms, on such systems an OpenMP \emph{device} may be
 %implemented as a CUDA context, which \emph{is} an address space into which CUDA image files 
 %are loaded and CUDA kernels are launched.
-A collection of logical, virtual, or physical memory address ranges containing code, stack, and data. 
-The memory address ranges within an address space need not be contiguous. An address space 
-has associated with it a collection of image files that have been loaded into it.
+A collection of logical, virtual, or physical memory address ranges containing code, stack, and/or data. 
+Address ranges within an address space need not be contiguous.  An address space consists of one or more \emph{segments}.
+% An address space has associated with it a collection of image files that have been loaded into it.
 \glossarydefend
 
-\glossaryterm{Image File}
+\glossaryterm{segment}
 \glossarydefstart
-An executable or shared library file that is loaded into an address space and that provides symbolic 
-debug information to a debugger.
+A region of an address space associated with a set of address ranges.
 \glossarydefend
 
-\glossaryterm{Target Architecture}
+\begin{comment}
+}
+{\color{red}
+
+\glossaryterm{architecture}
 \glossarydefstart
 %A target architecture is defined by the processor (CPU or GPU) and the Application Binary 
 %Interface (ABI) used by threads and address spaces. A process may contain threads and address 
@@ -1483,22 +1488,43 @@ debug information to a debugger.
 %threads for an NVIDIA\textsuperscript{\textregistered} GPU architecture or for an 
 %Intel\textsuperscript{\textregistered} Xeon
 %Phi\textsuperscript{\texttrademark} architecture.
-A combination of the processor (CPU or GPU) and the Application Binary Interface (ABI) used by 
-threads and address spaces. A process may contain threads and address spaces for multiple 
-target architectures.
+A combination of the processor and the Application Binary Interface (ABI) used by 
+threads and address spaces. 
 \glossarydefend
 
-\glossaryterm{OMPD Handle}
+}
+{\color{blue}
+\end{comment}
+
+\glossaryterm{OpenMP architecture}
+\glossarydefstart
+The architecture on which an OpenMP region executes.
+\glossarydefend
+
+\glossaryterm{tool architecture}
+\glossarydefstart
+The architecture on which a third-party monitoring tool executes.
+\glossarydefend
+
+\glossaryterm{OpenMP process}
+\glossarydefstart
+A collection of one or more threads and address spaces. A process may contain threads and address spaces for multiple OpenMP architectures.
+%The collection may be homogeneous or heterogeneous, containing, for example, threads or 
+%address spaces from host programs or accelerator devices.
+A process may be live or a core file. 
+\glossarydefend
+
+\glossaryterm{handle}
 \glossarydefstart
 %OMPD handles identify OpenMP entities during the execution of an OpenMP program. Handles 
 %are opaque to the debugger, and defined internally by the OMPD implementation. Below we 
 %define these handles and the conditions under which they are guaranteed to be valid.
-An identifier of an OpenMP entity that is valid during the execution of an OpenMP program. OMPD 
-handles are created by an OMPD library upon requests from a third-party tool and are opaque to 
-the third-party tool. Handles remain valid until they are released by third-party tools.
+A opaque reference provided by an OMPD library implementation to a third-party tool. A handle uniquely identifies an abstraction.
+
+% An identifier for an OpenMP entity that is valid during the execution of an OpenMP program. OMPD  handles are created by an OMPD library upon requests from a third-party tool and are opaque to  the third-party tool. Handles remain valid until they are released by third-party tools.
 \glossarydefend
 
-\glossaryterm{Address Space Handle}
+\glossaryterm{address space handle}
 \glossarydefstart
 %A tool handle \emph{address space handle} identifies a portion of an instance of
 %an \emph{OpenMP program} that is running on a host device or a target
@@ -1524,11 +1550,11 @@ the third-party tool. Handles remain valid until they are released by third-part
 %\emph{Future versions of this API will support address space handles
 %	for target devices, which will be allocated and initialized by various
 %	OMPD API calls.}
-An OMPD handle that identifies a portion of an instance of an OpenMP program that is running on 
-a host device or a target device.
+A handle that refers to an address space within an OpenMP process.
+%a portion of an instance of an OpenMP program that is running on a host or a target device.
 \glossarydefend
 
-\glossaryterm{Thread Handle}
+\glossaryterm{thread handle}
 \glossarydefstart
 %The \emph{thread handle} identifies an \emph{OpenMP thread}.
 %Thread handles are allocated and initialized by various OMPD API calls.
@@ -1539,11 +1565,11 @@ a host device or a target device.
 %needs the handle.
 %The debugger releases the thread handle by calling
 %\refdef{\texttt{ompd\_release\_thread\_handle}}{release-thread-handle:def}.
-An OMPD handle that identifies an OpenMP thread. A handle is valid for the life time of the 
-corresponding system thread.
+A handle that refers to an OpenMP thread. 
+%A handle is valid for the lifetime of the system thread corresponding to the OpenMP thread.
 \glossarydefend
 
-\glossaryterm{Parallel Handle}
+\glossaryterm{parallel handle}
 \glossarydefstart
 %The \emph{parallel handle} identifies an \emph{OpenMP parallel region}.
 %It is allocated and initialized by various OMPD API calls.
@@ -1557,12 +1583,11 @@ corresponding system thread.
 %indicating when it no longer needs the handle.
 %The debugger releases the parallel handle by calling
 %\refdef{\texttt{ompd\_release\_parallel\_handle}}{release-parallel-handle:def}.
-An OMPD handle that identifies an OpenMP parallel region. The handle is guaranteed to be valid if 
-at least one thread in the parallel region is paused, or if a thread in a nested parallel region is 
-paused.
+A handle that refers to an instance of an OpenMP parallel region. 
+%The handle is guaranteed to be valid if at least one thread in the parallel region is paused, or if a thread in a nested parallel region is  paused.
 \glossarydefend
 
-\glossaryterm{Task Handle}
+\glossaryterm{task handle}
 \glossarydefstart
 %The \emph{task handle} identifies an \emph{OpenMP task region}.
 %It is allocated and initialized by various OMPD API calls.
@@ -1575,11 +1600,11 @@ paused.
 %indicating when it no longer needs the handle.
 %The debugger releases the task handle by calling
 %\refdef{\texttt{ompd\_release\_task\_handle}}{release-task-handle:def}.
-An OMPD handle that identifies an OpenMP task region. The handle is valid for the life time of the 
-task region. The handle is guaranteed to be valid if all threads in the task team are paused.
+A handle that refers to an instance of an OpenMP task region. 
+% The handle is valid for the life time of the  task region. The handle is guaranteed to be valid if all threads in the task team are paused.
 \glossarydefend
 
-\glossaryterm{Debugger Contexts}
+\glossaryterm{tool context}
 \glossarydefstart
 %Debugger contexts are used to identify a process, address space, or thread 
 %object in the debugger. Contexts are passed from the debugger into various OMPD API calls,
@@ -1587,11 +1612,11 @@ task region. The handle is guaranteed to be valid if all threads in the task tea
 %For example, symbol lookup and memory accesses are done in the ``context''
 %of a particular address space and possibly thread in the debugger.
 %Contexts are opaque to the OMPD implementation, and defined by the debugger.
-An identifier of a process, address space, or thread that resides in a third-party tool. Contexts are 
-opaque to an OMPD library, and are defined by a third-party tool.
+An opaque reference provided by a third-party tool to an OMPD library implementation. A tool context uniquely identifies an abstraction.
+% a process, address space, or thread that resides in a third-party tool. Contexts are opaque to an OMPD library, and are defined by a third-party tool.
 \glossarydefend
 
-\glossaryterm{Address Space Context}
+\glossaryterm{address space context}
 \glossarydefstart
 %The \emph{address space context} identifies the debugger object for a
 %portion of an instance of an \emph{OpenMP program} that is running on
@@ -1607,13 +1632,10 @@ opaque to an OMPD library, and are defined by a third-party tool.
 %until
 %\refdef{\texttt{ompd\_release\_address\_space\_handle}}{release-address-space-handle:def}
 %is called for the address space context passed into the initialization routine.
-An identifier of a third-party object for a portion of an instance of an OpenMP program that is 
-running on a host or target device. An address space is contained within a process, and has an 
-associated target architecture. The address space context must be valid for the life time of its
-associated address space handle.
+A tool context that refers to an address space within a process.
 \glossarydefend
 
-\glossaryterm{Thread Context}
+\glossaryterm{thread context}
 \glossarydefstart
 %The \emph{thread context} identifies the debugger object for a thread.
 %The debugger owns and initializes the thread context.
@@ -1624,37 +1646,12 @@ associated address space handle.
 %The OMPD implementation can assume that the thread context is valid
 %for as long as the debugger is holding any references to thread handles
 %that may contain the thread context.
-An identifier of a third-party tool object for a thread. The third-party tool owns and initializes the 
-thread context. An OMPD library implementation can assume that the thread context is valid
-for as long as the third-party tool is holding any references to thread handles that may contain the 
-thread context.
+A tool context that refers to a thread.
 \glossarydefend
 
-\glossaryterm{Operating System Thread Identifier}
+\glossaryterm{thread identifier}
 \glossarydefstart
-%An operating system thread ID,
-%is the object that allows the debugger and OMPD implementation
-%to map a thread handle to and from a thread context.
-%That is, the OS thread ID is the common identifier for a thread
-%that is visible to both the debugger and the OMPD implementation.
-%The operating system-specific information is platform dependent,
-%and therefore is not defined explicitly in this API.
-%Thus the interface defines
-%\refdef{\texttt{ompd\_osthread\_kind\_t}}{osthread-kind-t:def}
-%which identifies what ``kind'' of information an operating system
-%thread ID represents, such as \texttt{pthread\_t},
-%lightweight process ID, or accelerator-specific ID.
-%When an operating system thread ID needs to be passed across
-%the interface, the caller passes the ``kind'' of the ID,
-%the size of the ID in bytes, and a pointer to the
-%operating system-specific information.
-%The format of the information, such as byte ordering, is that
-%of the target.
-%The ID is owned by the caller, which is responsible for its
-%allocation and deallocation.
-An identifier of an object in a third-party tool that allows the third-party tool and an OMPD library
-to map a thread handle to and from a thread context. The operating system-specific information is 
-platform dependent, and therefore is not defined explicitly in this API.
+An identifier for a native thread defined by a thread implementation on a device.
 \glossarydefend
 
 }
@@ -2111,7 +2108,7 @@ directives.
 To enable development of high-quality, portable, tools that support
 monitoring, performance, or correctness analysis and debugging of OpenMP programs
 developed using any implementation of the OpenMP API,
-the OpenMP API includes two tool interfaces: OMPD and OMPD.
+the OpenMP API includes two tool interfaces: OMPT and OMPD.
 
 \subsection{OMPT}
 
@@ -2157,26 +2154,26 @@ all other OMPT functionality is described with C syntax only.
 
 \subsection{OMPD}
 
-The OMPD interface is intended for \emph{third-party} tools
-that run outside the OpenMP program as a separate process.
-The basic model is that an OpenMP implementor provides an OMPD plugin
-shared library that can be used by a third-party tool to access
-OpenMP-related information about a program using that implementation
-of OpenMP.
+The OMPD interface is intended for a \emph{third-party} tool, which runs as a separate process.
+An OpenMP implementation must provide an OMPD 
+shared library plugin that can be loaded and used by a third-party tool. 
+A third-party tool, such as a debugger, uses the OMPD  plugin library
+to access
+OpenMP state of a program that has begun execution.
 OMPD defines the following:
 
 \begin{itemize}
 \item
-  an interface an OMPD plugin shared library exports which a
-  third-party tool can use to access OpenMP information about
-  the OpenMP program it is examining;
+  an interface that an OMPD plugin shared library exports, which a
+  third-party tool can use to access OpenMP state of a program that has begun execution;
+  \item
+  a callback interface that a third-party tool provides to the
+  OMPD plugin so that the  plugin can use it to access
+ OpenMP state of a program that has begun execution; and
 \item
-  a callback-interface that the third-party tools provides to the
-  OMPD plugin that it can use to access the OpenMP program;
-\item
-  a small number of symbols that must be defined in an OpenMP program
+  a small number of symbols that must be defined by an OpenMP implementation
   to help the third-party tool find the correct OMPD plugin to use
-  for that OpenMP impementation, and to facilitate notification
+  for that OpenMP implementation and to facilitate notification
   of events.
 \end{itemize}
 OMPD is described in Chapter~\ref{chap:ToolsSupport}.
