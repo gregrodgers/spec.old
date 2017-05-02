@@ -4,15 +4,19 @@
 For the OMPD plugin to provide information about the internal state
 of the OpenMP runtime system in an OpenMP process or core file,
 it must have a means to extract information from
-the tool's target.
-The tool's target ``process'' may be a ``live'' process or a core file,
-and a target thread may be a ``live'' thread in a process,
+%the tool's target.
+the OpenMP process that the tool is debugging.
+The OpenMP process that the tool is operating on may be either a ``live'' process or a core file,
+%and a target thread may be a ``live'' thread in a process,
+and a thread may be either a ``live'' thread in an OpenMP process,
 or a thread in a core file.
-To enable OMPD to extract state information from a target process or core file,
+%To enable OMPD to extract state information from a target process or core file,
+To enable OMPD to extract state information from an OpenMP process or core file,
 the third-party tool must supply the OMPD with callback functions to inquire
-about the size of primitive types in the target,
+about the size of primitive types in the device of the OpenMP process,
 look up the addresses of symbols,
-as well as read and write memory in the target.
+%as well as read and write memory in the target.
+as well as read and write memory in the device.
 OMPD then uses these callbacks to implement its interface operations.
 Signatures for the third-party tool callbacks used by OMPD are given below.
 
@@ -211,8 +215,10 @@ On success, the callbacks returns \code{ompd\_rc\_ok},
 and the context in \plc{*address\_space\_context}.
 If \plc{thread\_context} refers to a host device thread,
 this function returns the context for the host address space.
-If \plc{thread\_context} referes to a target device thread,
-this function returns the target device's address space.
+%If \plc{thread\_context} referes to a target device thread,
+If \plc{thread\_context} refers to a device thread,
+%this function returns the target device's address space.
+this function returns the device's address space.
 
 On failure, the callback returns an error code from \code{ompd\_rc\_t}.
 
@@ -247,8 +253,10 @@ basic types.
 \end{itemize}
 
 \subsubsubsection{Representation of the Sizes of the Basic Types}
-\label{sec:ompd:ompd_target_type_sizes_t}
-\index{ompd\_target\_sizes\_t@{\code{ompd\_target\_sizes\_t}}}
+%\label{sec:ompd:ompd_target_type_sizes_t}
+%\index{ompd\_target\_sizes\_t@{\code{ompd\_target\_sizes\_t}}}
+\label{sec:ompd:ompd_device_type_sizes_t}
+\index{ompd\_device\_sizes\_t@{\code{ompd\_device\_sizes\_t}}}
 
 \summary
 The defintion of the type that represents the sizes of the basic types
@@ -266,13 +274,14 @@ typedef struct \{
   int  \plc{sizeof\_long};
   int  \plc{sizeof\_long\_long};
   int  \plc{sizeof\_pointer};
-\} ompd\_target\_type\_sizes\_t;
+\} ompd\_device\_type\_sizes\_t;
 \end{boxedcode}
 \cspecificend
 }
 
 \descr
-The fields of \code{ompd\_target\_type\_sizes\_t} give the sizes of
+%The fields of \code{ompd\_target\_type\_sizes\_t} give the sizes of
+The fields of \code{ompd\_device\_type\_sizes\_t} give the sizes of
 the eponymous basic types used by the OpenMP runtime.
 As the third-party tool and the OMPD plugin, by definition, have the same
 architecture and programming model, the size of the fields can be given
@@ -300,7 +309,7 @@ in an address space.
 \begin{boxedcode}
 typedef ompd\_rc\_t (*ompd\_sizeof\_fn\_t) (
     \code{ompd\_address\_space\_context\_t}  *\plc{address\_space\_context},
-    \code{ompd\_target\_type\_sizes\_t}      *\plc{sizes}
+    \code{ompd\_device\_type\_sizes\_t}      *\plc{sizes}
 );
 \end{boxedcode}
 \cspecificend
@@ -318,7 +327,7 @@ Otherwise, an error code from \code{ompd\_rc\_t} is returned.
 \item
   \code{ompd\_address\_space\_context\_t}, \specref{ompd:ompd_address_space_context_t}
 \item
-  \code{ompd\_target\_type\_sizes\_t}, \specref{sec:ompd:ompd_target_type_sizes_t}
+  \code{ompd\_device\_type\_sizes\_t}, \specref{sec:ompd:ompd_device_type_sizes_t}
 \item
   \code{ompd\_rc\_t}, \specref{ompd:ompd_rc_t}
 \item
@@ -430,7 +439,7 @@ owned by the OMPD plugin.
 The contents of the buffer are unstructured, raw bytes.
 It is the responsibility of the OMPD plugin to arrange for
 any transformations such as byte-swapping that may be necessary
-(see~\specref{sec:ompd:ompd_target_host_fn_t}) to interpret the
+(see~\specref{sec:ompd:ompd_device_host_fn_t}) to interpret the
 data returned.
 
 On success, \code{ompd\_rc\_ok} is returned.
@@ -449,7 +458,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 \item
   \code{ompd\_rc\_t}, \specref{ompd:ompd_rc_t}
 \item
-  \code{ompd\_target\_host\_fn\_t}, \specref{sec:ompd:ompd_target_host_fn_t}
+  \code{ompd\_device\_host\_fn\_t}, \specref{sec:ompd:ompd_device_host_fn_t}
 \item
   \code{ompd\_callbacks\_t}, \specref{ompd:ompd_callbacks_t}
 \end{itemize}
@@ -494,7 +503,7 @@ owned by the OMPD plugin.
 The contents of the buffer are unstructured, raw bytes.
 It is the responsibility of the OMPD plugin to arrange for
 any transformations such as byte-swapping that may be necessary
-(see~\specref{sec:ompd:ompd_target_host_fn_t})
+(see~\specref{sec:ompd:ompd_device_host_fn_t})
 to render the data into a form compatible with the OpenMP runtime.
 
 On success, \code{ompd\_rc\_ok} is returned.
@@ -513,7 +522,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 \item
   \code{ompd\_rc\_t}, \specref{ompd:ompd_rc_t}
 \item
-  \code{ompd\_target\_host\_fn\_t}, \specref{sec:ompd:ompd_target_host_fn_t}
+  \code{ompd\_device\_host\_fn\_t}, \specref{sec:ompd:ompd_device_host_fn_t}
 \item
   \code{ompd\_callbacks\_t}, \specref{ompd:ompd_callbacks_t}
 \end{itemize}
@@ -531,8 +540,8 @@ used by the third-party tool and OMPD plugin on the
 one hand, and the OpenMP program on the other.
 
 \subsubsubsection{Data Conversion}
-\label{sec:ompd:ompd_target_host_fn_t}
-\index{ompd\_target\_host\_fn\_t@{\code{ompd\_target\_host\_fn\_t}}}
+\label{sec:ompd:ompd_device_host_fn_t}
+\index{ompd\_device\_host\_fn\_t@{\code{ompd\_device\_host\_fn\_t}}}
 
 \summary
 
@@ -545,7 +554,7 @@ third-part tool and OMPD plugin, and the OpenMP program.
 % they line up in the pdf
 \cspecificstart
 \begin{boxedcode}
-typedef ompd\_rc\_t (*ompd\_target\_host\_fn\_t) (
+typedef ompd\_rc\_t (*ompd\_device\_host\_fn\_t) (
     ompd\_address\_space\_context\_t  *\plc{address\_space\_context},
     const void                    *\plc{input},
     int                            \plc{unit\_size},
@@ -646,8 +655,8 @@ typedef struct \{
   ompd\_symbol\_addr\_fn\_t     \plc{symbol\_addr\_lookup};
   ompd\_memory\_read\_fn\_t     \plc{read\_memory};
   ompd\_memory\_write\_fn\_t    \plc{write\_memory};
-  ompd\_target\_host\_fn\_t     \plc{target\_to\_host};
-  ompd\_target\_host\_fn\_t     \plc{host\_to\_target};
+  ompd\_device\_host\_fn\_t     \plc{device\_to\_host};
+  ompd\_device\_host\_fn\_t     \plc{host\_to\_device};
   ompd\_get\_thread\_context\_for\_osthread\_fn\_t
                             \plc{get\_thread\_context\_for\_osthread}:
   ompd\_get\_address\_space\_context\_for\_thread\_fn\_t
@@ -681,11 +690,11 @@ and pointer types used by the OpenMP program.
 Because of the differences in architecture or programming model,
 the conventions for representing data in the OMPD plugin and
 the OpenMP program may be different.
-The \plc{target\_to\_host} field points to a function which translates
+The \plc{device\_to\_host} field points to a function which translates
 data from the conventions used by the OpenMP program to that used
 by the third-party tool and OMPD plugin.
 The reverse operation is performed by the function pointed
-to by the \plc{host\_to\_target} field.
+to by the \plc{host\_to\_device} field.
 
 The OMPD plugin may need to access memory in the OpenMP program.
 The \plc{symbol\_addr\_lookup} field points to a callback the
@@ -719,7 +728,7 @@ thread represented by a tool thread context.
 \item
   \code{ompd\_memory\_write\_fn\_t}, \specref{sec:ompd:ompd_memory_write_fn_t}
 \item
-  \code{ompd\_target\_host\_fn\_t}, \specref{sec:ompd:ompd_target_host_fn_t}
+  \code{ompd\_device\_host\_fn\_t}, \specref{sec:ompd:ompd_device_host_fn_t}
 \item
   \code{ompd\_get\_thread\_context\_for\_osthread\_fn\_t}, \specref{sec:ompd:ompd_get_thread_context_for_osthread_fn_t}
 \item

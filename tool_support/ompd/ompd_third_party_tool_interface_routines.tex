@@ -47,8 +47,9 @@ the API.
 
 The third-party tool must provide the OMPD library with a set of callback functions 
 that enable OMPD to allocate and deallocate memory in the tool's address space, to lookup the 
-sizes of basic primitive types in the target, to lookup symbols in the target, as well as to read and 
-write memory in the target. These callback functions are provided to the OMPD library via a 
+sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and 
+%write memory in the target. These callback functions are provided to the OMPD library via a 
+write memory in the device. These callback functions are provided to the OMPD library via a 
 table---a list of function pointers---of type \code{ompd\_callbacks\_t}.
 
 \format
@@ -75,14 +76,16 @@ invalid, \code{ompd\_rc\_bad\_input} should be returned. All other errors will b
 \code{ompd\_rc\_error}.
 
 The above initialization is performed for each OMPD library that is loaded by a third-party tool. 
-There may more than one library present in a thid-party tool, such as a debugger, because the tool 
-may be controlling a number of targets that may be using different runtime systems which require 
+There may be more than one library present in a thid-party tool, such as a debugger, because the tool 
+%may be controlling a number of targets that may be using different runtime systems which require 
+may be controlling a number of devices that may be using different runtime systems which require 
 different OMPD libraries. This initialization must be performed exactly once before the tool
-can begin operating on a target process or core file.
+can begin operating on a OpenMP process or core file.
 
-\ompdsubsection{Per Target Initialization}
+%\ompdsubsection{Per Target Initialization}
+\ompdsubsection{Per OpenMP Process Initialization}
 
-A third-party tool initializes a session working on a target process or core
+A third-party tool initializes a session working on a OpenMP process or core
 file by calling \code{ompd\_process\_initialize}:
 
 \format
@@ -98,18 +101,21 @@ ompd_rc_t ompd_process_initialize(
 }
 
 The \code{context} argument is the pointer to the third-party tool's host
-address space context object for the target process or core file. The OMPD implementation 
+%address space context object for the target process or core file. The OMPD implementation 
+address space context object for the OpenMP process or core file. The OMPD implementation 
 returns a pointer to the address space handle in \code{*handle}, which the tool is responsible for 
 releasing when it is no longer needed. This function must be called before any OMPD operations 
-are performed on the target.
+%are performed on the target.
+are performed on the OpenMP process.
 \code{ompd\_process\_initialize} gives the OMPD library an opportunity to confirm that it is capable 
-of handling the target process or core file identified by the context. Incompatibility is signaled by a 
+of handling the OpenMP process or core file identified by the context. Incompatibility is signaled by a 
 return value of \code{ompd\_rc\_incompatible}. On return, the handle is owned by the tool, 
 which must release it using \code{ompd\_release\_address\_space\_handle}.
 
-\ompdsubsection{Per Target Finalization}
+%\ompdsubsection{Per Target Finalization}
+\ompdsubsection{Per OpenMP Process Finalization}
 
-When the tool is finished working on the target address space for a process or core file, it calls
+When the tool is finished working on the OpenMP process address space for a process or core file, it calls
 \code{ompd\_release\_address\_space\_handle}
 to tell the OMPD implementation that it no longer needs the address space
 and give the OMPD implementation an opportunity to release any
@@ -216,10 +222,12 @@ ompd_rc_t ompd_release_address_space_handle(
 }
 
 \descr
-When the debugger is finished with the target address space handle it
+%When the debugger is finished with the target address space handle it
+When the debugger is finished with the OpenMP process address space handle it
 should call \code{ompd\_release\_address\_space\_handle} to release
 the handle and give the OMPD implementation the opportunity to release
-any resources it may have related to the target.
+%any resources it may have related to the target.
+any resources it may have related to the OpenMP process.
 
 \argdesc
 
@@ -255,7 +263,8 @@ A successful invocation of  \code{|ompd\_get\_threads} returns
 a pointer to a vector of pointers to handles in \code{*thread\_handle\_vector}
 and returns the number of handle pointers in \code{*num\_handles}.
 This call yields meaningful results only if all OpenMP threads in
-the target process are stopped; otherwise, the OpenMP runtime may be creating and/or destroying
+%the target process are stopped; otherwise, the OpenMP runtime may be creating and/or destroying
+the OpenMP process are stopped; otherwise, the OpenMP runtime may be creating and/or destroying
 threads during or after the call, rendering useless the
 vector of handles returned.
 
@@ -1087,7 +1096,8 @@ ompd\_rc\_t ompd\_get\_max\_threads (
 
 \descr
 The \code{ompd\_get\_max\_threads} function returns the value of the
-target's \emph{nthreads-var} ICV ,
+%target's \emph{nthreads-var} ICV ,
+device's \emph{nthreads-var} ICV ,
 and corresponds to the \code{omp\_get\_max\_threads} function
 in the OpenMP runtime API.
 This returns an upper bound on the number threads that could be used
@@ -1315,7 +1325,8 @@ ompd\_rc\_t ompd\_get\_schedule (
 \code{ompd\_get\_schedule} returns information about the schedule that is
 applied when \code{runtime} scheduling is used.
 %
-This information is represented in the target by the
+%This information is represented in the target by the
+This information is represented in the device by the
 \emph{run-sched-var} ICV (\S3.2.1 of~\cite{OpenMP}).
 \argdesc
 OpenMP defines a minimum set of values in the enumeration type
