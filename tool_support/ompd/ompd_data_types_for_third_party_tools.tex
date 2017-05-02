@@ -1,0 +1,286 @@
+
+In this section, we define the types, structures, and functions for the OMPD API.
+
+\ompdsubsection{Basic Types}
+The following describes the basic OMPD API types.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+/* unsigned integer large enough to hold a target address or a */
+/* target segment value*/
+typedef uint64_t ompd_taddr_t;
+/* signed version of ompd_addr_t */
+typedef int64_t  ompd_tword_t;   
+/* identifies what a thread is  waiting for*/       
+typedef uint64_t ompd_wait_id_t;
+typedef struct \{
+  /* target architecture specific segment value */
+  ompd_taddr_t segment;
+  /* target address in the segment */ 
+  ompd_taddr_t address;
+\} ompd_address_t;
+
+#define OMPD_SEGMENT_UNSPECIFIED  ((ompd_taddr_t) 0)
+#define OMPD_SEGMENT_TEXT         ((ompd_taddr_t) 1)
+#define OMPD_SEGMENT_DATA         ((ompd_taddr_t) 2)
+\end{boxedcode}
+\ccppspecificend
+}
+
+The \code{ompd\_address\_t} is a structure that OMPD uses to specify target addresses, which 
+may or may not be segmented.  The following rules apply for this structure:
+
+\begin{itemize}
+	%
+	\item
+	If the address space of the  OpenMP architecture is not segmented, the OMPD implementation 
+	should use \code{OMPD\_SEGMENT\_UNSPECIFIED} for the segment value.
+	%
+	\item
+	If the target architecture uses simple ``text'' and ``data'' segments,
+	which is common on some systems, the OMPD implementation should use
+	\code{OMPD\_SEGMENT\_TEXT} for the text segment value, and
+	\code{OMPD\_SEGMENT\_DATA} for the data segment value.
+	%
+	\item
+	The segment value for the NVIDIA\textsuperscript{\textregistered} GPU
+	target architecture should use a \code{ptxStorageKind} enumeration value as defined by the 
+	CUDA Debugger API.
+	%
+	This enumeration is defined by the \code{cudadebugger.h} header file contained within a CUDA 
+	SDK package.
+	\item
+	Otherwise, the segment value is target architecture specific.
+\end{itemize}
+
+\ompdsubsection{Operating System Thread Types}
+
+An OpenMP runtime may use different thread implementations. OMPD uses the 
+\code{ompd\_osthread\_kind\_t} type to describe the thread implementation upon which an 
+OpenMP thread is overlaid.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum \{
+  ompd_osthread_pthread,
+  ompd_osthread_lwp,
+  ompd_osthread_winthread
+\} ompd_osthread_kind_t;
+		
+\end{boxedcode}
+\ccppspecificend
+}
+
+The operating system-specific information can vary in size and format, and therefore is not 
+explicitly represented in this API. Operating system-specific thread identifiers are passed
+across the interface by reference, that is, by a pointer to where the information can be found.
+In addition, the `kind' and size of the information are also passed.
+
+When operating system-specific thread identifiers are passed as either `in' or `out' parameters, 
+they are allocated and owned by the caller, which is responsible for their eventual disposal.
+
+\ompdsubsection{OMPD Handle Types}
+
+Each OMPD interface operation that applies to a particular address space, thread, parallel region, 
+or task must  explicitly specify the target entity for the operation using a \emph{handle}.
+OMPD employs handles for address spaces (for a host or target device), threads, parallel regions, 
+and tasks. A handle for an entity is constant while the entity itself is alive. Handles are defined by 
+an OMPD implementation, and are opaque to a third-party tool. The following define the OMPD 
+handle types:
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct _ompd_address_space_handle_s ompd_address_space_handle_t;
+typedef struct _ompd_thread_handle_s ompd_thread_handle_t;
+typedef struct _ompd_parallel_handle_s ompd_parallel_handle_t;
+typedef struct _ompd_task_handle_s ompd_task_handle_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+Defining externally visible type names in this way introduces type safety to the interface, and helps 
+to catch instances where incorrect handles are passed by the debugger to the OMPD 
+implementation. The \code{struct}s do not need to be defined at all. The OMPD implementation 
+would need to cast incoming (pointers to) handles to the appropriate internal, private types.
+
+\ompdsubsection{Debugger Context Types}
+
+The debugger contexts are opaque to the OMPD and are defined as follows:
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct _ompd_address_space_context_s ompd_address_space_context_t;
+typedef struct _ompd_thread_context_s ompd_thread_context_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\ompdsubsection{Return Code Types}
+Each OMPD operation has a return code. The return code types and their semantics are defined as 
+follows:
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum \{
+  ompd_rc_ok = 0,  /* operation was successful */
+  ompd_rc_unavailable = 1, /* info is not available (in this context) */
+  ompd_rc_stale_handle = 2, /* handle is no longer valid */
+  ompd_rc_bad_input = 3, /* bad input parameters (other than handle) */
+  ompd_rc_error = 4, /* error */
+  ompd_rc_unsupported = 5, /* operation is not supported */
+  ompd_rc_needs_state_tracking = 6, /* needs runtime state tracking enabled */
+  ompd_rc_incompatible = 7, /* target is not compatible with this OMPD */
+  ompd_rc_target_read_error = 8, /* error reading from the target */
+  ompd_rc_target_write_error = 9, /* error writing from the target */
+  ompd_rc_nomem = 10, /* unable to allocate memory */
+\} ompd_rc_t;	
+\end{boxedcode}
+\ccppspecificend
+}
+
+\ompdsubsection{OpenMP Scheduling Types}
+
+The following enumeration defines \code{ompd\_sched\_t}, which is the OMPD API definition 
+corresponding to the OpenMP enumeration type \code|omp\_sched\_t| (XXXX).
+\code{ompd\_sched\_t} also defines \code{ompd\_sched\_vendor\_lo} and
+\code{ompd\_sched\_vendor\_hi} to define the range of implementation-specific 
+\code{omp\_sched\_t} values than can be handle by the OMPD API.
+
+\begin{quote}
+	\begin{lstlisting}
+
+	\end{lstlisting}
+\end{quote}
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum \{
+  ompd_sched_static = 1,
+  ompd_sched_dynamic = 2,
+  ompd_sched_guided = 3,
+  ompd_sched_auto = 4,
+  ompd_sched_vendor_lo = 5,
+  ompd_sched_vendor_hi = 0x7fffffff
+\} ompd_sched_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\ompdsubsection{OpenMP Proc Binding Types}
+
+The following enumeration defines \code{ompd\_proc\_bind\_t}, which is the OMPD
+API definition corresponding to the OpenMP enumeration type
+\code{omp\_proc\_bind\_t} (XXX).
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum \{
+  ompd_proc_bind_false = 0,
+  ompd_proc_bind_true = 1,
+  ompd_proc_bind_master = 2,
+  ompd_proc_bind_close = 3,
+  ompd_proc_bind_spread = 4
+\} ompd_proc_bind_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\ompdsubsection{Primitive Types}
+
+The following structure contains members that the OMPD implementation can use
+to interrogate the debugger about the ``sizeof'' of primitive types in the OpenMP architecture 
+address space.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef struct \{
+  int sizeof_char;
+  int sizeof_short;
+  int sizeof_int;
+  int sizeof_long;
+  int sizeof_long_long;
+  int sizeof_pointer;
+\} ompd_target_type_sizes_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+The following enumeration of primitive types are used by OMPD to express the primitive
+type of data for target to host conversion.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum \{
+  ompd_type_char = 0,
+  ompd_type_short = 1,
+  ompd_type_int = 2,
+  ompd_type_long = 3,
+  ompd_type_long_long = 4,
+  ompd_type_pointer = 5
+\} ompd_target_prim_types_t;
+\end{boxedcode}
+\ccppspecificend
+}
+
+\ompdsubsection{Runtime State Types}
+
+The OMPD runtime states mirror those in OMPT (see XXX}). Note that there is no guarantee that 
+the numeric values of the corresponding members of the enumerations are identical.
+
+\format
+\vbox{
+\ccppspecificstart
+\begin{boxedcode}
+typedef enum \{
+  /* work states (0..15) */
+  ompd_state_work_serial = 0x00, /* working outside parallel */
+  ompd_state_work_parallel = 0x01, /* working within parallel  */
+  ompd_state_work_reduction = 0x02, /* performing a reduction */
+
+  /* idle (16..31) */
+  ompd_state_idle = 0x10, /* waiting for work */
+
+  /* overhead states (32..63) */
+  ompd_state_overhead = 0x20, /* non-wait overhead */
+
+  /* barrier wait states (64..79) */
+  ompd_state_wait_barrier = 0x40, /* generic barrier */
+  ompd_state_wait_barrier_implicit = 0x41, /* implicit barrier */
+  ompd_state_wait_barrier_explicit = 0x42, /* explicit barrier */
+
+  /* task wait states (80..95) */
+  ompd_state_wait_taskwait = 0x50, /* waiting at a taskwait */
+  ompd_state_wait_taskgroup = 0x51, /* waiting at a taskgroup */
+
+  /* mutex wait states (96..111) */
+  ompd_state_wait_mutex = 0x60, /* waiting for any mutex kind */
+  ompd_state_wait_lock = 0x61, /* waiting for lock */  
+  ompd_state_wait_critical = 0x62, /* waiting for critical */
+  ompd_state_wait_atomic = 0x63, /* waiting for atomic */
+  ompd_state_wait_ordered = 0x64, /* waiting for ordered */
+
+  /* misc (112..127) */
+  ompd_state_undefined = 0x70, /* undefined thread state */
+  ompd_state_first = 0x71, /* initial enumeration state */
+\} ompd_state_t;
+\end{boxedcode}
+\ccppspecificend
+}
