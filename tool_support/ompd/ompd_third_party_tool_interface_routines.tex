@@ -189,7 +189,10 @@ a session on a live process or core file by calling \code{ompd\_process\_initial
 \vbox{
 \cspecificstart
 \begin{boxedcode}
-ompd_rc_t ompd_initialize(const ompd_callbacks_t *\plc{callbacks});
+ompd_rc_t ompd_process_initialize(
+  ompd_address_space_context_t  *\plc{context},   /* IN */
+  ompd_address_space_handle_t  **\plc{handle}   /* OUT */
+);
 \end{boxedcode}
 \cspecificend
 }
@@ -199,9 +202,15 @@ On return from \code{ompd\_process\_initialize} the address
 space handle is owned by the tool.
 
 \argdesc
+The input argument \plc{context} is an opaque handle provided by the debugger
+to address an address space.
+On return the output argument \plc{handle} provides an opaque handle to the
+debugger for this address space.
+
 \crossreferences
 \begin{itemize}
-	\item \code{ompd\_callbacks\_t} type, see \specref{sec:ompd_callbacks_t}.
+	\item \code{ompd\_address\_space\_context\_t} type, see \specref{sec:ompd_address_space_context_t}.
+	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{sec:ompd_address_space_handle_t}.
 \end{itemize}
 
 
@@ -226,12 +235,13 @@ ompd_rc_t ompd_release_address_space_handle(
 When the debugger is finished with the OpenMP process address space handle it
 should call \code{ompd\_release\_address\_space\_handle} to release
 the handle and give the OMPD implementation the opportunity to release
-%any resources it may have related to the target.
-any resources it may have related to the OpenMP process.
+any resources it may have related to the address space.
 
 \argdesc
+The input argument \plc{handle} is an opaque handle for an address space
+to be released.
 
-\crossreferences
+\crossreferences	
 \begin{itemize}
 	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{sec:ompd_address_space_handle_t}.
 \end{itemize}
@@ -239,69 +249,9 @@ any resources it may have related to the OpenMP process.
 
 \ompdsubsection{Thread Handles}
 
-\ompdcallbacksignature{\code{ompd\_get\_threads}}
-\summary
-The \code{ompd\_get\_threads} enables a tool to
-to obtain pointers to handles for all OpenMP threads associated
-with an address space handle.
-
-\format
-\vbox{
-\cspecificstart
-\begin{boxedcode}
-ompd_rc_t ompd_get_threads(
-  ompd_address_space_handle_t *\plc{handle},   /* IN */
-  ompd_thread_handle_t ***\plc{thread_handle_vector},   /* OUT */
-  int *\plc{num_handles}   /* OUT */
-);
-\end{boxedcode}
-\cspecificend
-}
-
-\descr
-A successful invocation of  \code{|ompd\_get\_threads} returns
-a pointer to a vector of pointers to handles in \code{*thread\_handle\_vector}
-and returns the number of handle pointers in \code{*num\_handles}.
-This call yields meaningful results only if all OpenMP threads in
-%the target process are stopped; otherwise, the OpenMP runtime may be creating and/or destroying
-the OpenMP process are stopped; otherwise, the OpenMP runtime may be creating and/or destroying
-threads during or after the call, rendering useless the
-vector of handles returned.
-
-The \code{num\_handles} pointer argument must be valid.
-The \code{thread\_handle\_vector} pointer argument may be NULL,
-in which case the number of handles that would have been returned
-had the argument not been NULL is returned in \code{*num\_handles}.
-This allows the debugger to find out how many OpenMP threads are
-running in the address space when it is not interested in the handles 
-themselves.
-
-The OMPD library gets the memory required for the vector of pointers to thread 
-handles using the memory allocation routine in the callbacks it received during
-the call to \code{ompd\_initialize}. If the OMPD implementation needs to allocate heap memory for 
-the thread handles, it must use the callbacks to acquire this memory. On return, the vector and the 
-thread handles are `owned' by the debugger, and the debugger is responsible for releasing them 
-when they are no longer required.
-
-The thread handles must be released by calling 
-\code{ompd\_release\_thread\_handle}. The vector was allocated by the OMPD implementation 
-using the allocation routine in the callbacks it received during initialization 
-%(see \refdef{\code{ompt\_initialize}}{initialize:def}); 
-the debugger must deallocate the vector in a 
-compatible manner.
-
-\argdesc
-
-\crossreferences
-\begin{itemize}
-	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{sec:ompd_address_space_handle_t}.
-	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
-\end{itemize}
-
-
 \ompdcallbacksignature{\code{ompd\_get\_thread\_in\_parallel}}
 \summary
-The  \code{ompd\_get\_thread\_in\_parallel} operation enables a tools to obtain handles for all 
+The  \code{ompd\_get\_thread\_in\_parallel} operation enables a tools to obtain handles for 
 OpenMP threads associated with a parallel region.
 
 \format
@@ -310,34 +260,28 @@ OpenMP threads associated with a parallel region.
 \begin{boxedcode}
 ompd_rc_t ompd_get_thread_in_parallel(
   ompd_parallel_handle_t *\plc{parallel_handle},   /* IN */
-  ompd_thread_handle_t ***\plc{thread_handle_vector},   /* OUT */
-  int *\plc{num_handles}   /* OUT */
+  int \plc{nth_handle},   /* IN */
+  ompd_thread_handle_t **\plc{thread_handle}   /* OUT */
 );
 \end{boxedcode}
 \cspecificend
 }
 
 \descr
-A successful invocation of  \code{ompd\_get\_thread\_in\_parallel} returns a pointer to a vector of 
-pointers to thread handles in \code{*thread\_handle\_vector}, and returns the number of handles in 
-\code{*num\_handles}. This call yields meaningful results only if all OpenMP threads in the parallel 
-region are stopped; otherwise, the OpenMP runtime may be creating and/or destroying threads 
-during or after the call, rendering useless the vector of handles returned.
-
-The \code{num\_handles} pointer argument must be valid. The \code{thread\_handle\_vector} 
-pointer argument may be NULL, in which case the number of handles that would have been 
-returned had the argument not been NULL is returned in \code{*num\_handles}.
-
-The OMPD library must obtain the memory for the vector of pointers to thread handles
-using the memory allocation callback function that was passed to it during \code{ompd\_initialize}.
-If the OMPD implementation needs to allocate heap memory for the thread handles it must use the 
-callbacks to acquire this memory. After the call the vector and the thread handles are `owned' by 
-the third-party tool, which is responsible for releasing them. The thread handles must be released 
-by calling \code{ompd\_thread\_handle}. The vector was allocated by the OMPD implementation 
-using the allocation routine in the callbacks; the debugger must deallocate  the vector in a 
-compatible manner.
+A successful invocation of  \code{ompd\_get\_thread\_in\_parallel} returns a pointer to 
+a thread handle in \code{*thread\_handle}. 
+This call yields meaningful results only if all OpenMP threads in the parallel 
+region are stopped.
 
 \argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a parallel region
+ and selects the parallel region to operate on.
+The input argument \code{nth\_handles} selects the thread of the team to be returned. 
+On return the output argument \plc{thread\_handle} is an opaque handle for the selected thread.
+
+\restrictions
+The value of \code{nth\_handles} must be a non-negative integer smaller than the
+team size returned by a call to \code{ompd\_get\_num\_threads}.
 
 \crossreferences
 \begin{itemize}
@@ -345,42 +289,47 @@ compatible manner.
 	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
 \end{itemize}
 
-
-\ompdcallbacksignature{\code{ompd\_get\_master\_thread\_in\_parallel}}
-\summary
-The  \code{ompd\_get\_master\_thread\_in\_parallel} operation
-enables a third-party tool to obtain a handle for the OpenMP master thread in a parallel region. 
-
-\format
-\vbox{
-\cspecificstart
-\begin{boxedcode}
-ompd_rc_t ompd_get_master_thread_in_parallel(
-  ompd_parallel_handle_t *\plc{parallel_handle},   /* IN */
-  ompd_thread_handle_t **\plc{thread_handle}   /* OUT */
-); 
-\end{boxedcode}
-\cspecificend
-}
-
-\descr
-A successful invocation of \code{ompd\_get\_master\_thread\_in\_parallel} returns a handle
-for the thread that encountered the parallel construct. This call yields meaningful results only if an 
-OpenMP thread in the parallel region is stopped; otherwise, the parallel region is not guaranteed to 
-be alive. 
-
-On success \code{ompd\_get\_master\_thread\_in\_parallel} returns \code{ompd\_rc\_ok}.
-A pointer to the thread handle is returned in \code{*thread\_handle}. After the call the thread 
-handle is owned by the tool, which must release it when it is no longer required by calling
-\code{ompd\_release\_thread\_handle}.
-
-\argdesc
-
-\crossreferences
-\begin{itemize}
-	\item \code{ompd\_parallel\_handle\_t} type, see \specref{sec:ompd_parallel_handle_t}.
-	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
-\end{itemize}
+% SUBSUMED by  ompd\_get\_thread\_in\_parallel
+%
+%
+%\ompdcallbacksignature{\code{ompd\_get\_master\_thread\_in\_parallel}}
+%\summary
+%The  \code{ompd\_get\_master\_thread\_in\_parallel} operation
+%enables a third-party tool to obtain a handle for the OpenMP master thread in a parallel region. 
+%
+%\format
+%\vbox{
+%\ccppspecificstart
+%\begin{boxedcode}
+%ompd_rc_t ompd_get_master_thread_in_parallel(
+%  ompd_parallel_handle_t *\plc{parallel_handle},   /* IN */
+%  ompd_thread_handle_t **\plc{thread_handle}   /* OUT */
+%); 
+%\end{boxedcode}
+%\ccppspecificend
+%}
+%
+%\descr
+%A successful invocation of \code{ompd\_get\_master\_thread\_in\_parallel} returns a handle
+%for the thread that encountered the parallel construct. This call yields meaningful results only if an 
+%OpenMP thread in the parallel region is stopped; otherwise, the parallel region is not guaranteed to 
+%be alive. 
+%
+%On success \code{ompd\_get\_master\_thread\_in\_parallel} returns \code{ompd\_rc\_ok}.
+%A pointer to the thread handle is returned in \code{*thread\_handle}. After the call the thread 
+%handle is owned by the tool, which must release it when it is no longer required by calling
+%\code{ompd\_release\_thread\_handle}.
+%
+%\argdesc
+%The input argument \plc{parallel\_handle} is an opaque handle for the parallel team.
+%The input argument \code{nth\_handles} selects the thread of the team to be returned. 
+%On return the output argument \plc{thread\_handle} is an opaque handle for the selected thread.
+%
+%\crossreferences
+%\begin{itemize}
+%	\item \code{ompd\_parallel\_handle\_t} type, see \specref{sec:ompd_parallel_handle_t}.
+%	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
+%\end{itemize}
 
 
 \ompdcallbacksignature{\code{ompd\_release\_thread\_handle}}
@@ -404,6 +353,8 @@ Instead, when the tool is finished with a thread handle it must pass it to the O
 \code{ompd\_release\_thread\_handle} routine for disposal.
 
 \argdesc
+The input argument \plc{thread\_handle} is an opaque handle for a thread
+to be released.
 
 \crossreferences
 \begin{itemize}
@@ -446,16 +397,19 @@ less than, equal to, or greater than that corresponding to \code{thread\_handle\
 %	thread3 or can thread1 > thread3?
 %\end{notes}
 
-For OMPD implementations that always have a single, unique, underlying thread handle for a given 
-thread, this operation reduces to a simple comparison of the pointers. However, other 
-implementations may take a different approach, and therefore the only reliable way of determining 
-whether two different pointers to thread handles refer the same or distinct threads is to use
-\code{ompd\_thread\_handle\_compare}.
-
-Allowing thread handles to be compared allows the tool to hold them in ordered collections.
-The means by which thread handles are ordered is implementation-defined.
+% JP: rationale, so dropped
+%For OMPD implementations that always have a single, unique, underlying thread handle for a given 
+%thread, this operation reduces to a simple comparison of the pointers. However, other 
+%implementations may take a different approach, and therefore the only reliable way of determining 
+%whether two different pointers to thread handles refer the same or distinct threads is to use
+%\code{ompd\_thread\_handle\_compare}.
+%
+%Allowing thread handles to be compared allows the tool to hold them in ordered collections.
+%The means by which thread handles are ordered is implementation-defined.
 
 \argdesc
+The input arguments \plc{thread\_handle\_1} and \plc{thread\_handle\_2} are opaque handles for threads.
+On return the output argument \plc{cmp\_value} is set to a signed integer value.
 
 \crossreferences
 \begin{itemize}
@@ -494,6 +448,9 @@ debugger, which is responsible for deallocating it. The contents of the strings 
 handles which compare as equal with \code{ompd\_thread\_handle\_compare} must be the same.
 
 \argdesc
+The input argument \plc{thread\_handle} is an opaque handle for a thread  and selects the thread to operate on.
+On return the output argument \plc{string\_id} is set to a string representation of the thread.
+
 
 \crossreferences
 \begin{itemize}
@@ -524,6 +481,9 @@ This call is meaningful only if the thread whose handle is provided is stopped. 
 must be released by calling \code{ompd\_release\_parallel\_handle}.
 
 \argdesc
+The input argument \plc{thread\_handle} is an opaque handle for a thread and selects the thread to operate on.
+On return the output argument \plc{parallel\_handle} is set to a handle for the parallel region
+currently executing on this thread if there is any.
 
 \crossreferences
 \begin{itemize}
@@ -557,6 +517,9 @@ A pointer to the parallel handle for the enclosing region is returned in
 release it when it is no longer required by calling \code{ompd\_release\_parallel\_handle}.
 
 \argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a parallel region and selects the parallel region to operate on.
+On return the output argument \plc{parallel\_handle} is set to a handle for the parallel region
+enclosing the selected parallel region.
 
 \crossreferences
 \begin{itemize}
@@ -588,6 +551,9 @@ regions handle is returned in \code{*task\_parallel\_handle}. The parallel handl
 tool, which must release it by calling \code{ompd\_release\_parallel\_handle}.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{parallel\_handle} is set to a handle for the parallel region
+enclosing the selected task.
 
 \crossreferences
 \begin{itemize}
@@ -617,6 +583,8 @@ it must must pass it to the OMPD \code{ompd\_release\_parallel\_handle}
 routine for disposal.
 
 \argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a parallel region
+to be released.
 
 \crossreferences
 \begin{itemize}
@@ -694,6 +662,8 @@ The contents of the strings returned for parallel regions handles which compare 
 \code{ompd\_parallel\_handle\_compare} must be the same.
 
 \argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a parallel region and selects the parallel region to operate on.
+On return the output argument \plc{string\_id} is set to a string representation of the parallel region.
 
 \crossreferences
 \begin{itemize}
@@ -724,6 +694,9 @@ This call is meaningful only if the thread whose handle is provided is stopped.
 The task handle must be released by calling \code{ompd\_release\_task\_handle}.
 
 \argdesc
+The input argument \plc{thread\_handle} is an opaque handle for a thread and selects the thread to operate on.
+On return the output argument \plc{task\_handle} is set to a handle for the task
+currently executing on the thread.
 
 \crossreferences
 \begin{itemize}
@@ -770,6 +743,9 @@ This call is meaningful only if the thread executing the task specified by
 \verb|task_handle|  is stopped.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{task\_handle} is set to a handle for the task
+that created the selected task.
 
 \crossreferences
 \begin{itemize}
@@ -801,6 +777,9 @@ by \code{task\_handle}  is stopped. The parent task handle must be released by c
 \code{ompd\_release\_task\_handle}.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{parent\_task\_handle} is set to a handle for the task that is 
+still on the stack of execution on the same thread and was deferred in favor of executing the selected task.
 
 \crossreferences
 \begin{itemize}
@@ -837,6 +816,9 @@ allocation routine passed to it during the call to \code{ompd\_initialize}.
 The tool itself must deallocate the vector in a compatible manner.
 
 \argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a parallel region and selects the parallel region to operate on.
+On return the output argument \plc{task\_handle} is set to a handle for the implicit task
+executing on \plc{nth} thread of the parallel region.
 
 \crossreferences
 \begin{itemize}
@@ -866,6 +848,8 @@ pass it to the OMPD \code{ompd\_release\_task\_handle} routine
 for disposal.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task
+to be released.
 
 \crossreferences
 \begin{itemize}
@@ -944,6 +928,8 @@ The contents of the strings returned for task handles which compare as equal wit
 \code{ompd\_task\_handle\_compare} must be the same.
 
 \argdesc
+The input argument \plc{thread\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{string\_id} is set to a string representation of the task.
 
 \crossreferences
 \begin{itemize}
@@ -961,7 +947,7 @@ Determine the number of threads associated with a parallel region.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_num\_threads(
   ompd\_parallel\_handle\_t *\plc{parallel\_handle},                         /* IN */
-  ompd\_tword\_t *\plc{val}                                     /* OUT */
+  ompd\_word\_t *\plc{val}                                     /* OUT */
 );
 \end{boxedcode}
 \cspecificend
@@ -969,11 +955,14 @@ ompd\_rc\_t ompd\_get\_num\_threads(
 \descr
 
 \argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a parallel region and selects the parallel region to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_get\_num\_threads} would return when
+executed in this parallel region.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_parallel\_handle\_t} type, see \specref{sec:ompd_parallel_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
 
@@ -986,7 +975,7 @@ Determine the nesting depth of a particular parallel region.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_level (
   ompd\_task\_handle\_t *\plc{task\_handle},                                 /* IN */
-  ompd\_tword\_t *\plc{val}                                         /* OUT */
+  ompd\_word\_t *\plc{val}                                         /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
@@ -994,11 +983,15 @@ ompd\_rc\_t ompd\_get\_level (
 \descr
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_get\_level} would return when
+executed in this task.
+
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
 
@@ -1011,7 +1004,7 @@ Determine the number of enclosing  parallel regions.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_active\_level(
   ompd\_task\_handle\_t *\plc{task\_handle},                                 /* IN */
-  ompd\_tword\_t *\plc{val}                                         /* OUT */
+  ompd\_word\_t *\plc{val}                                         /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
@@ -1021,38 +1014,45 @@ ompd\_rc\_t ompd\_get\_active\_level(
 parallel regions enclosing the parallel region specified by its handle.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_get\_active\_level} would return when
+executed in this task.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
-
-\ompdcallbacksignature{\code{ompd\_get\_parallel\_function}}
-\summary
-Parallel Function Entry Point
-\format
-\cspecificstart
-\begin{boxedcode}
-ompd\_rd\_t ompd\_get\_parallel\_function(
-  ompd\_parallel\_handle\_t *\plc{parallel\_handle},                         /* IN */
-  ompd\_address\_t *\plc{entry\_point}                             /* OUT */
-);
-\end{boxedcode}
-\cspecificend
-
-\descr
-The \code{ompd\_get\_parallel\_function} returns the
-entry point of the code that corresponds to the body of
-the parallel construct.
-\argdesc
-
-\crossreferences
-\begin{itemize}
-	\item \code{ompd\_parallel\_handle\_t} type, see \specref{sec:ompd_parallel_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
-\end{itemize}
+%JP: Basically, there isn't the parallel function, look for the task function of the implicit task.
+%
+%\ompdcallbacksignature{\code{ompd\_get\_parallel\_function}}
+%\summary
+%Parallel Function Entry Point
+%\format
+%\cspecificstart
+%\begin{boxedcode}
+%ompd\_rd\_t ompd\_get\_parallel\_function(
+%  ompd\_parallel\_handle\_t *\plc{parallel\_handle},                         /* IN */
+%  ompd\_address\_t *\plc{entry\_point}                             /* OUT */
+%);
+%\end{boxedcode}
+%\cspecificend
+%
+%\descr
+%The \code{ompd\_get\_parallel\_function} returns the
+%entry point of the code that corresponds to the body of
+%the parallel construct.
+%\argdesc
+%The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+%On return the output argument \plc{val} is set to the value that \code{omp\_get\_level} would return when
+%executed in this task.
+%
+%\crossreferences
+%\begin{itemize}
+%	\item \code{ompd\_parallel\_handle\_t} type, see \specref{sec:ompd_parallel_handle_t}.
+%	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+%\end{itemize}
 
 
 \ompdcallbacksignature{\code{ompd\_get\_task\_function}}
@@ -1073,11 +1073,14 @@ The \code{ompd\_get\_task\_function} returns the entry point of the code
 that corresponds to the body of code executed by the task:
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{entry\_point} is set an address that describes the begin of application
+code which executes the task region.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_address\_t} type, see \specref{sec:ompd_address_t}.
 \end{itemize}
 
 
@@ -1089,34 +1092,31 @@ that corresponds to the body of code executed by the task:
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_max\_threads (
   const ompd\_task\_handle\_t  *\plc{task\_handle},                           /* IN */
-  ompd\_tword\_t              *\plc{val}                                   /* OUT */
+  ompd\_word\_t              *\plc{val}                                   /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
 
 \descr
-The \code{ompd\_get\_max\_threads} function returns the value of the
-%target's \emph{nthreads-var} ICV ,
-device's \emph{nthreads-var} ICV ,
+The \code{ompd\_get\_max\_threads} function returns the first value of the
+ \emph{nthreads-var} ICV,
 and corresponds to the \code{omp\_get\_max\_threads} function
 in the OpenMP runtime API.
 This returns an upper bound on the number threads that could be used
 to form a new team if a \code{parallel} construct without a
 \code{num\_threads} clause were encountered.
 
-The \emph{nthreads-var} ICV is defined in OpenMP as a list
-(\S2.3.2 of~\cite{OpenMP}).
-Like \code{omp\_get\_max\_threads}, \code{ompd\_get\_max\_threads}
-returns the first element of the list.
-
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_get\_max\_threads} would return when
+executed in this task.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+	\item \plc{nthreads-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
-(\S2.3.1)
 
 \ompdcallbacksignature{\code{ompd\_get\_thread\_num}}
 \summary
@@ -1125,8 +1125,8 @@ returns the first element of the list.
 \cspecificstart
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_thread\_num (
-  const ompd\_thread\_handle\_t *\plc{thread\_handle},                       /* IN */
-  ompd\_tword\_t *\plc{val}                                 /* OUT */
+  const ompd\_thread\_handle\_t *\plc{task\_handle},                       /* IN */
+  ompd\_word\_t *\plc{val}                                 /* OUT */
 );
 \end{boxedcode}
 \cspecificend
@@ -1138,11 +1138,14 @@ thread number of the thread in the team.
 
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_get\_thread\_num} would return when
+executed in this task.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
 
@@ -1154,7 +1157,7 @@ thread number of the thread in the team.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_in\_parallel (
   const ompd\_task\_handle\_t  *\plc{task\_handle},                           /* IN */
-  ompd\_tword\_t              *\plc{val}                                   /* OUT */
+  ompd\_word\_t              *\plc{val}                                   /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
@@ -1162,15 +1165,19 @@ ompd\_rc\_t ompd\_in\_parallel (
 \descr
 \code{ompd\_in\_parallel} returns logical true (\textit{i.e.}, \code{*val != 0})
 if \emph{active-levels-var}
-ICV (\S2.3.1 of~\cite{OpenMP}) is greater than~0, and false (0) otherwise.
+ICV is greater than~0, and false (0) otherwise.
 The routine corresponds to \code{omp\_in\_parallel} in the OpenMP runtime.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_in\_parallel} would return when
+executed in this task.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+	\item \plc{active-levels-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
 
 
@@ -1182,7 +1189,7 @@ The routine corresponds to \code{omp\_in\_parallel} in the OpenMP runtime.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_in\_final (
   const ompd\_task\_handle\_t  *\plc{task\_handle},                           /* IN */
-  ompd\_tword\_t              *\plc{val}                                   /* OUT */
+  ompd\_word\_t              *\plc{val}                                   /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
@@ -1192,11 +1199,14 @@ ompd\_rc\_t ompd\_in\_final (
 logical true if the task is a final task.
 
 \argdesc
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_in\_final} would return when
+executed in this task.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
 
@@ -1208,24 +1218,26 @@ logical true if the task is a final task.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_dynamic (
   const ompd\_task\_handle\_t  *\plc{task\_handle},                           /* IN */
-  ompd\_tword\_t              *\plc{val}                                   /* OUT */
+  ompd\_word\_t              *\plc{val}                                   /* OUT */
 );
 \end{boxedcode}
 \cspecificend
 
 \descr
 \code{ompd\_get\_dynamic} returns the value of the
-\emph{dyn-var} ICV (\S2.3.1 of~\cite{OpenMP}),
+\plc{dyn-var} ICV,
 and corresponds to the \code{omp\_get\_dynamic} member of the OpenMPI API.
 
 \argdesc
-\emph{dyn-var}~determines whether dynamic adjustment of the number
-of threads is enabled or disabled.
+The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
+On return the output argument \plc{val} is set to the value that \code{omp\_get\_dynamic} would return when
+executed in this task.
 
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+	\item \plc{dyn-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
 
 
@@ -1237,14 +1249,14 @@ of threads is enabled or disabled.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_nested (
   const ompd\_task\_handle\_t  *\plc{task\_handle},                           /* IN */
-  ompd\_tword\_t              *\plc{val}                                   /* OUT */
+  ompd\_word\_t              *\plc{val}                                   /* OUT */
 );
 \end{boxedcode}
 \cspecificend
 
 \descr
 \code{ompd\_get\_nested} corresponds to \code{omp\_get\_nested},
-and returns the value of the \emph{nest-var} ICV (\S2.3.1 of~\cite{OpenMP}).
+and returns the value of the \emph{nest-var} ICV.
 
 \argdesc
 \emph{nest-var} determines if nested parallelism is enabled;
@@ -1253,7 +1265,8 @@ a logical true value indicates that it is, false that it is not.
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+	\item \plc{nest-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
 
 
@@ -1265,7 +1278,7 @@ a logical true value indicates that it is, false that it is not.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_max\_active\_levels (
   const ompd\_thread\_handle\_t  *\plc{thread\_handle},                       /* IN */
-  ompd\_tword\_t                *\plc{val}                                 /* OUT */
+  ompd\_word\_t                *\plc{val}                                 /* OUT */
 );
 \end{boxedcode}
 \cspecificend
@@ -1282,9 +1295,9 @@ and the ICV \emph{max-active-levels-var}.%
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+	\item \plc{max-active-levels-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
-(\S2.3.1 of~\cite{OpenMP})
 
 
 %\begin{notes}
@@ -1315,7 +1328,7 @@ and the ICV \emph{max-active-levels-var}.%
 ompd\_rc\_t ompd\_get\_schedule (
   ompd\_task\_handle\_t        *\plc{task\_handle},                           /* IN */
   ompd\_sched\_t              *\plc{kind},                                 /* OUT */
-  ompd\_tword\_t              *\plc{modifier}                              /* OUT */
+  ompd\_word\_t              *\plc{modifier}                              /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
@@ -1325,12 +1338,11 @@ ompd\_rc\_t ompd\_get\_schedule (
 \code{ompd\_get\_schedule} returns information about the schedule that is
 applied when \code{runtime} scheduling is used.
 %
-%This information is represented in the target by the
 This information is represented in the device by the
-\emph{run-sched-var} ICV (\S3.2.1 of~\cite{OpenMP}).
+\emph{run-sched-var}.
 \argdesc
 OpenMP defines a minimum set of values in the enumeration type
-\code{omp\_sched\_t} (\S3.2.12 of~\cite{OpenMP}).
+\code{omp\_sched\_t}.
 %
 The OMPD API defines
 \code{ompd\_sched\_t}, which contains the
@@ -1349,7 +1361,8 @@ See \S3.2.12 and \S3.2.13 of~\cite{OpenMP} for further details.
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
 	\item \code{ompd\_sched\_t} type, see \specref{sec:ompd_sched_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
+	\item \plc{run-sched-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
 
 
@@ -1387,8 +1400,8 @@ The binding is returned in \code{*bind}.
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
 	\item \code{ompd\_proc\_bind\_t} type, see \specref{sec:ompd_proc_bind_t}.
+	\item \plc{bind-var} ICV, see \specref{sec:Internal Control Variables}.
 \end{itemize}
-See \S3.2.22 of~\cite{OpenMP} for further details.
 
 \ompdcallbacksignature{\code{ompd\_is\_implicit}}
 \summary
@@ -1398,7 +1411,7 @@ See \S3.2.22 of~\cite{OpenMP} for further details.
 \begin{boxedcode}
 ompd\_rc\_t ompd\_is\_implicit (
   ompd\_task\_handle\_t  *\plc{task\_handle},                                 /* IN */
-  ompd\_tword\_t        *\plc{val}                                         /* OUT */
+  ompd\_word\_t        *\plc{val}                                         /* OUT */
 ); 
 \end{boxedcode}
 \cspecificend
@@ -1413,7 +1426,7 @@ The routine has no corresponding call in the OpenMP runtime.
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
-	\item \code{ompd\_tword\_t} type, see \specref{sec:ompd_tword_t}.
+	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
 
