@@ -6,7 +6,7 @@
 
 The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
 before it is unloaded. Per OpenMP process or core file initialization and finalization are also required. 
-A third-party tool starts the initialization by calling \code{ompd\_initialize}. Once loaded, the 
+A tool starts the initialization by calling \code{ompd\_initialize}. Once loaded, the 
 debugger can determine the version of the OMPD API supported by the plugin by 
 calling \code{ompd\_get\_version}:
 
@@ -41,11 +41,11 @@ stack memory for the string it returns to the tool.
 
 The signatures of \code{ompd\_get\_version} and \code{ompd\_get\_version\_string} are 
 guaranteed not to change in future versions of the API. In contrast, the type definitions and 
-prototypes in the rest of the API do not carry the same guarantee. Therefore a third-party tool 
+prototypes in the rest of the API do not carry the same guarantee. Therefore an OMPD using tool 
 should check the version of the API of a loaded OMPD library before calling any other function of 
 the API.
 
-The third-party tool must provide the OMPD library with a set of callback functions 
+The tool must provide the OMPD library with a set of callback functions 
 that enable OMPD to allocate and deallocate memory in the tool's address space, to lookup the 
 sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and 
 %write memory in the target. These callback functions are provided to the OMPD library via a 
@@ -75,17 +75,16 @@ On success, \code{ompd\_initialize} returns \code{ompd\_rc\_ok}. If the \code{da
 invalid, \code{ompd\_rc\_bad\_input} should be returned. All other errors will be reported by 
 \code{ompd\_rc\_error}.
 
-The above initialization is performed for each OMPD library that is loaded by a third-party tool. 
+The above initialization is performed for each OMPD library that is loaded by an OMPD using tool. 
 There may be more than one library present in a thid-party tool, such as a debugger, because the tool 
 %may be controlling a number of targets that may be using different runtime systems which require 
 may be controlling a number of devices that may be using different runtime systems which require 
 different OMPD libraries. This initialization must be performed exactly once before the tool
 can begin operating on a OpenMP process or core file.
 
-%\ompdsubsection{Per Target Initialization}
 \ompdsubsection{Per OpenMP Process Initialization}
 
-A third-party tool initializes a session working on a OpenMP process or core
+An OMPD tool initializes a session working on an OpenMP process or core
 file by calling \code{ompd\_process\_initialize}:
 
 \format
@@ -93,26 +92,24 @@ file by calling \code{ompd\_process\_initialize}:
 \cspecificstart
 \begin{boxedcode}
 ompd_rc_t ompd_process_initialize(
-  ompd_address_space_context_t  *\plc{context},   /* IN */
-  ompd_address_space_handle_t  **\plc{handle}   /* OUT */
+  ompd_address_space_context_t  *\plc{context},
+  ompd_address_space_handle_t  **\plc{handle}
 );
 \end{boxedcode}
 	\cspecificend
 }
 
-The \code{context} argument is the pointer to the third-party tool's host
-%address space context object for the target process or core file. The OMPD implementation 
-address space context object for the OpenMP process or core file. The OMPD implementation 
+The \code{context} argument is a pointer to the tool's context object for the address space
+of the OpenMP process or core file.  The OMPD implementation 
 returns a pointer to the address space handle in \code{*handle}, which the tool is responsible for 
 releasing when it is no longer needed. This function must be called before any OMPD operations 
-%are performed on the target.
 are performed on the OpenMP process.
+
 \code{ompd\_process\_initialize} gives the OMPD library an opportunity to confirm that it is capable 
-of handling the OpenMP process or core file identified by the context. Incompatibility is signaled by a 
+of handling the OpenMP process or core file identified by the \code{context}. Incompatibility is signaled by a 
 return value of \code{ompd\_rc\_incompatible}. On return, the handle is owned by the tool, 
 which must release it using \code{ompd\_release\_address\_space\_handle}.
 
-%\ompdsubsection{Per Target Finalization}
 \ompdsubsection{Per OpenMP Process Finalization}
 
 When the tool is finished working on the OpenMP process address space for a process or core file, it calls
@@ -141,40 +138,40 @@ free up any remaining resources it may be holding.
 
 The OMPD library may implement a \emph{finalizer} section. This will execute as the library is 
 unloaded, and therefore after the tool's call to \code{ompd\_finalize}. The OMPD library is allowed 
-to use the callbacks (provided to it earlier by the third-party tool after the call to 
+to use the callbacks (provided to it earlier by the tool after the call to 
 \code{ompd\_initialize}) during finalization.
 
 \ompdsubsection{Memory Management}
 
 The OMPD library must not access the heap manager directly. Instead, if it needs heap memory it 
-must use the memory allocation and deallocation callback functions provided by the third-party tool 
+must use the memory allocation and deallocation callback functions provided by the tool 
 to obtain and release heap memory. This will ensure that the library does not interfere with any 
 custom memory management scheme that the tool may use.
 
 If the OMPD library is implemented in \code{C++}, memory management operators like \code{new} 
 and \code{delete} in all their variants, \emph{must all} be overloaded and implemented in terms of 
-the callbacks provided by the third-party tool. The OMPD library must be coded so that any of its 
+the callbacks provided by the tool. The OMPD library must be coded so that any of its 
 definitions of \code{new} or \code{delete} do not interfere with any defined by the tool.
 
-In some cases, the OMPD library will need to allocate memory to return results to the third-party 
+In some cases, the OMPD library will need to allocate memory to return results to the
 tool. This memory will then be `owned' by the tool, which will be responsible for releasing it. It is 
 therefore vital that the OMPD library and the tool use the same memory manager.
 
 OMPD handles are created by the OMPD implementation. These are opaque to the 
-third-party tool, and depending on the specific implementation of OMPD may have complex 
+tool, and depending on the specific implementation of OMPD may have complex 
 internal structure. The tool cannot know whether the handle pointers returned by the API 
 correspond to discrete heap allocations. Consequently, the tool must not simply deallocate a 
 handle by passing an address it receives from the OMPD library to its own memory manager. 
 Instead, the API includes functions that the tool must use when it no longer needs a handle.
 
-Contexts are created by a third-party tool and passed to the OMPD implementation. The OMPD 
+Contexts are created by a tool and passed to the OMPD implementation. The OMPD 
 library does not need to release contexts; instead this will be done by the tool after it releases any 
 handles that may be referencing the contexts.
 
 \ompdsubsection{Thread and Signal Safety}
 
 The OMPD implementation does not need to be reentrant. It is the responsibility 
-of the third-party tool to ensure that only one thread enters the OMPD library at a time. The OMPD 
+of the tool to ensure that only one thread enters the OMPD library at a time. The OMPD 
 implementation must not install signal handlers or otherwise interfere with the tool's signal 
 configuration.
 
@@ -216,7 +213,7 @@ debugger for this address space.
 
 \ompdcallbacksignature{\code{ompd\_release\_address\_space\_handle}}
 \summary
-A third-party tool calls \code{ompd\_release\_address\_space\_handle} to release an address space 
+A tool calls \code{ompd\_release\_address\_space\_handle} to release an address space 
 handle.
 
 \format
@@ -295,7 +292,7 @@ team size returned by a call to \code{ompd\_get\_num\_threads}.
 %\ompdcallbacksignature{\code{ompd\_get\_master\_thread\_in\_parallel}}
 %\summary
 %The  \code{ompd\_get\_master\_thread\_in\_parallel} operation
-%enables a third-party tool to obtain a handle for the OpenMP master thread in a parallel region. 
+%enables a tool to obtain a handle for the OpenMP master thread in a parallel region. 
 %
 %\format
 %\vbox{
@@ -348,7 +345,7 @@ ompd_rc_t ompd_release_thread_handle(
 }
 
 \descr
-Thread handles are opaque to third-party tools, which therefore cannot release them directly.
+Thread handles are opaque to tools, which therefore cannot release them directly.
 Instead, when the tool is finished with a thread handle it must pass it to the OMPD 
 \code{ompd\_release\_thread\_handle} routine for disposal.
 
@@ -364,7 +361,7 @@ to be released.
 
 \ompdcallbacksignature{\code{ompd\_thread\_handle\_compare}}
 \summary
-The \code{ompd\_thread\_handle\_compare} operation allows third-party tools to compare 
+The \code{ompd\_thread\_handle\_compare} operation allows tools to compare 
 two thread handles.
 
 \format
@@ -493,7 +490,7 @@ currently executing on this thread if there is any.
 
 \ompdcallbacksignature{\code{ompd\_get\_enclosing\_parallel\_handle}}
 \summary
-The  \code{ompd\_get\_enclosing\_parallel\_handle}  operation enables a third-party tool to obtain a 
+The  \code{ompd\_get\_enclosing\_parallel\_handle}  operation enables a tool to obtain a 
 pointer to the parallel handle for the parallel region enclosing the parallel region specified by 
 \code{parallel\_handle}.
 
@@ -528,7 +525,7 @@ enclosing the selected parallel region.
 
 \ompdcallbacksignature{\code{ompd\_get\_task\_parallel\_handle}}
 \summary
-The  \code{ompd\_get\_task\_parallel\_handle}  operation enables a third-party tool to obtain a 
+The  \code{ompd\_get\_task\_parallel\_handle}  operation enables a tool to obtain a 
 pointer to the parallel handle for the parallel region enclosing the task region specified by 
 \code{task\_handle}.
 
@@ -577,7 +574,7 @@ ompd_rc_t ompd_release_parallel_handle(
 }
 
 \descr
-Parallel region handles are opaque to the third-party tool, which therefore
+Parallel region handles are opaque to the tool, which therefore
 cannot release them directly. Instead, when the tool is finished with a parallel region handle
 it must must pass it to the OMPD \code{ompd\_release\_parallel\_handle}
 routine for disposal.
@@ -593,7 +590,7 @@ to be released.
 
 \ompdcallbacksignature{\code{ompd\_parallel\_handle\_compare}}
 \summary
-The \code{ompd\_parallel\_handle\_compare} operation allows a third-party tool to compare two 
+The \code{ompd\_parallel\_handle\_compare} operation allows a tool to compare two 
 parallel region handles.
 
 \format
@@ -674,7 +671,7 @@ On return the output argument \plc{string\_id} is set to a string representation
 
 \ompdcallbacksignature{\code{ompd\_get\_top\_task\_region}}
 \summary
-A third-party tool uses the \code{ompd\_get\_top\_task\_region} operation to obtain a pointer to the 
+A tool uses the \code{ompd\_get\_top\_task\_region} operation to obtain a pointer to the 
 task handle for the innermost, or topmost, task region associated with an OpenMP thread.
 
 \format
@@ -722,7 +719,7 @@ construct it is executing.
 
 \ompdcallbacksignature{\code{ompd\_get\_generating\_ancestor\_task\_region}}
 \summary
-A third-party tool uses \code{ompd\_get\_generating\_ancestor\_task\_region} to obtain
+A tool uses \code{ompd\_get\_generating\_ancestor\_task\_region} to obtain
 a pointer to the task handle for the task that encountered the OpenMP construct which caused the 
 task represented by \code{task\_handle} to be created.
 
@@ -788,7 +785,7 @@ still on the stack of execution on the same thread and was deferred in favor of 
 
 \ompdcallbacksignature{\code{ompd\_get\_implicit\_task\_in\_parallel}}
 \summary
-The  code{ompd\_get\_implicit\_task\_in\_parallel}  operation enables a third-party tool to obtain a 
+The  code{ompd\_get\_implicit\_task\_in\_parallel}  operation enables a tool to obtain a 
 vector of pointers to task handles for all implicit tasks associated with a parallel region.
 
 \format
@@ -842,7 +839,7 @@ ompd_rc_t ompd_release_task_handle(
 }
 
 \descr
-Task handles are opaque to the third-party tool, which therefore cannot release
+Task handles are opaque to the tool, which therefore cannot release
 them directly. Instead, when the debugger is finished with a task handle it must
 pass it to the OMPD \code{ompd\_release\_task\_handle} routine
 for disposal.
@@ -859,7 +856,7 @@ to be released.
 
 \ompdcallbacksignature{\code{ompd\_task\_handle\_compare}}
 \summary
-The \code{ompd\_task\_handle\_compare} operations allows a third-party tool to compare task 
+The \code{ompd\_task\_handle\_compare} operations allows a tool to compare task 
 handles.
 
 \format
@@ -1132,9 +1129,7 @@ ompd\_rc\_t ompd\_get\_thread\_num (
 \cspecificend
 
 \descr
-\code{ompd\_get\_thread\_num} is the third-party variant of the 
-\code{omp\_get\_thread\_num} runtime routine, and returns the logical
-thread number of the thread in the team.
+\code{ompd\_get\_thread\_num} returns the logical thread number of the thread in the team of the OpenMP process.
 
 
 \argdesc
@@ -1448,12 +1443,8 @@ ompd\_rc\_t ompd\_get\_task\_frame (
 \cspecificend
 
 \descr
-The function \code{ompd\_get\_task\_frame}
-ia a third-party versions of \code{ompt\_get\_task\_frame}.
-%
 \code{ompd\_get\_task\_frame} is discussed under Stack Unwinding in
 Section~\ref{stack-unwinding:sec}.
-%
 
 \argdesc
 
@@ -1645,13 +1636,11 @@ ompd\_rc\_t ompd\_get\_state (
 \cspecificend
 
 \descr
-The function \code{ompd\_get\_state} is a  third-party version of
+The function \code{ompd\_get\_state} is the  OMPD version of
 \code{ompt\_get\_state}. 
 The only difference between the OMPD and OMPT counterparts
 is that the OMPD version must supply a thread handle to provide
 a context for this inquiry.
-% Calls to this function need not return meaningful results unless the thread 
-%is stopped.
 
 \argdesc
 The states are represented by values of the enumeration type

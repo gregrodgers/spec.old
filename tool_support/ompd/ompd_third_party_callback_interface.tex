@@ -1,5 +1,5 @@
 \subsection{OMPD Tool Callback Interface}
-\label{sec:ompd:third-party-tool-callback-interface}
+\label{sec:ompd:ompd-tool-callback-interface}
 
 For the OMPD plugin to provide information about the internal state
 of the OpenMP runtime system in an OpenMP process or core file,
@@ -12,31 +12,31 @@ and a thread may be either a ``live'' thread in an OpenMP process,
 or a thread in a core file.
 %To enable OMPD to extract state information from a target process or core file,
 To enable OMPD to extract state information from an OpenMP process or core file,
-the third-party tool must supply the OMPD with callback functions to inquire
+the tool must supply the OMPD with callback functions to inquire
 about the size of primitive types in the device of the OpenMP process,
 look up the addresses of symbols,
 %as well as read and write memory in the target.
 as well as read and write memory in the device.
 OMPD then uses these callbacks to implement its interface operations.
-Signatures for the third-party tool callbacks used by OMPD are given below.
+Signatures for the tool callbacks used by OMPD are given below.
 
 \subsubsection{Memory Management}
 
 The OMPD plugin \emph{must} obtain and release heap memory \emph{only}
-using the callbacks provided to it by the third-party tool.
+using the callbacks provided to it by the tool.
 It must \emph{not} call the heap manager directly using \code{malloc}.
 For C++ implementations of OMPD this means that \code{new},
 \code{new(throw)}, \code{new[]}, \code{delete}, \code{delete(throw)},
 and \code{delete[]} in \emph{all} their variants \emph{must} be overloaded,
 and implemented in terms of the callback functions
-provided to it by the third-party tool.
+provided to it by the tool.
 
 \subsubsubsection{Memory Allocation Callback}
 \label{sec:ompd:ompd_dmemory_alloc_fn_t}
 \index{ompd\_dmemory\_alloc\_fn\_t@{\code{ompd\_dmemory\_alloc\_fn\_t}}}
 
 \summary
-The type signature of the callback routine provided by the third-tool
+The type signature of the callback routine provided by the tool
 to be used by the OMPD plugin to allocate memory.
 
 \vbox{
@@ -56,7 +56,7 @@ typedef ompd\_rc\_t (*ompd\_dmemory\_alloc\_fn\_t) (
 The argument \plc{nbytes} gives the size in bytes of the block of memory the
 OMPD wants allocated.
 
-On success, the third-party tool returns \code{ompd\_rc\_ok} as the
+On success, the tool returns \code{ompd\_rc\_ok} as the
 return value of the callback, and the address of the newly allocated
 block in \plc{*ptr}.
 The newly allocated block is suitably aligned for any type of variable,
@@ -79,7 +79,7 @@ On failure an error code from \code{ompd\_rc\_t} is returned by the callback.
 \index{ompd\_dmemory\_free\_fn\_t@{\code{ompd\_dmemory\_free\_fn\_t}}}
 
 \summary
-The type signature of the callback routine provided by the third-party
+The type signature of the callback routine provided by the 
 tool to be used by the OMPD plugin to deallocate memory.
 
 \vbox{
@@ -95,7 +95,7 @@ typedef ompd\_rc\_t (*ompd\_dmemory\_free\_fn\_t) (
 \argdesc
 \plc{ptr} is the adderss of the block to be released.
 The block must have been previously allocated using the allocation callback
-provided by the third-party tool to the OMPD plugin.
+provided by the tool to the OMPD plugin.
 
 On success, \code{ompd\_rc\_ok} is returned by the callback to the OMPD plugin.
 Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
@@ -110,7 +110,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 
 \subsubsection{Context Management and Navigation}
 
-The third-party tool provides the OMPD plugin with callbacks
+The tool provides the OMPD plugin with callbacks
 to manage and navigate context relationships.
 
 \subsubsubsection{Context Management}
@@ -123,7 +123,7 @@ to manage and navigate context relationships.
 \index{ompd\_get\_thread\_context\_for\_osthread\_fn\_t@{\code{ompd\_get\_thread\_context\_for\_\discretionary{}{}{}osthread\_fn\_t}}}
 
 \summary
-The type signature of the callback routine provided by the third-party
+The type signature of the callback routine provided by the 
 tool the OMPD plugin can use to map an operating system thread handle
 to a tool \plc{thread context}.
 
@@ -189,7 +189,7 @@ On failure, the callback returns an error code from \code{ompd\_rc\_t}.
 \index{ompd\_get\_address\_space\_context\_for\_thread\_fn\_t@{\code{ompd\_get\_address\_space\_context\_\discretionary{}{}{}for\_thread\_fn\_t}}}
 
 \summary
-The type signature of the callback routine provided by the third-party
+The type signature of the callback routine provided by the 
 tool the OMPD plugin can use to find the address space context
 for a thread identified by a thread context.
 
@@ -236,12 +236,12 @@ On failure, the callback returns an error code from \code{ompd\_rc\_t}.
 
 \subsubsection{Sizes of Primitive Types}
 
-The third-party tool provides the OMPD plugin with callbacks
+The tool provides the OMPD plugin with callbacks
 to discover information about the sizes of the basic primitive types
 in an address space.
 This information is important to an OMPD plugin because the architecture
 or programming model of the OpenMP runtime it is examining may be different
-from the its own and that of the third-party tool which loaded it.
+from the its own and that of the tool which loaded it.
 On platforms with multiple programming models, an OMPD plugin may need
 to be able to handle OpenMP runtimes using different sizes for the
 basic types.
@@ -283,7 +283,7 @@ typedef struct \{
 %The fields of \code{ompd\_target\_type\_sizes\_t} give the sizes of
 The fields of \code{ompd\_device\_type\_sizes\_t} give the sizes of
 the eponymous basic types used by the OpenMP runtime.
-As the third-party tool and the OMPD plugin, by definition, have the same
+As the tool and the OMPD plugin, by definition, have the same
 architecture and programming model, the size of the fields can be given
 as \code{int}.
 
@@ -298,7 +298,7 @@ as \code{int}.
 \index{ompd\_sizeof\_fn\_t@{\code{ompd\_sizeof\_fn\_t}}}
 
 \summary
-The type signature of the callback routine provided by the third-party
+The type signature of the callback routine provided by the 
 tool the OMPD plugin can use to find the sizes of the primitive types
 in an address space.
 
@@ -339,7 +339,7 @@ Otherwise, an error code from \code{ompd\_rc\_t} is returned.
 \index{ompd\_symbol\_addr\_fn\_t@{\code{ompd\_symbol\_addr\_fn\_t}}}
 
 \summary
-The type signature of the callback provided by the third-party tool the
+The type signature of the callback provided by the tool the
 OMPD plugin can use to look up the addresses of symbols in an OpenMP program.
 
 
@@ -361,7 +361,7 @@ typedef ompd\_rc\_t (*ompd\_symbol\_addr\_fn\_t) (
 \argdesc
 The OMPD plugin may want to look up the addresses of symbols in
 the OpenMP program in order to locate information it needs to satisfy
-requests from the third-party tool.
+requests from the tool.
 This callback looks up the symbol \plc{symbol\_name}.
 The \plc{thread\_context} is optional for global memory access,
 and should be NULL in this case.
@@ -370,7 +370,7 @@ context for the symbol lookup, for the purpose of calculating thread
 local storage~(TLS) addresses.
 
 The \plc{symbol\_name} supplied by the OMPD plugin is used verbatim by
-the third-party tool, and in particular, no name mangling, demangling
+the tool, and in particular, no name mangling, demangling
 or other transformations are performed prior to the lookup.
 
 On success, the callback returns \code{ompd\_rc\_ok} and the address
@@ -395,7 +395,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 
 The OMPD plugin may need to read from, or write to, the OpenMP program.
 It cannot do this directly, but instead must use the callbacks provided
-to it by the third-party tool, which will perform the operation
+to it by the tool, which will perform the operation
 on its behalf.
 
 \subsubsubsection{Reading Memory}
@@ -404,7 +404,7 @@ on its behalf.
 
 \summary
 
-The type signature of the callback provided by the third-party tool the
+The type signature of the callback provided by the tool the
 OMPD plugin can use to read data out of an OpenMP program.
 
 
@@ -469,7 +469,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 
 \summary
 
-The type signature of the callback provided by the third-party tool the
+The type signature of the callback provided by the tool the
 OMPD plugin can use to write data to an OpenMP program.
 
 \vbox{
@@ -530,13 +530,13 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 \subsubsection{Data Format Conversion}
 \label{sec:ompd:data-format-conversion}
 
-The architecuture and/or programming-model of third-party tool and
+The architecuture and/or programming-model of tool and
 OMPD plugin may be different from that of the OpenMP program being
 examined.
 Consequently, the conventions for representing data will differ.
 The callback interface includes operations for converting between
 the conventions, such as byte order (`endianness'),
-used by the third-party tool and OMPD plugin on the
+used by the tool and OMPD plugin on the
 one hand, and the OpenMP program on the other.
 
 \subsubsubsection{Data Conversion}
@@ -545,9 +545,9 @@ one hand, and the OpenMP program on the other.
 
 \summary
 
-The type signature of the callback provided by the third-party tool the
+The type signature of the callback provided by the tool the
 OMPD plugin can use to convert data between the formats used by the
-third-part tool and OMPD plugin, and the OpenMP program.
+tool and OMPD plugin, and the OpenMP program.
 
 \vbox{
 % the odd-looking spacing between type and argument name ensures
@@ -596,7 +596,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 
 \summary
 
-The type signature of the callback provided by the third-party tool the
+The type signature of the callback provided by the tool the
 OMPD plugin can use to emit output.
 
 \vbox{
@@ -613,7 +613,7 @@ typedef ompd\_rc\_t (*ompd\_print\_string\_fn\_t) (
 
 \argdesc
 The OMPD plugin emits output, such as logging or debug information,
-using a callback supplied to it by the third-party tool.
+using a callback supplied to it by the tool.
 It should not emit output directly.
 
 \plc{string} is the string to be printed.
@@ -638,7 +638,7 @@ Otherwise, on failure an error code from \code{ompd\_rc\_t} is returned.
 
 All the OMPD plugin's interactions with the OpenMP program
 must be through a set of callbacks provided to it by the
-third-party tool which loaded it.
+tool which loaded it.
 These callbacks must also be used for allocating or releasing resources,
 such as memory, that the plugin needs.
 
@@ -673,7 +673,7 @@ An instance of this type is passed to the OMPD plugin
 as a parameter to \code{ompd\_initialize}.
 Each field points to a function that the OMPD plugin should use
 for interacting with the OpenMP program, or getting memory from
-the third-party tool.
+the tool.
 
 The \plc{d\_alloc\_memory} and \plc{d\_free\_memory} fields are
 pointers to functions the OMPD plugin uses to allocate and release
@@ -682,7 +682,7 @@ dynamic memory.
 \plc{print\_string} points to a function that prints a string.
 
 The architectures or programming models of the OMPD plugin and
-third party tool may be different from that of the OpenMP
+party tool may be different from that of the OpenMP
 program being examined.
 \plc{sizeof\_prim\_type} points to function that allows
 the OMPD plugin to determine the sizes of the basic integer
@@ -692,7 +692,7 @@ the conventions for representing data in the OMPD plugin and
 the OpenMP program may be different.
 The \plc{device\_to\_host} field points to a function which translates
 data from the conventions used by the OpenMP program to that used
-by the third-party tool and OMPD plugin.
+by the tool and OMPD plugin.
 The reverse operation is performed by the function pointed
 to by the \plc{host\_to\_device} field.
 

@@ -1,14 +1,14 @@
 \subsection{Runtime Entry Points for OMPD}
 \label{sec:ompd:runtime-entry-points-for-ompd}
 
-Most of the third-party tool's OpenMP-related activity on an OpenMP
+Most of the tool's OpenMP-related activity on an OpenMP
 program will be performed through the OMPD interface.
 However, supporting OMPD introduced some requirements of the OpenMP
 runtime.
 These fall into three categories: entrypoints the user's code in
 OpenMP program can call; locations in the OpenMP runtime through
 which control must pass when specific events occur; and data that must
-be accessible to the third-party tool.
+be accessible to the tool.
 
 \subsubsection{Identifying the Matching OMPD}
 \label{sec:ompd:ompd_dll_locations}
@@ -31,23 +31,23 @@ strings that provide the names of any OMPD plugin implementations
 that are compatible with the OpenMP runtime.
 The vector is NULL-terminated.
 
-The programming model or architecture of the third-party tool, and
+The programming model or architecture of the tool, and
 hence that of the required OMPD plugin, might not match that of
 the OpenMP program to be examined.
 On platforms that support multiple programming models (\textit{e.g.},
 32- v. 64-bit), or in heterogenous  environments where the architectures
-of the OpenMP program and third-party tool may be be different,
+of the OpenMP program and tool may be be different,
 OpenMP implementors are encourgaed to provide OMPD plugins for all models.
 The vector, therefore, may name plugins that are not compatible
-with the third-party tool.
-This is legal, and it is up to the third-party tool to check that
+with the tool.
+This is legal, and it is up to the tool to check that
 a plugin is compatible.
 (Typically, a tool might iterate over the vector until a compatible
 plugin is found.)
 
 \restrictions
 \code{ompd\_dll\_locations} has external \code{C} linkage,
-no demangling or other transformations are required by a third-party
+no demangling or other transformations are required by a 
 tool before looking up its address in the OpenMP program.
 
 The vector and its members must be fully initialized before
@@ -84,23 +84,23 @@ void ompd\_dll\_locations\_valid ( void );
 In some implementations of the OpenMP runtime the vector of names
 of matching OMPD plugins may need to be constructed at runtime.
 Before the vector is valid, \code{ompd\_dll\_locations} must be NULL.
-To avoid a third-party having to poll \code{ompd\_dll\_locations}
+To avoid the tool having to poll \code{ompd\_dll\_locations}
 to become non-NULL, the OpenMP runtime must arrange for execution
 to pass through the location named by \code{ompd\_dll\_locations\_valid}
 once the vector has been initialized.
 By planting a breakpoint at \code{ompd\_dll\_locations\_valid},
-the third-party tool can be notified when the vector of names is
+the tool can be notified when the vector of names is
 ready to be read.
 
 If \code{ompd\_dll\_locations} vector is statically allocated
-and initialized, the third-party tool should not need to use
+and initialized, the tool should not need to use
 \code{ompd\_dll\_locations\_valid} since \code{ompd\_dll\_locations}
 will be non-NULL.
 
 \restrictions
 
 \code{ompd\_dll\_locations\_valid} has external \code{C} linkage,
-and no demangling or other transformations are required by a third-party
+and no demangling or other transformations are required by a 
 tool before looking up its address in the OpenMP program.
 
 Conceptually \code{ompd\_dll\_locations\_valid} has the signature
@@ -122,7 +122,7 @@ location in the runtime code.
 
 \summary
 Instructs the OpenMP runtime to collect whatever information
-is necessary for supporting access by third-party tools using OMPD.
+is necessary for supporting access by tools using OMPD.
 
 \vbox{
 \cspecificstart
@@ -163,11 +163,11 @@ the OpenMP program executes its first OMP construct.
 \subsubsection{Event notification}
 \label{sec:ompd:event-notification}
 
-Neither a third-party tool nor an OpenMP runtime system know what
+Neither a tool nor an OpenMP runtime system know what
 application code a program will launch as parallel regions
 or tasks until the program invokes the runtime system and
 provides a code address as an argument.
-To help a third-party tool control the execution of an OpenMP program
+To help a tool control the execution of an OpenMP program
 launching parallel regions or tasks,
 the OpenMP runtime must define a number of symbols
 through which execution must pass when particular events occur
@@ -212,7 +212,7 @@ thread handle using
 \code{ompd\_get\_thread\_handle}.
 At this point the handle returned by \code{ompd\_get\_top\_parallel\_region}
 is that of the new parallel region.
-The third-party tool can find the entry point of the user code that
+The tool can find the entry point of the user code that
 the new parallel region will execute by passing the parallel handle region
 to \code{ompd\_get\_parallel\_function}.
 
@@ -235,7 +235,7 @@ the parallel construct.
 \restrictions
 
 \code{ompd\_bp\_parallel\_begin} has external \code{C} linkage, and no
-demangling or other transformations are required by a third-party tool
+demangling or other transformations are required by a tool
 to look up its address in the OpenMP program.
 
 Conceptually \code{ompd\_bp\_parallel\_begin} has the type signature
@@ -284,7 +284,7 @@ Control passes through \code{ompd\_bp\_parallel\_end}
 once per region, and not once for each thread per region.
 
 At the point the runtime reaches \code{ompd\_bp\_parallel\_end}
-the third-party tool can map the encountering operating system thread
+the tool can map the encountering operating system thread
 to an OpenMP thread handle using \code{ompd\_get\_thread\_handle}.
 \code{ompd\_get\_top\_parallel\_region}
 returns the handle of the terminating parallel region.
@@ -304,7 +304,7 @@ invoked the parallel construct just terminating.
 \restrictions
 
 \code{ompd\_bp\_parallel\_end} has external \code{C} linkage, and no
-demangling or other transformations are required by a third-party tool
+demangling or other transformations are required by a tool
 to look up its address in the OpenMP program.
 
 Conceptually \code{ompd\_bp\_parallel\_end} has the type signature
@@ -348,7 +348,7 @@ must allow control to pass through \code{ompd\_bp\_task\_begin}.
 The OpenMP runtime system will execute through this location after the task
 construct is encountered, but before the new explicit task starts.
 At the point where the runtime reaches \code{ompd\_bp\_task\_begin}
-the third-party tool can map the operating thread to an OpenMP handle using
+the tool can map the operating thread to an OpenMP handle using
 \code{ompd\_get\_thread\_handle}.
 
 \code{ompd\_get\_top\_task\_region} returns the handle of the new task region.
@@ -359,7 +359,7 @@ is returned from
 \restrictions
 
 \code{ompd\_bp\_task\_begin} has external \code{C} linkage, and no
-demangling or other transformations are required by a third-party tool
+demangling or other transformations are required by a tool
 to look up its address in the OpenMP program.
 
 Conceptually \code{ompd\_bp\_task\_begin} has the type signature
@@ -399,7 +399,7 @@ When a task region completes, the OpenMP runtime system
 must allow execution to flow through the location \code{ompd\_bp\_task\_end}.
 
 At the point where the runtime reaches \code{ompd\_bp\_task\_end}
-the third-party tool can use
+the tool can use
 \code{ompd\_get\_thread\_handle}
 to map the encountering operating system thread to the corresponding
 OpenMP thread handle.
@@ -409,7 +409,7 @@ returns the handle for the terminating task.
 \restrictions
 
 \code{ompd\_bp\_task\_end} has external \code{C} linkage, and no
-demangling or other transformations are required by a third-party tool
+demangling or other transformations are required by a tool
 to look up its address in the OpenMP program.
 
 Conceptually \code{ompd\_bp\_task\_end} has the type signature
