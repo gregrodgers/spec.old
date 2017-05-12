@@ -166,6 +166,15 @@ for a listing of current \emph{base languages} for the OpenMP API.
 A program written in a \emph{base language}.
 \glossarydefend
 
+\glossaryterm{program order}
+\glossarydefstart
+For C/C+, an ordering that exists between two operations executed by the same
+thread, as defined by their sequenced before relation.
+
+For Fortran, an ordering that exists between two operation executed by the
+same thread, as defined by the program's execution sequence.
+\glossarydefend
+
 \glossaryterm{structured block}
 \glossarydefstart
 For C/C++, an executable statement, possibly compound, with a single entry at the 
@@ -1640,26 +1649,38 @@ specified with the \code{atomic} construct, as described in
 \specref{subsec:atomic Construct}.
 \end{note}
 
-If there exists a sequence of operations executed in a program where the
-following conditions are satisfied, each operation in the sequence
-\emph{happens before} all subsequent operations in the sequence:
+% If there exists a sequence of operations executed in a program where the
+% following conditions are satisfied, each operation in the sequence
+% \emph{happens before} all subsequent operations in the sequence:
+% 
+% \begin{enumerate}
+% \item Any two operations performed by the same thread are ordered in the
+% sequence according to that thread’s program order.
+% 
+% \item If any two consecutive operations are performed by different threads,
+% the first must be a release flush and the second must be an acquire flush it
+% synchronizes with.
+% \end{enumerate}
+% 
+% A variable with an initial value is treated as if the value is
+% stored to the variable by an operation that happens before all operations
+% occurring in the program. 
+% 
+% Additionally, if two operations have a happens before order according to the
+% base language, they are treated as if they have a happens before order for the
+% purposes of determining memory consistency guarantees in OpenMP.
 
+An operation \plc{X} \emph{happens~before} an operation \plc{Y} if any of the following conditions are satisfied:
 \begin{enumerate}
-\item Any two operations performed by the same thread are ordered in the
-sequence according to that thread’s program order.
-
-\item If any two consecutive operations are performed by different threads,
-the first must be a release flush and the second must be an acquire flush it
-synchronizes with.
+\item \plc{X} happens before \plc{Y} according to the base language's definition of happens before, if such a definition exists.
+\item \plc{X} and \plc{Y} are performed by the same thread, and \plc{X} precedes \plc{Y} in the thread's program order.
+\item \plc{X} synchronizes with \plc{Y}.
+\item There exists another operation \plc{Z}, such that \plc{X} happens before \plc{Z} and \plc{Z} happens before \plc{Y}.
 \end{enumerate}
 
-A variable with an initial value is treated as if the value is
-stored to the variable by an operation that happens before all operations
-occurring in the program. 
-
-Additionally, if two operations have a happens before order according to the
-base language, they are treated as if they have a happens before order for the
-purposes of determining memory consistency guarantees in OpenMP.
+A variable with an initial value is treated as if the value is stored to the
+variable by an operation that happens before all operations occurring in the
+program.
 
 \subsection{OpenMP Memory Consistency}
 \label{subsec:OpenMP Memory Consistency}
