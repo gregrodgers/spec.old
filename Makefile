@@ -5,33 +5,56 @@ all: openmp.pdf
 
 .PHONY: clean quick all git-diff-all
 
-CHAPTERS=titlepage.tex \
-	ch1-introduction.tex \
-	ch2-directives.tex \
-	ch3-runtimeLibrary.tex \
-	ch4-toolsSupport.tex \
-	ch5-environmentVariables.tex \
-	appendix-A-stubs.tex \
-	appendix-B-grammar.tex \
-	appendix-C-InterfaceDeclarations.tex \
-	appendix-D-ImplementationDefined.tex \
-	appendix-E-FeaturesHistory.tex
+CHAPTERS=openmp.tex \
+         titlepage.tex \
+         introduction.tex \
+         directives.tex \
+         directives/worksharing-schedule-loop.tex \
+         directives/directives_common.tex \
+         directives/directives_parallel.tex \
+         directives/directives_worksharing.tex \
+         directives/directives_simd.tex \
+         directives/directives_tasking.tex \
+         directives/directives_device.tex \
+         directives/directives_combined.tex \
+         directives/directives_if.tex \
+         directives/directives_synchronization.tex \
+         directives/directives_cancellation.tex \
+         directives/directives_data_environment.tex \
+         directives/directives_nesting.tex \
+         directives/directives_udr.tex \
+         runtime_library.tex \
+         runtime_library/runtime_library_execution.tex \
+         runtime_library/runtime_library_others.tex \
+         tool_support.tex \
+         tool_support/tool_support_common.tex \
+         tool_support/tool_support_callbacks.tex \
+         tool_support/tool_support_entrypoints.tex \
+         environment_variables.tex \
+         appendices/stubs.tex \
+         appendices/stubs_ccpp.tex \
+         appendices/stubs_fortran.tex \
+         appendices/interface_declarations.tex \
+         appendices/implementation_defined.tex \
+         appendices/tool_support_frames.tex \
+         appendices/features_history.tex
 
-openmp.pdf: $(CHAPTERS) openmp.sty openmp.tex openmp-index.ist worksharing-schedule-loop.tex openmp-logo.png Makefile
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
+openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 quick:
-	pdflatex -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 debug:
-	pdflatex -file-line-error openmp.tex
+	pdflatex -synctex=1 -file-line-error openmp.tex
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf
+	rm -f openmp.synctex.gz
 	rm -rf *.tmpdir
 
 #NOTE: set these either as environment variables or on the command line, 
@@ -43,16 +66,16 @@ clean:
 #      make DIFF_FROM=upstream/master make openmp-diff.pdf
 #
 ifdef DIFF_TO
-VC_DIFF_TO := -r ${DIFF_TO}
-ifndef DIFF_FROM
-	#need a from to get to right, probably want master?
-	VC_DIFF_FROM := -r master
-endif
+    VC_DIFF_TO := -r ${DIFF_TO}
+    ifndef DIFF_FROM
+        # need a from to get to right, probably want master?
+        VC_DIFF_FROM := -r master
+    endif
 endif
 ifdef DIFF_FROM
-VC_DIFF_FROM := -r ${DIFF_FROM}
+    VC_DIFF_FROM := -r ${DIFF_FROM}
 else
-VC_DIFF_FROM := -r HEAD
+    VC_DIFF_FROM := -r HEAD
 endif
 
 DIFF_FROM:=master
@@ -77,8 +100,9 @@ git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png)
-	mkdir -p $@
+	mkdir -p $@/appendices
 	cp -f $^ "$@/" || true
+	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
