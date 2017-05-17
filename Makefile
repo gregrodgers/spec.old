@@ -32,26 +32,29 @@ CHAPTERS=openmp.tex \
          tool_support/tool_support_entrypoints.tex \
          environment_variables.tex \
          appendices/stubs.tex \
+         appendices/stubs_ccpp.tex \
+         appendices/stubs_fortran.tex \
          appendices/interface_declarations.tex \
          appendices/implementation_defined.tex \
          appendices/tool_support_frames.tex \
          appendices/features_history.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
-	-pdflatex -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 quick:
-	pdflatex -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 debug:
-	pdflatex -file-line-error openmp.tex
+	pdflatex -synctex=1 -file-line-error openmp.tex
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf openmp-diff-traditional.pdf
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf
+	rm -f openmp.synctex.gz
 	rm -rf *.tmpdir
 
 #NOTE: set these either as environment variables or on the command line, 
@@ -97,8 +100,9 @@ git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png)
-	mkdir -p $@
+	mkdir -p $@/appendices
 	cp -f $^ "$@/" || true
+	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
