@@ -88,7 +88,7 @@ COMMON_DIFF_OPTS:=--math-markup=whole \
 #                  --append-textcmd=plc,code,glossaryterm \
 #                  --exclude-textcmd=section,subsection,subsubsection,vcode
 
-VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --flatten --type="${DIFF_TYPE}" --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}  --subtype=ZLABEL
+VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --flatten --type="${DIFF_TYPE}" --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}  --subtype=ZLABEL --graphics-markup=none
 
 VC_DIFF_MINIMAL_OPTS:= --only-changes
 
