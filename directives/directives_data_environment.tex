@@ -1,0 +1,2373 @@
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+
+\section{Data Environment}
+\label{sec:Data Environment}
+\index{data environment}
+This section presents a directive and several clauses for controlling the data environment 
+during the execution of \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
+
+\begin{itemize}
+\item \specref{subsec:Data-sharing Attribute Rules} 
+describes how the data-sharing attributes of variables
+referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
+
+\item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
+is described in \specref{subsec:threadprivate Directive}.
+
+\item Clauses that may be specified on directives to control the data-sharing attributes of 
+variables referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
+
+\item Clauses that may be specified on directives to copy data values from private or 
+threadprivate variables on one thread to the corresponding variables on other threads 
+in the team are described in \specref{subsec:Data Copying Clauses}.
+
+\item Clauses that may be specified on directives to control the data-mapping of variables to a device data environment are described in \specref{subsec:map Clause}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Data-sharing Attribute Rules}
+\label{subsec:Data-sharing Attribute Rules}
+\index{data-sharing attribute rules}
+\index{attributes, data-sharing}
+This section describes how the data-sharing attributes of variables referenced in 
+\code{target}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined. The following two cases are described separately:
+
+\begin{itemize}
+\item \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct} 
+describes the data-sharing attribute rules for variables 
+referenced in a construct.
+
+\item \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Region but not in a Construct} describes the data-sharing attribute rules for variables 
+referenced in a region, but outside any construct. 
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsubsection{Data-sharing Attribute Rules for Variables Referenced in a Construct}
+\label{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}
+The data-sharing attributes of variables that are referenced in a construct can be 
+\emph{predetermined}, \emph{explicitly determined}, or \emph{implicitly determined}, according to the rules 
+outlined in this section.
+
+Specifying a variable on a \code{firstprivate}, \code{lastprivate}, \code{linear}, \code{reduction}, 
+or \code{copyprivate} clause of an enclosed construct causes an implicit reference to the 
+variable in the enclosing construct. Specifying a variable on a \code{map} clause of an enclosed 
+construct may cause an implicit reference to the variable in the enclosing construct. 
+Such implicit references are also subject to the data-sharing attribute rules outlined in 
+this section.
+
+Certain variables and objects have \emph{predetermined} data-sharing attributes as follows:
+
+\begin{ccppspecific}
+\begin{itemize}
+\item Variables appearing in \code{threadprivate} directives are threadprivate.
+
+\item Variables with automatic storage duration that are declared in a scope inside the 
+construct are private. 
+
+\item Objects with dynamic storage duration are shared.
+
+\item Static data members are shared.
+
+\item The loop iteration variable(s) in the associated \plc{for-loop(s)} of a
+\code{for}, \code{parallel}~\code{for}, \code{taskloop}, or \code{distribute} construct is (are) private.
+
+\item The loop iteration variable in the associated \plc{for-loop} of a \code{simd} construct with just 
+one associated \plc{for-loop} is linear with a \plc{linear-step} that is the increment of
+the associated \plc{for-loop}.
+
+\item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with 
+multiple associated \plc{for-loops} are lastprivate. 
+
+\item Variables with static storage duration that are declared in a scope inside the construct 
+are shared.
+
+\item If an array section is a list item in a \code{map} clause on the \code{target} construct and the array section is derived from a variable for which the type is pointer then that variable is firstprivate. 
+\end{itemize}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item Variables and common blocks appearing in \code{threadprivate} directives are 
+threadprivate. 
+
+\item The loop iteration variable(s) in the associated \plc{do-loop(s)} of a \code{do}, \code{parallel}~\code{do},
+\code{taskloop}, or \code{distribute} construct is (are) private.
+
+\item The loop iteration variable in the associated \plc{do-loop} of a \code{simd} construct with just 
+one associated \plc{do-loop} is linear with a \plc{linear-step} that is the increment of
+the associated \plc{do-loop}.
+
+\item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with 
+multiple associated \plc{do-loops} are lastprivate. 
+
+\item A loop iteration variable for a sequential loop in a \code{parallel} or task generating construct is 
+private in the innermost such construct that encloses the loop.
+
+\item Implied-do indices and \code{forall} indices are private. 
+
+\item Cray pointees have the same the data-sharing attribute as the storage with which their Cray 
+pointers are associated.
+
+\item Assumed-size arrays are shared.
+\nopagebreak
+\item An associate name preserves the association with the selector established at the 
+\code{ASSOCIATE} statement.
+\end{itemize}
+\end{fortranspecific}
+
+Variables with predetermined data-sharing attributes may not be listed in data-sharing 
+attribute clauses, except for the cases listed below. For these exceptions only, listing a 
+predetermined variable in a data-sharing attribute clause is allowed and overrides the 
+variable's predetermined data-sharing attributes.
+
+\begin{ccppspecific}
+\begin{itemize}
+\item The loop iteration variable(s) in the associated \plc{for-loop(s)} of a \code{for}, 
+\code{parallel}~\code{for}, \code{taskloop}, or \code{distribute} construct may be listed in a \code{private} or \code{lastprivate} clause.
+
+\item The loop iteration variable in the associated \plc{for-loop} of a \code{simd} construct with just 
+one associated \plc{for-loop} may be listed in a \code{linear} clause with a
+\plc{linear-step}
+that is the increment of the associated \plc{for-loop}.
+
+\item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with 
+multiple associated \plc{for-loops} may be listed in a \code{lastprivate} clause. 
+
+\item Variables with \code{const}-qualified type having no mutable member may be listed in a
+\code{firstprivate} clause, even if they are static data members.
+\end{itemize}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item The loop iteration variable(s) in the associated \plc{do-loop(s)} of a \code{do}, 
+\code{parallel}~\code{do}, \code{taskloop}, or \code{distribute}
+construct may be listed in a \code{private} or \code{lastprivate} clause. 
+
+\item The loop iteration variable in the associated \plc{d}o-loop of a \code{simd} construct with just 
+one associated \plc{do-loop} may be listed in a \code{linear} clause with a \plc{linear-step}
+that is the increment of the associated loop.
+
+\item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with 
+multiple associated \plc{do-loops} may be listed in a \code{lastprivate} clause. 
+
+\item Variables used as loop iteration variables in sequential loops in a \code{parallel} 
+or task generating construct may be listed in data-sharing clauses on the construct itself, and on 
+enclosed constructs, subject to other restrictions.
+
+\item Assumed-size arrays may be listed in a \code{shared} clause.
+\end{itemize}
+\end{fortranspecific}
+
+Additional restrictions on the variables that may appear in individual clauses are 
+described with each clause in \specref{subsec:Data-Sharing Attribute Clauses}.
+
+Variables with \emph{explicitly determined} data-sharing attributes are those that are referenced 
+in a given construct and are listed in a data-sharing attribute clause on the construct.
+
+Variables with \emph{implicitly determined} data-sharing attributes are those that are referenced 
+in a given construct, do not have predetermined data-sharing attributes, and are not 
+listed in a data-sharing attribute clause on the construct.
+
+Rules for variables with \emph{implicitly determined} data-sharing attributes are as follows:
+
+\begin{itemize}
+\item In a \code{parallel}, \code{teams}, or task generating construct, the data-sharing attributes of these variables are
+determined by the \code{default} clause, if present (see
+\specref{subsubsec:default clause}).
+
+\item In a \code{parallel} construct, if no \code{default} clause is present, these variables are 
+shared.
+
+\item For constructs other than task generating constructs, if no \code{default} clause is present, these variables reference the variables with the same names that exist in the enclosing context.
+
+\item In a \code{target} construct, variables that are not mapped after applying data-mapping attribute rules (see \specref{subsec:Data-mapping Attribute Rules and Clauses}) are firstprivate.
+\end{itemize}
+
+\begin{cppspecific}
+\begin{itemize}
+\item In an orphaned task generating
+construct, if no \code{default} clause is present, formal arguments passed by reference are firstprivate.
+\end{itemize}
+\end{cppspecific}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item In an orphaned task generating
+construct, if no \code{default} clause is present, dummy arguments 
+are firstprivate.
+\end{itemize}
+\end{fortranspecific}
+
+\begin{itemize}
+\item In a task generating construct, if no \code{default} clause is present, a variable
+for which the data-sharing attribute is not determined by the rules above
+and that in the enclosing context is determined to be shared by all implicit tasks bound
+to the current team is shared.
+
+\item In a task generating construct, if no
+\code{default} clause is present, a variable for which the data-sharing 
+attribute is not determined by the rules above is firstprivate.
+\end{itemize}
+
+Additional restrictions on the variables for which data-sharing attributes cannot be 
+implicitly determined in a task generating construct are described in
+\specref{subsubsec:firstprivate clause}.
+
+
+
+
+
+
+
+\pagebreak
+
+\subsubsection{Data-sharing Attribute Rules for Variables Referenced in a Region but not in a Construct}
+\label{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Region but not in a Construct}
+The data-sharing attributes of variables that are referenced in a region, but not in a 
+construct, are determined as follows: 
+
+\begin{ccppspecific}
+\begin{itemize}
+\item Variables with static storage duration that are declared in called routines in the region 
+are shared.
+
+\item File-scope or namespace-scope variables referenced in called routines in the region 
+are shared unless they appear in a \code{threadprivate} directive.
+
+\item Objects with dynamic storage duration are shared.
+
+\item Static data members are shared unless they appear in a \code{threadprivate} directive.
+
+\item In C++, formal arguments of called routines in the region that are passed by reference have the same data-sharing attributes as the associated actual arguments. 
+
+\item Other variables declared in called routines in the region are private.
+\end{itemize}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item Local variables declared in called routines in the region and that have the \code{save} 
+attribute, or that are data initialized, are shared unless they appear in a 
+\code{threadprivate} directive.
+
+\item Variables belonging to common blocks, or accessed by host or use association, and referenced in called routines in the region are shared unless they appear in a \code{threadprivate} directive. 
+
+\item Dummy arguments of called routines in the region that have the
+    \code{VALUE} attribute are private.
+
+\item Dummy arguments of called routines in the region that do not have the
+    \code{VALUE} attribute are private if the associated actual argument is not
+    shared.
+
+\item Dummy arguments of called routines in the region that do not have the
+\code{VALUE} attribute are shared if the actual argument is shared and it
+is a scalar variable, structure, an array that is not a pointer or
+assumed-shape array, or a simply contiguous array section.  Otherwise, the
+data-sharing attribute of the dummy argument is implementation-defined if
+the associated actual argument is shared.
+
+\item Cray pointees have the same data-sharing attribute as the storage with which their Cray pointers are associated.
+
+\item Implied-do indices, \code{forall} indices, and other local variables declared in called 
+routines in the region are private. 
+
+\end{itemize}
+
+
+\end{fortranspecific}
+
+
+
+
+
+
+
+
+
+\subsection{\code{threadprivate} Directive}
+\index{threadprivate@{\code{threadprivate}}}
+\index{directives!threadprivate@{\code{threadprivate}}}
+\label{subsec:threadprivate Directive}
+\summary
+The \code{threadprivate} directive specifies that variables are replicated, with each thread 
+having its own copy. The \code{threadprivate} directive is a declarative directive.
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{threadprivate} directive is as follows:
+
+\begin{boxedcode}
+\#pragma omp threadprivate(\plc{list}) \plc{new-line}
+\end{boxedcode}
+
+where \plc{list} is a comma-separated list of file-scope, namespace-scope, or static 
+block-scope variables that do not have incomplete types.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{threadprivate} directive is as follows:
+
+\begin{boxedcode}
+!\$omp threadprivate(\plc{list})
+\end{boxedcode}
+
+where \plc{list} is a comma-separated list of named variables and named common blocks. 
+Common block names must appear between slashes.
+\end{fortranspecific}
+
+\descr
+Each copy of a threadprivate variable is initialized once, in the manner specified by the 
+program, but at an unspecified point in the program prior to the first reference to that 
+copy. The storage of all copies of a threadprivate variable is freed according to how 
+static variables are handled in the base language, but at an unspecified point in the 
+program.
+
+A program in which a thread references another thread’s copy of a threadprivate variable 
+is non-conforming.
+
+The content of a threadprivate variable can change across a task scheduling point if the 
+executing thread switches to another task that modifies the variable. For more details on 
+task scheduling, see 
+\specref{sec:Execution Model} and 
+\specref{sec:Tasking Constructs}.
+
+In \code{parallel} regions, references by the master thread will be to the copy of the 
+variable in the thread that encountered the \code{parallel} region. 
+
+During a sequential part references will be to the initial thread’s copy of the variable. 
+The values of data in the initial thread’s copy of a threadprivate variable are guaranteed 
+to persist between any two consecutive references to the variable in the program. 
+
+The values of data in the threadprivate variables of non-initial threads 
+are guaranteed to persist between two consecutive active \code{parallel} 
+regions only if all of the following conditions hold:
+
+\begin{itemize}  % L0 vvvvvvvvvvvvvvvvvvvvvvvvv
+\item Neither \code{parallel} region is nested inside another explicit \code{parallel} region. 
+
+\item The number of threads used to execute both \code{parallel} regions is the same. 
+
+\item The thread affinity policies used to execute both \code{parallel} regions are the same. 
+
+\item The value of the \plc{dyn-var} internal control variable in the enclosing task region is \plc{false} 
+at entry to both \code{parallel} regions.
+\end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^^^^
+
+If these conditions all hold, and if a threadprivate variable is referenced in both regions, 
+then threads with the same thread number in their respective regions will reference the 
+same copy of that variable.
+
+\begin{ccppspecific}
+If the above conditions hold, the storage duration, lifetime, and value of a thread’s copy 
+of a threadprivate variable that does not appear in any \code{copyin} clause on the second 
+region will be retained. Otherwise, the storage duration, lifetime, and value of a thread’s 
+copy of the variable in the second region is unspecified.
+
+If the value of a variable referenced in an explicit initializer of a threadprivate variable 
+is modified prior to the first reference to any instance of the threadprivate variable, then 
+the behavior is unspecified. 
+\end{ccppspecific}
+
+\begin{cppspecific}
+The order in which any constructors for different threadprivate variables of class type 
+are called is unspecified. The order in which any destructors for different threadprivate 
+variables of class type are called is unspecified. 
+\end{cppspecific}
+
+\begin{fortranspecific}
+A variable is affected by a \code{copyin} clause if the variable appears in the \code{copyin} clause 
+or it is in a common block that appears in the \code{copyin} clause. 
+
+If the above conditions hold, the definition, association, or allocation status of a thread’s 
+copy of a threadprivate variable or a variable in a threadprivate common 
+block, that is not affected by any \code{copyin} clause that appears on the second region, will 
+be retained. Otherwise, the definition and association status of a thread’s copy of the 
+variable in the second region are undefined, and the allocation status of an allocatable 
+variable will be implementation defined. 
+
+If a threadprivate variable or a variable in a threadprivate common block is 
+not affected by any \code{copyin} clause that appears on the first \code{parallel} region in which 
+it is referenced, the variable or any subobject of the variable is initially defined or 
+undefined according to the following rules:
+
+\begin{itemize} % L0 vvvvvvvvvvvvvvvvvvvvvv
+\item If it has the \code{ALLOCATABLE} attribute, each copy created will have an initial 
+allocation status of unallocated.
+
+\item If it has the \code{POINTER} attribute:
+\begin{itemize} % L1 vvvvvvvvvvvvvvvvvvvvvv
+\item if it has an initial association status of disassociated, either through explicit 
+initialization or default initialization, each copy created will have an association 
+status of disassociated;
+\item otherwise, each copy created will have an association status of undefined.
+\end{itemize} % l1 ^^^^^^^^^^^^^^^^^^^^
+
+\item If it does not have either the \code{POINTER} or the \code{ALLOCATABLE} attribute:
+
+\begin{samepage}\begin{itemize} %L1 vvvvvvvvvvvvvvv
+\item if it is initially defined, either through explicit initialization or default 
+initialization, each copy created is so defined;
+
+\item otherwise, each copy created is undefined.
+\end{itemize} % L1 ^^^^^^^^^^^^^^^^^
+\end{samepage}
+
+\end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^^
+\end{fortranspecific}
+
+\restrictions
+The restrictions to the \code{threadprivate} directive are as follows:
+
+\begin{itemize} % L0 vvvvvvvvvvvvvvv
+\item A threadprivate variable must not appear in any clause except the \code{copyin}, 
+\code{copyprivate}, \code{schedule}, \code{num\_threads}, \code{thread\_limit}, and \code{if} clauses.
+
+\item A program in which an untied task accesses threadprivate storage is non-conforming.
+
+\begin{ccppspecific}
+\item A variable that is part of another variable (as an array or structure element) cannot 
+appear in a \code{threadprivate} clause unless it is a static data member of a C++ 
+class.
+
+\item A \code{threadprivate} directive for file-scope variables must appear outside any 
+definition or declaration, and must lexically precede all references to any of the 
+variables in its list.
+
+\item A \code{threadprivate} directive for namespace-scope variables must appear outside 
+any definition or declaration other than the namespace definition itself, and must 
+lexically precede all references to any of the variables in its list.
+
+\item Each variable in the list of a \code{threadprivate} directive at file, namespace, or class 
+scope must refer to a variable declaration at file, namespace, or class scope that 
+lexically precedes the directive.
+
+\item A \code{threadprivate} directive for static block-scope variables must appear in the 
+scope of the variable and not in a nested scope. The directive must lexically precede 
+all references to any of the variables in its list.
+
+\item Each variable in the list of a \code{threadprivate} directive in block scope must refer to 
+a variable declaration in the same scope that lexically precedes the directive. The 
+variable declaration must use the static storage-class specifier.
+
+\item If a variable is specified in a \code{threadprivate} directive in one translation unit, it 
+must be specified in a \code{threadprivate} directive in every translation unit in which 
+it is declared.
+
+\item The address of a threadprivate variable is not an address constant.
+\end{ccppspecific}
+
+\begin{cppspecific}
+\item A \code{threadprivate} directive for static class member variables must appear in the 
+class definition, in the same scope in which the member variables are declared, and 
+must lexically precede all references to any of the variables in its list.
+
+\item A threadprivate variable must not have an incomplete type or a reference type.
+
+\item A threadprivate variable with class type must have:
+
+\begin{itemize} % L1 vvvvvvvvvvvvvv
+\item an accessible, unambiguous default constructor in case of default initialization 
+without a given initializer;
+
+\item an accessible, unambiguous constructor accepting the given argument in case of 
+direct initialization;
+
+\item an accessible, unambiguous copy constructor in case of copy initialization with an 
+explicit initializer
+\end{itemize} % L1 ^^^^^^^^^^^^^
+\end{cppspecific}
+
+\end{itemize} % L0 ^^^^^^^^^^^^^^
+
+\begin{fortranspecific}
+\begin{itemize} % L0 vvvvvvvvvvvvvvv
+\item A variable that is part of another variable (as an array or structure element) cannot 
+appear in a \code{threadprivate} clause.
+
+\item The \code{threadprivate} directive must appear in the declaration section of a scoping 
+unit in which the common block or variable is declared. Although variables in 
+common blocks can be accessed by use association or host association, common 
+block names cannot. This means that a common block name specified in a 
+\code{threadprivate} directive must be declared to be a common block in the same 
+scoping unit in which the \code{threadprivate} directive appears. 
+
+\item If a \code{threadprivate} directive specifying a common block name appears in one 
+program unit, then such a directive must also appear in every other program unit that 
+contains a \code{COMMON} statement specifying the same name. It must appear after the last 
+such \code{COMMON} statement in the program unit.
+
+\item If a threadprivate variable or a threadprivate common block is declared 
+with the \code{BIND} attribute, the corresponding C entities must also be specified in a 
+\code{threadprivate} directive in the C program.
+
+\item A blank common block cannot appear in a \code{threadprivate} directive.
+
+\item A variable can only appear in a \code{threadprivate} directive in the scope in which it 
+is declared. It must not be an element of a common block or appear in an 
+\code{EQUIVALENCE} statement.
+
+\item A variable that appears in a \code{threadprivate} directive must be declared in the 
+scope of a module or have the \code{SAVE} attribute, either explicitly or implicitly.
+\end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^
+\end{fortranspecific}
+
+\crossreferences
+\begin{itemize}
+\item \plc{dyn-var} ICV, see 
+\specref{sec:Internal Control Variables}.
+
+\item Number of threads used to execute a \code{parallel} region, see 
+\specref{subsec:Determining the Number of Threads for a parallel Region}.
+
+\item \code{copyin} clause, see 
+\specref{subsubsec:copyin clause}.
+\end{itemize}
+
+
+
+
+
+
+
+
+\subsection{Data-Sharing Attribute Clauses}
+\label{subsec:Data-Sharing Attribute Clauses}
+\index{data-sharing attribute clauses}
+\index{attribute clauses}
+\index{clauses!data-sharing}
+\index{clauses!attribute data-sharing}
+Several constructs accept clauses that allow a user to control the data-sharing attributes 
+of variables referenced in the construct. Data-sharing attribute clauses apply only to 
+variables for which the names are visible in the construct on which the clause appears.
+
+Not all of the clauses listed in this section are valid on all directives. The set of clauses 
+that is valid on a particular directive is described with the directive.
+
+Most of the clauses accept a comma-separated list of list items (see 
+\specref{sec:Directive Format}). 
+All list items appearing in a clause must be visible, according to the scoping rules 
+of the base language. With the exception of the \code{default} clause, clauses may be 
+repeated as needed. A list item that specifies a given variable may not appear in more 
+than one clause on the same directive, except that a variable may be specified in both 
+\code{firstprivate} and \code{lastprivate} clauses.
+
+The reduction data-sharing clauses are explained in Section \ref{subsec:Reduction Clauses}.
+
+\begin{cppspecific}
+If a variable referenced in a data-sharing attribute clause has a type derived from a 
+template, and there are no other references to that variable in the program, then any 
+behavior related to that variable is unspecified. 
+\end{cppspecific}
+
+\begin{fortranspecific}
+When a named common block appears in a \code{private}, \code{firstprivate}, 
+\code{lastprivate}, or \code{shared} clause of a directive, none of its members may be declared 
+in another data-sharing attribute clause in that directive. When individual members of a common block appear in a \code{private}, \code{firstprivate}, 
+\code{lastprivate}, \code{reduction}, or \code{linear} clause of a directive, the storage of the specified variables is no longer Fortran associated with the storage of the common block itself.
+\end{fortranspecific}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{default} Clause}
+\label{subsubsec:default clause}
+\index{default@{\code{default}}}
+\index{clauses!default@{\code{default}}}
+\summary
+The \code{default} clause explicitly determines the data-sharing attributes of variables that 
+are referenced in a \code{parallel}, \code{teams}, or task generating construct
+and would otherwise be implicitly determined (see
+\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}).
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{default} clause is as follows:
+
+\begin{boxedcode}
+default(shared \textnormal{|} none)
+\end{boxedcode}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{default} clause is as follows:
+
+\begin{boxedcode}
+default(private \textnormal{|} firstprivate \textnormal{|} shared \textnormal{|} none)
+\end{boxedcode}
+\end{fortranspecific}
+
+\descr
+The \code{default(shared)} clause causes all variables referenced in the construct that 
+have implicitly determined data-sharing attributes to be shared.
+
+\begin{fortranspecific}
+The \code{default(firstprivate)} clause causes all variables in the construct that have 
+implicitly determined data-sharing attributes to be firstprivate.
+
+The \code{default(private)} clause causes all variables referenced in the construct that 
+have implicitly determined data-sharing attributes to be private.
+\end{fortranspecific}
+
+The \code{default(none)} clause requires that each variable that is referenced in the 
+construct, and that does not have a predetermined data-sharing attribute, must have its 
+data-sharing attribute explicitly determined by being listed in a data-sharing attribute 
+clause. 
+
+\restrictions
+The restrictions to the \code{default} clause are as follows:
+
+\begin{itemize}
+\item Only a single \code{default} clause may be specified on a 
+\code{parallel}, \code{task}, \code{taskloop} or \code{teams} directive.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{shared} Clause}
+\label{subsubsec:shared clause}
+\index{shared@{\code{shared}}}
+\index{clauses!shared@{\code{shared}}}
+\summary
+The \code{shared} clause declares one or more list items to be shared by tasks generated by 
+a \code{parallel}, \code{teams}, or task generating construct.
+
+\syntax
+The syntax of the \code{shared} clause is as follows:
+
+\begin{boxedcode}
+shared(\plc{list})
+\end{boxedcode}
+
+\descr
+All references to a list item within a task refer to the storage area of the original variable 
+at the point the directive was encountered. 
+
+The programmer must ensure, by adding proper synchronization, that 
+storage shared by an explicit task region does not reach the end of its lifetime before 
+the explicit task region completes its execution. 
+
+
+\begin{fortranspecific}
+The association status of a shared pointer becomes undefined upon entry to and on exit 
+from the \code{parallel}, \code{teams}, or task generating construct if it
+is associated with a target or a  subobject of a target that is in a \code{private},
+\code{firstprivate}, \code{lastprivate}, or \code{reduction} clause in the construct.
+
+
+\begin{note}
+Passing a shared variable to a procedure may result in the use of
+temporary storage in place of the actual argument when the corresponding dummy
+argument does not have the \code{VALUE} attribute and its data-sharing attribute
+is implementation-defined as per the rules in
+\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Region but not in a Construct}.  
+These conditions effectively result in references to, and definitions of, the
+temporary storage during the procedure reference.  Furthermore, the value of
+the shared variable is copied into the intervening temporary storage before the procedure
+reference when the dummy argument does not have the \code{INTENT(OUT)}
+attribute, and back out of the temporary storage into the shared variable when
+the dummy argument does not have the \code{INTENT(IN)} attribute.  Any
+references to (or definitions of) the shared storage that is associated with
+the dummy argument by any other task must be synchronized with
+the procedure reference to avoid possible race conditions.
+
+\end{note}
+\medskip
+\end{fortranspecific}
+
+
+\restrictions
+The restrictions for the \code{shared} clause are as follows:
+\begin{itemize}
+
+\begin{cspecific}
+\item A variable that is part of another variable (as an array or structure element) cannot appear in a shared clause.
+\end{cspecific}
+
+\begin{cppspecific}
+\item A variable that is part of another variable (as an array or structure
+  element) cannot appear in a \code{shared} clause except if the \code{shared}
+  clause is associated with a construct within a class non-static member
+  function and the variable is an accessible data member of the object for
+  which the non-static member function is invoked.
+\end{cppspecific}
+
+\begin{fortranspecific}
+\item A variable that is part of another variable (as an array or structure element) cannot appear in a shared clause.
+\end{fortranspecific}
+
+\end{itemize}
+
+
+
+
+
+
+
+\subsubsection{\code{private} Clause}
+\index{private@{\code{private}}}
+\index{clauses!private@{\code{private}}}
+\label{subsubsec:private clause}
+\summary
+The \code{private} clause declares one or more list items to be private to a task or to a 
+SIMD lane.
+
+\syntax
+The syntax of the private clause is as follows:
+
+\begin{boxedcode}
+private(\plc{list})
+\end{boxedcode}
+
+\descr
+Each task that references a list item that appears in a \code{private} clause in any statement 
+in the construct receives a new list item. Each SIMD lane used in a \code{simd} construct that 
+references a list item that appears in a private clause in any statement in the construct 
+receives a new list item. Language-specific attributes for new list items are derived from 
+the corresponding original list item. Inside the construct, all references to the original 
+list item are replaced by references to the new list item. In the rest of the region, it is 
+unspecified whether references are to the new list item or the original list item. 
+
+\begin{cppspecific}
+If the construct is contained in a member function, it is unspecified anywhere in the region if accesses through the implicit \code{this} pointer refer to the new list item or the original list item.
+\end{cppspecific}
+
+Therefore, if an attempt is made to reference the original item, its value after the region 
+is also unspecified. If a SIMD construct or a task does not reference a list item that 
+appears in a \code{private} clause, it is unspecified whether SIMD lanes or the task receive 
+a new list item. 
+
+The value and/or allocation status of the original list item will change only: 
+
+\begin{itemize}
+\item if accessed and modified via pointer, 
+
+\item if possibly accessed in the region but outside of the construct, 
+
+\item as a side effect of directives or clauses, or
+
+\newpage %% HACK
+\begin{fortranspecific}
+\item if accessed and modified via construct association.
+\end{fortranspecific}
+\end{itemize}
+
+List items that appear in a \code{private}, \code{firstprivate}, or
+\code{reduction} clause in a \code{parallel} construct may also appear
+in a \code{private} clause in an enclosed \code{parallel},
+worksharing, \code{task}, \code{taskloop}, \code{simd}, or
+\code{target} construct.
+
+List items that appear in a \code{private} or \code{firstprivate}
+clause in a \code{task} or \code{taskloop} construct may also appear in a \code{private}
+clause in an enclosed \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, or
+\code{target} construct.
+
+List items that appear in a \code{private}, \code{firstprivate},
+\code{lastprivate}, or \code{reduction} clause in a worksharing
+construct may also appear in a \code{private} clause in an enclosed
+\code{parallel}, \code{task}, \code{simd}, or \code{target} construct.
+
+\begin{ccppspecific}
+A new list item of the same type, with automatic storage duration, is allocated for the 
+construct. The storage and thus lifetime of these list items lasts until the block in which 
+they are created exits. The size and alignment of the new list item are determined by the 
+type of the variable. This allocation occurs once for each task generated by the construct 
+and once for each SIMD lane used by the construct.
+
+The new list item is initialized, or has an undefined initial value, as if it had been locally 
+declared without an initializer. 
+\end{ccppspecific}
+
+\begin{cppspecific}
+If the type of a list item is a reference to a type \plc{T} then the type will be considered to be 
+\plc{T} for all purposes of this clause.
+
+The order in which any default constructors for different private variables of class type 
+are called is unspecified. The order in which any destructors for different private 
+variables of class type are called is unspecified.
+\end{cppspecific}
+
+\begin{fortranspecific} 
+If any statement of the construct references a list item, a new list
+item of the same type and type parameters is allocated. This
+allocation occurs once for each task generated by the construct and
+once for each SIMD lane used by the construct. The initial value of
+the new list item is undefined. The initial status of a private
+pointer is undefined.
+
+For a list item or the subobject of a list item with the \code{ALLOCATABLE} attribute:
+
+\begin{itemize}
+\item if the allocation status is unallocated, the new list item or the subobject
+of the new list item will have an initial allocation status of unallocated.
+
+\item if the allocation status is allocated, the new list item or the subobject of
+the new list item will have an initial allocation status of allocated.
+
+\item If the new list item or the subobject of the new list item is an array, its bounds will be 
+the same as those of the original list item or the subobject of the original list item.
+\end{itemize}
+
+A list item that appears in a \code{private} clause may be storage-associated with other 
+variables when the \code{private} clause is encountered. Storage association may exist 
+because of constructs such as \code{EQUIVALENCE} or \code{COMMON}. If \plc{A} is a variable appearing 
+in a \code{private} clause on a construct and \plc{B} is a variable that is storage-associated with \plc{A}, then:
+
+\begin{itemize}
+\item The contents, allocation, and association status of \plc{B} are undefined on entry to the region.
+
+\item Any definition of \plc{A}, or of its allocation or association status, causes the contents, 
+allocation, and association status of \plc{B} to become undefined. 
+
+\item Any definition of \plc{B}, or of its allocation or association status, causes the contents, 
+allocation, and association status of \plc{A} to become undefined. 
+\end{itemize}
+
+A list item that appears in a \code{private} clause may be a selector of an \code{ASSOCIATE} 
+construct. If the construct association is established prior to a \code{parallel} region, the 
+association between the associate name and the original list item will be retained in the 
+region.
+
+Finalization of a list item of a finalizable type or subojects of a
+list item of a finalizable type occurs at the end of the region. The
+order in which any final subroutines for different variables of a
+finalizable type are called is unspecified.
+\end{fortranspecific}
+
+\restrictions
+The restrictions to the \code{private} clause are as follows:
+
+\begin{itemize}
+\begin{cspecific}
+\item A variable that is part of another variable (as an array or structure element) cannot 
+appear in a \code{private} clause.
+\end{cspecific}
+
+\begin{cppspecific}
+\item A variable that is part of another variable (as an array or structure element) cannot 
+appear in a \code{private} clause except if the \code{private} clause is associated with a construct within a class non-static member function and the variable is an accessible data member of the object for which the non-static member function is invoked.
+
+\item A variable of class type (or array thereof) that appears in a \code{private} clause requires 
+an accessible, unambiguous default constructor for the class type. 
+\end{cppspecific}
+
+\begin{ccppspecific}
+\item A variable that appears in a \code{private} clause must not have a \code{const}-qualified type 
+unless it is of class type with a \code{mutable} member. This restriction does not apply to 
+the \code{firstprivate} clause.
+
+\item A variable that appears in a \code{private} clause must not have an incomplete type or be a reference to an incomplete type.
+\end{ccppspecific}
+
+
+\begin{fortranspecific}
+\item A variable that is part of another variable (as an array or structure element) cannot 
+appear in a \code{private} clause.
+
+\item A variable that appears in a \code{private} clause must either be definable, or an 
+allocatable variable. This restriction does not apply to the \code{firstprivate} clause.
+
+\item Variables that appear in namelist statements, in variable format expressions, and in 
+expressions for statement function definitions, may not appear in a \code{private} clause.
+
+\item Pointers with the \code{INTENT(IN)} attribute may not appear in a \code{private} clause. This 
+restriction does not apply to the \code{firstprivate} clause. 
+
+\item Assumed-size arrays may not appear in the \code{private}
+clause in a \code{target}, \code{teams}, or \code{distribute} construct.
+\end{fortranspecific}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{firstprivate} Clause}
+\label{subsubsec:firstprivate clause}
+\index{firstprivate@{\code{firstprivate}}}
+\index{clauses!firstprivate@{\code{firstprivate}}}
+\summary
+The \code{firstprivate} clause declares one or more list items to be private to a task, and 
+initializes each of them with the value that the corresponding original item has when the 
+construct is encountered. 
+
+\syntax
+The syntax of the \code{firstprivate} clause is as follows:
+
+\begin{boxedcode}
+firstprivate(\plc{list})
+\end{boxedcode}
+
+\descr
+The \code{firstprivate} clause provides a superset of the functionality provided by the 
+\code{private} clause. 
+
+A list item that appears in a \code{firstprivate} clause is subject to the \code{private} clause 
+semantics described in 
+\specref{subsubsec:private clause}, 
+except as noted. In addition, the 
+new list item is initialized from the original list item existing before the construct. The 
+initialization of the new list item is done once for each task that references the list item 
+in any statement in the construct. The initialization is done prior to the execution of the 
+construct.
+
+For a \code{firstprivate} clause on a \code{parallel}, \code{task},
+\code{taskloop}, \code{target}, or \code{teams} construct, the
+initial value of the new list item is the value of the original list
+item that exists immediately prior to the construct in the task region
+where the construct is encountered. For a \code{firstprivate} clause
+on a worksharing construct, the initial value of the new list item for
+each implicit task of the threads that execute the worksharing
+construct is the value of the original list item that exists in the
+implicit task immediately prior to the point in time that the
+worksharing construct is encountered.
+
+To avoid race conditions, concurrent updates of the original list item must be 
+synchronized with the read of the original list item that occurs as a result of the 
+\code{firstprivate} clause.
+
+If a list item appears in both \code{firstprivate} and \code{lastprivate} clauses, the update 
+required for \code{lastprivate} occurs after all the initializations for \code{firstprivate}.
+
+\begin{ccppspecific}
+For variables of non-array type, the initialization occurs by copy assignment. For an 
+array of elements of non-array type, each element is initialized as if by assignment from 
+an element of the original array to the corresponding element of the new array. 
+\end{ccppspecific}
+
+\begin{cppspecific}
+For variables of class type, a copy constructor is invoked to perform the initialization. 
+The order in which copy constructors for different variables of class type are called is 
+unspecified. 
+\end{cppspecific}
+
+\begin{fortranspecific}
+If the original list item does not have the \code{POINTER} attribute, initialization of the new 
+list items occurs as if by intrinsic assignment, unless the original list item has the 
+allocation status of unallocated, in which case the new list items will have the
+same status.
+
+If the original list item has the \code{POINTER} attribute, the new list items receive the same 
+association status of the original list item as if by pointer assignment.
+\end{fortranspecific}
+
+\restrictions
+The restrictions to the \code{firstprivate} clause are as follows:
+
+\begin{itemize}
+\item A list item that is private within a \code{parallel} region must
+not appear in a \code{firstprivate} clause on a worksharing construct
+if any of the worksharing regions arising
+from the worksharing construct ever bind to any of the
+\code{parallel} regions arising from the \code{parallel} construct.
+
+\item A list item that is private within a \code{teams} region must not appear in a 
+\code{firstprivate} clause on a \code{distribute} construct if any of the \code{distribute} 
+regions arising from the \code{distribute} construct ever bind to any of the \code{teams} 
+regions arising from the \code{teams} construct.
+
+\item A list item that appears in a \code{reduction} clause of a \code{parallel} 
+construct must not appear in a \code{firstprivate} clause on a worksharing, \code{task}, 
+or \code{taskloop} construct if any of the worksharing or task regions arising from 
+the worksharing, \code{task}, or \code{taskloop} construct ever bind to any of the 
+\code{parallel} regions arising from the \code{parallel} construct.
+
+\item A list item that appears in a \code{reduction} clause of a \code{teams} construct must not 
+appear in a \code{firstprivate} clause on a \code{distribute} construct if any of the 
+\code{distribute} regions arising from the \code{distribute} construct ever bind to any of 
+the \code{teams} regions arising from the \code{teams} construct. 
+
+\item A list item that appears in a \code{reduction} clause of a worksharing construct must not 
+appear in a \code{firstprivate} clause in a \code{task} construct encountered during execution 
+of any of the worksharing regions arising from the worksharing construct.
+
+\begin{cppspecific}
+\item A variable of class type (or array thereof) that appears in a \code{firstprivate} clause 
+requires an accessible, unambiguous copy constructor for the class type.
+\end{cppspecific}
+
+\begin{ccppspecific}
+\item A variable that appears in a \code{firstprivate} clause must not have an incomplete C/C++ type or be a reference to an incomplete type.
+
+\item If a list item in a \code{firstprivate} clause on a worksharing
+construct has a reference type then it must bind to the same object for all threads of the team.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\item Variables that appear in namelist statements, in variable format expressions, or in 
+expressions for statement function definitions, may not appear in a \code{firstprivate} 
+clause. 
+
+\item Assumed-size arrays may not appear in the \code{firstprivate}
+clause in a \code{target}, \code{teams}, or \code{distribute} construct.
+\end{fortranspecific}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{lastprivate} Clause}
+\index{lastprivate@{\code{lastprivate}}}
+\index{clauses!lastprivate@{\code{lastprivate}}}
+\label{subsubsec:lastprivate clause}
+\summary
+The \code{lastprivate} clause declares one or more list items to be private to an implicit 
+task or to a SIMD lane, and causes the corresponding original list item to be updated 
+after the end of the region. 
+
+\syntax
+The syntax of the \code{lastprivate} clause is as follows:
+
+\begin{boxedcode}
+lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
+\end{boxedcode}
+
+where \plc{lastprivate-modifier} is:
+\begin{indentedcodelist}
+conditional
+\end{indentedcodelist}
+
+\descr
+The \code{lastprivate} clause provides a superset of the functionality provided by the 
+\code{private} clause.
+
+A list item that appears in a \code{lastprivate} clause is subject to the \code{private} clause 
+semantics described in 
+\specref{subsubsec:private clause}. 
+In addition, when a 
+\code{lastprivate} clause without the \code{conditional} modifier appears on the directive that identifies a worksharing construct 
+or a SIMD construct, the value of each new list item from the sequentially last iteration 
+of the associated loops, or the lexically last \code{section} construct, is assigned to the 
+original list item. When the \code{conditional} modifier appears on the clause,
+if an assignment to a list item is encountered in the construct then the
+original list item is assigned the value that is assigned to the new list item
+in the sequentially last iteration or lexically last section in which such an
+assignment is encountered.
+
+
+\begin{ccppspecific}
+For an array of elements of non-array type, each element is assigned to the 
+corresponding element of the original array.
+\end{ccppspecific}
+\bigskip
+
+\begin{fortranspecific}
+If the original list item does not have the \code{POINTER} attribute, its update occurs as if by 
+intrinsic assignment.
+
+If the original list item has the \code{POINTER} attribute, its update occurs as if by pointer 
+assignment.
+\end{fortranspecific}
+
+When the \code{conditional} modifier does not appear on the \code{lastprivate} clause, list items that are not
+assigned a value by the sequentially last iteration of the loops, or by the
+lexically last \code{section} construct, have unspecified values after the
+construct.  Unassigned subcomponents also have unspecified values after the
+construct.
+
+The original list item becomes defined at the end of the construct if there is an implicit 
+barrier at that point. To avoid race conditions, concurrent reads or updates of the original 
+list item must be synchronized with the update of the original list item that occurs as a 
+result of the \code{lastprivate} clause.
+
+If the \code{lastprivate} clause is used on a construct that does not end with
+an implicit barrier, accesses to the original list item may create a data race.
+To avoid this, if an assignment to the original list item occurs
+then synchronization must be inserted to ensure that the assignment completes and
+the original list item is flushed to memory.
+
+If a list item appears in both \code{firstprivate} and \code{lastprivate} clauses, the update 
+required for \code{lastprivate} occurs after all initializations for \code{firstprivate}.
+
+\restrictions
+The restrictions to the \code{lastprivate} clause are as follows:
+
+\begin{itemize}
+\item A list item that is private within a \code{parallel} region, or
+that appears in the \code{reduction} clause of a \code{parallel}
+construct, must not appear in a \code{lastprivate} clause on a
+worksharing construct if any of the corresponding
+worksharing regions ever binds to any of the corresponding
+\code{parallel} regions.
+
+\item If a list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier is modified in the region by an assignment
+outside the construct or not to the list item then the value assigned to
+the original list item is unspecified.
+
+\item A list item that appears in a \code{lastprivate} clause with the
+\code{conditional} modifier must be a scalar variable.
+
+\begin{cppspecific}
+\item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
+requires an accessible, unambiguous default constructor for the class type, unless the 
+list item is also specified in a \code{firstprivate} clause. 
+
+\item A variable of class type (or array thereof) that appears in a \code{lastprivate} clause 
+requires an accessible, unambiguous copy assignment operator for the class type. The 
+order in which copy assignment operators for different variables of class type are 
+called is unspecified.
+\end{cppspecific}
+
+\begin{ccppspecific}
+\item A variable that appears in a \code{lastprivate} clause must not have a \code{const}-qualified 
+type unless it is of class type with a \code{mutable} member. 
+
+\item A variable that appears in a \code{lastprivate} clause must not have an incomplete C/C++ type or be a reference to an incomplete type.
+
+\item If a list item in a \code{lastprivate} clause on a worksharing
+construct has a reference type then it must bind to the same object for all threads of the team.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\item A variable that appears in a \code{lastprivate} clause must be definable.
+
+\item If the original list item has the \code{ALLOCATABLE} attribute, the
+    corresponding list item whose value is assigned to the original list item must have an allocation status of allocated upon exit from
+    the sequentially last iteration or lexically last \code{section} construct.
+
+\item Variables that appear in namelist statements, in variable format expressions, or in 
+expressions for statement function definitions, may not appear in a \code{lastprivate} 
+clause.
+\end{fortranspecific}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{linear} Clause}
+\index{linear@{\code{linear}}}
+\index{clauses!linear@{\code{linear}}}
+\label{subsubsec:linear clause}
+\summary
+The \code{linear} clause declares one or more list items to be private to a SIMD lane and to 
+have a linear relationship with respect to the iteration space of a loop.
+
+\syntax
+
+
+\begin{cspecific}
+The syntax of the \code{linear} clause is as follows:
+\begin{boxedcode}
+linear(\plc{linear-list[ }:\plc{ linear-step]})
+\end{boxedcode}
+where \plc{linear-list} is one of the following
+\vspace{-2ex} %% HACK
+\begin{indentedcodelist}
+\plc{list}
+\plc{modifier}(\plc{list})
+\end{indentedcodelist}
+where  \plc{modifier} is one of the following:
+\vspace{-2ex} %% HACK
+\begin{indentedcodelist}
+val
+\end{indentedcodelist}
+\end{cspecific}
+
+\begin{cppspecific}
+The syntax of the \code{linear} clause is as follows:
+\begin{boxedcode}
+linear(\plc{linear-list[ }:\plc{ linear-step]})
+\end{boxedcode}
+where \plc{linear-list} is one of the following
+\vspace{-2ex} %% HACK
+\begin{indentedcodelist}
+\plc{list}
+\plc{modifier}(\plc{list})
+\end{indentedcodelist}
+where  \plc{modifier} is one of the following:
+\vspace{-2ex} %% HACK
+\begin{indentedcodelist}
+ref
+val
+uval
+\end{indentedcodelist}
+\end{cppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{linear} clause is as follows:
+\begin{boxedcode}
+linear(\plc{linear-list[ }:\plc{ linear-step]})
+\end{boxedcode}
+where \plc{linear-list} is one of the following
+\vspace{-2ex} %% HACK
+\begin{indentedcodelist}
+\plc{list}
+\plc{modifier}(\plc{list})
+\end{indentedcodelist}
+where  \plc{modifier} is one of the following:
+\vspace{-2ex} %% HACK
+\begin{indentedcodelist}
+ref
+val
+uval
+\end{indentedcodelist}
+\end{fortranspecific}
+
+
+\descr
+The \code{linear} clause provides a superset of the functionality provided by the \code{private} clause.
+A list item that appears in a \code{linear} clause is subject to the \code{private} clause semantics described
+in \specref{subsubsec:private clause} except as noted.
+If \plc{linear-step} is not specified, it is assumed to be 1.
+
+When a \code{linear} clause is specified on a construct, the value of the new list item on each iteration of the associated loop(s) corresponds to the value of the original list item before entering the construct plus the logical number of the iteration times \plc{linear-step}. 
+The value corresponding to the sequentially last iteration of the associated loop(s) is assigned to the original list item.
+
+When a \code{linear} clause is specified on a declarative directive, all list items must be formal parameters (or, in Fortran, dummy arguments) of a function that will be invoked concurrently on each SIMD lane.
+If no \plc{modifier} is specified or the \code{val} or \code{uval} modifier is specified, the value of each list item on each lane corresponds to the value of the list item upon entry to the function plus the logical number of the lane times \plc{linear-step}.
+If the \code{uval} modifier is specified, each invocation uses the same storage location for each SIMD lane; this storage location is updated with the final value of the logically last lane.
+If the \code{ref} modifier is specified, the storage location of each list item on each lane corresponds to an array at the storage location upon entry to the function indexed by the logical number of the lane times \plc{linear-step}.
+
+
+\restrictions
+\begin{itemize}
+\item The \plc{linear-step} expression must be invariant during the execution of the region 
+associated with the construct. Otherwise, the execution results in unspecified 
+behavior.
+
+\item A \plc{list-item} cannot appear in more than one \code{linear} clause.
+
+\item A \plc{list-item} that appears in a \code{linear} clause cannot appear in any other data-sharing 
+attribute clause. 
+
+\begin{cspecific}
+\item A \plc{list-item} that appears in a \code{linear} clause must be of integral or pointer type.
+\end{cspecific}
+
+\begin{cppspecific}
+\item A \plc{list-item} that appears in a \code{linear} clause without the \code{ref} modifier must be of integral or pointer type, or must be a reference to an integral or pointer type. 
+\item The \code{ref} or \code{uval} modifier can only be used if the \plc{list-item} is of a reference type.
+\item If a list item in a \code{linear} clause on a worksharing
+construct has a reference type then it must bind to the same object for all threads of the team.
+\item If the list item is of a reference type and the \code{ref} modifier is not specified and if any write to the list item occurs before any read of the list item then the result is unspecified.
+\end{cppspecific}
+
+\begin{fortranspecific}
+\item A \plc{list-item} that appears in a \code{linear} clause without the \code{ref} modifier must be of type \code{integer}.
+\item The \code{ref} or \code{uval} modifier can only be used if the \plc{list-item} is a dummy argument without the \code{VALUE} attribute.
+\item Variables that have the \code{POINTER} attribute and Cray pointers may not appear in a linear clause. 
+\item The list item with the \code{ALLOCATABLE} attribute in the sequentially last iteration must have an allocation status of allocated upon exit from that iteration. 
+\item If the list item is a dummy argument without the \code{VALUE} attribute and the \code{ref} modifier is not specified and if any write to the list item occurs before any read of the list item then the result is unspecified.
+\item A common block name cannot appear in a \code{linear} clause.
+\end{fortranspecific}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Reduction Clauses}
+\index{reduction clauses}
+\label{subsec:Reduction Clauses}
+The reduction clauses can be used to perform some forms of recurrence
+calculations (involving mathematically associative and commutative operators)
+in parallel.
+
+Reduction clauses include reduction scoping clauses and reduction participating
+clauses. Reduction scoping clauses define the region in which a reduction is
+computed. Reduction participating clauses define the participants in the
+reduction.
+
+Reduction clauses specify a \plc{reduction-identifier} and one or more list
+items.
+
+
+
+
+
+
+
+
+
+
+\subsubsection{Properties Common To All Reduction Clauses}
+\label{subsubsec:Properties Common To All Reduction Clauses}
+
+\syntax
+The syntax of a \plc{reduction-identifier} is defined as follows:
+\begin{cspecific} % L1 vvvvv
+A \plc{reduction-identifier} is either an \plc{identifier} or one of the following operators:
+\code{+},
+\code{-},
+\code{*},
+\code{\&},
+\code{|},
+\code{\^},
+\code{\&\&} and
+\code{||}
+\end{cspecific} % L1 ^^^^^
+
+\begin{cppspecific} % L1 vvvvv
+A \plc{reduction-identifier} is either an \plc{id-expression} or one of the following operators:
+\code{+},
+\code{-},
+\code{*},
+\code{\&},
+\code{|},
+\code{\^},
+\code{\&\&} and
+\code{||}
+\end{cppspecific} % L1 ^^^^^
+
+\begin{fortranspecific}
+A \plc{reduction-identifier} is either a base language identifier, or a user-defined operator,
+or one of the following operators:
+\code{+},
+\code{-},
+\code{*},
+\code{.and.},
+\code{.or.},
+\code{.eqv.},
+\code{.neqv.},
+ or one of the following intrinsic procedure names:
+\code{max},
+\code{min},
+\code{iand},
+\code{ior},
+\code{ieor}.
+\end{fortranspecific}
+
+
+\begin{ccppspecific} % L0 vvvvv
+Table~\ref{tab:Implicitly Declared C/C++ Reduction Identifiers} lists each
+\plc{reduction-identifier} that is implicitly declared at every scope for
+arithmetic types and its semantic initializer value. The actual initializer
+value is that value as expressed in the data type of the reduction list item.
+
+
+\newpage %% HACK 
+% Table 
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+%\begin{center}
+\tablecaption{Implicitly Declared C/C++ \plc{reduction-identifiers}\label{tab:Implicitly Declared C/C++ Reduction Identifiers}}
+%% \tablecaption*{}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\begin{supertabular}{ p{0.1\textwidth} p{0.3\textwidth} p{0.5\textwidth}}
+\code{+} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
+\code{*} & \code{omp\_priv = 1} & \code{omp\_out *= omp\_in}\\
+\code{-} & \code{omp\_priv = 0} & \code{omp\_out += omp\_in}\\
+\code{\&} & \code{omp\_priv =  \textasciitilde 0} & \code{omp\_out \&= omp\_in}\\
+\code{|} & \code{omp\_priv = 0} & \code{omp\_out |= omp\_in}\\
+\code{\^} & \code{omp\_priv = 0} & \code{omp\_out \^}\code{= omp\_in}\\
+\code{\&\&} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in \&\& omp\_out}\\
+\code{||} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in || omp\_out}\\
+\code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = omp\_in > omp\_out ? omp\_in : omp\_out}\\
+\code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = omp\_in < omp\_out ? omp\_in : omp\_out}\\
+\end{supertabular}
+%\end{center}
+\linenumbers
+
+\end{ccppspecific} % L0 ^^^^^
+\bigskip
+
+\begin{fortranspecific}
+Table~\ref{tab:Implicitly Declared Fortran Reduction Identifiers} lists each
+\plc{reduction-identifier} that is implicitly declared for numeric and logical
+types and its semantic initializer value. The actual initializer value is that
+value as expressed in the data type of the reduction list item.
+
+% Table
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Identifier}} & \textsf{\textbf{Initializer}} & \textsf{\textbf{Combiner}}\\
+\hline \\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Implicitly Declared Fortran \plc{reduction-identifiers}\label{tab:Implicitly Declared Fortran Reduction Identifiers}}
+\begin{supertabular}{ p{0.1\textwidth} p{0.30\textwidth} p{0.5\textwidth}}
+\code{+} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
+\code{*} & \code{omp\_priv = 1} & \code{omp\_out = omp\_in * omp\_out}\\
+\code{-} & \code{omp\_priv = 0} & \code{omp\_out = omp\_in + omp\_out}\\
+\code{.and.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .and.\ omp\_out}\\
+\code{.or.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .or.\ omp\_out}\\
+\code{.eqv.} & \code{omp\_priv = .true.} & \code{omp\_out = omp\_in .eqv.\ omp\_out}\\
+\code{.neqv.} & \code{omp\_priv = .false.} & \code{omp\_out = omp\_in .neqv.\ omp\_out}\\
+\code{max} & \code{omp\_priv = \plc{Least representable number in the reduction list item type}} & \code{omp\_out = max(omp\_in, omp\_out)}\\
+\code{min} & \code{omp\_priv = \plc{Largest representable number in the reduction list item type}} & \code{omp\_out = min(omp\_in, omp\_out)}\\
+\code{iand} & \code{omp\_priv = \plc{All bits on}} & \code{omp\_out = iand(omp\_in, omp\_out)}\\
+\code{ior} & \code{omp\_priv = 0} & \code{omp\_out = ior(omp\_in, omp\_out)}\\
+\code{ieor} & \code{omp\_priv = 0} & \code{omp\_out = ieor(omp\_in, omp\_out)}\\
+\end{supertabular}
+
+\linenumbers
+
+\end{fortranspecific}
+\vspace{\baselineskip}
+
+In the above tables, \code{omp\_in} and \code{omp\_out} correspond to two
+identifiers that refer to storage of the type of the list item. \code{omp\_out}
+holds the final value of the combiner operation.
+
+Any \plc{reduction-identifier} that is defined with the \code{declare}~\code{reduction}
+directive is also valid. In that case, the initializer and combiner of the
+\plc{reduction-identifier} are specified by the \plc{initializer-clause} and
+the \plc{combiner} in the \code{declare}~\code{reduction} directive.
+
+
+
+
+\descr
+A reduction clause specifies a \plc{reduction-identifier} and one or more list
+items.
+
+The \plc{reduction-identifier} specified in a reduction clause must match a
+previously declared \plc{reduction-identifier} of the same name and type for
+each of the list items. This match is done by means of a name lookup in the
+base language.
+
+The list items that appear in a reduction clause may include array sections.
+
+
+\begin{cppspecific}
+If the type is a derived class, then any \plc{reduction-identifier} that
+matches its base classes is also a match, if there is no specific match for the
+type.
+
+If the \plc{reduction-identifier} is not an \plc{id-expression}, then it is
+implicitly converted to one by prepending the keyword operator (for example,
+\code{+} becomes \code{\plc{operator}+}).
+
+If the \plc{reduction-identifier} is qualified then a qualified name lookup is
+used to find the declaration.
+
+If the \plc{reduction-identifier} is unqualified then an \emph{argument-dependent name lookup}
+must be performed using the type of each list item.
+\end{cppspecific}
+
+If the list item is an array or array section, it will be treated as
+if a reduction clause would be applied to each separate element
+of the array section. 
+
+
+
+\restrictions
+The restrictions common to reduction clauses are as follows:
+
+\begin{itemize}
+\item Any number of reduction clauses can be specified on the directive, but a
+list item (or any array element in an array section) can appear only once in
+reduction clauses for that directive.
+
+\item For a \plc{reduction-identifier} declared with the \code{declare}~\code{reduction}
+construct, the directive must appear before its use in a reduction clause.
+
+\item If a list item is an array section, it must specify contiguous storage
+and it cannot be a zero-length array section.
+
+\item If a list item is an array section, accesses to the elements of the array
+outside the specified array section result in unspecified behavior.
+
+\begin{ccppspecific}
+\item The type of a list item that appears in a reduction clause must be valid for the 
+\plc{reduction-identifier}. For a \code{max} or \code{min} reduction in C, the type of the list item must 
+be an allowed arithmetic data type: \code{char}, \code{int}, \code{float}, \code{double}, or \code{\_Bool}, 
+possibly modified with \code{long}, \code{short}, \code{signed}, or \code{unsigned}. For a \code{max} or \code{min} 
+reduction in C++, the type of the list item must be an allowed arithmetic data type: 
+\code{char}, \code{wchar\_t}, \code{int}, \code{float}, \code{double}, or \code{bool}, possibly modified with \code{long}, 
+\code{short}, \code{signed}, or \code{unsigned}.
+
+\item A list item that appears in a reduction clause must not be \code{const}-qualified.
+
+\item The \plc{reduction-identifier} for any list item must be unambiguous and accessible.
+\end{ccppspecific}
+\bigskip
+
+\begin{fortranspecific}
+\item The type and the rank of a list item that appears in a reduction clause
+must be valid for the \plc{combiner} and \plc{initializer}.
+
+\item A list item that appears in a reduction clause must be definable.
+
+\item A procedure pointer may not appear in a reduction clause.
+
+\item A pointer with the \code{INTENT(IN)} attribute may not appear in the
+reduction clause.
+
+\item An original list item with the \code{POINTER} attribute or any pointer
+component of an original list item that is referenced in the \plc{combiner}
+must be associated at entry to the construct that contains the reduction
+clause. Additionally, the list item or the pointer component of the list item
+must not be deallocated, allocated, or pointer assigned within the region.
+
+\item An original list item with the \code{ALLOCATABLE} attribute or any
+allocatable component of an original list item that is referenced in the
+\plc{combiner} must be in the allocated state at entry to the construct that
+contains the reduction clause. Additionally, the list item or the allocatable
+component of the list item must be neither deallocated nor allocated within the
+region.
+
+\item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction}
+directive, the \code{declare}~\code{reduction} directive must be in the same
+subprogram, or accessible by host or use association.
+
+\item If the \plc{reduction-identifier} is a user-defined operator, the same
+explicit interface for that operator must be accessible as at the
+\code{declare}~\code{reduction} directive.
+
+\item If the \plc{reduction-identifier} is defined in a \code{declare}~\code{reduction}
+directive, any subroutine or function referenced in the initializer clause or
+combiner expression must be an intrinsic function, or must have an explicit
+interface where the same explicit interface is accessible as at the
+\code{declare}~\code{reduction} directive.
+\end{fortranspecific}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{Reduction Scoping Clauses}
+\label{subsubsec:Reduction Scoping Clauses}
+Reduction scoping clauses define the region in which a reduction is computed by
+tasks or SIMD lanes. All properties common to all reduction clauses,
+which are defined in Section~\ref{subsubsec:Properties Common To All Reduction
+Clauses}, apply to reduction scoping clauses.
+
+The number of copies created for each list item and the time at which those
+copies are initialized are determined by the particular reduction scoping clause
+that appears on the construct. Any copies associated with the reduction are
+initialized with the intializer value of the \plc{reduction-identifier}.
+
+
+Any copies are combined using the combiner associated with the
+\plc{reduction-identifier}. The time at which the original list item contains the result
+of the reduction is determined by the particular reduction scoping clause.
+
+\begin{samepage}
+\begin{fortranspecific}
+If the original list item has the \code{POINTER} attribute, copies of
+the list item are associated with private targets.
+\end{fortranspecific}
+\end{samepage}
+
+If the list item is an array section, the elements of any copy of the array section will
+be allocated contiguously.
+
+The location in the OpenMP program at which values are combined and the
+order in which values are combined are unspecified. Therefore, when
+comparing sequential and parallel runs, or when comparing one parallel run to
+another (even if the number of threads used is the same), there is no guarantee
+that bit-identical results will be obtained or that side effects (such as
+floating-point exceptions) will be identical or take place at the same location
+in the OpenMP program.
+
+To avoid race conditions, concurrent reads or updates of the original list item
+must be synchronized with the update of the original list item that occurs as a
+result of the reduction computation.
+
+
+
+
+
+
+
+
+
+
+\subsubsection{Reduction Participating Clauses}
+\label{subsubsec:Reduction Participating Clauses}
+A reduction participating clause specifies a task or a SIMD lane as a
+participant in a reduction defined by a reduction scoping clause.
+All properties common to all reduction clauses, which are defined in
+Section~\ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
+reduction participating clauses.
+
+Accesses to the original list item may be replaced by accesses to copies of the
+original list item created by a region associated with a construct with a
+reduction scoping clause.
+
+In any case, the final value of the reduction must be determined as if all tasks
+or SIMD lanes that participate in the reduction are executed sequentially in
+some arbitrary order.
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{reduction} Clause}
+\index{reduction@{\code{reduction}}}
+\index{clauses!reduction@{\code{reduction}}}
+\label{subsubsec:reduction clause}
+\summary
+The \code{reduction} clause specifies a \plc{reduction-identifier} and one or
+more list items. For each list item, a private copy is created in each implicit
+task or SIMD lane and is initialized with the initializer value of the
+\plc{reduction-identifier}. After the end of the region, the original list item
+is updated with the values of the private copies using the combiner associated
+with the \plc{reduction-identifier}.
+
+\syntax
+\begin{boxedcode}
+\code{reduction}(\plc{reduction-identifier }:\plc{ list})
+\end{boxedcode}
+Where \plc{reduction-identifier} is defined in Section
+\ref{subsubsec:Properties Common To All Reduction Clauses}.
+
+\descr
+The \code{reduction} clause is a reduction scoping clause and a reduction
+participating clause, as described in Sections \ref{subsubsec:Reduction Scoping
+Clauses} and \ref{subsubsec:Reduction Participating Clauses}.
+
+For \code{parallel} and worksharing constructs, a private copy of each list item is created, 
+one for each implicit task, as if the \code{private} clause had been used. For the \code{simd} 
+construct, a private copy of each list item is created, one for each SIMD lane as if the 
+\code{private} clause had been used. 
+For the \code{taskloop} construct, private copies are created according to the rules of the reduction scoping clauses. 
+For the \code{target} construct, a private
+copy of each list item is created and initialized for the initial task as if
+the \code{private} clause had been used. For the \code{teams} construct, a
+private copy of each list item is created and initialized, one for each team in
+the league as if the \code{private} clause had been used. At the end of the
+region for  which the \code{reduction} clause was specified, the original list
+item is updated by combining its original value with the final value of each of
+the private copies, using the combiner of the specified
+\plc{reduction-identifier}.
+
+
+If \code{nowait} is not used, the reduction computation will be complete at the end of the 
+construct; however, if the reduction clause is used on a construct to which \code{nowait} is 
+also applied, accesses to the original list item will create a race and, thus, have 
+unspecified effect unless synchronization ensures that they occur after all threads have 
+executed all of their iterations or \code{section} constructs, and the reduction computation 
+has completed and stored the computed value of that list item. This can most simply be 
+ensured through a barrier synchronization.
+
+
+\restrictions
+The restrictions to the \code{reduction} clause are as follows:
+
+\begin{itemize}
+\item All the common restrictions to all reduction clauses, which are listed in
+Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
+this clause.
+
+\item A list item that appears in a \code{reduction} clause of a worksharing
+construct must be shared in the \code{parallel} regions to which any of the
+worksharing regions arising from the worksharing construct bind.
+
+\item A list item that appears in a \code{reduction} clause of the innermost
+enclosing worksharing or \code{parallel} construct may not be accessed in an
+explicit task generated by a construct for which an \code{in\_reduction} clause
+over the same list item does not appear.
+
+\begin{ccppspecific}
+\item If a list item in a \code{reduction} clause on a worksharing
+construct has a reference type then it must bind to the same object for all threads of the team.
+\end{ccppspecific}
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{task\_reduction} Clause}
+\index{task\_reduction@{\code{task\_reduction}}}
+\index{clauses!task\_reduction@{\code{task\_reduction}}}
+\label{subsubsec:task_reduction clause}
+\summary
+The \code{task\_reduction} clause specifies a reduction among tasks.
+
+\syntax
+\begin{boxedcode}
+\code{task\_reduction}(\plc{reduction-identifier }:\plc{ list})
+\end{boxedcode}
+Where \plc{reduction-identifier} is defined in Section
+\ref{subsubsec:Properties Common To All Reduction Clauses}.
+
+\descr
+The \code{task\_reduction} clause is a reduction scoping clause, as described in
+\ref{subsubsec:Reduction Scoping Clauses}.
+
+For each list item, the number of copies is unspecified. Any copies associated
+with the reduction are initialized before they are accessed by the tasks
+participating in the reduction. After the end of the region, the original list
+item contains the result of the reduction.
+
+\restrictions
+The restrictions to the \code{task\_reduction} clause are as follows:
+
+\begin{itemize}
+\item All the common restrictions to all reduction clauses, which are listed in
+Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
+this clause.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\newpage %% HACK
+
+\subsubsection{\code{in\_reduction} Clause}
+\index{in\_reduction@{\code{in\_reduction}}}
+\index{clauses!in\_reduction@{\code{in\_reduction}}}
+\label{subsubsec:in_reduction clause}
+\summary
+The \code{in\_reduction} clause specifies that a task participates in a reduction.
+
+\syntax
+\begin{boxedcode}
+\code{in\_reduction}(\plc{reduction-identifier }:\plc{ list})
+\end{boxedcode}
+Where \plc{reduction-identifier} is defined in Section \ref{subsubsec:Properties Common To All Reduction Clauses}
+
+\descr
+The \code{in\_reduction} clause is a reduction participating clause, as described in
+Section \ref{subsubsec:Reduction Participating Clauses}.
+
+\restrictions
+The restrictions to the \code{in\_reduction} clause are as follows:
+
+\begin{itemize}
+\item All the common restrictions to all reduction clauses, which are listed in
+Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
+this clause.
+
+
+\item A list item that appears in an \code{in\_reduction} clause of a \code{task}
+construct must appear in a \code{task\_reduction} clause of a construct
+associated with a taskgroup region that includes the participating task in its
+\plc{taskgroup set}. The construct associated with the innermost region that meets
+this condition must specify the same \plc{reduction-identifier} as the
+\code{in\_reduction} clause.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+\subsection{Data Copying Clauses}
+\label{subsec:Data Copying Clauses}
+\index{data copying clauses}
+\index{clauses!data copying}
+This section describes the \code{copyin} clause (allowed on the \code{parallel} directive and 
+combined parallel worksharing directives) and the \code{copyprivate} clause (allowed on 
+the \code{single} directive).
+
+These clauses support the copying of data values from private or threadprivate variables 
+on one implicit task or thread to the corresponding variables on other implicit tasks or 
+threads in the team.
+
+The clauses accept a comma-separated list of list items (see \specref{sec:Directive Format}). 
+All list items appearing in a clause must be visible, according to the scoping rules of the 
+base language. Clauses may be repeated as needed, but a list item that specifies a given 
+variable may not appear in more than one clause on the same directive.
+
+\begin{fortranspecific}
+An associate name preserves the association with the selector established at the \code{ASSOCIATE} statement. A list item that appears in a data copying clause may be a selector of an \code{ASSOCIATE} construct. If the construct association is established prior to a parallel region, the association between the associate name and the original list item will be retained in the region.
+\end{fortranspecific}
+
+
+
+
+
+
+
+\subsubsection{\code{copyin} Clause}
+\index{copyin@{\code{copyin}}}
+\index{clauses!copyin@{\code{copyin}}}
+\label{subsubsec:copyin clause}
+\summary
+The \code{copyin} clause provides a mechanism to copy the value of the master thread’s 
+threadprivate variable to the threadprivate variable of each other member of the team 
+executing the \code{parallel} region. 
+
+\syntax
+The syntax of the \code{copyin} clause is as follows:
+
+\begin{boxedcode}
+copyin(\plc{list})
+\end{boxedcode}
+
+\descr
+\begin{ccppspecific}
+The copy is done after the team is formed and prior to the start of execution of the 
+associated structured block. For variables of non-array type, the copy occurs by copy 
+assignment. For an array of elements of non-array type, each element is copied as if by 
+assignment from an element of the master thread’s array to the corresponding element of 
+the other thread’s array. 
+\end{ccppspecific}
+
+\begin{cppspecific}
+For class types, the copy assignment operator is invoked. The order in which copy 
+assignment operators for different variables of class type are called is unspecified. 
+\end{cppspecific}
+
+\begin{fortranspecific}
+The copy is done, as if by assignment, after the team is formed and prior to the start of 
+execution of the associated structured block.
+
+On entry to any \code{parallel} region, each thread’s copy of a variable that is affected by 
+a \code{copyin} clause for the \code{parallel} region will acquire the allocation, association, and 
+definition status of the master thread’s copy, according to the following rules:
+
+\begin{itemize}
+\item If the original list item has the \code{POINTER} attribute, each copy receives the same 
+association status of the master thread’s copy as if by pointer assignment.
+
+\item If the original list item does not have the \code{POINTER} attribute, each copy becomes 
+defined with the value of the master thread's copy as if by intrinsic assignment, 
+unless it has the allocation status of unallocated, in which case each copy
+will have the same status.
+\end{itemize}
+\end{fortranspecific}
+
+\restrictions
+The restrictions to the \code{copyin} clause are as follows:
+\begin{ccppspecific}
+\begin{itemize}
+\item A list item that appears in a \code{copyin} clause must be threadprivate.
+
+\item A variable of class type (or array thereof) that appears in a \code{copyin} clause requires 
+an accessible, unambiguous copy assignment operator for the class type.
+\end{itemize}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item A list item that appears in a \code{copyin} clause must be threadprivate. Named variables 
+appearing in a threadprivate common block may be specified: it is not necessary to 
+specify the whole common block. 
+
+\item A common block name that appears in a \code{copyin} clause must be declared to be a 
+common block in the same scoping unit in which the \code{copyin} clause appears.
+\end{itemize}
+\end{fortranspecific}
+
+
+
+
+
+
+
+
+
+\subsubsection{\code{copyprivate} Clause}
+\index{copyprivate@{\code{copyprivate}}}
+\index{clauses!copyprivate@{\code{copyprivate}}}
+\label{subsubsec:copyprivate clause}
+\summary
+The \code{copyprivate} clause provides a mechanism to use a private variable to broadcast 
+a value from the data environment of one implicit task to the data environments of the 
+other implicit tasks belonging to the \code{parallel} region.
+
+To avoid race conditions, concurrent reads or updates of the list item must be 
+synchronized with the update of the list item that occurs as a result of the 
+\code{copyprivate} clause.
+
+\syntax
+The syntax of the \code{copyprivate} clause is as follows:
+
+\begin{boxedcode}
+copyprivate(\plc{list})
+\end{boxedcode}
+
+\descr
+The effect of the \code{copyprivate} clause on the specified list items occurs after the 
+execution of the structured block associated with the \code{single} construct (see 
+\specref{subsec:single Construct}), 
+and before any of the threads in the team have left the barrier 
+at the end of the construct.
+
+\begin{ccppspecific}
+In all other implicit tasks belonging to the \code{parallel} region, each specified list item 
+becomes defined with the value of the corresponding list item in the implicit task associated with the 
+thread that executed the structured block. For variables of non-array type, the definition 
+occurs by copy assignment. For an array of elements of non-array type, each element is
+copied by copy assignment from an element of the array in the data environment of the 
+implicit task associated with the thread that executed the structured block to the 
+corresponding element of the array in the data environment of the other implicit tasks
+\end{ccppspecific}
+
+\begin{cppspecific}
+For class types, a copy assignment operator is invoked. The order in which copy 
+assignment operators for different variables of class type are called is unspecified. 
+\end{cppspecific}
+
+\begin{fortranspecific}
+If a list item does not have the \code{POINTER} attribute, then in all other implicit tasks 
+belonging to the \code{parallel} region, the list item becomes defined as if by intrinsic 
+assignment with the value of the corresponding list item in the implicit task associated 
+with the thread that executed the structured block. 
+
+If the list item has the \code{POINTER} attribute, then, in all other implicit tasks belonging to 
+the \code{parallel} region, the list item receives, as if by pointer assignment, the same 
+association status of the corresponding list item in the implicit task associated with the 
+thread that executed the structured block.
+
+The order in which any final subroutines for different variables of a finalizable type are called is unspecified.
+\end{fortranspecific}
+
+\begin{note}
+The \code{copyprivate} clause is an alternative to using a shared variable for the 
+value when providing such a shared variable would be difficult (for example, in a 
+recursion requiring a different variable at each level). 
+\end{note}
+
+\restrictions
+The restrictions to the \code{copyprivate} clause are as follows:
+
+\begin{itemize}
+\item All list items that appear in the \code{copyprivate} clause must be either threadprivate 
+or private in the enclosing context.
+
+\item A list item that appears in a \code{copyprivate} clause may not appear in a \code{private} or
+\code{firstprivate} clause on the \code{single} construct. 
+
+\begin{cppspecific}
+\item A variable of class type (or array thereof) that appears in a \code{copyprivate} clause 
+requires an accessible unambiguous copy assignment operator for the class type.
+\end{cppspecific}
+
+\begin{fortranspecific}
+\item A common block that appears in a \code{copyprivate} clause must be threadprivate. 
+
+\item Pointers with the \code{INTENT(IN)} attribute may not appear in the \code{copyprivate} 
+clause.
+\item The list item with the \code{ALLOCATABLE} attribute must have the allocation status of allocated when the intrinsic assignment is performed. 
+\end{fortranspecific}
+\end{itemize}
+
+
+
+
+
+
+
+%%% map
+
+\subsection{Data-mapping Attribute Rules and Clauses}
+\label{subsec:Data-mapping Attribute Rules and Clauses}
+\index{data-mapping rules and clauses}
+\index{attributes, data-mapping}
+
+%% Do we need something about
+%% ``explicit \code{declare}~\code{target} directives''?
+This section describes how the data-mapping attributes of any variable 
+referenced in a \code{target} region are determined. When specified, 
+explicit \code{map} clauses on \code{target}~\code{data} and \code{target} 
+directives determine these attributes.  Otherwise, the following 
+data-mapping rules apply for variables referenced in a \code{target}
+construct that are not declared in the construct and do not appear in 
+data-sharing attribute or \code{map} clauses:
+
+Certain variables and objects have predetermined data-mapping attributes 
+as follows:
+
+\begin{itemize}
+\item If a variable appears in a \code{to} or \code{link} clause 
+on a \code{declare}~\code{target} directive then it is treated as if it had appeared in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+
+\begin{ccppspecific}
+\item A variable that is of type pointer is treated as if it had appeared in a \code{map} clause as a zero-length array section.
+\end{ccppspecific}
+
+\begin{cppspecific}
+\item A variable that is of type reference to pointer is treated as if it had appeared in a \code{map} clause as a zero-length array section.
+\end{cppspecific}
+\end{itemize}
+
+Otherwise, the following implicit data-mapping attribute rules apply:
+
+\begin{itemize}
+\item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
+a scalar variable (or a nonallocatable nonpointer scalar variable, for
+Fortran) is not mapped, but instead has an implicit data-sharing
+attribute of firstprivate (see 
+\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}).
+
+\item If a \code{defaultmap(tofrom:scalar)} clause is present then a scalar 
+variable is treated as if it had appeared in a \code{map} clause with a 
+\plc{map-type} of \code{tofrom}.
+
+\item If a variable is not a scalar then it is treated as if it had appeared 
+in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+\end{itemize}
+
+\subsubsection{\code{map} Clause}
+\label{subsec:map Clause}
+\index{map@{\code{map}}}
+\index{clauses!map@{\code{map}}}
+\summary
+The \code{map} clause specifies how an original list item is mapped from the current task's data environment to a corresponding list item in the device data environment of the device identified by the construct.
+
+\syntax
+The syntax of the map clause is as follows:
+
+\begin{boxedcode}
+map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+\end{boxedcode}
+
+where \plc{map-type} is one of the following:
+
+\begin{indentedcodelist}
+to
+from
+tofrom
+alloc
+release
+delete
+\end{indentedcodelist}
+
+and \plc{map-type-modifier} is \code{always}.
+
+\descr
+The list items that appear in a \code{map} clause may include array sections and structure elements.
+
+The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
+
+The original and corresponding list items may share storage such that writes to either
+item by one task followed by a read or write of the other item by another task without
+intervening synchronization can result in data races.
+
+If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs as if performed as a single atomic operation:
+\begin{enumerate}
+\item If a corresponding list item of the original list item is not present in the device data environment, then:
+\begin{enumerate}
+\item A new list item with language-specific attributes is derived from the original list item and created in the device data environment.
+\item The new list item becomes the corresponding list item to the original list item in the device data environment.
+\item The corresponding list item has a reference count that is initialized to zero. 
+\end{enumerate}
+\item The corresponding list item's reference count is incremented by one.
+\item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
+\begin{enumerate}
+\item If the \plc{map-type} is \code{to} or \code{tofrom}, then the corresponding list item is assigned the value of the original list item. 
+\end{enumerate}
+\item If the corresponding list item's reference count is one, then:
+\begin{enumerate}
+\item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
+\end{enumerate}
+\end{enumerate}
+
+If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs as if performed as a single atomic operation:
+\begin{enumerate}
+\item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
+\item If a corresponding list item of the original list item is present in the device data environment, then:
+\begin{enumerate}
+\item If the corresponding list item's reference count is finite, then:
+\begin{enumerate}
+%\item the corresponding list item's reference count is decremented by one.
+\item If the \plc{map-type} is not \code{delete}, then the corresponding list item's reference count is decremented by one.
+\item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
+\end{enumerate}
+\item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
+\begin{enumerate}
+\item If the \plc{map-type} is \code{from} or \code{tofrom}, then the original list item is assigned the value of the corresponding list item. 
+\end{enumerate}
+\item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
+\end{enumerate}
+\end{enumerate}
+
+If a single contiguous part of the original storage of a list item with an
+implicit data-mapping attribute has corresponding storage in the device data
+environment prior to a task encountering the construct associated with the
+\code{map} clause, only that part of the original storage will have
+corresponding storage in the device data environment as a result of the \code{map}
+clause. 
+
+\begin{ccppspecific}
+If a new list item is created then a new list item of the same type, with automatic storage
+duration, is allocated for the construct. The size and alignment of the new list
+item are determined by the static type of the variable. This allocation occurs if the region
+references the list item in any statement.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+If a new list item is created then a new list item of the same type, type parameter, and
+rank is allocated.
+\end{fortranspecific}
+
+The \plc{map-type} determines how the new list item is initialized.
+
+If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofrom}.
+
+\events
+The \plc{target-map} event occurs when a thread maps data to or from a target device.
+
+The \plc{target-transfer} event occurs when a thread initiates a data transfer to or from a target device.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_target\_map}
+callback for each occurrence of a \plc{target-map} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_map\_t}. 
+
+A thread dispatches a registered \code{ompt\_callback\_target\_data\_op}
+callback for each occurrence of a \plc{target-transfer} event in that thread. 
+The callback occurs in the context of the target task.  The callback has type signature
+\code{ompt\_callback\_target\_data\_op\_t}. 
+
+\restrictions
+\begin{itemize}
+
+\item A list item cannot appear in both a \code{map} clause and a data-sharing attribute clause on the same construct.
+
+\item If a list item is an array section, it must specify contiguous storage.
+
+\item At most one list item can be an array item derived from a given variable in \code{map}
+clauses of the same construct.
+
+\item List items of \code{map} clauses in the same construct must not share original storage.
+
+\item If any part of the original storage of a list item with a predetermined or
+explicit data-mapping attribute has corresponding storage in the device data
+environment prior to a task encountering the construct associated with the map
+clause, all of the original storage must have corresponding storage
+in the device data environment prior to the task encountering the construct.
+
+\item If a list item is an element of a structure, and a different element 
+of the structure has a corresponding list item in the device data environment 
+prior to a task encountering the construct associated with the \code{map} 
+clause, then the list item must also have a corresponding list item in the 
+device data environment prior to the task encountering the construct.
+
+\item If a list item is an element of a structure, only the rightmost symbol of the variable reference can be an array section.
+
+\item If variables that share storage are mapped, the behavior is unspecified. 
+
+\item A list item must have a mappable type.
+
+\item \code{threadprivate} variables cannot appear in a \code{map} clause.
+
+\begin{cppspecific}
+\item If the type of a list item is a reference to a type \plc{T} then the type will be considered to be \plc{T} for all purposes of this clause.
+\end{cppspecific}
+
+\begin{ccppspecific}
+\item Initialization and assignment are through bitwise copy.
+
+\item A variable for which the type is pointer and an array section derived from that variable must not appear as list items of \code{map} clauses of the same construct. 
+
+\item A list item cannot be a variable that is a member of a structure with a union type.
+
+\item A bit-field cannot appear in a \code{map} clause.
+\end{ccppspecific}
+\end{itemize}
+
+\begin{samepage}
+\begin{fortranspecific}
+\begin{itemize}
+\item The value of the new list item becomes that of the original list item in the map 
+initialization and assignment.
+
+\item A list item must not contain any components that have the
+  \code{ALLOCATABLE} attribute.
+
+\item If the allocation status of a list item with the
+  \code{ALLOCATABLE} attribute is unallocated upon entry to a
+  \code{target} region, the list item must be unallocated
+  upon exit from the region.
+
+\item If the allocation status of a list item with the
+  \code{ALLOCATABLE} attribute is allocated upon entry to a
+  \code{target} region, the allocation status of the corresponding
+  list item must not be changed and must not be reshaped in the
+  region.
+
+\item If an array section is mapped and the size of the section is
+  smaller than that of the whole array, the behavior of referencing
+  the whole array in the \code{target} region is unspecified.
+
+\item A list item must not be a whole array of an assumed-size array.
+\end{itemize}
+\end{fortranspecific}
+\end{samepage}
+
+\crossreferences
+\begin{itemize}
+
+\item \code{ompt\_callback\_target\_map\_t}, see 
+\specref{sec:ompt_callback_target_map_t}.
+
+\item \code{ompt\_callback\_target\_data\_op\_t}, see 
+\specref{sec:ompt_callback_target_data_op_t}.
+\end{itemize}
+
+
+
+
+\subsubsection{\code{defaultmap} Clause}
+\label{subsubsec:defaultmap clause}
+\index{defaultmap@{\code{defaultmap}}}
+\index{clauses!defaultmap@{\code{defaultmap}}}
+\summary
+The \code{defaultmap} clause explicitly determines the data-mapping attributes of variables that 
+are referenced in a \code{target} construct and would otherwise be 
+implicitly determined.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{defaultmap} clause is as follows:
+
+\begin{boxedcode}
+defaultmap(tofrom:scalar)
+\end{boxedcode}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{defaultmap} clause is as follows:
+
+\begin{boxedcode}
+defaultmap(tofrom:scalar)
+\end{boxedcode}
+\end{fortranspecific}
+
+\descr
+The \code{defaultmap(tofrom:scalar)} clause causes all scalar variables
+referenced in the construct that have implicitly determined data-mapping
+attributes to have the \code{tofrom} \plc{map-type}.
+
+
+
+
+
+
+
+
