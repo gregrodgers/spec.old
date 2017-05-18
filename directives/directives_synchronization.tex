@@ -1025,8 +1025,9 @@ designated by \plc{x} to be performed by the encountering thread, preceded
 and/or followed by implicit flush operations as described in this section. The
 implicit flushes are performed as if they are part of the same atomic
 operation applied to \plc{x}.  Each non-synchronizable implicit flush is a
-global flush. If \plc{memory-order-clause} is present and is \code{seq\_cst},
-each synchronizable implicit flush is also a global flush.
+strongly-ordered flush. If \plc{memory-order-clause} is present and is \code{seq\_cst},
+each synchronizable implicit flush is a strongly-ordered flush; otherwise,
+each synchronizable implicit flush is a weakly-ordered flush.
 
 The \code{atomic} construct with the \code{read} clause forces an atomic read of the location 
 designated by \plc{x} regardless of the native machine word size. The atomic
@@ -1260,15 +1261,18 @@ may implement a \code{flush} with a list by ignoring the list, and treating it t
 \code{flush} without a list.
 
 If \plc{memory-order-clause} is not specified, the flush operation has the
-global, release, and acquire flush properties. If \plc{memory-order-clause} is
-\code{acq\_rel}, the flush operation has the release and acquire properties.
+strong, release, and acquire flush properties. 
+If \plc{memory-order-clause} is \code{acq\_rel}, the flush operation has the
+release and acquire flush properties. 
 If \plc{memory-order-clause} is \code{release}, the flush operation has the
-release flush property. If \plc{memory-order-clause} is \code{acquire}, the
-flush operation has the acquire flush property. 
+release flush property.
+If \plc{memory-order-clause} is \code{acquire}, the flush operation has the
+acquire flush property.
 
-If list items are specified on the \code{flush} construct, the sync-set of the
-flush operation is empty. Otherwise, the sync-set contains all variables that
-are flushed.
+If list items are specified on the \code{flush} construct, the flush operation
+is a non-synchronizable flush.  Otherwise, the flush operation is a
+synchronizable flush for which the sync-set contains all variables that are
+flushed.
 
 \begin{ccppspecific}
 If a pointer is present in the list, the pointer itself is flushed, not the memory block to 
@@ -1352,7 +1356,8 @@ executed.
 Flush operations implied when executing an \code{atomic} region are described in
 Section \ref{subsec:atomic Construct}. 
 
-A \code{flush} region without a list is implied at the following locations:
+A \code{flush} region arising from a \code{flush} directive without a list and
+without \plc{memory-order-clause} present is implied at the following locations:
 \begin{itemize}
 \item During a barrier region.
 \item At entry to a \code{target update} region whose corresponding construct has a \code{to} clause.
