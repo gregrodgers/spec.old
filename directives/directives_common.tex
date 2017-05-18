@@ -1053,6 +1053,121 @@ first element of the \plc{bind-var} ICV; otherwise, the \code{proc\_bind} clause
 \section{Array Sections}
 \label{sec:Array Sections}
 \index{array sections}
+%An array section designates a subset of the elements in an array. An array section can
+%appear only in clauses where it is explicitly allowed.
+%
+%\begin{ccppspecific}
+%An array section is formed by a \emph{base expression} of array or pointer
+%type that is followed by one or more \emph{array section subscripts}.  At
+%least one of the array section subscripts contains an array subscript
+%expression that is extended with the following syntax, and otherwise they
+%contain array subscript expressions permitted by the base language:
+%
+%
+%\begin{quote}
+%\code{[\plc{ lower-bound }:\plc{ length }]} or
+%
+%\code{[\plc{ lower-bound }:\plc{ }]} or
+%
+%\code{[ :\plc{ length }]} or
+%
+%\code{[\plc{ }:\plc{ }]}
+%\end{quote}
+%
+%The base expression of an array section is its named array or named pointer.
+%
+%Array sections are allowed on multidimensional arrays. Base language array subscript 
+%expressions can be used to specify length-one dimensions of multidimensional array 
+%sections.
+%
+%The \plc{lower-bound} and \plc{length} are integral type expressions. When evaluated they 
+%represent a set of integer values as follows:
+%
+%\{ \plc{lower-bound}, \plc{lower-bound} + 1, \plc{lower-bound} + 2,... , \plc{lower-bound} + \plc{length} - 1 \}
+%
+%The \plc{length} must evaluate to a non-negative integer.
+%
+%When the size of the array dimension is not known, the \plc{length} must be specified 
+%explicitly.
+%
+%When the \plc{length} is absent, it defaults to the size of the array dimension minus the 
+%\plc{lower-bound}.
+%
+%When the \plc{lower-bound} is absent it defaults to 0.
+%
+%Each array element specified by an array section is determined according to
+%the base expression of the array section and the array subscript expressions
+%derived from its array section subscripts.
+%
+%\begin{note}
+%The following are examples of array sections:
+%
+%\begin{indentedcodelist}
+%a[0:6]
+%a[:6]
+%a[1:10]
+%a[1:]
+%b[10][:][:0]
+%c[1:10][42][0:6]
+%S.c[:100]
+%p->y[:10]
+%this->a[:N]
+%\end{indentedcodelist}
+%
+%The first two examples are equivalent. If \code{a} is declared to be an eleven element array, the 
+%third and fourth examples are equivalent. The fifth example is a zero-length array 
+%section. The sixth example is not contiguous.  The remaining examples show
+%array sections formed from more general base expressions.
+%
+%\end{note}
+%
+%\medskip
+%\end{ccppspecific}
+%
+%Fortran has built-in support for array sections although some
+%restrictions apply to their use, as enumerated in the following section.
+%
+%\restrictions
+%Restrictions to array sections are as follows:
+%
+%\begin{itemize}
+%\item An array section can appear only in clauses where it is explicitly allowed.
+%
+%\item An array section must have a named array or named pointer.
+%
+%\begin{ccppspecific}
+%%\item The base expression of the array section must be an lvalue expression.
+%
+%\item An array element expression derived from a given array section, formed
+%by the base expression of the array section followed by array subscripts that each
+%contain a value taken from the corresponding array section subscripts,
+%must be a valid expression in the base language.
+%\end{ccppspecific}
+%
+%\begin{cppspecific}
+%\item If the type of the base expression of an array section is a reference to a type \plc{T} then the type will be considered to be \plc{T} for all purposes of the array section.
+%
+%\item An array section cannot be used in a C++ user-defined \code{[]}-operator.
+%\end{cppspecific}
+%
+%\begin{fortranspecific}
+%
+%\item A stride expression may not be specified.
+%
+%\item The upper bound for the last dimension of an assumed-size dummy
+%  array must be specified.
+%
+%\item If a list item is an array section with vector subscripts, the
+%  first array element must be the lowest in the array element order of
+%  the array section.
+%
+%\end{fortranspecific}
+%
+%
+%\end{itemize}
+
+\label{sec:Array Sections}
+\index{array sections}
 An array section designates a subset of the elements in an array. An array section can
 appear only in clauses where it is explicitly allowed.
 
@@ -1062,7 +1177,6 @@ type that is followed by one or more \emph{array section subscripts}.  At
 least one of the array section subscripts contains an array subscript
 expression that is extended with the following syntax, and otherwise they
 contain array subscript expressions permitted by the base language:
-
 
 \begin{quote}
 \code{[\plc{ lower-bound }:\plc{ length }]} or
@@ -1074,7 +1188,12 @@ contain array subscript expressions permitted by the base language:
 \code{[\plc{ }:\plc{ }]}
 \end{quote}
 
-The base expression of an array section is its named array or named pointer.
+% TODO: consider removing this in future ticket
+The array section must be a subset of the original array.
+
+The base expression of an array section is its named array or named pointer pointer, if
+either exists. Otherwise, it is an lvalue expression that specifies the
+initial element of the original array.
 
 Array sections are allowed on multidimensional arrays. Base language array subscript 
 expressions can be used to specify length-one dimensions of multidimensional array 
@@ -1095,9 +1214,10 @@ When the \plc{length} is absent, it defaults to the size of the array dimension 
 
 When the \plc{lower-bound} is absent it defaults to 0.
 
-Each array element specified by an array section is determined according to
-the base expression of the array section and the array subscript expressions
-derived from its array section subscripts.
+% TODO: consider adding this in future ticket
+%Each array element specified by an array section is determined according to
+%the base expression of the array section and the array subscript expressions
+%derived from its array section subscripts.
 
 \begin{note}
 The following are examples of array sections:
@@ -1114,13 +1234,12 @@ p->y[:10]
 this->a[:N]
 \end{indentedcodelist}
 
-The first two examples are equivalent. If \code{a} is declared to be an eleven element array, the 
-third and fourth examples are equivalent. The fifth example is a zero-length array 
-section. The sixth example is not contiguous.  The remaining examples show
-array sections formed from more general base expressions.
-
+The first two examples are equivalent. If \code{a} is declared to be an eleven
+element array, the third and fourth examples are equivalent. The fifth example
+is a zero-length array section. The sixth example is not contiguous.  The
+remaining examples show array sections formed from more general base
+expressions.
 \end{note}
-
 \medskip
 \end{ccppspecific}
 
@@ -1133,15 +1252,14 @@ Restrictions to array sections are as follows:
 \begin{itemize}
 \item An array section can appear only in clauses where it is explicitly allowed.
 
-\item An array section must have a named array or named pointer.
-
 \begin{ccppspecific}
-%\item The base expression of the array section must be an lvalue expression.
+\item The base expression of the array section must be an lvalue expression.
 
-\item An array element expression derived from a given array section, formed
-by the base expression of the array section followed by array subscripts that each
-contain a value taken from the corresponding array section subscripts,
-must be a valid expression in the base language.
+% TODO: consider adding this in future ticket
+%\item An array element expression derived from a given array section, formed
+%by the base expression of the array section followed by array subscripts
+%that each contain a value taken from the corresponding array section
+%subscripts, must be a valid expression in the base language.
 \end{ccppspecific}
 
 \begin{cppspecific}
