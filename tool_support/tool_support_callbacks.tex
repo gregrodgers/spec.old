@@ -651,6 +651,7 @@ typedef struct ompt_record_implicit_s \{
 
 The binding of \callbackarg{} \plc{parallel\_data} is the current
 parallel region.
+For the \plc{implicit-task-end} event, this argument returns \code{NULL}.
 
 The binding of \callbackarg{} \plc{task\_data} is the implicit task
 executing the parallel region's structured block.
@@ -661,7 +662,6 @@ threads in the team.
 The \callbackarg{} \plc{thread\_num} indicates
 the thread number of the calling thread, within the team executing the parallel
 region to which the implicit region binds.
-
 
 \crossreferences
 \begin{itemize}
@@ -722,6 +722,8 @@ synchronization region.
 
 The binding of \callbackarg{} \plc{parallel\_data} is the current
 parallel region.
+For the \plc{barrier-end} event at the end of a parallel region, 
+this argument returns \code{NULL}.
 
 The binding of \callbackarg{} \plc{task\_data} is the current task.
 
@@ -983,7 +985,7 @@ typedef void (*ompt_callback_flush_t) (
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef struct ompt_record_flush_s \{
-  void *\plc{codeptr_ra};
+  const void *\plc{codeptr_ra};
 \} ompt_record_flush_t;
 \end{boxedcode}
 \end{ccppspecific}
@@ -1165,7 +1167,7 @@ typedef struct ompt_record_target_map_s \{
 
 The binding of \callbackarg{} \plc{target\_id} is the target region.
 
-The \callbackarg{} \plc{nitems} indicates the number of data mappings.
+The \callbackarg{} \plc{nitems} indicates the number of data mappings being reported by this callback.
 
 The \callbackarg{} \plc{host\_addr} indicates an array of addresses of
 data on host side.
@@ -1176,13 +1178,27 @@ of data on device side.
 The \callbackarg{} \plc{bytes} indicates an array of size of data.
 
 The \callbackarg{} \plc{mapping\_flags} indicates the kind of data
-mapping.
+mapping. Flags for a mapping include one or more values specified by the type
+\code{ompt\_target\_map\_flag\_t}.
+
+\descr
+An instance of a \code{target}, \code{target data}, or \code{target enter data} construct may contain one or more \code{map} clauses. 
+An OpenMP implementation may report the set of mappings associated with \code{map} clauses for a construct 
+with a single \code{ompt\_callback\_target\_map} callback to report the effect of all mappings or multiple 
+\code{ompt\_callback\_target\_map} callbacks with each reporting a subset of the mappings. 
+If an OpenMP implementation issues multiple \code{ompt\_callback\_target\_map}
+callbacks, these callbacks may be interleaved with \code{ompt\_callback\_target\_data\_op} callbacks 
+used to report data operations associated with the mappings. 
 
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_id\_t} type, see
 \specref{sec:ompt_id_t}.
+\item \code{ompt\_callback\_target\_data\_op\_t}, 
+see \specref{sec:ompt_callback_target_data_op_t}.
+\item \code{ompt\_target\_map\_flag\_t} type, see
+\specref{sec:ompt_target_map_flag_t}.
 \end{itemize}
 
 
@@ -1303,7 +1319,7 @@ A device triggers a call to \code{ompt\_callback\_buffer\_complete\_t} when no f
 \begin{boxedcode}
 typedef void (*ompt_callback_buffer_complete_t) (
   uint64_t \plc{device_num},
-  const ompt_buffer_t *\plc{buf},
+  ompt_buffer_t *\plc{buffer},
   size_t \plc{bytes},
   ompt_buffer_cursor_t \plc{begin},
   int \plc{buffer_owned}
@@ -1460,7 +1476,7 @@ typedef void (*ompt_callback_device_initialize_t) (
   uint64_t \plc{device_num},
   const char *\plc{type},
   ompt_device_t *\plc{device},
-  ompt_function_lookup_t *\plc{lookup},
+  ompt_function_lookup_t \plc{lookup},
   const char *\plc{documentation}
 );
 \end{boxedcode}
@@ -1527,4 +1543,37 @@ Initializing tracing for a target device is described in section
 \item \code{ompt\_function\_lookup\_t}, see
   \specref{sec:ompt_function_lookup_t}.
 \end{itemize}
+
+
+\omptcallbacksignature{\code{ompt\_callback\_device\_finalize\_t}}
+\index{ompt\_callback\_flush\_t@{\code{ompt\_callback\_device\_finalize\_t}}}
+\label{sec:ompt_callback_device_finalize_t}
+
+\summary The tool callback with type signature
+\code{ompt\_callback\_device\_finalize\_t} finalizes a
+tool's tracing interface for a device.
+
+\format
+\vbox{
+\begin{ccppspecific}
+\begin{boxedcode}
+typedef void (*ompt_callback_device_finalize_t) (
+  uint64_t \plc{device_num}
+);
+\end{boxedcode}
+\end{ccppspecific}
+}
+
+\argdesc
+
+The \callbackarg{} \plc{device\_num} identifies the logical device
+being finalized.
+
+\descr 
+
+A device finalization callback for a tool occurs after all tracing activity 
+on a device is complete and immediately prior to the finalization of the device by the OpenMP implementation.
+
+
+
 

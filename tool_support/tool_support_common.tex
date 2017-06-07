@@ -93,7 +93,7 @@ unavailable as the program executes.
  
 If the value of \plc{tool-var} is \plc{enabled}, the OpenMP
 implementation will check to see if a tool has provided an
-implmentation of \code{ompt\_start\_tool}.  The OpenMP implementation first
+implementation of \code{ompt\_start\_tool}.  The OpenMP implementation first
 checks if a tool-provided implementation of \code{ompt\_start\_tool} is
 available in the address space, either statically-linked into the
 application or in a dynamically-linked library loaded in the address
@@ -323,7 +323,7 @@ of support for the callback can be implementation defined.
 \code{ompt\_callback\_target\_submit}         &   &   & * \\
 \code{ompt\_callback\_control\_tool}          &   &   & * \\
 \code{ompt\_callback\_device\_initialize}     &   &   & * \\
-\code{ompt\_callback\_idle}                   & * & * & * \\
+\code{ompt\_callback\_device\_finalize}       &   &   & * \\
 \code{ompt\_callback\_sync\_region\_wait}     & * & * & * \\
 \code{ompt\_callback\_mutex\_released}        & * & * & * \\
 \code{ompt\_callback\_task\_dependences}      & * & * & * \\
@@ -339,6 +339,7 @@ of support for the callback can be implementation defined.
 \code{ompt\_callback\_nest\_lock}             & * & * & * \\
 \code{ompt\_callback\_flush}                  & * & * & * \\
 \code{ompt\_callback\_cancel}                 & * & * & * \\
+\code{ompt\_callback\_idle}                   & * & * & * \\
 \bottomrule
 \end{tabular}
 \vskip 1ex
@@ -386,8 +387,9 @@ steps:
 
 \begin{itemize}
 \item To prepare to trace activity on a target device, when a tool
-  initializer executes, it must register a tool 
-  \code{ompt\_callback\_device\_initialize} callback.
+  initializer executes, it must register an 
+  \code{ompt\_callback\_device\_initialize} callback. A tool may also optionally
+  register an \code{ompt\_callback\_device\_finalize} callback.
 \item When an OpenMP implementation initializes a target device, the
   OpenMP implementation will dispatch the tool's device initialization
   callback on the host device. If the OpenMP implementation or target device does not support tracing, 
@@ -510,19 +512,24 @@ OpenMP specification.
   respectively. When tracing is stopped on a device, the OpenMP implementatin will eventually 
   gather all trace records already collected on the device and present to the tool using
   the buffer completion callback provided by the tool.
-\item It is legal to shut down the OpenMP implementation while device tracing 
+\item It is legal to shut down an OpenMP implementation while device tracing 
 is in progress.  
-\item When the OpenMP implementation is shut down, any device tracing in progress will be
-  stopped and all trace records collected on each device will be flushed.
-  For each target device, the OpenMP implementation will present the tool 
-  with the trace records for the device using the buffer completion callback 
-  associated with that device.
+\item When an OpenMP implementation begins to shut down, the OpenMP implementation will 
+  finalize each target device.  Device finalization occurs in three steps.
+  First, the OpenMP implementation halts any tracing in progress for the device. Second,
+  the OpenMP implementation flushes all trace records collected for the device and presents them to
+  the tool using the buffer completion callback associated with that device. 
+  Finally, the OpenMP implementation dispatches 
+  any \code{ompt\_callback\_device\_finalize} callback that was previously 
+  registered by the tool.
+
 \end{itemize}
 
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_callback\_device\_initialize\_t}, see \specref{sec:ompt_callback_device_initialize_t}.
+\item \code{ompt\_callback\_device\_finalize\_t}, see \specref{sec:ompt_callback_device_finalize_t}.
 \item \code{ompt\_get\_device\_time}, see \specref{sec:ompt_get_device_time_t}.
 \item \code{ompt\_translate\_time}, see \specref{sec:ompt_translate_time_t}.
 \item\code{ompt\_set\_trace\_ompt}, see \specref{sec:ompt_set_trace_ompt_t}.
@@ -906,7 +913,7 @@ typedef enum ompt_callbacks_e \{
   ompt_callback_target_submit            = 10,
   ompt_callback_control_tool             = 11,
   ompt_callback_device_initialize        = 12,
-  ompt_callback_idle                     = 13,
+  ompt_callback_device_finalize          = 13,
   ompt_callback_sync_region_wait         = 14,
   ompt_callback_mutex_released           = 15,
   ompt_callback_task_dependences         = 16,
@@ -921,7 +928,9 @@ typedef enum ompt_callbacks_e \{
   ompt_callback_mutex_acquired           = 25,
   ompt_callback_nest_lock                = 26,
   ompt_callback_flush                    = 27,
-  ompt_callback_cancel                   = 28
+  ompt_callback_cancel                   = 28,
+  ompt_callback_idle                     = 29
+
 \} ompt_callbacks_t;
 \end{boxedcode}
 \end{ccppspecific}
@@ -1140,7 +1149,7 @@ typedef enum ompt_record_native_kind_e \{
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef struct ompt_record_abstract_s \{
-  ompt_record_native_class_t \plc{rclass};
+  ompt_record_native_kind_t \plc{rclass};
   const char *\plc{type};
   ompt_device_time_t \plc{start\_time};
   ompt_device_time_t \plc{end\_time};
@@ -1274,7 +1283,7 @@ typedef union ompt_data_u \{\\
   void *\plc{ptr};                     
 \} ompt_data_t;
 
-const ompt_data_t ompt_data_none = \{.value=0\};         
+static const ompt_data_t ompt_data_none = \{0\};
 \end{boxedcode}
 \end{ccppspecific}
 }
@@ -1749,18 +1758,18 @@ typedef \ulonglongint{} ompt_hwid_t;
 
 \summary
 If a tool wants to use the OMPT interface provided by an OpenMP implementation,
-the tool must implement \code{ompt\_start\_tool} to announce its interest.
+the tool must implement the function \code{ompt\_start\_tool} to announce its interest.
 
 \format
 \vbox{
-    \begin{ccppspecific}
-    \begin{boxedcode}
-        ompt_fns_t *ompt_start_tool(
-        unsigned int \plc{omp_version},
-        const char *\plc{runtime_version}
-        );
-    \end{boxedcode}
-    \end{ccppspecific}
+\cspecificstart
+\begin{boxedcode}
+ompt_fns_t *ompt_start_tool(
+  unsigned int \plc{omp_version},
+  const char *\plc{runtime_version}
+);
+\end{boxedcode}
+\cspecificend
 }
 
 \descr
@@ -1800,12 +1809,12 @@ an immutable string that is defined for the lifetime of a program
 execution.
 
 \effect
-If a tool returns a non-\code{NULL} pointer,
+If a tool returns a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
 an OpenMP implementation will call the tool initializer specified by the
 \plc{initialize} field in this structure before
 beginning execution of any OpenMP construct
 or completing execution of any environment routine invocation; the
-OpenMP implementation will call the tool finializer specified by the
+OpenMP implementation will call the tool finalizer specified by the
 \plc{finalize} field in this structure when the OpenMP
 implementation shuts down.
 
