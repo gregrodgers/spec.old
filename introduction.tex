@@ -706,15 +706,17 @@ memory consistency. These properties are:
 \begin{itemize}
     \item \emph{strong}:  guarantees a completion ordering between memory operations
         on different threads that all threads agree upon;
-    \item \emph{release}: makes modifications by the executing thread visible
+    \item \emph{write}: makes modifications by the executing thread visible
         to other threads;
-    \item \emph{acquire}: makes modifications by other threads visible to the
-        executing thread.
+    \item \emph{read}: makes modifications by other threads visible to the
+        executing thread;
+    \item \emph{synchronizable}: allows the \emph{flush} operation to
+        synchronize with another \emph{flush} operation.
 \end{itemize}
 
 \begin{quote}
 COMMENT: A given \emph{flush} operation can have one or more \emph{flush
-properties}, but must have at least the release or acquire flush property.
+properties}, but must have at least the write or read flush property.
 \end{quote}
 \glossarydefend
 
@@ -728,30 +730,41 @@ A \emph{flush} operation that has the \emph{strong flush property}.
 A \emph{flush} operation that does not have the \emph{strong flush property}.
 \glossarydefend
 
+\glossaryterm{write flush}
+\glossarydefstart
+A \emph{flush} operation that has the \emph{write flush property}.
+\glossarydefend
+
+\glossaryterm{read flush}
+\glossarydefstart
+A \emph{flush} operation that has the \emph{read flush property}.
+\glossarydefend
+
+\glossaryterm{synchronizable flush}
+\glossarydefstart
+A \emph{flush} operation that has the \emph{synchronizable flush property}.
+\glossarydefend
+
+\glossaryterm{non-synchronizable flush}
+\glossarydefstart
+A \emph{flush} operation that does not have the \emph{synchronizable flush
+property}.
+\glossarydefend
+
 \glossaryterm{release flush}
 \glossarydefstart
-A \emph{flush} operation that has the \emph{release flush property}.
+A \emph{write flush} that is a \emph{synchronizable flush}.
 \glossarydefend
 
 \glossaryterm{acquire flush}
 \glossarydefstart
-A \emph{flush} operation that has the \emph{acquire flush property}.
+A \emph{read flush} that is a \emph{synchronizable flush}.
 \glossarydefend
 
 \glossaryterm{sync-set}
 \glossarydefstart
 The set of variables associated with a \emph{release flush} or \emph{acquire flush} that a
 program may use to force a \emph{release flush} to synchronize with an \emph{acquire flush}.
-\glossarydefend
-
-\glossaryterm{synchronizable flush}
-\glossarydefstart
-A \emph{flush} operation with a non-empty \emph{sync-set}.
-\glossarydefend
-
-\glossaryterm{non-synchronizable flush}
-\glossarydefstart
-A \emph{flush} operation with an empty \emph{sync-set}.
 \glossarydefend
 
 
@@ -1568,24 +1581,24 @@ The flush operation is applied to a set of variables called the
 \emph{flush-set}. It also has an associated \emph{sync-set}
 containing a set of synchronization variables that may be used to force
 synchronization between the flush operation and another flush operation.  A flush operation
-must be a release flush, an acquire flush, or both a release flush and an
-acquire flush; accordingly, it restricts reordering of memory operations
+must be a write flush, a read flush, or both a write flush and a
+read flush; accordingly, it restricts reordering of memory operations
 performed by the same thread that an implementation might otherwise do as
 follows:
 
 \begin{itemize}
-\item An implementation must not reorder with respect to a release flush any
+\item An implementation must not reorder with respect to a write flush any
     prior memory operation in the thread's program order that reads or writes
     to a variable in its flush-set or any subsequent memory operation in the
     thread's program order that writes to a variable in its sync-set.
 
-\item An implementation must not reorder with respect to an acquire flush any
+\item An implementation must not reorder with respect to a read flush any
     subsequent memory operation in the thread's program order that reads or
     writes to a variable in its flush-set or any prior memory operation in the
     thread's program order that reads from a variable in its sync-set.
 
-\item An implementation must not reorder with respect to eachother a release
-    flush and an acquire flush that are applied to the same variable.
+\item An implementation must not reorder with respect to eachother a write
+    flush and a read flush that are applied to the same variable.
 \end{itemize}
 
 A strong flush imposes stronger ordering requirements across threads
@@ -1593,16 +1606,16 @@ compared to a weak flush, as described in
 \specref{subsec:OpenMP Memory Consistency}.
 
 If a thread has performed a write to its temporary view of
-a shared variable since its last release flush of that variable, then when it
-executes another release flush of the variable, the completion of the flush
+a shared variable since its last write flush of that variable, then when it
+executes another write flush of the variable, the completion of the flush
 ensures the written value propagates to memory so that it can be read by
 another thread.  If a thread performs multiple writes to the same variable
-between two release flushes of that variable, the release flush ensures that
-it is the value of the last write that propagates to memory.  An acquire flush
+between two write flushes of that variable, the write flush ensures that
+it is the value of the last write that propagates to memory.  A read flush
 of a variable executed by a thread causes its temporary view of the variable
 to be discarded, so that if its next memory operation for that variable is a
 read, then the thread will read from memory when it may again capture the
-value in the temporary view. When a thread executes an acquire flush, no later
+value in the temporary view. When a thread executes a read flush, no later
 memory operation by that thread for a variable involved in that flush is
 allowed to start until the flush completes.  
 
@@ -1618,9 +1631,9 @@ guarantees defined in \specref{subsec:OpenMP Memory Consistency}:
 \begin{enumerate}
 \item The value is written to the variable by the first thread.   
 
-\item The variable is flushed, with a release flush, by the first thread.    
+\item The variable is flushed, with a write flush, by the first thread.    
 
-\item The variable is flushed, with an acquire flush, by the second thread.   
+\item The variable is flushed, with an read flush, by the second thread.   
 
 \item The value is read from the variable by the second thread.
 \end{enumerate}
@@ -1638,8 +1651,10 @@ but is not recommended because the proper timing of flushes is difficult.
 \subsection{Flush Synchronization and Happens Before}
 \label{subsec:happens-before}
 
-A synchronizable release flush may synchronize with a synchronizable acquire
-flush using a variable that is in the sync-sets of both flushes.
+A release flush is a write flush that is synchronizable, and likewise an
+acquire flush is a read flush that is synchronizable.  A release flush may
+synchronize with an acquire flush using a variable that is in the sync-sets of
+both flushes.
 
 For every variable in the sync-set of a release flush, there exists a
 \emph{release flush sequence} that is a sequence of consecutive modifications
