@@ -1605,19 +1605,25 @@ A strong flush imposes stronger ordering requirements across threads
 compared to a weak flush, as described in
 \specref{subsec:OpenMP Memory Consistency}.
 
-If a thread has performed a write to its temporary view of
-a shared variable since its last write flush of that variable, then when it
-executes another write flush of the variable, the completion of the flush
-ensures the written value propagates to memory so that it can be read by
-another thread.  If a thread performs multiple writes to the same variable
-between two write flushes of that variable, the write flush ensures that
-it is the value of the last write that propagates to memory.  A read flush
-of a variable executed by a thread causes its temporary view of the variable
-to be discarded, so that if its next memory operation for that variable is a
-read, then the thread will read from memory when it may again capture the
-value in the temporary view. When a thread executes a read flush, no later
-memory operation by that thread for a variable involved in that flush is
-allowed to start until the flush completes.  
+If a thread has performed a write to its temporary view of a shared variable
+since its last write flush of that variable, then when it executes another
+write flush of the variable, the flush does not complete until the value of
+the variable has been written to the variable in memory.  If a thread performs
+multiple writes to the same variable between two write flushes of that
+variable, the write flush ensures that it is the value of the last write is
+written to the variable in memory. The completion of a write flush of a set of
+variables executed by a thread is defined as the point at which all writes to
+those variables performed by the thread before the flush are visible in
+memory.
+
+A read flush of a variable executed by a thread causes its temporary view of
+the variable to be discarded, so that if its next memory operation for that
+variable is a read, then the thread will read from memory when it may again
+capture the value in the temporary view. When a thread executes a read flush,
+no later memory operation by that thread for a variable involved in that flush
+is allowed to start until the flush completes. The completion of a read flush
+of a set of variables executed by a thread is defined as the point at which
+the thread's temporary view of all variables involved is discarded.
 
 Flush operations enable a program to provide a guarantee of consistency
 between a thread’s temporary view and memory. Therefore, the flush operation can
@@ -1692,9 +1698,10 @@ modify the variable in the program.
 
 \subsection{OpenMP Memory Consistency}
 \label{subsec:OpenMP Memory Consistency}
-Given the happens before order defined in \specref{subsec:happens-before}
-and the restrictions in \specref{subsec:The Flush Operation} on reordering
-with respect to flush operations, OpenMP guarantees the following:
+Given the conditions in \specref{subsec:happens-before} for flush
+synchronization and happens before, OpenMP guarantees the following in
+accordance with the restrictions in \specref{subsec:The Flush Operation} on
+reordering with respect to flush operations:
 
 \begin{itemize}
 \item If the intersection of the flush-sets of two strong flushes
@@ -1704,6 +1711,10 @@ with respect to flush operations, OpenMP guarantees the following:
 \item If two operations performed by the same thread access, modify, or, with
     a strong flush, flush the same variable, then they must be
     completed as if in that thread's program order, as seen by all threads. 
+
+\item If a release flush synchronizes with an acquire flush, the release flush
+    must be completed before the acquire flush as seen by the threads that
+    perform the flush operations.
 
 \item If two operations access or modify the same variable and one happens
     before the other, then they must be completed as if in that happens before
