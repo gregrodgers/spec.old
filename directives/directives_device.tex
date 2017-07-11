@@ -60,6 +60,9 @@ after the thread initiates initialization of OpenMP on the device and the
 device's OpenMP initialization, which may include device-side tool
 initialization, completes. 
 
+The \plc{device-finalize} event for a target device that has been initialized
+occurs in some thread before an OpenMP implementation shuts down.
+
 \tools 
 
 A thread dispatches a registered \code{ompt\_callback\_device\_initialize}
@@ -67,14 +70,24 @@ callback for each occurrence of a \plc{device-initialize} event in
 that thread.  This callback has type signature
 \code{ompt\_callback\_device\_initialize\_t}.
 
+A thread dispatches a registered \code{ompt\_callback\_device\_finalize}
+callback for each occurrence of a \plc{device-finalize} event in
+that thread.  This callback has type signature
+\code{ompt\_callback\_device\_finalize\_t}.
+
 \restrictions
-No thread may offload execution of an OpenMP construct to a device until any  
-callback associated with a \plc{device-initialize} event completes.
+No thread may offload execution of an OpenMP construct to a device until a 
+dispatched \code{ompt\_callback\_device\_initialize} callback completes.
+
+No thread may offload execution of an OpenMP construct to a device after a 
+dispatched \code{ompt\_callback\_device\_finalize} callback occurs.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt\_callback\_device\_initialize\_t}, see
 \specref{sec:ompt_callback_device_initialize_t}.
+\item \code{ompt\_callback\_device\_finalize\_t}, see
+\specref{sec:ompt_callback_device_finalize_t}.
 \end{itemize}
 
 
@@ -207,6 +220,8 @@ as its \plc{endpoint} argument, as appropriate, and
 \item \code{map} clause, see 
 \specref{subsec:map Clause}.
 
+\item \code{omp\_get\_num\_devices} routine, see \specref{subsec:omp_get_num_devices}
+
 \item \code{ompt\_callback\_target\_t}, see
 \specref{sec:ompt_callback_target_t}.
 
@@ -304,7 +319,12 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 \begin{itemize}
 \item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{enter}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 \item At least one \code{map} clause must appear on the directive.
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression must evaluate to a non-negative integer value.
+
+\item At most one \code{device} clause can appear on the
+  directive. The \code{device} expression must evaluate to a
+  non-negative integer value less than the value of
+  \code{omp\_get\_num\_devices()}.
+
 \item At most one \code{if} clause can appear on the directive.
 \item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{to} or \code{alloc}.
 \end{itemize}
@@ -327,6 +347,8 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 
 \item \code{map} clause, see \specref{subsec:map Clause}.
 
+\item \code{omp\_get\_num\_devices} routine, see \specref{subsec:omp_get_num_devices}
+  
 \item \code{ompt\_callback\_target\_t}, see
 \specref{sec:ompt_callback_target_t}.
 
@@ -402,7 +424,10 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \begin{itemize}
 \item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{exit}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 \item At least one \code{map} clause must appear on the directive.
-\item At most one \code{device} clause can appear on the directive. The \code{device} expression must evaluate to a non-negative integer value.
+\item At most one \code{device} clause can appear on the
+  directive.  The \code{device} expression must evaluate to a
+  non-negative integer value less than the value of
+  \code{omp\_get\_num\_devices()}.
 \item At most one \code{if} clause can appear on the directive.
 \item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{from}, \code{release}, or \code{delete}.
 \end{itemize}
@@ -424,6 +449,8 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
 \item \code{map} clause, see \specref{subsec:map Clause}.
+
+\item \code{omp\_get\_num\_devices} routine, see \specref{subsec:omp_get_num_devices}
 
 \item \code{ompt\_callback\_target\_t}, see
 \specref{sec:ompt_callback_target_t}.
@@ -584,6 +611,11 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 
 \item A list item that appears in an \code{is\_device\_ptr} clause must be a valid device pointer in the device data environment.
 
+\item At most one \code{device} clause can appear on the
+  directive.  The \code{device} expression must evaluate to a
+  non-negative integer value less than the value of
+  \code{omp\_get\_num\_devices()}.
+
 \begin{cspecific}
 \item A list item that appears in an \code{is\_device\_ptr} clause must have a type of pointer or array.
 \end{cspecific}
@@ -625,6 +657,8 @@ same \code{target} region, and the same thread that threw the exception must cat
 
 \item Data-mapping Attribute Rules and Clauses, see 
 \specref{subsec:Data-mapping Attribute Rules and Clauses}.
+
+\item \code{omp\_get\_num\_devices} routine, see \specref{subsec:omp_get_num_devices}
 
 \item \code{ompt\_callback\_target\_t}, see 
 \specref{sec:ompt_callback_target_t}.
@@ -779,6 +813,8 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
+\item \code{omp\_get\_num\_devices} routine, see \specref{subsec:omp_get_num_devices}
+
 \item \code{ompt\_callback\_task\_create\_t}, see
 \specref{sec:ompt_callback_task_create_t}.
 
@@ -887,11 +923,11 @@ devices.
 \end{ccppspecific}
 
 \begin{fortranspecific}
-If a procedure that is host or use associated is treated as if it appeared as a
+If a procedure that is host associated is treated as if it appeared as a
 list item in a \code{to} clause on a \code{declare}~\code{target} directive
 then a device-specific version of the procedure is created.
 
-If a variable that is host or use associated is treated as if it appeared as a
+If a variable that is host associated is treated as if it appeared as a
 list item in a \code{to} clause on a \code{declare}~\code{target} directive
 then the original list item is allocated a corresponding list item in the
 device data environment of all devices.
