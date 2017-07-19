@@ -31,6 +31,13 @@ The syntax of the \code{allocate} directive is as follows:
 \#pragma omp allocate(\plc{list}) \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
 \end{boxedcode}
 
+or
+
+\begin{boxedcode}
+\#pragma omp allocate \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
+   \plc{allocation-stmt}
+\end{boxedcode}
+
 \needspace{10\baselineskip}
 where \plc{clause} is one of the following:
 
@@ -39,6 +46,13 @@ allocator(\plc{allocator})
 \end{indentedcodelist}
 
 where \plc{allocator} is an expression of the \code{omp\_allocator\_t} type.
+
+where \plc{allocation-stmt} is an expression statement with one of the following form:
+\begin{codepar}
+    function(arguments);
+    expression = function(arguments);
+\end{codepar}
+
 \end{ccppspecific}
 \medskip
 
@@ -68,40 +82,41 @@ where \plc{allocator} is an integer expression of the \code{omp\_allocator\_kind
 
 \descr
 
-If the directive is not associated with a Fortran \code{allocate} statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through an allocator. If no clause is specified then the allocator specified by the \plc{def-allocator-var} ICV will be used. If the \plc{allocator} clause is specified, the allocator specified in the clause will be used. Otherwise, the allocation will be provided as if using an allocator that had been built with the specified allocator traits, memory traits and/or the \plc{memspace} memory space. If the \code{safe\_align} clause is specified, then the allocation alignment of the request will the value of the \code{safe\_align} clause.
+If the directive is not associated with a statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through an allocator. If no clause is specified then the allocator specified by the \plc{def-allocator-var} ICV will be used. If the \plc{allocator} clause is specified, the allocator specified in the clause will be used.
 
-The scope of this allocation is that of the list item in the base language. When the allocation reaches the end of the scope it will be deallocated through the specified allocator or as if using an allocator that had been built with the specified allocator traits, memory traits and/or the \plc{memspace} memory space. If the execution leaves the scope in a manner not supported by the base language it is unspecified whether the deallocation happens or not.
+The scope of this allocation is that of the list item in the base language. When the allocation reaches the end of the scope it will be deallocated using the same allocator used for the allocation. If the execution leaves the scope in a manner not supported by the base language it is unspecified whether the deallocation happens or not.
+
+\begin{ccppspecific}
+If the directive is associated with an \plc{allocation-stmt}, then the statement will be replaced by a request to an allocator according to the mapping rules expressed for the \plc{function} in the statement with the \code{declare alloc} directive. 
+\end{ccppspecific}
 
 \begin{fortranspecific}
-If the directive is associated with a Fortran \code{allocate} statement, the allocation of the specified list items will be provided through an allocator. If no clause is specified then the allocator specified by the \plc{def-allocator-var} ICV will be used. If the \plc{allocator} clause is specified, the allocator specified in the clause will be used. Otherwise, the allocation will be provided as if using an allocator that had been built with the specified allocator traits, memory traits and/or the \plc{memspace} memory space. If no list item is specified then all variables allocated by the \code{allocate} statement will be provided by the allocator.
+If the directive is associated with an \code{allocate} statement, the allocation of the specified list items will be provided through an allocator. If no list item is specified then all variables allocated by the \code{allocate} statement will be provided by the allocator.
 \end{fortranspecific}
 
-For allocations that arise from this directive the \code{null\_fb} value of the \code{fallback} allocator trait will behave as if the \code{abort\_fb} had been specified.
+If no clause is specified then the allocator specified by the \plc{def-allocator-var} ICV will be used. If the \plc{allocator} clause is specified, the allocator specified in the clause will be used.
+
+%TODO
+%For allocations that arise from this directive the \code{null\_fb} value of the \code{fallback} allocator trait will behave as if the \code{abort\_fb} had been specified.
 
 \restrictions
 \begin{itemize}
 \item A variable that is part of another variable (as an array or structure element) cannot appear in an \code{allocate} directive.
 \item The directive must appear in the same scope of the \plc{list item} declaration and before its first use.
-\item If the \code{allocator} clause is present, no other clause must be specified.
-\item If the \code{allocator} clause is present, the \plc{allocator} must be an allocator returned by the \code{omp\_init\_allocator} routine.
 \item At most one \code{allocator} clause can appear on the \code{allocate} directive.
-\item If the \code{memspace} clause is present, the  \code{memtraits} clause must not be specified.
-\item If the \code{memspace} clause is present, the \plc{memspace} must be a memory space returned by the \code{omp\_init\_memspace} routine.
-\item At most one \code{memspace} clause can appear on the \code{allocate} directive.
-\item If the \code{safe\_align} clause is present, its value must a power of two.
 \begin{ccppspecific}
-\item If a list item has a static storage type, the \code{allocator} and the \code{memspace} clauses must not be specified.
-\item If a list item has a static storage type, the \code{fallback} allocator trait must not have the \code{allocator\_fb} value.
+\item If the directive is associated with an \plc{allocation-stmt}, the \plc{function} must appear in a previous \code{declare alloc} directive.
+\item If a list item has a static storage type, only pre-defined allocator variables can be used in the \code{allocator} clause.
 \end{ccppspecific}
 \begin{fortranspecific}
 \item List items specified in the \code{allocate} directive must not have the \code{ALLOCATABLE} attribute unless the directive is associated with an \code{allocate} statement.
-\item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be \code{ALLOCATABLE} variables allocated by the \code{allocate} statement.
+\item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be \code{ALLOCATABLE} variables or \code{POINTER} variables allocated by the \code{allocate} statement.
 \end{fortranspecific}
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item Memory spaces, allocators and their traits, see \specref{sec:Memory allocation}.
+\item Allocators, see \specref{sec:Memory Allocators}.
 \item \code{omp\_memspace\_t} and \code{omp\_allocator\_t}, see \specref{subsec:Memory Management Types}.
 \item \code{omp\_memspace\_kind} and \code{omp\_allocator\_kind}, see \specref{subsec:Memory Management Types}.
 \end{itemize}
