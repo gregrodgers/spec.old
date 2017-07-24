@@ -140,7 +140,7 @@ where \plc{allocator} is an integer expression of the \code{omp\_allocator\_kind
 
 \descr
 
-If the directive is not associated with a statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through a memory allocator. If no clause is specified then the memory allocator specified by the \plc{def-allocator-var} ICV will be used. If the \plc{allocator} clause is specified, the memory allocator specified in the clause will be used.
+If the directive is not associated with a statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through a memory allocator. If no clause is specified then the memory allocator specified by the \plc{def-allocator-var} ICV will be used. If the \code{allocator} clause is specified, the memory allocator specified in the clause will be used.
 
 The scope of this allocation is that of the list item in the base language. When the allocation reaches the end of the scope it will be deallocated using the same memory allocator used for the allocation. If the execution leaves the scope in a manner not supported by the base language it is unspecified whether the deallocation happens or not.
 
@@ -152,15 +152,13 @@ If the directive is associated with an \plc{allocation-stmt}, then the call to \
 If the directive is associated with an \code{allocate} statement, the allocation of the specified list items will be provided through an allocator. If no list item is specified then all variables allocated by the \code{allocate} statement will be provided by the allocator.
 \end{fortranspecific}
 
-If no clause is specified then the memory allocator specified by the \plc{def-allocator-var} ICV will be used. If the \plc{allocator} clause is specified, the memory allocator specified in the clause will be used.
-
 \restrictions
 \begin{itemize}
 \item A variable that is part of another variable (as an array or structure element) cannot appear in an \code{allocate} directive.
 \item The directive must appear in the same scope of the \plc{list item} declaration and before its first use.
 \item At most one \code{allocator} clause can appear on the \code{allocate} directive.
 \begin{ccppspecific}
-\item If the directive is associated with an \plc{allocation-stmt}, the \plc{function} must appear in a previous \code{declare alloc} directive.
+\item If the directive is associated with an \plc{allocation-stmt}, the \plc{function} must appear in a previous \code{declare alloc} directive and the \plc{kind} must be either \code{alloc} or \code{realloc}.
 \item If a list item has a static storage type, only predefined memory allocator variables can be used in the \code{allocator} clause.
 \end{ccppspecific}
 \begin{fortranspecific}
@@ -185,18 +183,10 @@ If no clause is specified then the memory allocator specified by the \plc{def-al
 
 \summary
 
-The \code{deallocate} directive specifies how a set of variables is deallocated.
-The \code{deallocate} directive is a declarative directive if it is not
-associated with an deallocation statement.
+The \code{deallocate} directive replaces a user function with a deallocation request to a memory allocator.
 
 \syntax
 The syntax of the \code{deallocate} directive is as follows:
-
-\begin{boxedcode}
-\#pragma omp deallocate(\plc{list}) \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
-\end{boxedcode}
-
-or
 
 \begin{boxedcode}
 \#pragma omp deallocate \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
@@ -211,7 +201,7 @@ where \plc{clause} is one of the following:
 allocator(\plc{allocator})
 \end{indentedcodelist}
 
-where \plc{allocator} is an expression of the \code{omp\_allocator\_t} type,
+where \plc{allocator} is an expression of the \code{omp\_allocator\_t *} type,
 
 where \plc{allocation-stmt} is an expression statement of the following form:
 \begin{codepar}
@@ -221,57 +211,23 @@ where \plc{allocation-stmt} is an expression statement of the following form:
 
 \descr
 
-If the directive is not associated with a statement, the storage for each
-\plc{list item} that appears in the directive will be freed by an deallocation
-through an allocator.
-If no clause is specified then the allocator specified by the
-\plc{def-allocator-var} ICV will be used.
-If the \plc{allocator} clause is specified, the allocator specified in the
-clause will be used.
+The \plc{deallocation-stmt} associated with the construct will be replaced by a deallocation request to a memory allocator will be replaced by a request to a memory allocator using the arguments the function according to the specification of the \code{declare alloc} directive for \plc{function}. 
 
-The scope of this deallocation is that of the list item in the base language.
-When the deallocation reaches the end of the scope it will be deallocated using
-the same allocator used for the allocation.
-If the execution leaves the scope in a manner not supported by the base language
-it is unspecified whether the deallocation happens or not.
-
-If the directive is associated with an \plc{deallocation-stmt}, then the
-statement will be replaced by a request to an allocator according to the mapping
-rules expressed for the \plc{function} in the statement with the
-\code{declare alloc} directive.
-
-If no clause is specified then the allocator specified by the
-\plc{def-allocator-var} ICV will be used.
-If the \plc{allocator} clause is specified, the allocator specified in the
-clause will be used.
-
+If no \code{allocator} clause is specified the memory allocator used to allocate the memory being deallocated will be used. If the \code{allocator} clause is specified, the memory allocator specified in the clause will be used. Specifying a memory allocator in the \code{allocator} clause different than the one used to allocate the memory being deallocated results in undefined behavior.
 
 \restrictions
 \begin{itemize}
-\item A variable that is part of another variable (as an array or structure
-element) cannot appear in an \code{deallocate} directive.
-\item The directive must appear in the same scope of the \plc{list item}
-declaration and before its first use.
-\item At most one \code{allocator} clause can appear on the \code{deallocate}
-directive.
-\item If the directive is associated with an \plc{allocation-stmt}, the
-\plc{function} must appear in a previous \code{declare alloc} directive.
-\item If a list item has a static storage type, only pre-defined allocator
-variables can be used in the \code{allocator} clause.
+\item At most one \code{allocator} clause can appear on the \code{deallocate} directive.
+\item If the directive is associated with an \plc{allocation-stmt}, the \plc{function} must appear in a previous \code{declare alloc} directive and \plc{kind} must be \code{deallocate}.
 \end{itemize}
-
 
 \crossreferences
 \begin{itemize}
 \item Memory allocators, see \specref{sec:Memory Allocators}.
 \item \code{omp\_allocator\_t} and \code{omp\_allocator\_kind}, see \specref{subsec:Memory Management Types}.
-\item \plc{def-allocator-var} ICV, see \specref{\label{ICV Descriptions}.
 \end{itemize}
 
-
 \end{ccppspecific}
-
-
 
 \subsection{The \code{allocate} Clause}
 \index{allocate@{\code{allocate}}}
