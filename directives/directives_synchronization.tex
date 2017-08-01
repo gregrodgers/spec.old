@@ -185,7 +185,7 @@ The syntax of the \code{critical} construct is as follows:
 \end{boxedcode}
 
 where \plc{hint-expression} is a constant expression that evaluates to
-a scalar value with kind \code{omp\_synch\_hint\_kind} and  a value
+a scalar value with kind \code{omp\_sync\_hint\_kind} and  a value
 that is a valid synchronization hint (as described 
 in~\specref{subsec:Synchronization Hints}).
 \end{fortranspecific}
@@ -214,17 +214,13 @@ The threads of a contention group execute the \code{critical} region as if only 
 The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all 
 threads in the contention group, not just those threads in the current team.
 
+If present, the \code{hint(}\plc{hint-expression}\code{)} clause gives the implementation additional
+information about the expected runtime properties of the \code{critical} region
+which can optionally be used to optimize the implementation.
 The presence of a \code{hint} clause does not affect the isolation
 guarantees provided by the \code{critical} construct. If no
-\code{hint} clause is specified, the effect is as if \code{hint(omp\_synch\_hint\_none)}
+\code{hint} clause is specified, the effect is as if \code{hint(omp\_sync\_hint\_none)}
 had been specified.
-
-% Replaced by the above paragraph
-% If the \code{hint} clause is present, the effect of the \code{critical} 
-% construct is implementation defined, but retains the mutual exclusion 
-% semantics. If no
-% \code{hint} clause is specified, the effect is as if \code{hint(none)}
-% has been specified.
 
 \def\omptMutex#1#2{
 \events
@@ -1134,6 +1130,8 @@ implementation defined.
 If present, the \code{hint(}\plc{hint-expression}\code{)} clause gives the implementation additional
 information about the expected properties of the atomic operation
 which can optionally be used to optimize the implementation. 
+The presence of a \code{hint} clause does not affect the isolation guarantees provided by the \code{atomic} construct.
+If no \code{hint} clause is specified, the effect is as if \code{hint(omp\_sync\_hint\_none)} had been specified.
 
 \needspace{16\baselineskip}\begin{samepage}
 
@@ -1173,9 +1171,9 @@ are required to have the same type and type parameters.
 \end{fortranspecific}
 
 \begin{itemize}
-\item When a \plc{hint} is provided all \code{atomic} constructs which
-may be simultaneously accessing the storage locations designated by
-\plc{x} are required to have hints which evaluate to the same value. 
+\item When a \code{hint} is present at the construct, \code{atomic} constructs which
+may simultaneously access the storage locations designated by
+\plc{x} must have a hint expression that evaluates to the same value.
 \end{itemize}
 
 \begin{itemize}
@@ -1844,20 +1842,20 @@ The valid constants must include the following, which can be extended with imple
 
 \begin{ccppspecific}
 \begin{codepar}
-typedef enum omp\_synch\_hint\_t \{
-  omp\_synch\_hint\_none = 0,
-  omp\_lock\_hint\_none = omp\_synch\_hint\_none,
-  omp\_synch\_hint\_uncontended = 1,
-  omp\_lock\_hint\_uncontended = omp\_synch\_hint\_uncontended,
-  omp\_synch\_hint\_contended = 2,
-  omp\_lock\_hint\_contended = omp\_synch\_hint\_contended,
-  omp\_synch\_hint\_nonspeculative = 4,
-  omp\_lock\_hint\_nonspeculative = omp\_synch\_hint\_nonspeculative,
-  omp\_synch\_hint\_speculative = 8
-  omp\_lock\_hint\_speculative = omp\_synch\_hint\_speculative
-\} omp\_synch\_hint\_t;
+typedef enum omp\_sync\_hint\_t \{
+  omp\_sync\_hint\_none = 0,
+  omp\_lock\_hint\_none = omp\_sync\_hint\_none,
+  omp\_sync\_hint\_uncontended = 1,
+  omp\_lock\_hint\_uncontended = omp\_sync\_hint\_uncontended,
+  omp\_sync\_hint\_contended = 2,
+  omp\_lock\_hint\_contended = omp\_sync\_hint\_contended,
+  omp\_sync\_hint\_nonspeculative = 4,
+  omp\_lock\_hint\_nonspeculative = omp\_sync\_hint\_nonspeculative,
+  omp\_sync\_hint\_speculative = 8
+  omp\_lock\_hint\_speculative = omp\_sync\_hint\_speculative
+\} omp\_sync\_hint\_t;
 
-typedef omp\_synch\_hint\_t omp\_lock\_hint\_t;
+typedef omp\_sync\_hint\_t omp\_lock\_hint\_t;
 \end{codepar}
 \end{ccppspecific}
 
@@ -1865,55 +1863,55 @@ typedef omp\_synch\_hint\_t omp\_lock\_hint\_t;
 
 \begin{fortranspecific}
 \begin{codepar}
-integer, parameter :: omp\_lock\_hint\_kind = omp\_synch\_hint\_kind
+integer, parameter :: omp\_lock\_hint\_kind = omp\_sync\_hint\_kind
 
-integer (kind=omp\_synch\_hint\_kind), &
-  parameter :: omp\_synch\_hint\_none = 0
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_none = 0
 integer (kind=omp\_lock\_hint\_kind), &
-  parameter :: omp\_lock\_hint\_none = omp\_synch\_hint\_none
-integer (kind=omp\_synch\_hint\_kind), &
-  parameter :: omp\_synch\_hint\_uncontended = 1
+  parameter :: omp\_lock\_hint\_none = omp\_sync\_hint\_none
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_uncontended = 1
 integer (kind=omp\_lock\_hint\_kind), &
-  parameter :: omp\_lock\_hint\_uncontended = omp\_synch\_hint\_uncontended
-integer (kind=omp\_synch\_hint\_kind), &
-  parameter :: omp\_synch\_hint\_contended = 2
+  parameter :: omp\_lock\_hint\_uncontended = omp\_sync\_hint\_uncontended
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_contended = 2
 integer (kind=omp\_lock\_hint\_kind), &
-  parameter :: omp\_lock\_hint\_contended = omp\_synch\_hint\_contended
-integer (kind=omp\_synch\_hint\_kind), &
-  parameter :: omp\_synch\_hint\_nonspeculative = 4 
+  parameter :: omp\_lock\_hint\_contended = omp\_sync\_hint\_contended
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_nonspeculative = 4
 integer (kind=omp\_lock\_hint\_kind), &
-  parameter :: omp\_lock\_hint\_nonspeculative = omp\_synch\_hint\_nonspeculative
-integer (kind=omp\_synch\_hint\_kind), &
-  parameter :: omp\_synch\_hint\_speculative = 8
+  parameter :: omp\_lock\_hint\_nonspeculative = omp\_sync\_hint\_nonspeculative
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_speculative = 8
 integer (kind=omp\_lock\_hint\_kind), &
-  parameter :: omp\_lock\_hint\_speculative = omp\_synch\_hint\_speculative
+  parameter :: omp\_lock\_hint\_speculative = omp\_sync\_hint\_speculative
 \end{codepar}
 \end{fortranspecific}
 
 The hints can be combined by using the \code{+} or \code{|} operators in C/C++ or the \code{+} operator in Fortran.  
 The effect of the combined hint is implementation defined and can be ignored by the implementation.
-Combining \code{omp\_synch\_hint\_none} with any other hint is equivalent to specifying the other hint.
+Combining \code{omp\_sync\_hint\_none} with any other hint is equivalent to specifying the other hint.
 The following restrictions apply to combined hints; violating these 
 restrictions results in unspecified behavior:
 \begin{itemize}
-\item the hints \code{omp\_synch\_hint\_uncontended} and \code{omp\_synch\_hint\_contended} cannot be combined,
-\item the hints \code{omp\_synch\_hint\_nonspeculative} and \code{omp\_synch\_hint\_speculative} cannot be combined.
+\item the hints \code{omp\_sync\_hint\_uncontended} and \code{omp\_sync\_hint\_contended} cannot be combined,
+\item the hints \code{omp\_sync\_hint\_nonspeculative} and \code{omp\_sync\_hint\_speculative} cannot be combined.
 \end{itemize}
-The rules for combining \code{omp\_synch\_hint}s apply equally to the
+The rules for combining \code{omp\_sync\_hint}s apply equally to the
 corresponding \code{omp\_lock\_hint}s, and expressions mixing the two types.
 
 \begin{note}
-The \code{omp\_synch\_hint\_t} and \code{omp\_lock\_hint\_t} enumerations (and the equivalent types in Fortran) 
+The \code{omp\_sync\_hint\_t} and \code{omp\_lock\_hint\_t} enumerations (and the equivalent types in Fortran)
 are synonyms for each other which are provided to avoid any user confusion caused by using a hint which
 explicitly includes the word "lock" when dealing with a \code{atomic} construct whose implementation is not
 expected to use locks. The user is free to choose whichever spelling
 of the names she prefers.
 
-Future OpenMP specifications may add additional hints to the 
-\code{omp\_synch\_hint\_t} type and the \code{omp\_synch\_hint\_kind} kind.  
+Future OpenMP specifications may add additional hints to the
+\code{omp\_sync\_hint\_t} type and the \code{omp\_sync\_hint\_kind} kind.
 Implementers are advised to add implementation-defined hints starting from 
-the most significant bit of the \code{omp\_synch\_hint\_t} type and
-\code{omp\_synch\_hint\_kind} kind and to include the name of the 
+the most significant bit of the \code{omp\_sync\_hint\_t} type and
+\code{omp\_sync\_hint\_kind} kind and to include the name of the
 implementation in the name of the added hint to avoid name conflicts 
 with other OpenMP implementations.
 \end{note}
