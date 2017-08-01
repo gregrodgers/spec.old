@@ -21,7 +21,7 @@ ompd_rc_t ompd_get_version(int *\plc{version});
 
 On success this should return \code{ompd\_rc\_ok}; \code{ompd\_rc\_bad\_input} indicates that the 
 argument is invalid. Other errors could be reported by \code{ompd\_rc\_error}. A descriptive string 
-describing the OMPD implementation is returned by the function \code{ompd\_get\_version\_string}:
+describing the OMPD library is returned by the function \code{ompd\_get\_version\_string}:
 
 \format
 \vbox{
@@ -100,7 +100,7 @@ ompd_rc_t ompd_process_initialize(
 }
 
 The \code{context} argument is a pointer to the tool's context object for the address space
-of the OpenMP process or core file.  The OMPD implementation 
+of the OpenMP process or core file.  The OMPD library 
 returns a pointer to the address space handle in \code{*handle}, which the tool is responsible for 
 releasing when it is no longer needed. This function must be called before any OMPD operations 
 are performed on the OpenMP process.
@@ -114,8 +114,8 @@ which must release it using \code{ompd\_release\_address\_space\_handle}.
 
 When the tool is finished working on the OpenMP process address space for a process or core file, it calls
 \code{ompd\_release\_address\_space\_handle}
-to tell the OMPD implementation that it no longer needs the address space
-and give the OMPD implementation an opportunity to release any
+to tell the OMPD library that it no longer needs the address space
+and give the OMPD library an opportunity to release any
 resources it may have related to the handle.
 
 \ompdsubsection{Per OMPD Library Finalization}
@@ -157,20 +157,20 @@ In some cases, the OMPD library will need to allocate memory to return results t
 tool. This memory will then be `owned' by the tool, which will be responsible for releasing it. It is 
 therefore vital that the OMPD library and the tool use the same memory manager.
 
-OMPD handles are created by the OMPD implementation. These are opaque to the 
+OMPD handles are created by the OMPD library. These are opaque to the 
 tool, and depending on the specific implementation of OMPD may have complex 
 internal structure. The tool cannot know whether the handle pointers returned by the API 
 correspond to discrete heap allocations. Consequently, the tool must not simply deallocate a 
 handle by passing an address it receives from the OMPD library to its own memory manager. 
 Instead, the API includes functions that the tool must use when it no longer needs a handle.
 
-Contexts are created by a tool and passed to the OMPD implementation. The OMPD 
+Contexts are created by a tool and passed to the OMPD library. The OMPD 
 library does not need to release contexts; instead this will be done by the tool after it releases any 
 handles that may be referencing the contexts.
 
 \ompdsubsection{Thread and Signal Safety}
 
-The OMPD implementation does not need to be reentrant. It is the responsibility 
+The OMPD library does not need to be reentrant. It is the responsibility 
 of the tool to ensure that only one thread enters the OMPD library at a time. The OMPD 
 implementation must not install signal handlers or otherwise interfere with the tool's signal 
 configuration.
@@ -231,7 +231,7 @@ ompd_rc_t ompd_release_address_space_handle(
 %When the debugger is finished with the target address space handle it
 When the debugger is finished with the OpenMP process address space handle it
 should call \code{ompd\_release\_address\_space\_handle} to release
-the handle and give the OMPD implementation the opportunity to release
+the handle and give the OMPD library the opportunity to release
 any resources it may have related to the address space.
 
 \argdesc
@@ -395,7 +395,7 @@ less than, equal to, or greater than that corresponding to \code{thread\_handle\
 %\end{notes}
 
 % JP: rationale, so dropped
-%For OMPD implementations that always have a single, unique, underlying thread handle for a given 
+%For OMPD libraries that always have a single, unique, underlying thread handle for a given 
 %thread, this operation reduces to a simple comparison of the pointers. However, other 
 %implementations may take a different approach, and therefore the only reliable way of determining 
 %whether two different pointers to thread handles refer the same or distinct threads is to use
@@ -439,7 +439,7 @@ underscore characters, and NULL terminated.
 %	names.
 %\end{notes}
 
-The OMPD implementation allocates the string returned in \code{*string\_id} using the allocation 
+The OMPD library allocates the string returned in \code{*string\_id} using the allocation 
 routine in the callbacks passed to it during initialization. On return the string is owned by the 
 debugger, which is responsible for deallocating it. The contents of the strings returned for thread 
 handles which compare as equal with \code{ompd\_thread\_handle\_compare} must be the same.
@@ -616,7 +616,7 @@ integer value that indicates how the underlying parallel regions compare: a valu
 to, or greater than 0 indicates that the region corresponding to \code{parallel\_handle\_1} is,
 respectively, less than, equal to, or greater than that corresponding to \code{parallel\_handle\_2}.
 
-For OMPD implementations that always have a single, unique, underlying parallel region handle for 
+For OMPD libraries that always have a single, unique, underlying parallel region handle for 
 a given parallel region, this operation reduces to a simple comparison of the pointers. However, 
 other implementations may take a different approach, and therefore the only reliable way of 
 determining whether two different pointers to parallel regions handles refer the same or distinct
@@ -651,7 +651,7 @@ ompd_rc_t ompd_get_parallel_handle_string_id(
 
 \descr
 The returned string should be a single sequence of alphanumeric or underscore characters, and 
-NULL terminated. The OMPD implementation allocates the string returned in \code{*string\_id}
+NULL terminated. The OMPD library allocates the string returned in \code{*string\_id}
 using the allocation routine in the callbacks passed to it during initialization. On return the string is 
 owned by the tool, which is responsible for deallocating it.
 
@@ -804,11 +804,11 @@ ompd_rc_t ompd_get_implicit_task_in_parallel(
 \descr
 This call is meaningful only if all threads associated with the parallel region are stopped.
 The OMPD library must use the memory allocation callback to obtain the memory for the vector of 
-pointers to task handles returned by the operation. If the OMPD implementation needs to allocate 
+pointers to task handles returned by the operation. If the OMPD library needs to allocate 
 heap memory for the task handles it returns, it must use the callbacks to acquire this memory.
 After the call the vector and the task handles are `owned' by the tool, which is responsible for 
 deallocating them. The task handles must be released calling \code{ompd\_release\_task\_handle}.
-The vector was allocated by the OMPD implementation using the
+The vector was allocated by the OMPD library using the
 allocation routine passed to it during the call to \code{ompd\_initialize}.
 The tool itself must deallocate the vector in a compatible manner.
 
@@ -882,7 +882,7 @@ value that indicates how the underlying tasks compare: a value less than, equal 
 0 indicates that the task corresponding to \plc{task\_handle\_1} is, respectively, less than, equal 
 to, or greater than that corresponding to \plc{task\_handle\_2}.
 
-For OMPD implementations that always have a single, unique, underlying task handle for a given 
+For OMPD libraries that always have a single, unique, underlying task handle for a given 
 task, this operation reduces to a simple comparison of the pointers. However, other 
 implementations may take a different approach, and therefore the only reliable way of determining 
 whether two different pointers to task handles refer the same or distinct task is to use 
@@ -917,7 +917,7 @@ ompd_rc_t ompd_get_task_handle_string_id (
 
 \descr
 The returned string should be a single sequence of alphanumeric or underscore characters, and 
-NULL terminated. The OMPD implementation allocates the string returned in \code{*string\_id}
+NULL terminated. The OMPD library allocates the string returned in \code{*string\_id}
 using the allocation routine in the callbacks passed to it during initialization. On return the string is 
 owned by the tool, which is responsible for deallocating it.
 
@@ -1558,7 +1558,7 @@ the OpenMP thread.
 
 The operating system ID \plc{*osthread} is guaranteed
 to be valid for the duration of the call.
-If the OMPD implementation needs to retain the operating system-specific
+If the OMPD library needs to retain the operating system-specific
 thread identifier it must copy it.
 
 The thread handle \plc{*thread\_handle} returned by the OMP implementation
@@ -1600,15 +1600,15 @@ identifier it wants by setting the \plc{kind}
 `in' parameter.
 It also passes a pointer to the buffer into which the OMPD
 implementation writes the operating system-specific thread identifier,
-and the size of the buffer, to the OMPD implementation.
+and the size of the buffer, to the OMPD library.
 The buffer is owned by the debugger.
 
 On success \code{ompd\_get\_osthread} returns \code{rc\_ok},
 and returns the operating system-specific thread identifier in
 \plc{*osthread}.
-If the operation fails, the OMPD implementation returns
+If the operation fails, the OMPD library returns
 the appropriate value from \code{ompd\_rc\_t}.
-Note that the operation should fail if the OMPD implementation is
+Note that the operation should fail if the OMPD library is
 unable to return an operating system-specific identifier of the
 requested `kind' or size.
 
