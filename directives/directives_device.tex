@@ -133,8 +133,9 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+\mapclausespec
 use\_device\_ptr(\plc{list})
+use\_device\_addr(\plc{list})
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -154,8 +155,9 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+\mapclausespec
 use\_device\_ptr(\plc{list})
+use\_device\_addr(\plc{list})
 \end{indentedcodelist}
 
 The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{target}~\code{data} construct.
@@ -168,11 +170,18 @@ The binding task set for a \code{target}~\code{data} region is the generating ta
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
-List items that appear in a \code{use\_device\_ptr} clause are converted into
-device pointers to the corresponding list items in the device data environment.
-If a \code{use\_device\_ptr} clause and one or more \code{map} clauses are
-present on the same construct, this conversion will occur as if performed after
-all variables are mapped according to those \code{map} clauses.
+List items that appear in a \code{use\_device\_ptr} clause will result in a
+device pointer to their corresponding list item in the device data environment
+when evaluated in a reference context for the duration of the construct.  List
+items that appear in a \code{use\_device\_addr} clause will result in the device
+address of their corresponding list item in the device data environment when
+evaluated in a reference context for the duration of the construct.  Evaluating
+a list item listed in either of these clauses in a value context will have
+implementation-defined behavior.  If a \code{use\_device\_ptr} or
+\verb`use_device_addr` clause and one or more \code{map} clauses are present on
+the same construct, the initialization of the firstprivate vslue will occur as
+if performed after all variables are mapped according to those \code{map}
+clauses.
 
 \def\omptTargetRegionEvents#1#2#3
 {
@@ -216,7 +225,8 @@ as its \plc{endpoint} argument, as appropriate, and
 
   \item At most one \code{if} clause can appear on the directive.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item At least one \code{map} or \code{use\_device\_ptr} clause must appear on the directive.
+  \item At least one \code{map}, \code{use\_device\_addr} or
+    \code{use\_device\_ptr} clause must appear on the directive.
 
 
   \item A list item in a \code{use\_device\_ptr} clause must have a
@@ -276,7 +286,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+\mapclausespec
 depend(\plc{dependence-type} : \plc{locator-list})
 nowait
 \end{indentedcodelist}
@@ -290,7 +300,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+\mapclausespec
 depend(\plc{dependence-type} : \plc{locator-list})
 nowait
 \end{indentedcodelist}
@@ -398,7 +408,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+\mapclausespec
 depend(\plc{dependence-type} : \plc{locator-list})
 nowait
 \end{indentedcodelist}
@@ -412,7 +422,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+\mapclausespec
 depend(\plc{dependence-type} : \plc{locator-list})
 nowait
 \end{indentedcodelist}
@@ -511,7 +521,7 @@ device(\plc{integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+\mapclausespec
 is\_device\_ptr(\plc{list})
 defaultmap(tofrom:scalar)
 nowait
@@ -538,7 +548,7 @@ device(\plc{scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+\mapclausespec
 is\_device\_ptr(\plc{list})
 defaultmap(tofrom:scalar)
 nowait
@@ -907,9 +917,6 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 
 
-
-
-
 \subsection{\code{declare}~\code{target} Directive}
 \index{declare target@{\code{declare}~\code{target}}}
 \index{directives!declare target@{\code{declare}~\code{target}}}
@@ -1156,7 +1163,264 @@ may only be specified within an implicit \plc{extended-list}.
 
 
 
+%%%%%%%%%%%%%%%%%%%%%%%%declare mapper begin%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+\subsection{\code{declare}~\code{mapper} Directive}
+\index{declare mapper@{\code{declare}~\code{mapper}}}
+\index{directives!declare mapper@{\code{declare}~\code{mapper}}}
+\index{constructs!declare mapper@{\code{declare}~\code{mapper}}}
+\index{device constructs!declare mapper@{\code{declare}~\code{mapper}}}
+\label{subsec:declare mapper Directive}
+
+\summary
+
+The \verb`declare mapper` directive declares a user-defined mapper for a given
+type, and may define a \plc{mapper-identifier} that can be used in a \verb`map`
+clause. The \verb`declare mapper` directive is a declarative directive.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \verb`declare mapper` directive is as follows:
+
+\begin{boxedcode}
+#pragma omp declare mapper(\plc{[mapper-identifier:]}\plc{type} \plc{var})
+\plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \verb`declare mapper` directive is as follows:
+
+\begin{boxedcode}
+!$omp declare mapper(\plc{[mapper-identifier:]}\plc{type} :: \plc{var})
+\plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+
+\end{fortranspecific}
+
+where:
+\begin{itemize}
+  \item \plc{mapper-identifier} is a base-language identifier
+  \item \plc{type} is a valid type in scope
+  \item \plc{var} is a valid base-language identifier
+  \item and \plc{clause} is one of the following:
+    \begin{indentedcodelist}
+      \mapclausespec
+      use\_by\_default
+      skip\_safe
+    \end{indentedcodelist}
+\end{itemize}
+
+\descr
+
+User-defined mappers can be defined using the \verb`declare mapper` directive.
+The type and, if specified, the \plc{mapper-identifier}, uniquely identify the
+mapper for use in a \verb`map` clause later in the program.
+
+The \verb`use_by_default` clause makes this mapper the default for all variables
+of \plc{type}. The \verb`skip_safe` clause informs the compiler and runtime that
+any associated custom stages are safe to skip if the variable is already visible
+on the target device, note that if \verb`skip_safe` is not specified any
+associated mapper stages \emph{must not} be skipped.
+
+The variable declared by \plc{var} is available for use in all \verb`map`
+clauses on the construct, and no part of the variable to be mapped is mapped by
+default. The default mapper could thus be considered to be:
+
+\begin{boxedcode}
+#pragma omp declare mapper(T v) map(tofrom: v) use_by_default skip_safe
+\end{boxedcode}
+
+All \verb`map` clauses on the construct are expanded into corresponding
+\verb`map` clauses wherever this mapper is invoked, either by matching type or
+by being explicitly named in a \verb`map` clause.
+
+The visibility and accessibility of this declaration are the same as those of a variable
+declared at the same point in the program.
+
+\begin{cppspecific}
+The \verb`declare mapper` directive can also appear at points in the program at which
+a static data member could be declared. In this case, the visibility and accessibility of
+the declaration are the same as those of a static data member declared at the same point
+in the program.
+\end{cppspecific}
+
+\restrictions
+\begin{itemize}
+\item If the \verb`use_by_default` clause is not specified, then a
+  mapper-identifier is required.
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%declare mapper end%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%declare mapper_stage begin%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{\code{declare}~\code{mapper\_stage} Directive}
+\index{declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
+\index{directives!declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
+\index{constructs!declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
+\index{device constructs!declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
+\label{subsec:declare mapper_stage Directive}
+
+\summary
+
+The \verb`declare mapper_stage` directive defines a specific stage of the
+mapping process for a given user-defined mapper. The \verb`declare mapper_stage`
+directive is a declarative directive.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \verb`declare mapper_stage` directive is as follows:
+
+\begin{boxedcode}
+#pragma omp declare mapper_stage(\plc{mapper-identifier}: \plc{stage})
+\plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \verb`declare mapper_stage` directive is as follows:
+
+\begin{boxedcode}
+!$omp declare mapper(\plc{[mapper-identifier:]}\plc{type} :: \plc{var})
+\plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+\end{fortranspecific}
+
+\descr
+
+where:
+\begin{itemize}
+  \item \plc{mapper-identifier} is a previously declared mapper-identifier
+  \item \plc{stage} is one of the following:
+    \begin{indentedcodelist}
+      alloc
+      pack\_to
+      unpack\_to
+      pack\_from
+      unpack\_from
+      release
+      delete
+    \end{indentedcodelist}
+  \item and \plc{clause} is one of the following:
+    \begin{itemize}
+      \item \verb`in_place`
+      \item \verb`expr(\plc{stage-expression})` where \plc{stage-expression} is
+        a base language expression that performs the stage necessary on
+        \plc{mapper-var} and \verb`omp_buf`
+      \item \verb`size(\plc{size-expression})` where \plc{size-expression} is a
+        base language expression that evaluates to the number of bytes the stage
+        requires for its output
+      \item \verb`buffer_type(\plc{type})`
+    \end{itemize}
+\end{itemize}
+
+User-defined mappers, defined using the \verb`declare mapper` directive, can be
+customized beyond expanding \verb`map` clauses by specifying custom mapping
+stages with the \verb`declare mapper_stage` directive.  Every mapper is
+logically composed of six stages: \verb`alloc`, \verb`pack_to`,
+\verb`unpack_to`, \verb`pack_from`, \verb`unpack_from` and \verb`release` all
+executed one after the other in that order with a logical bitwise-copy between
+the \verb`pack_to` and \verb`unpack_to` as well as the \verb`pack_from` and
+\verb`unpack_from` stages.
+
+Stages are constructed from expressions, each of which will receive a variable
+of the type of their associated mapper named using the name declared in that
+mapper, and for all stages but \verb`alloc` and \verb`release` also a buffer in
+the variable \verb`omp_buf`.
+
+\begin{ccppspecific}
+  The type of \verb`omp_buf` will be \verb`void *` unless an alternate type,
+  which must be a pointer type, is specified with a \verb`buffer_type` clause.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+
+  The type of \verb`omp_buf` will be
+  \verb`character(len=1),dimension(:),pointer` unless an alternate type, is
+  specified with a \verb`buffer_type` clause. If a \verb`buffer_type` clause is
+  specified, the resulting declaration of \verb`omp_buf` must be valid in an
+  expression of the form:
+
+  \begin{boxedcode}
+    omp_buf = transfer(omp_buf_ptr, omp_buf)
+  \end{boxedcode}
+
+  where \verb`omp_buf_ptr` is a pointer to \verb`omp_buf_size` characters.
+
+\end{fortranspecific}
+
+Each stage is responsible for a specific action as part of mapping or updating a
+variable, and receives an instance of \plc{mapper-var}, the packer stages
+additionally receive \verb`omp_buf` and \verb`omp_buf_size`:
+
+\begin{description}
+
+  \item[alloc] Performs any and all unstructured data mapping required to place
+    components that require independent reference counts into the device data
+    environment.
+
+  \item[pack\_to] Packs all data in its input, \plc{mapper-var}, into a bitwise-copyable
+    form in \verb`omp_buf`, that will be allocated based on the result of its
+    \verb`size` clause or the size of a single instance of type if no
+    \verb`size` clause is specified. Additionally \verb`update` directives may
+    be used to populate data mapped by the \verb`alloc` stage.
+
+  \item[unpack\_to] Unpacks data in its input, \verb`omp_buf`,  into an instance
+    of \plc{mapper-var} in the device data environment, this expression must be
+    valid in a \verb`declare target` function.  The \verb`size` clause is not
+    allowed on this stage.
+
+  \item[pack\_from] Packs data in its input, \plc{mapper-var} in the device data
+    environment,   into \verb`omp_buf`, which will be allocated based on the
+    result of its \verb`size` clause or the size of a single instance of type if
+    no \verb`size` clause is specified.  This expression must be valid in a
+    \verb`declare target` function.
+
+  \item[unpack\_from] Unpacks its input, \verb`omp_buf`, into a \plc{mapper-var}
+    on the host device.  The \verb`size` clause is not allowed on this stage.
+    Additionally \verb`update` directives may be used to populate data mapped by
+    the \verb`alloc` stage.
+
+  \item[release] Releases any and all components mapped to the device in the
+    \verb`alloc` stage
+
+  \item[release] Deletes any and all components mapped to the device in the
+    \verb`alloc` stage
+
+\end{description}
+
+Stages are invoked as required by the context, specifically as follows:
+
+\begin{description}
+  \item[each time the mapped variable's reference count is incremented] \verb`alloc`
+  \item[update to] \verb`pack_to` followed by \verb`unpack_to`
+  \item[update from] \verb`pack_from` followed by \verb`unpack_from`
+  \item[each time the mapped variable's reference count is decrimented] \verb`release`
+\end{description}
+
+The \verb`in_place` clause is only valid on packer stages and causes
+\verb`omp_buf` and \verb`omp_buf_size` not to be defined, instead using
+\plc{mapper-var} as the only predefined variable in its expressions, it is
+mutually exclusive with the \verb`size` clause.
+
+The \verb`declare mapper_stage` directive can appear at any point where a
+\verb`declare mapper` clause would be valid.
+
+\restrictions
+\begin{itemize}
+
+\item If any of the pack or unpack stages are specified, all four must be
+  specified.
+
+\item If either of \verb`alloc` or \verb`release` are specified, the other must
+  be as well.
+
+\end{itemize}
+
+%%%%%%%%%%%%%%%%%%%%%%%%declare mapper_stage end%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
 \subsection{\code{teams} Construct}

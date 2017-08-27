@@ -2172,7 +2172,12 @@ release
 delete
 \end{indentedcodelist}
 
-and \plc{map-type-modifier} is \code{always}.
+and \plc{map-type-modifier} is one of the following:
+
+\begin{indentedcodelist}
+always
+mapper(\plc{mapper-identifier})
+\end{indentedcodelist}
 
 \descr
 The list items that appear in a \code{map} clause may include array sections and structure elements.
@@ -2182,7 +2187,17 @@ The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{m
 For a given construct, the effect of a \code{map} clause with the \code{to},
 \code{from}, or \code{tofrom} \plc{map-type} is ordered before the effect of a
 \code{map} clause with the \code{alloc}, \code{release}, or \code{delete}
-\plc{map-type}.
+\plc{map-type}. If a mapper is specified for the type being mapped, or
+explicitly specified with the \verb`mapper` map-type-modifier, then the map-type
+of an element given a map-type in the mapper is limited to the lower of the two
+map-types.
+
+If a mapper is specified for the type being mapped, or explicitly specified with
+the \verb`mapper` map-type-modifier, then all map clauses that appear on the
+\verb`declare mapper` directive are treated as though they appeared on the
+construct with the \verb`map` clause.  Array sections of a mapper type are
+expanded to map an appropriate array section, then map each element according to
+the mapper.
 
 \begin{ccppspecific}
 If a list item in a \code{map} clause is a variable of structure type then it
@@ -2303,7 +2318,8 @@ If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, 
 incremented because of the effect of a \code{map} clause on the
 construct then:
 \begin{enumerate}
-\item The corresponding list item's reference count is incremented by one
+  \item The corresponding list item's reference count is incremented by one
+  \item If an \verb`alloc` mapper stage is specified it is invoked
 \end{enumerate}
 
 % assign the corresponding variable
@@ -2311,6 +2327,10 @@ construct then:
 \begin{enumerate}
 \item If the \plc{map-type} is \code{to} or \code{tofrom}, then:
     \begin{itemize}
+
+      \item If \verb`pack_to` and \verb`unpack_to` mapper stages are specified
+        for this list-item, they are invoked to update the variable in the
+        device data environment, otherwise:
 
     \item For each part of the list item that is an attached pointer:  \begin{itemize}
 
@@ -2344,58 +2364,75 @@ the same value to the corresponding list item.
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs as if performed as a single atomic operation:
 \begin{enumerate}
-\item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
-\item If a corresponding list item of the original list item is present in the device data environment, then:
-\begin{enumerate}
+  \item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
+  \item If a corresponding list item of the original list item is present in the device data environment, then:
+    \begin{enumerate}
 
-% decrement the ref count
-\item If the corresponding list item's reference count is finite, then:
-\begin{enumerate}
-\item If the corresponding list item's reference count was not already
-decremented because of the effect of a \code{map} clause on the
-construct then:
-\begin{enumerate}
-\item If the \plc{map-type} is not \code{delete}, then the corresponding list
-    item's reference count is decremented by one.
-\end{enumerate}
-\item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
-\end{enumerate}
+        % decrement the ref count
+      \item If the corresponding list item's reference count is finite, then:
+        \begin{enumerate}
+          \item If the corresponding list item's reference count was not already
+            decremented because of the effect of a \code{map} clause on the
+            construct then:
+            \begin{enumerate}
+              \item If the \plc{map-type} is not \code{delete}, then the corresponding list
+                item's reference count is decremented by one.
+            \end{enumerate}
+          \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero.
+        \end{enumerate}
 
-% assign the original variable
-\item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
-\begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{tofrom} then:
-\begin{itemize}
+        % assign the original variable
+      \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
+        \begin{enumerate}
+          \item If the \plc{map-type} is \code{from} or \code{tofrom} then:
+            \begin{itemize}
 
-    \item For each part of the list item that is an attached pointer:  \begin{itemize}
+              \item If \verb`pack_from` and \verb`unpack_from` mapper stages are specified
+                for this list-item, they are invoked to update the variable in the
+                host data environment, otherwise:
 
-        \item That part of the original list item will
-        have the value it had immediately prior to the effect of the \code{map} clause;
+              \item For each part of the list item that is an attached pointer:  \begin{itemize}
 
-   \end{itemize}
+                  \item That part of the original list item will
+                    have the value it had immediately prior to the effect of the \code{map} clause;
 
-    \item For each part of the list item that is not an attached pointer: \begin{itemize}
+                \end{itemize}
 
-        \item The value of that part of the
-        corresponding list item is assigned to that part of the original list item; 
+              \item For each part of the list item that is not an attached pointer: \begin{itemize}
 
-   \end{itemize}
+                  \item The value of that part of the
+                    corresponding list item is assigned to that part of the original list item;
 
-   \item To avoid race conditions: \begin{itemize}
+                \end{itemize}
 
-        \item Concurrent reads or updates of any part
-        of the original list item must be synchronized with the update of the
-        original list item that occurs as a result of the \code{map} clause;
+              \item To avoid race conditions: \begin{itemize}
 
-   \end{itemize}
+                  \item Concurrent reads or updates of any part
+                    of the original list item must be synchronized with the update of the
+                    original list item that occurs as a result of the \code{map} clause;
+
+                \end{itemize}
 
 
-\end{itemize}
-\end{enumerate}
+            \end{itemize}
+        \end{enumerate}
 
-% release the storage
-\item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
-\end{enumerate}
+        % decrement the ref count
+      \item If the corresponding list item's reference count is finite, then:
+        \begin{enumerate}
+          \item If the corresponding list item's reference count was decremented due to
+            this map then:
+            \begin{enumerate}
+              \item If the \plc{map-type} is not \code{delete} and a \verb`release` mapper
+                stage is specified, it is invoked
+            \end{enumerate}
+          \item If the \plc{map-type} is \code{delete} and a \verb`delete` mapper stage
+            is specified, it is invoked
+        \end{enumerate}
+
+        % release the storage
+      \item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment
+    \end{enumerate}
 \end{enumerate}
 
 \begin{note}
