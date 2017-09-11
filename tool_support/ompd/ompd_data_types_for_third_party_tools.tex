@@ -1,6 +1,7 @@
 
 In this section, we define the types, structures, and functions for the OMPD API.
 
+\begin{comment}
 \ompdsubsection{Basic Types}
 \label{ompd:ompd_addr_t}
 \label{ompd:ompd_word_t}
@@ -55,6 +56,7 @@ in the technical report, "\emph{OMPD System-Specific Information}".
 Where possible, OpenMP vendors should use existing values and
 definitions to facilitate interoperability with existing tools.
 \end{itemize}
+\end{comment}
 
 \ompdsubsection{Operating System Thread Identifiers}
 
@@ -63,19 +65,18 @@ thread implementations.
 %% OMPD uses the 
 %% \code{ompd\_osthread\_kind\_t} type to describe the thread implementation upon which an 
 %% OpenMP thread is overlaid.
-The type used to hold an operating system thread identifier can vary in size and format, and therefore is not 
-explicitly represented in this API. Operating system thread identifiers are passed
-across the interface using a thread-identifier `kind', a pointer to where
-the thread identifer is stored, and the size of the thread identifier
-in bytes.
-
+The type used to hold an operating system thread identifier can vary in size and format, and 
+therefore is not explicitly represented in the OMPD API. Operating system thread identifiers are 
+passed across the interface using a thread-identifier `kind', a pointer to where
+the thread identifier is stored, and the size of the thread identifier in bytes.
 The OMPD library and tool using it must agree on the format
 of what is being passed.
 %% Thus, operating system-specific thread identifiers are always accompanied
 %% by a `kind' tag to indicate what the information represents.
-This is determined by the \plc{kind} argument.
+%This is determined by the \plc{kind} argument.
 Each different kind of thread identifier uses a unique
 unsigned 64-bit integer value.
+\begin{comment}
 The values less than \code{OMPD\_OSTHREAD\_USER\_LO} are reserved for
 well-known thread identifier kinds.
 The values \code{OMPD\_OSTHREAD\_USER\_LO} to \code{OMPD\_OSTHREAD\_USER\_HI}
@@ -85,6 +86,7 @@ and what they represent (e.g., the layout and semantics of the information),
 in the technical report, "\emph{OMPD System-Specific Information}".
 Where possible, OpenMP vendors should use existing values and
 definitions to facilitate interoperability with existing tools.
+\end{comment}
 
 \label{ompd:ompd_osthread_kind_t}
 \format
@@ -92,14 +94,15 @@ definitions to facilitate interoperability with existing tools.
 \ccppspecificstart
 \begin{boxedcode}
 typedef uint64_t ompd_osthread_kind_t;
-
-#define OMPD_OSTHREAD_PTHREAD 0
-#define OMPD_OSTHREAD_USER_L0 16384
-#define OMPD_OSTHREAD_USER_HI (~(ompd_osthread_kind_t) 0)
 \end{boxedcode}
 \ccppspecificend
 }
 
+%#define OMPD_OSTHREAD_PTHREAD 0
+%#define OMPD_OSTHREAD_USER_L0 16384
+%#define OMPD_OSTHREAD_USER_HI (~(ompd_osthread_kind_t) 0)
+
+\begin{comment}
 OpenMP implementations commonly use Posix threads (aka \code{pthreads}) as the
 underlying thread implementation.
 The \code{OMPD\_OSTHREAD\_PTHREAD} kind indicates that the thread identifier
@@ -109,21 +112,25 @@ OMPD library or the third-party tool.
 
 When thread identifiers are passed as either `in' or `out' parameters, 
 they are allocated and owned by the caller, which is responsible for their deallocation.
+\end{comment}
 
 \ompdsubsection{OMPD Handle Types}
 
-Each OMPD interface operation that applies to a particular address space, thread, parallel region, 
-or task must explicitly specify the device for the operation using a \emph{handle}.
+Each operation of the OMPD interface that applies to a particular address space, thread, parallel 
+region, or task must explicitly specify
+% ilaguna: device can be confused by a GPU device
+%the device for the operation using a \emph{handle}.
+a \emph{handle} for the operation.
 OMPD employs handles for address spaces (for a host or target device), threads, parallel regions, 
 and tasks. A handle for an entity is constant while the entity itself is alive. Handles are defined by 
-the OMPD library, and are opaque to the using tool. The following define the OMPD 
+the OMPD plugin, and are opaque to the tool. The following defines the OMPD 
 handle types:
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct _ompd_address_space_handle_s ompd_address_space_handle_t;
+typedef struct _ompd_aspace_handle_s ompd_address_space_handle_t;
 typedef struct _ompd_thread_handle_s ompd_thread_handle_t;
 typedef struct _ompd_parallel_handle_s ompd_parallel_handle_t;
 typedef struct _ompd_task_handle_s ompd_task_handle_t;
@@ -133,26 +140,28 @@ typedef struct _ompd_task_handle_s ompd_task_handle_t;
 
 Defining externally visible type names in this way introduces type safety to the interface, and helps 
 to catch instances where incorrect handles are passed by the debugger to the OMPD 
-implementation. The \code{struct}s do not need to be defined at all. The OMPD library 
-would need to cast incoming (pointers to) handles to the appropriate internal, private types.
+library. The \code{struct}s do not need to be defined at all. The OMPD library 
+must cast incoming (pointers to) handles to the appropriate internal, private types.
 
-\ompdsubsection{Debugger Context Types}
-\label{ompd:ompd_address_space_context_t}
-\label{ompd:ompd_thread_context_t}
-The debugger contexts are opaque to the OMPD and are defined as follows:
+\ompdsubsection{Tool Context Types}
+
+A third-party tool uses contexts to uniquely  identifies abstractions. These contexts are opaque to 
+the OMPD library and are defined as follows:
+%The debugger uses The debugger contexts are opaque to the OMPD and are defined as follows:
 
 \format
 \vbox{
 \ccppspecificstart
 \begin{boxedcode}
-typedef struct _ompd_address_space_context_s ompd_address_space_context_t;
-typedef struct _ompd_thread_context_s ompd_thread_context_t;
+typedef struct _ompd_aspace_cont_s ompd_address_space_context_t;
+typedef struct _ompd_thread_cont_s ompd_thread_context_t;
 \end{boxedcode}
 \ccppspecificend
 }
 
 \ompdsubsection{Return Code Types}
 \label{ompd:ompd_rc_t}
+
 Each OMPD operation has a return code. The return code types and their semantics are defined as 
 follows:
 
@@ -161,17 +170,28 @@ follows:
 \ccppspecificstart
 \begin{boxedcode}
 typedef enum \{
-  ompd_rc_ok = 0,  /* operation was successful */
-  ompd_rc_unavailable = 1, /* info is not available (in this context) */
-  ompd_rc_stale_handle = 2, /* handle is no longer valid */
-  ompd_rc_bad_input = 3, /* bad input parameters (other than handle) */
-  ompd_rc_error = 4, /* error */
-  ompd_rc_unsupported = 5, /* operation is not supported */
-  ompd_rc_needs_state_tracking = 6, /* needs runtime state tracking enabled */
-  ompd_rc_incompatible = 7, /* device is not compatible with this OMPD */
-  ompd_rc_device_read_error = 8, /* error reading from the device */
-  ompd_rc_device_write_error = 9, /* error writing to the device */
-  ompd_rc_nomem = 10, /* unable to allocate memory */
+  /* Operation was successful */
+  ompd_rc_ok = 0,
+  /* Information is not available (in this context) */
+  ompd_rc_unavailable = 1, 
+  /* Handle is no longer valid */
+  ompd_rc_stale_handle = 2,
+  /* Bad input parameters (other than handle) */ 
+  ompd_rc_bad_input = 3,
+  /* Error */
+  ompd_rc_error = 4,
+  /* Operation is not supported */ 
+  ompd_rc_unsupported = 5,
+  /* Needs runtime state tracking enabled */ 
+  ompd_rc_needs_state_tracking = 6,
+  /* Not compatible with this OMPD */ 
+  ompd_rc_incompatible = 7,
+  /* Read error  */ 
+  ompd_rc_device_read_error = 8,
+  /* Write error */ 
+  ompd_rc_device_write_error = 9,
+  /* Unable to allocate memory */
+  ompd_rc_nomem = 10, 
 \} ompd_rc_t;	
 \end{boxedcode}
 \ccppspecificend
@@ -180,7 +200,8 @@ typedef enum \{
 \ompdsubsection{OpenMP Scheduling Types}
 
 The following enumeration defines \code{ompd\_sched\_t}, which is the OMPD API definition 
-corresponding to the OpenMP enumeration type \code|omp\_sched\_t| (XXXX).
+corresponding to the OpenMP enumeration type \code{omp\_sched\_t} (see 
+\specref{subsec:omp_set_schedule}).
 \code{ompd\_sched\_t} also defines \code{ompd\_sched\_vendor\_lo} and
 \code{ompd\_sched\_vendor\_hi} to define the range of implementation-specific 
 \code{omp\_sched\_t} values than can be handle by the OMPD API.
