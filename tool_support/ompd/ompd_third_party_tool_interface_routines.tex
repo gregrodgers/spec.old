@@ -48,7 +48,6 @@ the API.
 The tool must provide the OMPD library with a set of callback functions 
 that enable OMPD to allocate and deallocate memory in the tool's address space, to lookup the 
 sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and 
-%write memory in the target. These callback functions are provided to the OMPD library via a 
 write memory in the device. These callback functions are provided to the OMPD library via a 
 table---a list of function pointers---of type \code{ompd\_callbacks\_t}.
 
@@ -61,23 +60,12 @@ ompd_rc_t ompd_initialize(const ompd_callbacks_t *\plc{callbacks});
 \cspecificend
 }
 
-%The type \refdef{\texttt{ompd\_callbacks\_t}}{callbacks-t:def} is defined in
-%Section~\ref{sec:ompd_data_types}. The argument is guaranteed to be valid for the duration of 
-%the call.
-%The OMPD library cannot assume that \texttt{callbacks} will remain valid
-%after the call returns back to the debugger.
-%\begin{notes}
-%ilaguna: We need to be more specific here. What does the previous sentence 
-%mean?	
-%\end{notes}
-
 On success, \code{ompd\_initialize} returns \code{ompd\_rc\_ok}. If the \code{data} argument is 
 invalid, \code{ompd\_rc\_bad\_input} should be returned. All other errors will be reported by 
 \code{ompd\_rc\_error}.
 
 The above initialization is performed for each OMPD library that is loaded by an OMPD using tool. 
 There may be more than one library present in a thid-party tool, such as a debugger, because the tool 
-%may be controlling a number of targets that may be using different runtime systems which require 
 may be controlling a number of devices that may be using different runtime systems which require 
 different OMPD libraries. This initialization must be performed exactly once before the tool
 can begin operating on a OpenMP process or core file.
@@ -266,7 +254,6 @@ ompd_rc_t ompd_release_address_space_handle(
 }
 
 \descr
-%When the debugger is finished with the target address space handle it
 When the debugger is finished with the OpenMP process address space handle it
 should call \code{ompd\_release\_address\_space\_handle} to release
 the handle and give the OMPD library the opportunity to release
@@ -1490,82 +1477,6 @@ Section~\ref{stack-unwinding:sec}.
 	\item \code{ompd\_task\_handle\_t} type, see \specref{sec:ompd_task_handle_t}.
 	\item \code{ompd\_address\_t} type, see \specref{sec:ompd_address_t}.
 \end{itemize}
-
-%
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%
-%\subsubsection{Stack Unwinding}
-%\label{stack-unwinding:sec}
-%%
-%\begin{notes}
-%	JVD: This section needs careful review by the OpenMP Tools Working
-%	Group to ensure its correctness.  It depends on whether or not John
-%	Mellor-Crummey's 07/16/15 email proposal to omp-tools@openmp.org to
-%	change the semantics of the \code{reenter\_runtime\_addr} field is
-%	adopted.  What we decide, OMPD and OMPT should be consistent.
-%\end{notes}
-%
-%The \code{ompd\_get\_task\_frame} function returns stack frame
-%information about the target thread associated with the task.
-%%
-%This routine corresponds to \code{ompt\_get\_task\_frame} in the OMPT
-%API, and the approach for stack inspection is similar to that
-%described in Appendix~B of~\cite{ompt-tr2}.
-%%
-%The \code{exit\_runtime\_addr} gives the address of the frame at which
-%the thread \emph{left} the OpenMP runtime to execute the user code
-%associated with the task.
-%%
-%The \code{reenter\_runtime\_addr} is the address of the frame that
-%called the OpenMP runtime.
-%\begin{notes}
-%	JVD: Follows John Mellor-Crummey's
-%	07/16/15 email proposal to omp-tools@openmp.org to change the
-%	semantics of the \code{reenter\_runtime\_addr} field.)
-%\end{notes}
-%%
-%The debugger can unwind a thread's stack by getting the
-%thread's current task using
-%\refdef{\code{ompd\_get\_top\_task\_region}}{get-top-task-region:def}.
-%\begin{notes}
-%	JVD: This assumes that the thread is ``bound'' to the task
-%	handle. Is that correct?
-%\end{notes}
-%%
-%Using the task handle, the debugger can find the thread's exit and
-%reentry stack frame addresses using \code{ompd\_get\_task\_frame}.
-%%
-%It can then use \refdef{\code{ompd\_get\_scheduling\_ancestor\_task\_region}}{get-scheduling-ancestor-task-region:def} to find the next task in the
-%thread's stack, and then call \code{ompd\_get\_task\_frame} for the parent task.
-%%
-%The frames between the scheduling parent task's reenter address and the top
-%task's exit address are frames in which the thread is executing OpenMP
-%runtime code.
-%\begin{notes}
-%	JVD: Is this still accurate given John M-C's
-%	proposed new semantics? I think with the new semantics, the addresses
-%	are always for user frames, not OpenMP runtime frames, so ``between''
-%	means \emph{exclusive} of the frame addresses.
-%\end{notes}
-%%
-%This process can be repeated to allow all frames in the thread's
-%backtrace that correspond to execution in the OpenMP runtime to be
-%identified.
-%
-%Using the generating ancestor operation \refdef{\code{ompd\_get\_generating\_ancestor\_task\_region}}{get-generating-ancestor-task-region:def},
-%the same process can be used to determine the chain logical ancestors.
-%Note that in this case the logical backtrace may traverse
-%across the stacks of different threads.
-%
-%The position within the stack frame where the runtime addresses point
-%is implementation defined.
-%
-%
-%
-%
-%
-
 
 \ompdcallbacksignature{\code{ompd\_get\_thread\_handle}}
 \summary
