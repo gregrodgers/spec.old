@@ -269,11 +269,86 @@ to be released.
 \end{itemize}
 
 
+
+
+\ompdcallbacksignature{\code{ompd\_get\_num\_procs}}
+\summary
+The \code{ompd\_get\_num\_procs} routine returns the number of processors
+available on the entity identified by an address space handle.
+
+\format
+\vbox{
+\cspecificstart
+\begin{boxedcode}
+ompd_rc_t ompd_get_num_procs (
+  ompd_address_space_handle_t *\plc{handle},         /* IN  */
+  ompd_word_t                 *\plc{num_processors}   /* OUT */
+);
+\end{boxedcode}
+\cspecificend
+}
+
+\descr
+
+\argdesc
+The input argument \plc{handle} is an opaque handle for an address space;
+the number of processors on the entity identified by the address space
+handle is returned through the output argument \plc{num\_processors}.
+This operation corresponds to the OpenMP runtime function
+\code{omp\_get\_num\_procs} that an OpenMP program can call.
+
+\crossreferences	
+\begin{itemize}
+	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{sec:ompd_address_space_handle_t}.
+	\item \code{omp\_get\_num\_procs}, see \specref{subsec:omp_get_num_procs}.
+\end{itemize}
+
+
+
+
+
+\ompdcallbacksignature{\code{ompd\_get\_thread\_limit}}
+\summary
+The \code{ompd\_get\_thread\_limit} routine returns the maximum
+number of OpenMP threads available on the entity identified by
+an address space handle.
+
+\format
+\vbox{
+\cspecificstart
+\begin{boxedcode}
+ompd_rc_t ompd_get_thread_limit (
+  ompd_address_space_handle_t *\plc{handle},      /* IN  */
+  ompd_word_t                 *\plc{num_threads}   /* OUT */
+);
+\end{boxedcode}
+\cspecificend
+}
+
+\descr
+
+\argdesc
+The input argument \plc{handle} is an opaque handle for an address space;
+the maximum number of OpenMP threads on the entity identified by the
+address space handle is returned through the output argument \plc{num\_threads}.
+This operation corresponds to the OpenMP runtime function
+\code{omp\_get\_thread\_limit} that an OpenMP program can call.
+
+\crossreferences	
+\begin{itemize}
+	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{sec:ompd_address_space_handle_t}.
+	\item \code{omp\_get\_thread\_limit}, see \specref{subsec:omp_get_thread_limit}.
+\end{itemize}
+
+
+
+
+
 \ompdsubsection{Thread Handles}
 
 \ompdcallbacksignature{\code{ompd\_get\_thread\_in\_parallel}}
 \summary
-The  \code{ompd\_get\_thread\_in\_parallel} operation enables a tools to obtain handles for 
+The  \code{ompd\_get\_thread\_in\_parallel} operation enables a tool to obtain handles for 
 OpenMP threads associated with a parallel region.
 
 \format
@@ -987,6 +1062,35 @@ executed in this parallel region.
 	\item \code{ompd\_word\_t} type, see \specref{sec:ompd_word_t}.
 \end{itemize}
 
+\ompdcallbacksignature{\code{ompd\_get\_parallel\_function}}
+\summary
+Returns the entry point of a parallel region.
+
+\format
+\cspecificstart
+\begin{boxedcode}
+ompd\_rc\_t ompd\_get\_parallel\_function (
+                 ompd\_parallel\_handle\_t  *parallel\_handle,  /* IN  */
+                 ompd\_address\_t          *entry_point         /* OUT */
+);
+\end{boxedcode}
+\cspecificend
+
+\descr
+
+\argdesc
+The input argument \plc{parallel\_handle} is an opaque handle for a
+parallel region, and selects the parallel region to operate on.
+On return,  the output argument \plc{entry\_point} is set to the
+entry point of the code that corresponds to the body of the parallel
+construct.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd\_parallel\_handle\_t} type, see \specref{sec:ompd_parallel_handle_t}.
+	\item \code{ompd\_address\_t} type, see \specref{sec:ompd_address_t}.
+\end{itemize}
+
 
 \ompdcallbacksignature{\code{ompd\_get\_level}}
 \summary
@@ -1603,4 +1707,103 @@ symbolic constants are identical.
 	\item \code{ompd\_thread\_handle\_t} type, see \specref{sec:ompd_thread_handle_t}.
 	\item \code{ompd\_state\_t} type, see \specref{sec:ompd_state_t}.
 	\item \code{ompd\_wait\_id\_t} type, see \specref{sec:ompd_wait_id_t}.
+\end{itemize}
+
+
+
+\ompdsubsection{Display Control variables}
+
+\ompdcallbacksignature{\code{ompd\_get\_display\_control\_vars}}
+\label{sec:ompd_get_display_control_vars}
+\summary
+Returns a list of name/value pairs for the OpenMP control variables
+that are user-controllable and important to the operation or
+performance of OpenMP programs.
+\format
+\cspecificstart
+\begin{boxedcode}
+ompd\_rc\_t ompd\_get\_display\_control\_vars (
+  ompd\_address\_space\_handle\_t *\plc{address\_space\_handle},  /* IN */
+  const char * const *        *\plc{control\_vars}         /* OUT */
+);
+\end{boxedcode}
+\cspecificend
+
+\descr
+The function \code{ompd\_get\_display\_control\_vars} returns a
+NULL-terminated vactor of strings of name/value pairs of control
+variables whose settings are (a) user controllable,
+and (b) importannt to the operation or performance of an OpenMP
+runtime system.
+The control variables exposed through this interface include all
+of the OpenMP environment variables, settings that may come from
+vendor or platform-specific environment variables, and other
+settings that affect the operation or functioning of an OpenMP
+runtime.
+
+The format of the strings is:
+\begin{center}
+\code{name=a string}
+\end{center}
+
+The third-party tool must not modify the vector or the strings
+(i.e., they are both \code{const}).
+The strings are NULL terminated.
+The vector is NULL terminated.
+
+After returning from the call, the vector and strings are `owned'
+by the third third-party tool.
+Providing the termination constraints are satisfied, the OMPD
+implementation is free to use static or dynamic memory for the
+vector and/or the strings, and to arrange them in memory
+as it pleases.
+If dynamic memory is used, then the OMPD implementation must use
+the allocate callback it received in the call to \code{ompd\_initialize}.
+As the third-party tool cannot make any assumptions about the origin or
+layout of the memory used for the vector or strings, it cannot release
+the display control variables directly when they are no longer
+needed; instead it must use \code{ompd\_release\_display\_control\_vars~()}.
+
+\argdesc
+The address space is identified by the input argument \plc{address\_space\_handle}.
+The vector of display control variables is return through
+the output argument \plc{control\_vars}.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{sec:ompd_address_space_t}.
+	\item \code{ompd\_release\_display\_control\_vars} type, see \specref{sec:ompd_release_display_control_vars}.
+\end{itemize}
+
+
+\ompdcallbacksignature{\code{ompd\_release\_display\_control\_vars}}
+\label{sec:ompd_release_display_control_vars}
+\summary
+
+Releases a list of name/value pairs of OpenMP control variables
+previously acquired using \code{ompd\_get\_display\_control\_vars}.
+\format
+\cspecificstart
+\begin{boxedcode}
+ompd\_rc\_t ompd\_release\_display\_control\_vars (
+  const char * const *        *\plc{control\_vars}         /* IN */
+);
+\end{boxedcode}
+\cspecificend
+
+\descr
+The vector and strings returned from \code{ompd\_get\_display\_control\_vars}
+are `owned' by the thrid-party, but allocated by the OMPD.
+Because the third-party tool doesn't know how the memory for the vector
+and strings was alloacted, it cannot deallocate the memory itself.
+Instead, the third-party tool must call
+\code{ompd\_release\_display\_control\_vars} to release the vector
+and strings.
+
+\argdesc
+\plc{control\_vars} is the vector of display control variables to be released.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd\_get\_display\_control\_vars} type, see \specref{sec:ompd_get_display_control_vars}.
 \end{itemize}
