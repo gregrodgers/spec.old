@@ -28,9 +28,10 @@ and implemented in terms of the callback functions
 provided to it by the tool.
 \end{comment}
 The OMPD library must not access the heap manager directly. Instead, if it needs heap memory it 
-must use the following memory allocation and deallocation callback functions provided by the tool 
-to obtain and release heap memory. This will ensure that the library does not interfere with any 
-custom memory management scheme that the tool may use.
+must use the memory allocation and deallocation callback functions that are described in this 
+section, \code{ompd\_memory\_alloc\_fn\_t} and \code{ompd\_memory\_free\_fn\_t},  which are 
+provided by the tool to obtain and release heap memory. This will ensure that the library does not 
+interfere with any custom memory management scheme that the tool may use.
 
 If the OMPD library is implemented in \code{C++}, memory management operators like \code{new} 
 and \code{delete} in all their variants, \emph{must all} be overloaded and implemented in terms of 
@@ -164,21 +165,32 @@ typedef ompd\_rc\_t (*ompd\_get\_thread\_context\_for\_osthread\_fn\_t) (
 \cspecificend
 }
 
-\argdesc
-This callback maps an operating system thread handle within the address
-space identified by \plc{address\_space\_context} to a tool thread context.
-The operating system thread is identified by the combination
-\plc{kind}, \plc{sizeof\_osthread}, and \plc{osthread} arguments.
+\descr
 
-On success the tool \plc{thread context} is returned in \plc{*thread\_context}.
-The \plc{thread context} is created, and remains owned, by the tool.
-The OMPD plugin can assume that the \plc{thread context} is valid for
-as long as the tool is holding any references to \plc{thread handles}
-that may contain the \plc{thread context}.
-The OMPD library can use the \plc{thread context} to access
+This callback maps an operating system thread handle within the address
+space identified by \plc{address\_space\_context} to a tool thread context. The OMPD plugin library 
+can use the thread context, for example, to access
 thread local storage (TLS).
 
-On failure, the callback returns an error code from \code{ompd\_rc\_t}.
+\argdesc
+
+The input argument \plc{address\_space\_context} is an opaque handle provided by the tool
+to reference an address space.
+The input arguments \plc{kind},  \plc{sizeof\_osthread}, and \plc{osthread} represent an operating 
+system thread identifier. 
+On return the output argument \plc{thread\_context} provides an opaque handle to the OMPD 
+plugin library that maps an operating system thread identifier to a tool thread context.
+
+
+%On success the tool \plc{thread context} is returned in \plc{*thread\_context}.
+%The \plc{thread context} is created, and remains owned, by the tool.
+%The OMPD plugin can assume that the \plc{thread context} is valid for
+%as long as the tool is holding any references to \plc{thread handles}
+%that may contain the \plc{thread context}.
+%The OMPD plugin library can use the \plc{thread context}, for example, to access
+%thread local storage (TLS).
+
+%On failure, the callback returns an error code from \code{ompd\_rc\_t}.
 
 
 \subsubsubsection{Context Navigation from a Thread}

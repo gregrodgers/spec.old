@@ -7,7 +7,7 @@
 The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
 before it is unloaded. Per OpenMP process or core file initialization and finalization are also required. 
 A tool starts the initialization by calling \code{ompd\_initialize}. Once loaded, the 
-debugger can determine the version of the OMPD API supported by the plugin by 
+tool can determine the version of the OMPD API supported by the plugin by 
 calling \code{ompd\_get\_version}:
 
 \format
@@ -160,10 +160,10 @@ On return, the handle is owned by the tool, which must release it using
 \code{ompd\_release\_address\_space\_handle}.
 
 \argdesc
-The input argument \plc{context} is an opaque handle provided by the debugger
+The input argument \plc{context} is an opaque handle provided by the tool
 to address an address space.
 On return the output argument \plc{handle} provides an opaque handle to the
-debugger for this address space, which the tool is responsible for 
+tool for this address space, which the tool is responsible for 
 releasing when it is no longer needed
 
 \crossreferences
@@ -201,10 +201,12 @@ On return from \code{ompd\_device\_initialize} the address
 space handle is owned by the tool.
 
 \argdesc
-The input argument \plc{context} is an opaque handle provided by the debugger
-to address an address space.
+
+The input argument \plc{context} is an opaque handle provided by the tool
+to reference an address space.
+The input arguments \plc{kind},  \plc{sizeof\_id}, and \plc{id} represent a device identifier. 
 On return the output argument \plc{handle} provides an opaque handle to the
-debugger for this address space.
+tool for this address space.
 
 \crossreferences
 \begin{itemize}
@@ -234,7 +236,7 @@ ompd_rc_t ompd_release_address_space_handle(
 }
 
 \descr
-When the debugger is finished with the OpenMP process address space handle it
+When the tool is finished with the OpenMP process address space handle it
 should call \code{ompd\_release\_address\_space\_handle} to release
 the handle and give the OMPD library the opportunity to release
 any resources it may have related to the address space.
@@ -555,7 +557,7 @@ underscore characters, and NULL terminated.
 
 The OMPD library allocates the string returned in \code{*string\_id} using the allocation 
 routine in the callbacks passed to it during initialization. On return the string is owned by the 
-debugger, which is responsible for deallocating it. The contents of the strings returned for thread 
+tool, which is responsible for deallocating it. The contents of the strings returned for thread 
 handles which compare as equal with \code{ompd\_thread\_handle\_compare} must be the same.
 
 \argdesc
@@ -572,7 +574,7 @@ On return the output argument \plc{string\_id} is set to a string representation
 
 \ompdcallbacksignature{\code{ompd\_get\_top\_parallel\_region}}
 \summary
-The  \code{ompd\_get\_top\_parallel\_region} operation enables the debugger to obtain a pointer to 
+The  \code{ompd\_get\_top\_parallel\_region} operation enables the tool to obtain a pointer to 
 the parallel handle for the innermost, or topmost, parallel region associated with an OpenMP thread.
 
 \format
@@ -736,7 +738,7 @@ other implementations may take a different approach, and therefore the only reli
 determining whether two different pointers to parallel regions handles refer the same or distinct
 parallel regions is to use \code{ompd\_parallel\_handle\_compare}.
 
-Allowing parallel region handles to be compared allows the debugger to hold them in ordered 
+Allowing parallel region handles to be compared allows the tool to hold them in ordered 
 collections. The means by which parallel region handles are ordered is implementation-defined.
 
 \argdesc
@@ -959,7 +961,7 @@ ompd_rc_t ompd_release_task_handle(
 
 \descr
 Task handles are opaque to the tool, which therefore cannot release
-them directly. Instead, when the debugger is finished with a task handle it must
+them directly. Instead, when the tool is finished with a task handle it must
 pass it to the OMPD \code{ompd\_release\_task\_handle} routine
 for disposal.
 
@@ -1587,18 +1589,24 @@ executed in this task.
 \cspecificstart
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_task\_frame (
-  ompd\_task\_handle\_t  *\plc{task\_handle},  /* IN */
-  ompd\_address\_t  *\plc{exit\_runtime\_addr},  /* OUT */
-  ompd\_address\_t *\plc{reenter\_runtime\_addr} /* OUT */
+  ompd\_task\_handle\_t  *\plc{task\_handle}, 
+  ompd\_address\_t  *\plc{exit\_runtime\_addr},
+  ompd\_address\_t *\plc{reenter\_runtime\_addr}
 );
 \end{boxedcode}
 \cspecificend
+
+
 
 \descr
 \code{ompd\_get\_task\_frame} is discussed under Stack Unwinding in
 Section~\ref{stack-unwinding:sec}.
 
 \argdesc
+
+%ompd\_task\_handle\_t  *\plc{task\_handle},  %/* IN */
+%ompd\_address\_t  *\plc{exit\_runtime\_addr},  %/* OUT */
+%ompd\_address\_t *\plc{reenter\_runtime\_addr} %/* OUT */
 
 \crossreferences
 \begin{itemize}
@@ -1634,7 +1642,7 @@ the OpenMP thread.
 \argdesc
 
 
-The input argument \plc{handle} is an opaque handle provided by the debugger
+The input argument \plc{handle} is an opaque handle provided by the tool
 to reference to an address space.
 The input arguments \plc{kind},  \plc{sizeof\_osthread}, and \plc{osthread} represent an operating 
 system thread identifier. 
@@ -1719,9 +1727,9 @@ Thread State Inquiry Analogue
 \cspecificstart
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_state (
-  ompd\_thread\_handle\_t *\plc{thread\_handle}, /* IN */
-  ompd\_state\_t *\plc{state}, /* OUT */
-  ompd\_wait\_id\_t    *\plc{wait\_id}  /* OUT */
+  ompd\_thread\_handle\_t *\plc{thread\_handle},
+  ompd\_state\_t *\plc{state},
+  ompd\_wait\_id\_t    *\plc{wait\_id}
 );
 \end{boxedcode}
 \cspecificend
@@ -1734,6 +1742,12 @@ is that the OMPD version must supply a thread handle to provide
 a context for this inquiry.
 
 \argdesc
+
+%ompd\_thread\_handle\_t *\plc{thread\_handle}, %/* IN */
+%ompd\_state\_t *\plc{state}, %/* OUT */
+%ompd\_wait\_id\_t    *\plc{wait\_id} % /* OUT */
+
+%The input argument \plc{thread\_handle} is a thread handle. On return, the output argument
 The states are represented by values of the enumeration type
 \code{ompd\_state\_t}.
 The symbolic names of the members of \code{ompd\_state\_t} should
@@ -1762,8 +1776,8 @@ performance of OpenMP programs.
 \cspecificstart
 \begin{boxedcode}
 ompd\_rc\_t ompd\_get\_display\_control\_vars (
-  ompd\_address\_space\_handle\_t *\plc{address\_space\_handle},  /* IN */
-  const char * const *  *\plc{control\_vars}  /* OUT */
+  ompd\_address\_space\_handle\_t *\plc{address\_space\_handle}, 
+  const char * const *  *\plc{control\_vars}
 );
 \end{boxedcode}
 \cspecificend
