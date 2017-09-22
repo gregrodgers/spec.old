@@ -1130,7 +1130,8 @@ implementation defined.
 If present, the \code{hint(}\plc{hint-expression}\code{)} clause gives the implementation additional
 information about the expected properties of the atomic operation
 which can optionally be used to optimize the implementation. 
-The presence of a \code{hint} clause does not affect the isolation guarantees provided by the \code{atomic} construct.
+The presence of a \code{hint} clause does not affect the semantics of
+the \code{atomic} construct, and it is legal to ignore all hints.
 If no \code{hint} clause is specified, the effect is as if \code{hint(omp\_sync\_hint\_none)} had been specified.
 
 \needspace{16\baselineskip}\begin{samepage}
@@ -1170,11 +1171,15 @@ are required to have the same type and type parameters.
 \end{itemize}
 \end{fortranspecific}
 
-\begin{itemize}
-\item When a \code{hint} is present at the construct, all \code{atomic} constructs which
-may simultaneously access the storage locations designated by
-\plc{x} must have a hint expression that evaluates to the same value.
-\end{itemize}
+% Do we want this? I do not believe that we need it. This is not like
+% a critical section where different lock implementations might be used
+% by lexically different critical sections that name the same
+% lock. Here all implementations must inter-operate anyway.
+% \begin{itemize}
+% \item When a \code{hint} is present at the construct, all \code{atomic} constructs which
+% may simultaneously access the storage locations designated by
+% \plc{x} must have a hint expression that evaluates to the same value.
+% \end{itemize}
 
 \begin{itemize}
 \item OpenMP constructs may not be encountered during execution of an
@@ -1833,10 +1838,11 @@ type of x$_{i}$ without overflow.
 Hints about the expected dynamic behavior or suggested implementation
 can be provided by the programmer to locks (by using 
 the \code{omp\_init\_lock\_with\_hint} or
-\code{omp\_init\_nest\_lock\_with\_hint} functions to initailize the lock), and to
+\code{omp\_init\_nest\_lock\_with\_hint} functions to initialize the lock), and to
 \code{atomic} and \code{critical} directives by using the \code{hint}
 clause.  The effect of a hint is implementation-defined. The OpenMP
-implementation can ignore the hint without changing program semantics.
+implementation is free to ignore the hint since doing so cannot change
+program semantics.
 
 The C/C++ header file (\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 module file (\code{omp\_lib}) define the valid hint constants.  
 The valid constants must include the following, which can be extended with implementation-defined values:
@@ -1901,12 +1907,22 @@ restrictions results in unspecified behavior:
 The rules for combining \code{omp\_sync\_hint}s apply equally to the
 corresponding \code{omp\_lock\_hint}s, and expressions mixing the two types.
 
+The intended meaning of hints is
+\begin{itemize}
+\item \code{omp\_sync\_hint\_uncontended}: low contention is expected in this operation. 
+(Few threads are expected to be performing the operation simultaneously in a manner that requires synchronization.)
+\item \code{omp\_sync\_hint\_contended}: high contention is expected in this operation. 
+(Many threads are expected to be performing the operation simultaneously in a manner that requires synchronization.) ) 
+\item \code{omp\_sync\_hint\_speculative}: the programmer suggests that the operation should be implemented using 
+speculative techniques such as transactional memory.
+\item \code{omp\_sync\_hint\_nonspeculative}: the programmer suggests that the operation should not be 
+implemented using speculative techniques such as transactional memory.
+\end{itemize}
 \begin{note}
 The \code{omp\_sync\_hint\_t} and \code{omp\_lock\_hint\_t} enumerations (and the equivalent types in Fortran)
-are synonyms for each other which are provided to avoid any user confusion caused by using a hint which
-explicitly includes the word "lock" when dealing with a \code{atomic} construct whose implementation is not
-expected to use locks. The user is free to choose whichever spelling
-of the names she prefers.
+are synonyms for each other. However, the \code{omp\_lock} prefixed names 
+are deprecated in OpenMP 5.0 and may be removed in OpenMP 6.0. Users
+are therefore advised to use the \code{omp\_sync} versions of the names.
 
 Future OpenMP specifications may add additional hints to the
 \code{omp\_sync\_hint\_t} type and the \code{omp\_sync\_hint\_kind} kind.
@@ -1915,6 +1931,7 @@ the most significant bit of the \code{omp\_sync\_hint\_t} type and
 \code{omp\_sync\_hint\_kind} kind and to include the name of the
 implementation in the name of the added hint to avoid name conflicts 
 with other OpenMP implementations.
+
 \end{note}
 
 \crossreferences

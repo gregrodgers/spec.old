@@ -67,11 +67,11 @@ it is already owned by the task trying to set it. \emph{Simple lock} variables a
 \emph{simple locks} and can only be passed to \emph{simple lock} routines. \emph{Nestable lock} variables are 
 associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
 
-Each type of lock can also have a \emph{lock hint} that contains information about the intended usage 
-of the lock by the application code.  The effect of the lock hint is
+Each type of lock can also have a \emph{synchronization hint} that contains information about the intended usage 
+of the lock by the application code.  The effect of the hint is
 implementation defined.  An OpenMP implementation can use this hint to select a
-usage-specific lock, but lock hints do not change the mutual exclusion semantics of locks. 
-A conforming implementation can safely ignore the lock hint.
+usage-specific lock, but hints do not change the mutual exclusion semantics of locks. 
+A conforming implementation can safely ignore the hint.
 
 Constraints on the state and ownership of the lock accessed by each of the lock routines 
 are described with the routine. If these constraints are not met, the behavior of the 
@@ -215,7 +215,7 @@ A thread dispatches a registered \code{ompt\_callback\_lock\_init}
 callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event 
 in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_acquire\_t}.
 The callbacks occur in the task encountering the routine.
-The callback receives \code{omp\_lock\_hint\_none} as
+The callback receives \code{omp\_sync\_hint\_none} as
 \plc{hint} argument and
 \code{ompt\_mutex\_lock} or 
  \code{ompt\_mutex\_nest\_lock} as \plc{kind} argument as appropriate.
@@ -250,9 +250,9 @@ can ignore the hint without changing program semantics.
 \begin{ccppspecific}
 \begin{boxedcode}
 void omp\_init\_lock\_with\_hint(omp\_lock\_t *\plc{lock}, 
-                             omp\_lock\_hint\_t \plc{hint});
+                             omp\_sync\_hint\_t \plc{hint});
 void omp\_init\_nest\_lock\_with\_hint(omp\_nest\_lock\_t *\plc{lock}, 
-                                  omp\_lock\_hint\_t \plc{hint});
+                                  omp\_sync\_hint\_t \plc{hint});
 \end{boxedcode}
 \end{ccppspecific}
 
@@ -262,11 +262,11 @@ void omp\_init\_nest\_lock\_with\_hint(omp\_nest\_lock\_t *\plc{lock},
 \begin{boxedcode}
 subroutine omp\_init\_lock\_with\_hint(\plc{svar}, \plc{hint})
 integer (kind=omp\_lock\_kind) \plc{svar}
-integer (kind=omp\_lock\_hint\_kind) \plc{hint}
+integer (kind=omp\_sync\_hint\_kind) \plc{hint}
 
 subroutine omp\_init\_nest\_lock\_with\_hint(\plc{nvar}, \plc{hint})
 integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
-integer (kind=omp\_lock\_hint\_kind) \plc{hint}
+integer (kind=omp\_sync\_hint\_kind) \plc{hint}
 \end{boxedcode}
 \end{fortranspecific}
 
@@ -276,6 +276,114 @@ is non-conforming.
 
 The second argument passed to these routines (\plc{hint}) is a hint 
 as described in \specref{subsec:Synchronization Hints}.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_mutex\_acquire\_t}, see
+\specref{sec:ompt_callback_mutex_acquire_t}.
+\item Synchronization Hints, see \specref{subsec:Synchronization Hints}.
+\end{itemize}
+
+
+
+\subsection[\code{omp\_destroy\_lock} and \code{omp\_destroy\_nest\_lock}]{\code{omp\_destroy\_lock} and\\ \code{omp\_destroy\_nest\_lock}}
+\label{subsec:omp_destroy_lock and omp_destroy_nest_lock}
+\index{omp\_destroy\_lock@{\code{omp\_destroy\_lock}}}
+\index{omp\_destroy\_nest\_lock@{\code{omp\_destroy\_nest\_lock}}}
+\summary
+These routines ensure that the OpenMP lock is uninitialized.
+
+\format
+\begin{ccppspecific}
+\begin{boxedcode}
+void omp\_destroy\_lock(omp\_lock\_t *\plc{lock});
+void omp\_destroy\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{boxedcode}
+subroutine omp\_destroy\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+
+subroutine omp\_destroy\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\end{fortranspecific}
+
+\constraints
+A program that accesses a lock that is not in the unlocked state through either routine is 
+non-conforming.
+
+\effect
+The effect of these routines is to change the state of the lock to uninitialized.
+
+\events
+
+The \plc{lock-destroy} or \plc{nest-lock-destroy} event occurs in the thread 
+executing a \code{omp\_destroy\_lock} or \code{omp\_destroy\_nest\_lock} region
+before finishing the region.
+
+\tools
+
+A thread dispatches a registered \code{ompt\_callback\_lock\_destroy}
+callback for each occurrence of a \plc{lock-destroy} or \plc{nest-lock-destroy} event 
+in that thread.  This callback has the type signature \code{ompt\_callback\_mutex\_t}.
+The callbacks occur in the task encountering the routine.
+The callbacks receive \code{ompt\_mutex\_lock} or 
+ \code{ompt\_mutex\_nest\_lock} as their \plc{kind} argument as appropriate.
+
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_callback\_mutex\_t}, see 
+\specref{sec:ompt_callback_mutex_t}.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsection{\code{omp\_set\_lock} and \code{omp\_set\_nest\_lock}}
+\label{subsec:omp_set_lock and omp_set_nest_lock}
+\index{omp\_set\_lock@{\code{omp\_set\_lock}}}
+\index{omp\_set\_nest\_lock@{\code{omp\_set\_nest\_lock}}}
+\summary
+These routines provide a means of setting an OpenMP lock. The calling
+task region behaves as if it was suspended until the lock can be set
+by this task.
+
+\format
+\begin{ccppspecific}
+\begin{boxedcode}
+void omp\_set\_lock(omp\_lock\_t *\plc{lock});
+void omp\_set\_nest\_lock(omp\_nest\_lock\_t *\plc{lock});
+\end{boxedcode}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{boxedcode}
+subroutine omp\_set\_lock(\plc{svar})
+integer (kind=omp\_lock\_kind) \plc{svar}
+
+subroutine omp\_set\_nest\_lock(\plc{nvar})
+integer (kind=omp\_nest\_lock\_kind) \plc{nvar}
+\end{boxedcode}
+\end{fortranspecific}
+
+\constraints
+A program that accesses a lock that is in the uninitialized state through either routine is 
+non-conforming. A simple lock accessed by \code{omp\_set\_lock} that is in the locked state 
+must not be owned by the task that contains the call or deadlock will result.
+
+\effect
+Each of these routines has an effect equivalent to suspension of the task
+executing the routine until the specified lock is available. 
 
 \effect
 The effect of these routines is to initialize the lock to the unlocked state and, optionally, to choose a specific lock implementation based on the hint. 
