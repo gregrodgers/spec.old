@@ -4,75 +4,6 @@
 \index{directives!memory management directives}
 \index{memory management directives!memory management directives}
 
-\subsection{\code{declare alloc} Directive}
-\index{declare alloc@{\code{declare alloc}}}
-\index{directives!declare@{\code{declare alloc}}}
-\label{subsec:declare alloc Directive}
-
-\begin{ccppspecific}
-
-\summary
-
-The \code{declare alloc} directive allows to describe the behavior of function with respect to memory allocations and/or deallocations.
-
-\syntax
-
-The syntax of the \code{declare alloc} directive is as follows:
-
-\begin{boxedcode}
-#pragma omp declare alloc(\plc{[kind}:\plc{]function-name}) \plc{[clause[ [ [},\plc{] clause] ... ]]} 
-\plc{new-line}
-\end{boxedcode}
-
-where \plc{kind} is one of the following:
-\begin{indentedcodelist}
-alloc
-realloc
-dealloc
-\end{indentedcodelist}
-
-where clause is one of the following:
-\begin{indentedcodelist}
-allocate(\plc{argument}|\code{omp\_return})
-deallocate(\plc{argument})
-size(\plc{integer expression})
-error(\plc{argument}|\code{omp\_return})
-\end{indentedcodelist}
-
-\descr
-
-The \code{declare alloc} directive allows to describe how the existing \plc{function-name} function allocates and/or deallocates memory.
-
-The special array \code{omp\_args} can be used in the clauses of this directive. The size of the \code{omp\_args} array is that of the number of arguments of the \plc{function-name} function. Each element of the array represents the corresponding argument of the function and has its type. For clauses allowing an \plc{argument} to be specified, this will be an element of the \code{omp\_args} array.
-
-If the \code{alloc} \plc{kind} is specified, then calling the \plc{function-name} function can result in memory allocations. The \code{allocate} clause specifies how the user function returns the result of the allocation. If \code{omp\_return} is specified, then user function must return the allocation result as its return value. If an \plc{argument} is specified, the user function returns the allocation result by storing in the specified argument. The \code{size} clause specifies how to compute the size of the allocation request that will be made by the function. The \plc{expression} of the \code{size} clause can contain references to the \code{omp\_args} array.
-
-If the \code{dealloc} \plc{kind} is specified, then calling the \plc{function-name} function can result in memory deallocations. The \code{deallocate} clauses specifies which argument of the function contains the address of the memory to deallocate.
-
-If the \code{realloc} \plc{kind} is specified, the calling the \plc{function-name} function can result in memory allocations and deallocations.
-
-If no \plc{kind} is specified it is assumed to be the \code{alloc} kind.
-
-The \code{error} clause specifies that the user function returns a status code indicating the success or failure of the allocation or deallocation. If \code{omp\_return} is specified, then the status code must returned as the function return value. If an \plc{argument} is specified, then the status code will be returned by storing it in the specified argument.
-
-\restrictions
-\begin{itemize}
-\item If the \plc{kind} \code{alloc} or the \plc{kind} \code{realloc} is used, then one, and only one, \code{allocate} clause and one, and only one, \code{size} clause must be specified.
-\item If the \plc{kind} \code{alloc} is used, then no \code{deallocate} clause can be specified.
-\item If the \plc{kind} \code{dealloc} or the \plc{kind} \code{realloc} is used, then one, and only one, \code{deallocate} clause must be specified.
-\item If the \plc{kind} \code{dealloc} is used, then no \code{allocate} clause can be specified.
-\item If \code{omp\_return} is specified in the \code{allocate} clause then the return type of the function must be of pointer type.
-\item If a \plc{argument} is specified in the \code{allocate} clause then type of the argument must be of a pointer to a pointer type or, in C++, reference to a pointer type.
-\item The \plc{argument} of the \code{deallocate} clause must be of pointer type.
-\item If \code{omp\_return} is specified in the \code{error} clause then the return type of the function must be of integer type.
-\item If a \plc{argument} is specified in the \code{error} clause then type of the argument must be of a pointer to an integer type or, in C++, reference to an integer type.
-\item The only variable allowed in the \code{size} clause is \code{omp\_args}.
-\item No function call is allowed the \plc{expression} of the \code{size} clause.
-\end{itemize}
-
-\end{ccppspecific}
-
-
 
 \subsection{\code{allocate} Directive}
 \index{allocate@{\code{allocate}}}
@@ -89,28 +20,6 @@ The syntax of the \code{allocate} directive is as follows:
 \begin{boxedcode}
 \#pragma omp allocate(\plc{list}) \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
 \end{boxedcode}
-
-or
-
-\begin{boxedcode}
-\#pragma omp allocate \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
-   \plc{allocation-stmt}
-\end{boxedcode}
-
-\needspace{10\baselineskip}
-where \plc{clause} is one of the following:
-
-\begin{indentedcodelist}
-allocator(\plc{allocator})
-\end{indentedcodelist}
-
-where \plc{allocator} is an expression of the \code{omp\_allocator\_t *} type.
-
-where \plc{allocation-stmt} is an expression statement with one of the following form:
-\begin{codepar}
-    function(arguments);
-    expression = function(arguments);
-\end{codepar}
 
 \end{ccppspecific}
 \medskip
@@ -146,10 +55,6 @@ If the directive is not associated with a statement, the storage for each \plc{l
 
 The scope of this allocation is that of the list item in the base language. When the allocation reaches the end of the scope it will be deallocated using the same memory allocator used for the allocation. If the execution leaves the scope in a manner not supported by the base language it is unspecified whether the deallocation happens or not.
 
-\begin{ccppspecific}
-If the directive is associated with an \plc{allocation-stmt}, then the call to \plc{function} in the statement will be replaced by a request to a memory allocator using the arguments the function according to the specification of the \code{declare alloc} directive for \plc{function}. The result of the allocation requests will be stored as if the \plc{function} had been called according to the specification of the \code{declare alloc} directive for \plc{function}.
-\end{ccppspecific}
-
 \begin{fortranspecific}
 If the directive is associated with an \code{allocate} statement, the allocation of the specified list items will be provided through an allocator. If no list item is specified then all variables allocated by the \code{allocate} statement will be provided by the allocator.
 \end{fortranspecific}
@@ -160,7 +65,6 @@ If the directive is associated with an \code{allocate} statement, the allocation
 \item The directive must appear in the same scope of the \plc{list item} declaration and before its first use.
 \item At most one \code{allocator} clause can appear on the \code{allocate} directive.
 \begin{ccppspecific}
-\item If the directive is associated with an \plc{allocation-stmt}, the \plc{function} must appear in a previous \code{declare alloc} directive and the \plc{kind} must be either \code{alloc} or \code{realloc}.
 \item If a list item has a static storage type, only predefined memory allocator variables can be used in the \code{allocator} clause.
 \end{ccppspecific}
 \begin{fortranspecific}
@@ -176,61 +80,6 @@ If the directive is associated with an \code{allocate} statement, the allocation
 \item \code{omp\_allocator\_t} and \code{omp\_allocator\_kind}, see \specref{subsec:Memory Management Types}.
 \item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \end{itemize}
-
-\subsection{The \code{deallocate} Directive}
-\index{deallocate@{\code{deallocate}}}
-\index{directives!deallocate@{\code{deallocate}}}
-\label{subsec:deallocate Directive}
-
-\begin{ccppspecific}
-
-\summary
-
-The \code{deallocate} directive replaces a user function with a deallocation request to a memory allocator.
-
-\syntax
-The syntax of the \code{deallocate} directive is as follows:
-
-\begin{boxedcode}
-\#pragma omp deallocate \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
-   \plc{deallocation-stmt}
-\end{boxedcode}
-
-\needspace{10\baselineskip}
-
-where \plc{clause} is one of the following:
-
-\begin{indentedcodelist}
-allocator(\plc{allocator})
-\end{indentedcodelist}
-
-where \plc{allocator} is an expression of the \code{omp\_allocator\_t *} type,
-
-where \plc{allocation-stmt} is an expression statement of the following form:
-\begin{codepar}
-    function(arguments);
-\end{codepar}
-
-
-\descr
-
-The \plc{deallocation-stmt} associated with the construct will be replaced by a deallocation request to a memory allocator will be replaced by a request to a memory allocator using the arguments the function according to the specification of the \code{declare alloc} directive for \plc{function}. 
-
-If no \code{allocator} clause is specified the memory allocator used to allocate the memory being deallocated will be used. If the \code{allocator} clause is specified, the memory allocator specified in the clause will be used. Specifying a memory allocator in the \code{allocator} clause different than the one used to allocate the memory being deallocated results in undefined behavior.
-
-\restrictions
-\begin{itemize}
-\item At most one \code{allocator} clause can appear on the \code{deallocate} directive.
-\item If the directive is associated with an \plc{allocation-stmt}, the \plc{function} must appear in a previous \code{declare alloc} directive and \plc{kind} must be \code{deallocate}.
-\end{itemize}
-
-\crossreferences
-\begin{itemize}
-\item Memory allocators, see \specref{sec:Memory Allocators}.
-\item \code{omp\_allocator\_t} and \code{omp\_allocator\_kind}, see \specref{subsec:Memory Management Types}.
-\end{itemize}
-
-\end{ccppspecific}
 
 \subsection{The \code{allocate} Clause}
 \index{allocate@{\code{allocate}}}
