@@ -6,7 +6,7 @@
 /* Kinds of device device address spaces */
 #define OMPD_DEVICE_KIND_HOST     ((ompd_device_kind_t)1)
 #define OMPD_DEVICE_KIND_CUDA     ((ompd_device_kind_t)2)
-/* More devices... */
+/* The range of non-standard implementation defined values */
 #define OMPD_DEVICE_IMPL_LO       ((ompd_device_kind_t)1000000)
 #define OMPD_DEVICE_IMPL_HI       ((ompd_device_kind_t)1100000)
 
@@ -15,7 +15,7 @@
 #define OMPD_OSTHREAD_LWP         ((ompd_osthread_kind_t)2)
 #define OMPD_OSTHREAD_WINTHREAD   ((ompd_osthread_kind_t)3)
 #define OMPD_OSTHREAD_CUDALOGICAL ((ompd_osthread_kind_t)4)
-/* More thread types... */
+/* The range of non-standard implementation defined values */
 #define OMPD_OSTHREAD_IMPL_LO       ((ompd_osthread_kind_t)1000000)
 #define OMPD_OSTHREAD_IMPL_HI       ((ompd_osthread_kind_t)1100000)
 
