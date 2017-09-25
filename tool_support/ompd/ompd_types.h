@@ -13,6 +13,7 @@ typedef uint64_t ompd_device_kind_t;
 
 /* Kinds of device threads  */
 typedef uint64_t ompd_osthread_kind_t;
+
 #define OMPD_OSTHREAD_PTHREAD 0
 #define OMPD_OSTHREAD_LWP 1
 #define OMPD_OSTHREAD_WINTHREAD 2
