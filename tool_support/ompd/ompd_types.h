@@ -4,7 +4,6 @@
 #include "ompd.h"
 
 /* Kinds of device device address spaces */
-#define OMPD_DEVICE_FIRST         ((ompd_device_kind_t)1)
 #define OMPD_DEVICE_KIND_HOST     ((ompd_device_kind_t)1)
 #define OMPD_DEVICE_KIND_CUDA     ((ompd_device_kind_t)2)
 /* More devices... */
@@ -12,18 +11,13 @@
 #define OMPD_DEVICE_IMPL_HI       ((ompd_device_kind_t)1100000)
 
 /* Kinds of device threads  */
-typedef uint64_t ompd_osthread_kind_t;
-
-/* Valid entries for OMPD_OSTHREAD are between OMPD_OSTHREAD_FIRST
- * and OMPD_DEVICE_LAST
- */
-#define OMPD_OSTHREAD_FIRST       ((ompd_device_kind_t)1)
 #define OMPD_OSTHREAD_PTHREAD     ((ompd_device_kind_t)1)
 #define OMPD_OSTHREAD_LWP         ((ompd_device_kind_t)2)
 #define OMPD_OSTHREAD_WINTHREAD   ((ompd_device_kind_t)3)
 #define OMPD_OSTHREAD_CUDALOGICAL ((ompd_device_kind_t)4)
 /* More thread types... */
-#define OMPD_OSTHREAD_RESERVED    ((ompd_device_kind_t)1000000)
+#define OMPD_OSTHREAD_IMPL_LO       ((ompd_device_kind_t)1000000)
+#define OMPD_OSTHREAD_IMPL_HI       ((ompd_device_kind_t)1100000)
 
 /* Target device-specific thread identification */
 typedef struct ompd_dim3_t {
@@ -64,3 +58,6 @@ typedef struct ompd_cudathread_coord_t {
 #define OMPD_SEGMENT_CUDA_PTX_OPARAM         ((ompd_seg_t)14)
 #define OMPD_SEGMENT_CUDA_PTX_FRAME          ((ompd_seg_t)15)
 #define OMPD_SEGMENT_CUDA_PTX_MAX            ((ompd_seg_t)16)
+
+#define OMPD_SEGMENT_IMPL_LO       ((ompd_device_kind_t)1000000)
+#define OMPD_SEGMENT_IMPL_HI       ((ompd_device_kind_t)1100000)
