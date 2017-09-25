@@ -41,7 +41,7 @@ typedef struct ompd_cudathread_coord_t {
 /* Memory Access Segment definitions for Host and Target Devices */
 #define OMPD_SEGMENT_UNSPECIFIED             ((ompd_seg_t)0)
 
-/* Cuda-specific values consistent with those defined in cudadebugger.h *
+/* Cuda-specific values consistent with those defined in cudadebugger.h */
 #define OMPD_SEGMENT_CUDA_PTX_UNSPECIFIED    ((ompd_seg_t)0)
 #define OMPD_SEGMENT_CUDA_PTX_CODE           ((ompd_seg_t)1)
 #define OMPD_SEGMENT_CUDA_PTX_REG            ((ompd_seg_t)2)
