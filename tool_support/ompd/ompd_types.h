@@ -57,7 +57,4 @@ typedef struct ompd_cudathread_coord_t {
 #define OMPD_SEGMENT_CUDA_PTX_IPARAM         ((ompd_seg_t)13)
 #define OMPD_SEGMENT_CUDA_PTX_OPARAM         ((ompd_seg_t)14)
 #define OMPD_SEGMENT_CUDA_PTX_FRAME          ((ompd_seg_t)15)
-#define OMPD_SEGMENT_CUDA_PTX_MAX            ((ompd_seg_t)16)
 
-#define OMPD_SEGMENT_IMPL_LO       ((ompd_device_kind_t)1000000)
-#define OMPD_SEGMENT_IMPL_HI       ((ompd_device_kind_t)1100000)
