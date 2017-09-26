@@ -8,6 +8,7 @@
 
 #define OMPD_TYPES_VERSION_MAJOR  5
 #define OMPD_TYPES_VERSION_MINOR  0
+#define OMPD_TYPES_VERSION_DATE   20171112
 
 /* Kinds of device threads  */
 #define OMPD_OSTHREAD_PTHREAD     ((ompd_osthread_kind_t)1)
