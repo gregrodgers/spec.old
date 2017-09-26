@@ -618,9 +618,9 @@ The following ICVs store values that affect default memory allocation.
 
 \begin{itemize}
 
-\item \plc{def-allocator-var} - determines the memory allocator to be used by memory allocation routines, directives and clauses when a memory allocator is not specified by the user except for those determined by the \plc{target-def-allocator-var} ICV.
+\item \plc{def-allocator-var} - determines the memory allocator to be used by memory allocation routines, directives and clauses when a memory allocator is not specified by the user except those cases determined by the \plc{target-def-allocator-var} ICV. There is one copy of this ICV per implicit task.
 
-\item \plc{target-def-allocator-var} - determines the memory allocator to be used by the target construct and its clauses when a memory allocator is not specified by the user.
+\item \plc{target-def-allocator-var} - determines the memory allocator to be used by the target directive and its clauses when a memory allocator is not specified by the user. There is one copy of this ICV per implicit task.
 
 \end{itemize}
 
@@ -939,8 +939,8 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \plc{max-task-priority-var} & global\\
 \plc{tool-var} & global\\
 \plc{tool-libraries-var} & global\\
-\plc{def-allocator-var} & thread\\
-\plc{def-target-allocator-var} & thread\\
+\plc{def-allocator-var} & implicit task\\
+\plc{def-target-allocator-var} & implicit task\\
 \end{supertabular}
 \renewcommand{\arraystretch}{1.5} % restore the previous value
 
@@ -951,8 +951,6 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \item Each data environment has its own copies of ICVs with data environment scope
 
 \item Each implicit task has its own copy of ICVs with implicit task scope 
-
-\item Each thread has its own copy of ICVs with thread scope 
 \end{itemize}
 
 Calls to OpenMP API routines retrieve or modify data environment scoped ICVs in the 
@@ -1186,7 +1184,7 @@ Restrictions to array sections are as follows:
 \label{sec:Memory Allocators}
 \index{memory allocators}
 
-OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive virtual memory in its associated storage resources of at least the size being requested. This allocation will not alias with any other previous allocation from an OpenMP allocator. Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators. The use of a given memory allocator expresses an intent to use storage with certain traits for the allocations. The actual storage resources that each memory allocator will use its implementation defined.
+OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive memory in its associated storage resources of at least the size being requested. This allocation will not alias with any other existing allocation from an OpenMP memory allocator. Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators. The use of a given memory allocator expresses an intent to use storage with certain traits for the allocations. The actual storage resources that each memory allocator will use are implementation defined.
 
 \nolinenumbers
 \renewcommand{\arraystretch}{1.5}
@@ -1208,17 +1206,16 @@ OpenMP memory allocators can be used by a program to make allocation requests. W
 \tablelasttail{\hline}
 \tablecaption{Predefined Allocators\label{tab:Predefined Allocators}}
 \begin{supertabular}{p{2.1in}p{3in}}
-\code{omp\_default\_mem\_alloc} & Use \plc{default} storage for allocations.\\
-\code{omp\_large\_mem\_alloc} & Use storage with large capacity.\\
+\code{omp\_default\_mem\_alloc} & Use default storage for allocations.\\
+\code{omp\_high\_cap\_mem\_alloc} & Use storage with a high capacity.\\
 \code{omp\_const\_mem\_alloc} & Use storage optimized for read-only variables. The result of writing to memory returned by this memory allocator is unspecified.\\
 \code{omp\_high\_bw\_mem\_alloc} & Use storage with high bandwidth.\\
 \code{omp\_low\_lat\_mem\_alloc} & Use storage with low latency.\\
-\code{omp\_team\_local\_mem\_alloc} & Use storage that is close to the \plc{team} requesting the allocation. Trying to access the memory returned by this allocator from a thread that is not part of the team that allocated the memory results in unspecified behavior.\\
-\code{omp\_thread\_local\_mem\_alloc} & Use storage that is close to the \plc{thread} requesting the allocation. Trying to access the memory returned by this allocator from a thread other than the one that allocated the memory results in unspecified behavior.\\
-\code{omp\_low\_prio\_mem\_alloc} & Use storage considered as non-critical.\\ 
+\code{omp\_team\_local\_mem\_alloc} & Use storage that is close to the \plc{team} requesting the allocation. Attempts to access the memory returned by this allocator from a thread that is not part of the team that allocated the memory results in unspecified behavior.\\
+\code{omp\_thread\_local\_mem\_alloc} & Use storage that is close to the \plc{thread} requesting the allocation. Attempts to access the memory returned by this allocator from a thread other than the one that allocated the memory results in unspecified behavior.\\
 \end{supertabular}
 
-For memory allocators other than \code{omp\_team\_local\_mem\_alloc} and \code{omp\_thread\_local\_mem\_alloc} the returned memory must be accessible by all threads in the device where the allocation was requested. The allocator will return the value zero if fails to allocate the requested memory.
+For memory allocators other than \code{omp\_team\_local\_mem\_alloc} and \code{omp\_thread\_local\_mem\_alloc} the returned memory must be accessible by all threads in the device where the allocation was requested. %The allocator will return the value zero it fails to allocate the requested memory.
 
 \begin{fortranspecific}
 If any operation of the base language causes a reallocation of an array that is allocated with a memory allocator then that memory allocator will be used to release the current memory and to allocate the new memory.
