@@ -2,13 +2,19 @@
 \subsection{OMPD Tool Interface Routines}
 \label{sec:ompd-api}
 
-\ompdsubsection{Per OMPD Library Initialization}
+\ompdsubsection{Per OMPD Library Initialization and Finalization}
 
 The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
 before it is unloaded. Per OpenMP process or core file initialization and finalization are also required. 
 A tool starts the initialization by calling \code{ompd\_initialize}. Once loaded, the 
 tool can determine the version of the OMPD API supported by the plugin by 
-calling \code{ompd\_get\_version}:
+calling \code{ompd\_get\_version}.
+
+\ompdcallbacksignature{\code{ompd\_get\_version}}
+\label{ompd:ompd_get_version}
+
+\summary
+The \code{ompd\_get\_version} function returns the OMPD API version.
 
 \format
 \vbox{
@@ -22,8 +28,14 @@ ompd_rc_t ompd_get_version(int *\plc{version});
 %On success this should return \code{ompd\_rc\_ok}; \code{ompd\_rc\_bad\_input} indicates that 
 %the 
 %argument is invalid. Other errors could be reported by \code{ompd\_rc\_error}.
-A descriptive string describing the OMPD library is returned by the function 
-\code{ompd\_get\_version\_string}:
+%A descriptive string describing the OMPD library is returned by the function 
+%\code{ompd\_get\_version\_string}:
+
+\ompdcallbacksignature{\code{ompd\_get\_version\_string}}
+\label{ompd:ompd_get_version_string}
+
+\summary
+The \code{ompd\_get\_version\_string} function returns a descriptive string for the OMPD API version.
 
 \format
 \vbox{
@@ -47,11 +59,11 @@ prototypes in the rest of the API do not carry the same guarantee. Therefore an 
 should check the version of the API of a loaded OMPD library before calling any other function of 
 the API.
 
-The tool must provide the OMPD library with a set of callback functions 
-that enable OMPD to allocate and deallocate memory in the tool's address space, to lookup the 
-sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and 
-write memory in the device. These callback functions are provided to the OMPD library via a 
-table---a list of function pointers---of type \code{ompd\_callbacks\_t}.
+\ompdcallbacksignature{\code{ompd\_initialize}}
+\label{ompd:ompd_initialize}
+
+\summary
+The \code{ompd\_initialize} function initializes the OMPD library.
 
 \format
 \vbox{
@@ -61,6 +73,12 @@ ompd_rc_t ompd_initialize(const ompd_callbacks_t *\plc{callbacks});
 \end{boxedcode}
 \cspecificend
 }
+
+The tool must provide the OMPD library with a set of callback functions 
+that enable OMPD to allocate and deallocate memory in the tool's address space, to lookup the 
+sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and 
+write memory in the device. These callback functions are provided to the OMPD library via a 
+table---a list of function pointers---of type \code{ompd\_callbacks\_t}.
 
 %On success, \code{ompd\_initialize} returns \code{ompd\_rc\_ok}. If the \code{data} argument is 
 %invalid, \code{ompd\_rc\_bad\_input} should be returned. All other errors will be reported by 
@@ -110,7 +128,6 @@ and give the OMPD library an opportunity to release any
 resources it may have related to the handle.
 \end{comment}
 
-
 \crossreferences
 \begin{itemize}
 	\item
@@ -119,9 +136,10 @@ resources it may have related to the handle.
 	\code{ompd\_callbacks\_t}, \specref{ompd:ompd_callbacks_t}
 \end{itemize}
 
+\ompdcallbacksignature{\code{ompd\_finalize}}
+\label{ompd:ompd_finalize}
 
-\ompdsubsection{Per OMPD Library Finalization}
-
+\summary
 When the tool is finished with the OMPD library it should call \code{ompd\_finalize} before 
 unloading the library.
 
@@ -134,6 +152,7 @@ ompd_rc_t ompd_finalize(void);
 \cspecificend
 }
 
+\descr
 This must be the last call the tool makes to the library before
 unloading it. The call to \code{ompd\_finalize} gives the OMPD library a chance to
 free up any remaining resources it may be holding.
