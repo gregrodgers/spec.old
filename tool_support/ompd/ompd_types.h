@@ -1,14 +1,13 @@
 /*
 * @@name:	ompd_types.h
 */
+#ifndef __OPMD_TYPES_H
+#define __OPMD_TYPES_H
+#include "omp_types.h"
 #include "ompd.h"
 
-/* Kinds of device device address spaces */
-#define OMPD_DEVICE_KIND_HOST     ((ompd_device_kind_t)1)
-#define OMPD_DEVICE_KIND_CUDA     ((ompd_device_kind_t)2)
-/* The range of non-standard implementation defined values */
-#define OMPD_DEVICE_IMPL_LO       ((ompd_device_kind_t)1000000)
-#define OMPD_DEVICE_IMPL_HI       ((ompd_device_kind_t)1100000)
+#define OMPD_TYPES_VERSION_MAJOR  5
+#define OMPD_TYPES_VERSION_MINOR  0
 
 /* Kinds of device threads  */
 #define OMPD_OSTHREAD_PTHREAD     ((ompd_osthread_kind_t)1)
@@ -58,4 +57,4 @@ typedef struct ompd_cudathread_coord_t {
 #define OMPD_SEGMENT_CUDA_PTX_IPARAM         ((ompd_seg_t)13)
 #define OMPD_SEGMENT_CUDA_PTX_OPARAM         ((ompd_seg_t)14)
 #define OMPD_SEGMENT_CUDA_PTX_FRAME          ((ompd_seg_t)15)
-
+#endif
