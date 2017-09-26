@@ -1,0 +1,236 @@
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of 
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+
+\section{\code{independent} Construct}
+\index{independent@{\code{independent}}}
+\index{constructs!independent@{\code{independent}}}
+\label{sec:independent Construct}
+\summary
+An independent construct specifies that the iterations of one or more
+associated loops are free of cross-iteration data dependencies and
+synchronizations to protect against data races. An implementation may choose
+to use this assertion to optimize and/or parallelize the iterations of the
+associated loop or loops above and beyond what is specified using OpenMP
+worksharing. The independent construct is a declarative directive, which
+asserts information to the compiler but provides no guaranteed semantics for
+parallelizing the iterations of the associated loops.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{independent} construct is as follows:
+\begin{boxedcode}
+\#pragma omp independent \plc{[clause[ [},\plc{] clause] ... ] new-line}
+   \plc{structured-block}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+private(\plc{list})
+firstprivate(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
+\end{indentedcodelist}
+The \code{independent} directive places restrictions on the structure of all associated \plc{for-loops}. 
+Specifically, all associated \plc{for-loops} must have \emph{canonical loop form} (see 
+\specref{sec:Canonical Loop Form}).
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{independent} construct is as follows:
+
+\begin{boxedcode}
+!\$omp independent \plc{[clause[ [},\plc{] clause] ... ]}
+   \plc{structured-block}
+[!\$omp end independent]
+\end{boxedcode}
+
+\begin{samepage}
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+private(\plc{list})
+firstprivate(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
+\end{indentedcodelist}
+\end{samepage}
+
+If an \code{end}~\code{independent} directive is not specified, an
+  \code{end}~\code{independent} directive is assumed at the end of the 
+\plc{do-loops}.
+
+Any associated \plc{do-loop} must be a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If
+an \code{end}~\code{independent} directive follows a \plc{do-construct} in
+which several loop statements share a \code{DO} termination statement,
+then the directive can only be specified for the outermost of these
+\code{DO} statements.
+
+If any of the loop iteration variables would otherwise be shared, they are implicitly 
+  made private on the \code{independent} construct.
+\end{fortranspecific}
+
+Loop induction variables for the associated loop(s) are firstprivate by
+default.
+
+If a private or firstprivate clause appears on the \code{independent} construct then
+if an implementation chooses to parallelize the associated loops, the loop
+iteration variables must be private to the team, thread, and/or simd lane that
+executes the loop iteration.
+
+If a reduction clause appears on the \code{independent} construct and an
+implementation chooses to parallelize the associated loops it must perform a
+parallel reduction with respect to the parallel execution units (teams,
+threads, or SIMD lanes) used to execute the loop iterations.
+
+
+\binding
+The binding for a given \code{independent} region is determined by the implementation.
+If the implementation distributes the associated loop iterations across teams
+defined by an enclosing teams region, the binding is as described for the
+\code{distribute} construct. If the implementation the workshares the associated loop
+iterations across threads in the team of an enclosing \code{parallel} region, the
+binding is as described for the loop construct. If the implementation
+determines the the associated loop can be transformed into a SIMD loop, the
+binding is as described for the SIMD construct. An implementation may choose
+not to distribute, workshare, or SIMD vectorize the associated loops, in which
+case the binding is inherited from the nearest enclosing distribute, loop, or
+SIMD construct.
+
+\descr
+The \code{independent} construct is associated with a loop nest consisting of one more
+more loops that follow the directive. The construct asserts that all iterations
+of the associated loop nest are independent with respect to each other; that is
+to say they are guaranteed to be free of cross-iteration data dependencies and
+data races. 
+
+If more than one thread encounters an \code{independent} construct the compiler will
+ensure that each iteration of the corresponding loops is executed exactly once.
+
+An implementation may choose to treat an \code{independen} construct as a
+\code{distribute},
+Loop, and/or SIMD construct if it would be legal for a programmer to have
+explicitly specified the selected construct. If the implementation chooses to
+treat an \code{independent} construct as one of these constructs then the default data
+sharing and binding will be as-if the programmer had specified the
+implicitly-added construct.
+
+The \code{levels} clause may be used to specify how many loops are associated with the
+\code{independent} construct. The parameter of the \code{levels} clause must be
+a constant positive integer expression. If a \code{levels} clause is present then for the next N
+tightly-nested loops all iterations of the loops are independent of all other
+iterations in the combined iteration space of the associated loops. 
+
+If a \code{private} or \code{firstprivate} clause appears on the
+\code{independent} construct and if
+an implementation chooses to parallelize the associated loops, the variables
+specified within the \code{private} or \code{firstprivate} clause must be privatized to the team, thread,
+and/or simd lane that executes the loop iteration.
+
+An \code{independent} construct may be nested within other OpenMP regions, but does
+not increase the nesting level, as defined in [add crossref]. [Should we
+restrict the nesting to only particular constructs for the first
+implementation?]
+
+\restrictions
+Restrictions to the \code{independent} construct are as follows:
+
+\begin{itemize}
+  \item All loops associated with the independent construct must be perfectly
+    nested; that is, there must be no intervening code nor any OpenMP directive
+    between any two loops.
+    
+  \item An implementation may not generate additional thread teams or threads
+    as the result of an independent construct.
+
+  \item Only one levels clause can appear on an independent directive.
+  
+  \item The region generated by an independent construct may not contain a
+    critical, single, master, or barrier construct, or any OpenMP lock
+    routines.
+  
+  \item The region generated by an independent construct may not contain device
+    directives.
+    
+  \item The region generated by an independent construct may not contain task
+    generating or task synchronization constructs.
+    
+  \item An independent construct may not be orphaned.
+
+\end{itemize}
+
+\begin{ccppspecific}
+\begin{itemize}
+    
+  \item The associated for-loops must be structured blocks.
+
+  \item No statement can branch to any associated independent statement.
+
+\end{itemize}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{itemize}
+    
+  \item The associated do-loops must be structured blocks.
+    
+  \item No statement in the associated loops other than the DO statements can cause
+    a branch out of the loops.
+
+
+\end{itemize}
+\end{fortranspecific}
+
+\crossreferences
+\begin{itemize}
+  \item The Loop construct, see \specref{sec:Loop Construct}.
+
+  \item \code{distribute} constrict, see \specref{sec:distribute Construct}.
+
+  \item SIMD constructs, see \specref{sec:SIMD Constructs}.
+
+
+\end{itemize}
+%% \pagebreak
