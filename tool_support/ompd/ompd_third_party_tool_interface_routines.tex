@@ -499,6 +499,62 @@ team size returned by a call to \code{ompd\_get\_num\_threads}.
 %\end{itemize}
 
 
+\ompdcallbacksignature{\code{ompd\_get\_thread\_handle}}
+\label{ompd:ompd_get_thread_handle}
+\summary
+Mapping a native thread to an OMPD thread handle.
+\format
+\cspecificstart
+\begin{boxedcode}
+	ompd\_rc\_t ompd\_get\_thread\_handle(
+	ompd\_address\_space\_handle\_t   *\plc{handle}, 
+	ompd\_thread\_id\_kind\_t           \plc{kind},
+	ompd\_size\_t                    \plc{sizeof\_thread\_id}, 
+	const void                    *\plc{thread\_id}, 
+	ompd\_thread\_handle\_t         **\plc{thread\_handle}
+	);
+\end{boxedcode}
+\cspecificend
+
+\descr
+OMPD provides the function \code{ompd\_get\_thread\_handle}
+to inquire whether a native thread is an OpenMP
+thread or not.
+%If the function returns \code{ompd\_rc\_ok},
+On success, the thread identifier is an OpenMP thread and \code{*thread\_handle}
+is initialized to a pointer to the thread handle for the OpenMP thread.
+
+\argdesc
+
+
+The input argument \plc{handle} is an opaque handle provided by the tool
+to reference to an address space.
+The input arguments \plc{kind},  \plc{sizeof\_thread\_id}, and \plc{thread\_id} represent a
+thread identifier. 
+On return the output argument \plc{thread\_handle} provides an opaque handle to the
+tool for thread within the provided address space.
+
+The thread identifier \plc{*thread\_id} is guaranteed to be valid for the duration of the call. If the 
+OMPD library needs to retain the thread identifier it must copy it.
+
+%\The thread handle \plc{*thread\_handle} returned by the OMP implementation
+%is `owned' by the debugger, which must release it by calling
+%\code{ompd\_release\_thread\_handle}.
+%If \plc{os\_thread} does not refer to an OpenMP thread,
+%\code{ompd\_get\_thread\_handle} returns \code{ompd\_rc\_bad\_input}
+%and \plc{*thread\_handle} is also set to NULL.
+
+
+
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{ompd:ompd_address_space_handle_t}.
+	\item \code{ompd\_thread\_id\_kind\_t} type, see \specref{ompd:ompd_thread_id_kind_t}.
+	\item \code{ompd\_size\_t} type, see \specref{ompd:ompd_size_t}.
+	\item \code{ompd\_thread\_handle\_t} type, see \specref{ompd:ompd_thread_handle_t}.
+\end{itemize}
+
 \ompdcallbacksignature{\code{ompd\_release\_thread\_handle}}
 \label{ompd:ompd_release_thread_handle}
 \summary
@@ -625,6 +681,54 @@ On return the output argument \plc{string\_id} is set to a string representation
 \crossreferences
 \begin{itemize}
 	\item \code{ompd\_thread\_handle\_t} type, see \specref{ompd:ompd_thread_handle_t}.
+\end{itemize}
+
+\ompdcallbacksignature{\code{ompd\_get\_thread\_id}}
+\label{ompd:ompd_get_thread_id}
+\summary
+Mapping an OMPD thread handle to a native thread.
+\format
+\cspecificstart
+\begin{boxedcode}
+	ompd\_rc\_t ompd\_get\_thread\_id(
+	ompd\_thread\_handle\_t *\plc{thread\_handle}, 
+	ompd\_thread\_id\_kind\_t \plc{kind}, 
+	ompd\_size\_t \plc{sizeof\_thread\_id}, 
+	void  *\plc{thread\_id} 
+	);
+\end{boxedcode}
+\cspecificend
+
+\descr
+\code{ompd\_get\_thread\_id} performs the mapping between an OMPD
+thread handle and a thread identifier.
+
+\argdesc
+
+The input argument \plc{thread\_handle} is an opaque thread handle.
+The input argument  \plc{kind} represents the thread
+identifier. The input argument \plc{sizeof\_thread\_id} represents the size of the 
+thread identifier. The output argument \plc{thread\_id} is a buffer that represents a thread identifier.
+
+%It also passes a pointer to the buffer into which the OMPD
+%implementation writes the operating system-specific thread identifier,
+%and the size of the buffer, to the OMPD library.
+%The buffer is owned by the debugger.
+
+%On success \code{ompd\_get\_thread_id} returns \code{rc\_ok},
+%and returns the operating system-specific thread identifier in
+%\plc{*thread_id}.
+%If the operation fails, the OMPD library returns
+%the appropriate value from \code{ompd\_rc\_t}.
+%Note that the operation should fail if the OMPD library is
+%unable to return an operating system-specific identifier of the
+%requested `kind' or size.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd\_thread\_handle\_t} type, see \specref{ompd:ompd_thread_handle_t}.
+	\item \code{ompd\_thread\_id\_kind\_t} type, see \specref{ompd:ompd_thread_id_kind_t}.
+	\item \code{ompd\_size\_t} type, see \specref{ompd:ompd_size_t}.
 \end{itemize}
 
 \ompdsubsection{Parallel Region Handles}
@@ -1208,6 +1312,8 @@ ompd\_rc\_t ompd\_get\_level (
 \cspecificend
 
 \descr
+\code{ompd\_get\_level} returns the number of nested
+parallel regions enclosing the parallel region specified by its handle.
 
 \argdesc
 The input argument \plc{task\_handle} is an opaque handle for a task and selects the task to operate on.
@@ -1712,110 +1818,6 @@ Section~\ref{stack-unwinding:sec}.
 \begin{itemize}
 	\item \code{ompd\_task\_handle\_t} type, see \specref{ompd:ompd_task_handle_t}.
 	\item \code{ompd\_address\_t} type, see \specref{ompd:ompd_address_t}.
-\end{itemize}
-
-\ompdcallbacksignature{\code{ompd\_get\_thread\_handle}}
-\label{ompd:ompd_get_thread_handle}
-\summary
-Mapping a native thread to an OMPD thread handle.
-\format
-\cspecificstart
-\begin{boxedcode}
-ompd\_rc\_t ompd\_get\_thread\_handle(
-  ompd\_address\_space\_handle\_t   *\plc{handle}, 
-  ompd\_thread\_id\_kind\_t           \plc{kind},
-  ompd\_size\_t                    \plc{sizeof\_thread\_id}, 
-  const void                    *\plc{thread\_id}, 
-  ompd\_thread\_handle\_t         **\plc{thread\_handle}
-);
-\end{boxedcode}
-\cspecificend
-
-\descr
-OMPD provides the function \code{ompd\_get\_thread\_handle}
-to inquire whether a native thread is an OpenMP
-thread or not.
-%If the function returns \code{ompd\_rc\_ok},
-On success, the thread identifier is an OpenMP thread and \code{*thread\_handle}
-is initialized to a pointer to the thread handle for the OpenMP thread.
-
-\argdesc
-
-
-The input argument \plc{handle} is an opaque handle provided by the tool
-to reference to an address space.
-The input arguments \plc{kind},  \plc{sizeof\_thread\_id}, and \plc{thread\_id} represent a
-thread identifier. 
-On return the output argument \plc{thread\_handle} provides an opaque handle to the
-tool for thread within the provided address space.
-
-The thread identifier \plc{*thread\_id} is guaranteed to be valid for the duration of the call. If the 
-OMPD library needs to retain the thread identifier it must copy it.
-
-%\The thread handle \plc{*thread\_handle} returned by the OMP implementation
-%is `owned' by the debugger, which must release it by calling
-%\code{ompd\_release\_thread\_handle}.
-%If \plc{os\_thread} does not refer to an OpenMP thread,
-%\code{ompd\_get\_thread\_handle} returns \code{ompd\_rc\_bad\_input}
-%and \plc{*thread\_handle} is also set to NULL.
-
-
-
-
-\crossreferences
-\begin{itemize}
-	\item \code{ompd\_address\_space\_handle\_t} type, see \specref{ompd:ompd_address_space_handle_t}.
-	\item \code{ompd\_thread\_id\_kind\_t} type, see \specref{ompd:ompd_thread_id_kind_t}.
-	\item \code{ompd\_size\_t} type, see \specref{ompd:ompd_size_t}.
-	\item \code{ompd\_thread\_handle\_t} type, see \specref{ompd:ompd_thread_handle_t}.
-\end{itemize}
-
-\ompdcallbacksignature{\code{ompd\_get\_thread\_id}}
-\label{ompd:ompd_get_thread_id}
-\summary
-Mapping an OMPD thread handle to a native thread.
-\format
-\cspecificstart
-\begin{boxedcode}
-ompd\_rc\_t ompd\_get\_thread\_id(
-  ompd\_thread\_handle\_t *\plc{thread\_handle}, 
-  ompd\_thread\_id\_kind\_t \plc{kind}, 
-  ompd\_size\_t \plc{sizeof\_thread\_id}, 
-  void  *\plc{thread\_id} 
-);
-\end{boxedcode}
-\cspecificend
-
-\descr
-\code{ompd\_get\_thread\_id} performs the mapping between an OMPD
-thread handle and a thread identifier.
-
-\argdesc
-
-The input argument \plc{thread\_handle} is an opaque thread handle.
-The input argument  \plc{kind} represents the thread
-identifier. The input argument \plc{sizeof\_thread\_id} represents the size of the 
-thread identifier. The output argument \plc{thread\_id} is a buffer that represents a thread identifier.
-
-%It also passes a pointer to the buffer into which the OMPD
-%implementation writes the operating system-specific thread identifier,
-%and the size of the buffer, to the OMPD library.
-%The buffer is owned by the debugger.
-
-%On success \code{ompd\_get\_thread_id} returns \code{rc\_ok},
-%and returns the operating system-specific thread identifier in
-%\plc{*thread_id}.
-%If the operation fails, the OMPD library returns
-%the appropriate value from \code{ompd\_rc\_t}.
-%Note that the operation should fail if the OMPD library is
-%unable to return an operating system-specific identifier of the
-%requested `kind' or size.
-
-\crossreferences
-\begin{itemize}
-	\item \code{ompd\_thread\_handle\_t} type, see \specref{ompd:ompd_thread_handle_t}.
-	\item \code{ompd\_thread\_id\_kind\_t} type, see \specref{ompd:ompd_thread_id_kind_t}.
-	\item \code{ompd\_size\_t} type, see \specref{ompd:ompd_size_t}.
 \end{itemize}
 
 
