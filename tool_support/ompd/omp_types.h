@@ -1,11 +1,12 @@
 /*
 * @@name:	omp_types.h
 */
-#ifndef __OPM_TYPES_H
-#define __OPM_TYPES_H
+#ifndef __OMP_TYPES_H
+#define __OMP_TYPES_H
 
 #define OMP_TYPES_VERSION_MAJOR  5
 #define OMP_TYPES_VERSION_MINOR  0
+#define OMP_TYPES_VERSION_DATE   20171112
 
 /* Kinds of device device address spaces */
 #define OMP_DEVICE_KIND_HOST     ((omp_device_kind_t)1)
