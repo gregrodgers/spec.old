@@ -6,9 +6,7 @@
 #include "omp_types.h"
 #include "ompd.h"
 
-#define OMPD_TYPES_VERSION_MAJOR  5
-#define OMPD_TYPES_VERSION_MINOR  0
-#define OMPD_TYPES_VERSION_DATE   20171112
+#define OMPD_TYPES_VERSION   20170927 /* YYYYMMDD Format */
 
 /* Kinds of device threads  */
 #define OMPD_OSTHREAD_PTHREAD     ((ompd_osthread_kind_t)1)

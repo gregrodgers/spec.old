@@ -4,9 +4,7 @@
 #ifndef __OMP_TYPES_H
 #define __OMP_TYPES_H
 
-#define OMP_TYPES_VERSION_MAJOR  5
-#define OMP_TYPES_VERSION_MINOR  0
-#define OMP_TYPES_VERSION_DATE   20171112
+#define OMP_TYPES_VERSION   20170927 /* YYYYMMDD Format */
 
 /* Kinds of device device address spaces */
 #define OMP_DEVICE_KIND_HOST     ((omp_device_kind_t)1)
