@@ -1288,15 +1288,16 @@ see \specref{sec:ompt_callback_target_data_op_t}.
 \begin{boxedcode}
 typedef void (*ompt_callback_target_submit_t) (
   ompt_id_t \plc{target_id},
-  ompt_id_t \plc{host_op_id}
+  ompt_id_t \plc{host_op_id},
+  unsigned int \plc{requested_num_teams}
 );
 \end{boxedcode}
 \end{ccppspecific}
 }
 
 \descr
-This callback is invoked when a target task creates an initial task on a
-target device. 
+A thread dispatches a registered \code{ompt\_callback\_target\_submit} callback on the host when
+a target task creates an initial task on a target device.
 
 \argdesc
 
@@ -1305,6 +1306,10 @@ associated target region.
 
 The \callbackarg{} \plc{host\_op\_id} is a unique identifer for the
 initial task on the target device.
+
+The \callbackarg{} \plc{requested\_num\_teams} is the number of teams that the host is requesting to
+execute the kernel. The actual number of teams that execute the kernel may be smaller and generally won't be
+known until the kernel begins to execute on the device.
 
 \constraints
 
@@ -1327,6 +1332,24 @@ typedef struct ompt_record_target_kernel_s \{
 \end{boxedcode}
 \end{ccppspecific}
 }
+
+
+If a tool has configured a device to trace kernel execution using \code{ompt\_set\_trace\_ompt},
+the device will log a \code{ompt\_record\_target\_kernel\_t} record in a trace. The fields in the record
+are as follows:
+
+\begin{itemize}
+\item The \plc{host\_op\_id} field contains a unique identifier that a tool can use to correlate a
+\code{ompt\_record\_target\_kernel\_t} record with its associated \code{ompt\_callback\_target\_submit} callback
+on the host.
+
+\item The \plc{requested\_num\_teams} field contains the number of teams that the host requested to execute the kernel.
+
+\item The \plc{granted\_num\_teams} field contains the number of teams that the device actually used to execute the kernel.
+
+\item The time when the initial task began execution on the device is recorded in the \plc{time} field of an enclosing
+\code{ompt\_record\_t} structure; the time when the initial task completed execution on the device is recorded in the \plc{end\_time} field.
+\end{itemize}
 
 \crossreferences
 \begin{itemize}
