@@ -142,15 +142,19 @@ collapsed loop is implementation defined.
 
 A SIMD loop has logical iterations numbered 0,1,...,N-1 where N is the number of loop 
 iterations, and the logical numbering denotes the sequence in which the iterations would 
-be executed if the associated loop(s) were executed with no SIMD instructions. If the 
-\code{safelen} clause is used then no two iterations executed concurrently with SIMD 
-instructions can have a greater distance in the logical iteration space than its value. The 
-parameter of the \code{safelen} clause must be a constant positive integer expression. 
-If used, the \code{simdlen} clause specifies the preferred number of iterations to be executed concurrently. 
-The parameter of the \code{simdlen} clause must be a constant positive integer.
+be executed if the associated loop(s) were executed with no SIMD instructions.
 The number of iterations that are executed concurrently at any given time is implementation 
 defined. Each concurrent iteration will be executed by a different SIMD lane. Each set 
 of concurrent iterations is a SIMD chunk. Lexical forward dependencies in the iterations of the original loop must be preserved within each SIMD chunk.
+
+The \code{safelen} clause specifies that no two concurrent iterations within a SIMD chunk can have a distance in the logical iteration space that is greater than or equal to the value given in the clause.
+The parameter of the \code{safelen} clause must be a constant positive integer expression.
+The \code{simdlen} clause specifies the preferred number of iterations to be executed concurrently.
+The parameter of the \code{simdlen} clause must be a constant positive integer expression.
+
+%\begin{note}
+%The value of the \code{safelen} clause defines the maximum number of logical iterations that can be executed concurrently within a SIMD chunk by a SIMD instruction.
+%\end{note}
 
 \begin{ccppspecific}
 The \code{aligned} clause declares that the object to which each list item points is aligned to 
@@ -193,7 +197,7 @@ no intervening code nor any OpenMP directive between any two loops.
 
 \item A \plc{modifier} may not be specified on a \code{linear} clause.
 
-\item An \code{ordered} construct with the \code{simd} clause is the only OpenMP
+\item An \code{atomic} construct or an \code{ordered} construct with the \code{simd} clause is the only OpenMP
 construct that can be encountered during execution of a \code{simd}
 region.
 
@@ -244,19 +248,19 @@ reference to array, or reference to pointer.
 
 
 
-\subsection{\code{declare}~\code{simd} Construct}
+\subsection{\code{declare}~\code{simd} Directive}
 \index{declare simd@{\code{declare}~\code{simd}}}
-\index{constructs!declare simd@{\code{declare}~\code{simd}}}
-\label{subsec:declare simd Construct}
+\index{directives!declare simd@{\code{declare}~\code{simd}}}
+\label{subsec:declare simd Directive}
 \summary
-The \code{declare}~\code{simd} construct can be applied to a function (C, C++ and Fortran) or a 
+The \code{declare}~\code{simd} directive can be applied to a function (C, C++ and Fortran) or a 
 subroutine (Fortran) to enable the creation of one or more versions that can process 
 multiple arguments using SIMD instructions from a single invocation in a SIMD 
 loop. The \code{declare}~\code{simd} directive is a declarative directive. There may be multiple 
 \code{declare}~\code{simd} directives for a function (C, C++, Fortran) or subroutine (Fortran).
 
 \syntax
-The syntax of the \code{declare}~\code{simd} construct is as follows:
+The syntax of the \code{declare}~\code{simd} directive is as follows:
 
 \begin{ccppspecific}
 \begin{boxedcode}
@@ -298,24 +302,24 @@ notinbranch
 
 \descr
 \begin{ccppspecific}
-The use of a \code{declare}~\code{simd} construct on a function enables the creation of SIMD 
+The use of one or more \code{declare}~\code{simd} directives immediately prior
+to a function declaration or definition enables the
+creation of corresponding SIMD 
 versions of the associated function that can be used to process multiple arguments from 
 a single invocation in a SIMD loop concurrently.
 
-The expressions appearing in the clauses of this directive are evaluated in the scope of 
+The expressions appearing in the clauses of each directive are evaluated in the scope of 
 the arguments of the function declaration or definition.
 \end{ccppspecific}
 
 \begin{samepage}
 \begin{fortranspecific}
-The use of a \code{declare}~\code{simd} construct enables the creation of SIMD versions of the 
-specified subroutine or function that can be used to process multiple arguments from a 
+The use of one or more \code{declare}~\code{simd} directives for a specified
+subroutine or function enables the creation of corresponding SIMD versions of the 
+subroutine or function that can be used to process multiple arguments from a 
 single invocation in a SIMD loop concurrently. 
 \end{fortranspecific}
 \end{samepage}
-
-If a \code{declare}~\code{simd} directive contains multiple SIMD declarations,
-each declaration enables the creation of SIMD versions.
 
 If a SIMD version is created, the number of concurrent arguments for the function is 
 determined by the \code{simdlen} clause. If the \code{simdlen} clause is used its value 
@@ -368,7 +372,7 @@ a \code{uniform} clause on the directive.
 
 \item The function or subroutine body must be a structured block.
 
-\item The execution of the function or subroutine, when called from a SIMD loop, cannot result in the execution of an OpenMP construct except for an \code{ordered} construct with the \code{simd} clause. 
+\item The execution of the function or subroutine, when called from a SIMD loop, cannot result in the execution of an OpenMP construct except for an \code{ordered} construct with the \code{simd} clause or an \code{atomic} construct. 
 
 \item The execution of the function or subroutine cannot have any side effects that would 
 alter its execution for concurrent iterations of a SIMD chunk.
