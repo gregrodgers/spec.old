@@ -760,8 +760,8 @@ depend (\plc{dependence-type} : \plc{locator-list})
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to(\plc{list})
-from(\plc{list})
+to([mapper(\plc{mapper-identifier}):]\plc{list})
+from([mapper(\plc{mapper-identifier}):]\plc{list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -784,8 +784,8 @@ depend (\plc{dependence-type} : \plc{locator-list})
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to(\plc{list})
-from(\plc{list})
+to([mapper(\plc{mapper-identifier}):]\plc{list})
+from([mapper(\plc{mapper-identifier}):]\plc{list})
 \end{indentedcodelist}
 \end{fortranspecific}
 
@@ -800,7 +800,11 @@ region binds to the corresponding \plc{target task} region.
 \descr
 For each list item in a \code{to} or \code{from} clause there is a corresponding list item and an 
 original list item. If the corresponding list item is not present in the device data environment then no assignment occurs to or from the original list item. Otherwise, each corresponding list item in the 
-device data environment has an original list item in the current task's data environment.
+device data environment has an original list item in the current task's data
+environment.  For \code{to} and \code{from} clauses with a \code{mapper()}
+modifier, the expansion of list-items occurs according to the rules for
+expanding mapper elements in map clauses, with the same rules for transfer type
+decay.
 
 For each list item in a \code{from} or a \code{to} clause: \begin{itemize}
 
@@ -1208,7 +1212,6 @@ where:
     \begin{indentedcodelist}
       map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
       use\_by\_default
-      skip\_safe
     \end{indentedcodelist}
 \end{itemize}
 
@@ -1216,34 +1219,58 @@ where:
 
 User-defined mappers can be defined using the \code{declare mapper} directive.
 The type and, if specified, the \plc{mapper-identifier}, uniquely identify the
-mapper for use in a \code{map} clause later in the program.
+mapper for use in a \code{map} clause later in the program.  The visibility and
+accessibility of this declaration are the same as those of a variable declared
+at the same point in the program.
 
-The \code{use\_by\_default} clause makes this mapper the default for all variables
-of \plc{type}. The \code{skip\_safe} clause informs the compiler and runtime that
-any associated custom stages are safe to skip if the variable is already visible
-on the target device, note that if \code{skip\_safe} is not specified any
-associated mapper stages \emph{must not} be skipped.
+The \code{use\_by\_default} clause makes this mapper the default for all
+variables of \plc{type}, so that all map clauses with this construct in scope
+that map a list-item of \plc{type} will use this mapper unless another is
+explicitly specified.
 
 The variable declared by \plc{var} is available for use in all \code{map}
 clauses on the construct, and no part of the variable to be mapped is mapped by
-default. The default mapper could thus be considered to be:
+default.
+
+The default mapper for all types \plc{T} is as follows unless a custom mapper is
+specified for that type.
 
 \begin{boxedcode}
-#pragma omp declare mapper(T v) map(tofrom: v) use_by_default skip_safe
+#pragma omp declare mapper(\plc{T} v) map(tofrom: v) use_by_default
 \end{boxedcode}
 
 All \code{map} clauses on the construct are expanded into corresponding
 \code{map} clauses wherever this mapper is invoked, either by matching type or
-by being explicitly named in a \code{map} clause.
+by being explicitly named in a \code{map} clause. A map clause with list-item
+\plc{var} invokes the default mapper behavior on \plc{var} and does not recurse.
+If another instance of \plc{type} is mapped in the same mapper, it must be
+an array section, and those maps will recurse unless the pointer is null, in
+which case the recursion will terminate.
 
-The visibility and accessibility of this declaration are the same as those of a variable
-declared at the same point in the program.
 
 \begin{cppspecific}
 The \code{declare mapper} directive can also appear at points in the program at which
 a static data member could be declared. In this case, the visibility and accessibility of
 the declaration are the same as those of a static data member declared at the same point
-in the program.
+in the program such that the following is valid.
+
+\begin{boxedcode}
+  template<typename T>
+  class C {
+    int len;
+  public:
+    #pragma omp declare mapper(Cmap: C v) map(v) map(p[:len]) use_by_default
+    T* p;
+    C() : p(new T[1]), len(1) {}
+  };
+  void foo() {
+    C<int> c;
+    #pragma omp target map(mapper(Cmap): c)
+    c.p[0] = 1;
+    assert(c.p[0] == 1);
+  }
+\end{boxedcode}
+
 \end{cppspecific}
 
 \restrictions
@@ -1253,175 +1280,6 @@ in the program.
 \end{itemize}
 
 %%%%%%%%%%%%%%%%%%%%%%%%declare mapper end%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-%%%%%%%%%%%%%%%%%%%%%%%%declare mapper_stage begin%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-\subsection{\code{declare}~\code{mapper\_stage} Directive}
-\index{declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
-\index{directives!declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
-\index{constructs!declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
-\index{device constructs!declare mapper\_stage@{\code{declare}~\code{mapper\_stage}}}
-\label{subsec:declare mapper_stage Directive}
-
-\summary
-
-The \code{declare mapper\_stage} directive defines a specific stage of the
-mapping process for a given user-defined mapper. The \code{declare mapper\_stage}
-directive is a declarative directive.
-
-\syntax
-\begin{ccppspecific}
-The syntax of the \code{declare mapper\_stage} directive is as follows:
-
-\begin{boxedcode}
-\#pragma omp declare mapper_stage(\plc{mapper-identifier}: \plc{stage})
-\plc{[clause[ [},\plc{] clause] ... ] new-line}
-\end{boxedcode}
-
-\end{ccppspecific}
-
-\begin{fortranspecific}
-The syntax of the \code{declare mapper\_stage} directive is as follows:
-
-\begin{boxedcode}
-!$omp declare mapper(\plc{[mapper-identifier:]}\plc{type} :: \plc{var})
-\plc{[clause[ [},\plc{] clause] ... ] new-line}
-\end{boxedcode}
-\end{fortranspecific}
-
-\descr
-
-where:
-\begin{itemize}
-  \item \plc{mapper-identifier} is a previously declared mapper-identifier
-  \item \plc{stage} is one of the following:
-    \begin{indentedcodelist}
-      alloc
-      pack\_to
-      unpack\_to
-      pack\_from
-      unpack\_from
-      release
-      delete
-    \end{indentedcodelist}
-  \item and \plc{clause} is one of the following:
-    \begin{itemize}
-      \item \code{in\_place}
-      \item \code{expr(\plc{stage-expression})} where \plc{stage-expression} is
-        a base language expression that performs the stage necessary on
-        \plc{mapper-var} and \code{omp\_buf}
-      \item \code{size(\plc{size-expression})} where \plc{size-expression} is a
-        base language expression that evaluates to the number of bytes the stage
-        requires for its output
-      \item \code{buffer\_type(\plc{type})}
-    \end{itemize}
-\end{itemize}
-
-User-defined mappers, defined using the \code{declare mapper} directive, can be
-customized beyond expanding \code{map} clauses by specifying custom mapping
-stages with the \code{declare mapper\_stage} directive.  Every mapper is
-logically composed of six stages: \code{alloc}, \code{pack\_to},
-\code{unpack\_to}, \code{pack\_from}, \code{unpack\_from} and \code{release} all
-executed one after the other in that order with a logical bitwise-copy between
-the \code{pack\_to} and \code{unpack\_to} as well as the \code{pack\_from} and
-\code{unpack\_from} stages.
-
-Stages are constructed from expressions, each of which will receive a variable
-of the type of their associated mapper named using the name declared in that
-mapper, and for all stages but \code{alloc} and \code{release} also a buffer in
-the variable \code{omp\_buf}.
-
-\begin{ccppspecific}
-  The type of \code{omp\_buf} will be \code{void *} unless an alternate type,
-  which must be a pointer type, is specified with a \code{buffer\_type} clause.
-\end{ccppspecific}
-
-\begin{fortranspecific}
-
-  The type of \code{omp\_buf} will be
-  \code{character(len=1),dimension(:),pointer} unless an alternate type, is
-  specified with a \code{buffer\_type} clause. If a \code{buffer\_type} clause is
-  specified, the resulting declaration of \code{omp\_buf} must be valid in an
-  expression of the form:
-
-  \begin{boxedcode}
-    omp_buf = transfer(omp_buf_ptr, omp_buf)
-  \end{boxedcode}
-
-  where \code{omp\_buf\_ptr} is a pointer to \code{omp\_buf\_size} characters.
-
-\end{fortranspecific}
-
-Each stage is responsible for a specific action as part of mapping or updating a
-variable, and receives an instance of \plc{mapper-var}, the packer stages
-additionally receive \code{omp\_buf} and \code{omp\_buf\_size}:
-
-\begin{description}
-
-  \item[alloc] Performs any and all unstructured data mapping required to place
-    components that require independent reference counts into the device data
-    environment.
-
-  \item[pack\_to] Packs all data in its input, \plc{mapper-var}, into a bitwise-copyable
-    form in \code{omp\_buf}, that will be allocated based on the result of its
-    \code{size} clause or the size of a single instance of type if no
-    \code{size} clause is specified. Additionally \code{update} directives may
-    be used to populate data mapped by the \code{alloc} stage.
-
-  \item[unpack\_to] Unpacks data in its input, \code{omp\_buf},  into an instance
-    of \plc{mapper-var} in the device data environment, this expression must be
-    valid in a \code{declare target} function.  The \code{size} clause is not
-    allowed on this stage.
-
-  \item[pack\_from] Packs data in its input, \plc{mapper-var} in the device data
-    environment,   into \code{omp\_buf}, which will be allocated based on the
-    result of its \code{size} clause or the size of a single instance of type if
-    no \code{size} clause is specified.  This expression must be valid in a
-    \code{declare target} function.
-
-  \item[unpack\_from] Unpacks its input, \code{omp\_buf}, into a \plc{mapper-var}
-    on the host device.  The \code{size} clause is not allowed on this stage.
-    Additionally \code{update} directives may be used to populate data mapped by
-    the \code{alloc} stage.
-
-  \item[release] Releases any and all components mapped to the device in the
-    \code{alloc} stage
-
-  \item[release] Deletes any and all components mapped to the device in the
-    \code{alloc} stage
-
-\end{description}
-
-Stages are invoked as required by the context, specifically as follows:
-
-\begin{description}
-  \item[each time the mapped variable's reference count is incremented] \code{alloc}
-  \item[update to] \code{pack\_to} followed by \code{unpack\_to}
-  \item[update from] \code{pack\_from} followed by \code{unpack\_from}
-  \item[each time the mapped variable's reference count is decrimented] \code{release}
-\end{description}
-
-The \code{in\_place} clause is only valid on packer stages and causes
-\code{omp\_buf} and \code{omp\_buf\_size} not to be defined, instead using
-\plc{mapper-var} as the only predefined variable in its expressions, it is
-mutually exclusive with the \code{size} clause.
-
-The \code{declare mapper\_stage} directive can appear at any point where a
-\code{declare mapper} clause would be valid.
-
-\restrictions
-\begin{itemize}
-
-\item If any of the pack or unpack stages are specified, all four must be
-  specified.
-
-\item If either of \code{alloc} or \code{release} are specified, the other must
-  be as well.
-
-\end{itemize}
-
-%%%%%%%%%%%%%%%%%%%%%%%%declare mapper_stage end%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 
 \subsection{\code{teams} Construct}
 \index{teams@{\code{teams}}}
