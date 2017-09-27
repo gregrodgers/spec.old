@@ -2126,11 +2126,12 @@ on a \code{declare}~\code{target} directive then it is treated as if it had appe
 Otherwise, the following implicit data-mapping attribute rules apply:
 
 \begin{itemize}
-\item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
-a scalar variable (or a nonallocatable nonpointer scalar variable, for
-Fortran) is not mapped, but instead has an implicit data-sharing
-attribute of firstprivate (see 
-\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}).
+\item If a \code{defaultmap(tofrom:scalar)} clause is not present then
+a scalar variable (or a nonallocatable nonpointer scalar variable,
+or a variable without the \code{TARGET} attribute, for Fortran) is not
+mapped, but instead has an implicit data-sharing attribute of
+firstprivate (see \specref{subsubsec:Data-sharing Attribute Rules
+for Variables Referenced in a Construct}).
 
 \item If a \code{defaultmap(tofrom:scalar)} clause is present then a scalar 
 variable is treated as if it had appeared in a \code{map} clause with a 
@@ -2138,6 +2139,12 @@ variable is treated as if it had appeared in a \code{map} clause with a
 
 \item If a variable is not a scalar then it is treated as if it had appeared 
 in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+
+\begin{fortranspecific}
+\item If a scalar variable that has the \code{TARGET} attribute then
+it is treated as if it has appeared in a \code{map} clause with a
+\plc{map-type} of \code{tofrom}.
+\end{fortranspecific}
 \end{itemize}
 
 \subsubsection{\code{map} Clause}
@@ -2177,12 +2184,21 @@ For a given construct, the effect of a \code{map} clause with the \code{to},
 \code{map} clause with the \code{alloc}, \code{release}, or \code{delete}
 \plc{map-type}.
 
+\begin{ccppspecific}
 If a list item in a \code{map} clause is a variable of structure type then it
 is treated as if each structure element contained in the variable is a list
 item in the clause.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+If a list item in a \code{map} clause is a derived type variable
+then it is treated as if each nonpointer component is a list item in
+the clause.
+\end{fortranspecific}
 
 If a list item in a \code{map} clause is a structure element then all other
-structure elements of the containing structure variable form a \plc{structure
+structure elements (except pointer component, for Fortran) of the
+containing structure variable form a \plc{structure
 sibling list}.  The \code{map} clause and the structure sibling list are
 associated with the same construct.  If a corresponding list item of the
 structure sibling list item is present in the device data environment when the
@@ -2213,6 +2229,18 @@ construct is encountered then:
     construct with a \plc{map-type} of \code{delete}.
 
 \end{itemize}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item If a list item in a \code{map} clause has the POINTER attribute
+  and if the association status of the list item is associated, then
+  it is treated as if the pointer target is a list item in the clause.
+
+\item If a list item in a \code{map} clause is a pointer component of
+  an array of derived type, the containing structure must be present
+  in the device data environment.
+\end{itemize}
+\end{fortranspecific}
 
 \begin{ccppspecific}
 If a list item in a \code{map} clause is a variable of pointer type, and the
@@ -2486,6 +2514,27 @@ initialization and assignment.
   the whole array in the \code{target} region is unspecified.
 
 \item A list item must not be a whole array of an assumed-size array.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is associated upon entry to a \code{target} region, the
+  list item remains associated with the same pointer target upon exit
+  from the region.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is disassociated upon entry to a \code{target} region, the
+  list item must be disassociated upon exit from the region.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is undefined upon entry to a \code{target} region, the
+  list item must be undefined upon exit from the region.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is disassociated or undefined on entry and if the list
+  item is associated with a pointer target inside a \code{target}
+  region, then the pointer association status must become
+  disassociated before the end of the region; otherwise the behavior
+  is unspecified.
+  
 \end{itemize}
 \end{fortranspecific}
 \end{samepage}
