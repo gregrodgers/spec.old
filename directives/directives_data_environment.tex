@@ -139,7 +139,11 @@ multiple associated \plc{for-loops} are lastprivate.
 \item Variables with static storage duration that are declared in a scope inside the construct 
 are shared.
 
-\item If an array section is a list item in a \code{map} clause on the \code{target} construct and the array section is derived from a variable for which the type is pointer then that variable is firstprivate. 
+\item If an array section with a named pointer is a list item in a
+\code{map} clause on the \code{target} construct and the named pointer is a
+scalar variable that does not appear in a \code{map} clause on the construct,
+the named pointer is firstprivate.
+
 \end{itemize}
 \end{ccppspecific}
 
@@ -1580,6 +1584,9 @@ reduction clauses for that directive.
 \item For a \plc{reduction-identifier} declared with the \code{declare}~\code{reduction}
 construct, the directive must appear before its use in a reduction clause.
 
+\item If a list item is an array section, its base expression must be a base
+language identifier.
+
 \item If a list item is an array section, it must specify contiguous storage
 and it cannot be a zero-length array section.
 
@@ -2128,11 +2135,12 @@ on a \code{declare}~\code{target} directive then it is treated as if it had appe
 Otherwise, the following implicit data-mapping attribute rules apply:
 
 \begin{itemize}
-\item If a \code{defaultmap(tofrom:scalar)} clause is not present then 
-a scalar variable (or a nonallocatable nonpointer scalar variable, for
-Fortran) is not mapped, but instead has an implicit data-sharing
-attribute of firstprivate (see 
-\specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct}).
+\item If a \code{defaultmap(tofrom:scalar)} clause is not present then
+a scalar variable (or a nonallocatable nonpointer scalar variable,
+or a variable without the \code{TARGET} attribute, for Fortran) is not
+mapped, but instead has an implicit data-sharing attribute of
+firstprivate (see \specref{subsubsec:Data-sharing Attribute Rules
+for Variables Referenced in a Construct}).
 
 \item If a \code{defaultmap(tofrom:scalar)} clause is present then a scalar 
 variable is treated as if it had appeared in a \code{map} clause with a 
@@ -2140,6 +2148,12 @@ variable is treated as if it had appeared in a \code{map} clause with a
 
 \item If a variable is not a scalar then it is treated as if it had appeared 
 in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+
+\begin{fortranspecific}
+\item If a scalar variable that has the \code{TARGET} attribute then
+it is treated as if it has appeared in a \code{map} clause with a
+\plc{map-type} of \code{tofrom}.
+\end{fortranspecific}
 \end{itemize}
 
 \subsubsection{\code{map} Clause}
@@ -2174,47 +2188,231 @@ The list items that appear in a \code{map} clause may include array sections and
 
 The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
+For a given construct, the effect of a \code{map} clause with the \code{to},
+\code{from}, or \code{tofrom} \plc{map-type} is ordered before the effect of a
+\code{map} clause with the \code{alloc}, \code{release}, or \code{delete}
+\plc{map-type}.
+
+\begin{ccppspecific}
+If a list item in a \code{map} clause is a variable of structure type then it
+is treated as if each structure element contained in the variable is a list
+item in the clause.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+If a list item in a \code{map} clause is a derived type variable
+then it is treated as if each nonpointer component is a list item in
+the clause.
+\end{fortranspecific}
+
+If a list item in a \code{map} clause is a structure element then all other
+structure elements (except pointer component, for Fortran) of the
+containing structure variable form a \plc{structure
+sibling list}.  The \code{map} clause and the structure sibling list are
+associated with the same construct.  If a corresponding list item of the
+structure sibling list item is present in the device data environment when the
+construct is encountered then:
+    \begin{itemize}
+
+    \item If the structure sibling list item does not appear in a \code{map}
+    clause on the construct then:
+    \begin{itemize} 
+    
+        \item If the construct is a \code{target}, \code{target}~\code{data},
+        or \code{target}~\code{enter}~\code{data} construct then the structure
+        sibling list item is treated as if it is a list item in a \code{map}
+        clause on the construct with a \plc{map-type} of \code{alloc}.
+
+        \item If the construct is \code{target}~\code{exit}~\code{data}
+        construct, then the structure sibling list item is treated as if it is
+        a list item in a \code{map} clause on the construct with a
+        \plc{map-type} of \code{release}.
+
+    \end{itemize}
+
+    \item If the \code{map} clause in which the structure element appears as a
+    list item has a \plc{map-type} of \code{delete} and the structure sibling
+    list item does not appear as a list item in a \code{map} clause on the
+    construct with a \plc{map-type} of \code{delete} then the structure sibling
+    list item is treated as if it is a list item in a \code{map} clause on the
+    construct with a \plc{map-type} of \code{delete}.
+
+\end{itemize}
+
+\begin{fortranspecific}
+\begin{itemize}
+\item If a list item in a \code{map} clause has the POINTER attribute
+  and if the association status of the list item is associated, then
+  it is treated as if the pointer target is a list item in the clause.
+
+\item If a list item in a \code{map} clause is a pointer component of
+  an array of derived type, the containing structure must be present
+  in the device data environment.
+\end{itemize}
+\end{fortranspecific}
+
+\begin{ccppspecific}
+If a list item in a \code{map} clause is a variable of pointer type, and the
+variable is the named pointer of an array section that is a list item in a
+\code{map} clause on the same construct, then the effect of a \code{map} clause
+on the pointer variable and the effect of a \code{map} clause on the array section are
+ordered as follows:
+
+\begin{itemize}
+
+\item If the \code{map} clauses appear on a \code{target},
+\code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct
+then on entry to the region the effect of the \code{map} clause on the pointer
+variable are ordered to occur before the effect of the \code{map} clause on
+the array section.
+
+\item If the \code{map} clauses appears on a \code{target},
+\code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct
+then on exit from the region the effect of the \code{map} clause on the array
+section are ordered to occur before the effect of the \code{map} clause on the
+pointer variable.
+
+\end{itemize}
+
+If an array section with a named pointer is a list item in a \code{map} clause
+and a pointer variable is present in the device data environment that
+corresponds to the named pointer when the effect of the \code{map} clause
+occurs, then if the corresponding array section is created in the device data
+environment: \begin{enumerate}
+
+\item The corresponding pointer variable is assigned the address of the
+corresponding array section.
+
+\item The corresponding pointer variable becomes an attached pointer
+for the corresponding array section.
+
+\end{enumerate}
+
+\end{ccppspecific}
+
+
 The original and corresponding list items may share storage such that writes to either
 item by one task followed by a read or write of the other item by another task without
 intervening synchronization can result in data races.
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct then on entry to the region the following sequence of steps occurs as if performed as a single atomic operation:
+
+% allocate storage
 \begin{enumerate}
 \item If a corresponding list item of the original list item is not present in the device data environment, then:
 \begin{enumerate}
 \item A new list item with language-specific attributes is derived from the original list item and created in the device data environment.
 \item The new list item becomes the corresponding list item to the original list item in the device data environment.
 \item The corresponding list item has a reference count that is initialized to zero. 
+\item The value of the corresponding list item is undefined.
 \end{enumerate}
-\item The corresponding list item's reference count is incremented by one.
+
+% incremenent the reference counter
+\item If the corresponding list item's reference count was not already
+incremented because of the effect of a \code{map} clause on the
+construct then:
+\begin{enumerate}
+\item The corresponding list item's reference count is incremented by one
+\end{enumerate}
+
+% assign the corresponding variable
 \item If the corresponding list item's reference count is one or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
-\item If the \plc{map-type} is \code{to} or \code{tofrom}, then the corresponding list item is assigned the value of the original list item. 
+\item If the \plc{map-type} is \code{to} or \code{tofrom}, then:
+    \begin{itemize}
+
+    \item For each part of the list item that is an attached pointer:  \begin{itemize}
+
+        \item That part of the corresponding list item will
+        have the value it had immediately prior to the effect of the \code{map} clause;
+
+   \end{itemize}
+
+    \item For each part of the list item that is not an attached pointer: \begin{itemize}
+
+        \item The value of that part of the
+        original list item is assigned to that part of the corresponding list item. 
+
+   \end{itemize}
+
+    \item Concurrent reads or updates of any part
+        of the corresponding list item must be synchronized with the update of the
+        corresponding list item that occurs as a result of the \code{map} clause.
+
+\end{itemize}
 \end{enumerate}
-\item If the corresponding list item's reference count is one, then:
-\begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{alloc}, the value of the corresponding list item is undefined. 
+
 \end{enumerate}
-\end{enumerate}
+
+\begin{note}
+If the effect of the \code{map} clauses on a construct would assign the
+value of an original list item to a corresponding list item more than once,
+then an implementation is allowed to ignore additional assignments of
+the same value to the corresponding list item.
+\end{note}
 
 If the \code{map} clause appears on a \code{target}, \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct then on exit from the region the following sequence of steps occurs as if performed as a single atomic operation:
 \begin{enumerate}
 \item If a corresponding list item of the original list item is not present in the device data environment, then the list item is ignored.
 \item If a corresponding list item of the original list item is present in the device data environment, then:
 \begin{enumerate}
+
+% decrement the ref count
 \item If the corresponding list item's reference count is finite, then:
 \begin{enumerate}
-%\item the corresponding list item's reference count is decremented by one.
-\item If the \plc{map-type} is not \code{delete}, then the corresponding list item's reference count is decremented by one.
+\item If the corresponding list item's reference count was not already
+decremented because of the effect of a \code{map} clause on the
+construct then:
+\begin{enumerate}
+\item If the \plc{map-type} is not \code{delete}, then the corresponding list
+    item's reference count is decremented by one.
+\end{enumerate}
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
+
+% assign the original variable
 \item If the corresponding list item's reference count is zero or the \code{always} \plc{map-type-modifier} is present, then:
 \begin{enumerate}
-\item If the \plc{map-type} is \code{from} or \code{tofrom}, then the original list item is assigned the value of the corresponding list item. 
+\item If the \plc{map-type} is \code{from} or \code{tofrom} then:
+\begin{itemize}
+
+    \item For each part of the list item that is an attached pointer:  \begin{itemize}
+
+        \item That part of the original list item will
+        have the value it had immediately prior to the effect of the \code{map} clause;
+
+   \end{itemize}
+
+    \item For each part of the list item that is not an attached pointer: \begin{itemize}
+
+        \item The value of that part of the
+        corresponding list item is assigned to that part of the original list item; 
+
+   \end{itemize}
+
+   \item To avoid race conditions: \begin{itemize}
+
+        \item Concurrent reads or updates of any part
+        of the original list item must be synchronized with the update of the
+        original list item that occurs as a result of the \code{map} clause;
+
+   \end{itemize}
+
+
+\end{itemize}
 \end{enumerate}
+
+% release the storage
 \item If the corresponding list item's reference count is zero, then the corresponding list item is removed from the device data environment 
 \end{enumerate}
 \end{enumerate}
+
+\begin{note}
+If the effect of the \code{map} clauses on a construct would assign the
+value of a corresponding list item to an original list item more than once,
+then an implementation is allowed to ignore additional assignments of
+the same value to the original list item.
+\end{note}
 
 If a single contiguous part of the original storage of a list item with an
 implicit data-mapping attribute has corresponding storage in the device data
@@ -2263,10 +2461,12 @@ The callback occurs in the context of the target task.  The callback has type si
 
 \item If a list item is an array section, it must specify contiguous storage.
 
-\item At most one list item can be an array item derived from a given variable in \code{map}
-clauses of the same construct.
+\item If more than one list item of the \code{map} clauses on the same construct
+are array items that have the same named array, they must indicate
+identical original storage.
 
-\item List items of \code{map} clauses in the same construct must not share original storage.
+\item List items of the \code{map} clauses on the same construct must not share
+original storage unless they are the same variable or array section.
 
 \item If any part of the original storage of a list item with a predetermined or
 explicit data-mapping attribute has corresponding storage in the device data
@@ -2282,8 +2482,6 @@ device data environment prior to the task encountering the construct.
 
 \item If a list item is an element of a structure, only the rightmost symbol of the variable reference can be an array section.
 
-\item If variables that share storage are mapped, the behavior is unspecified. 
-
 \item A list item must have a mappable type.
 
 \item \code{threadprivate} variables cannot appear in a \code{map} clause.
@@ -2294,9 +2492,6 @@ device data environment prior to the task encountering the construct.
 
 \begin{ccppspecific}
 \item Initialization and assignment are through bitwise copy.
-
-\item A variable for which the type is pointer and an array section derived from that variable must not appear as list items of \code{map} clauses of the same construct. 
-
 \item A list item cannot be a variable that is a member of a structure with a union type.
 
 \item A bit-field cannot appear in a \code{map} clause.
@@ -2328,6 +2523,27 @@ initialization and assignment.
   the whole array in the \code{target} region is unspecified.
 
 \item A list item must not be a whole array of an assumed-size array.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is associated upon entry to a \code{target} region, the
+  list item remains associated with the same pointer target upon exit
+  from the region.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is disassociated upon entry to a \code{target} region, the
+  list item must be disassociated upon exit from the region.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is undefined upon entry to a \code{target} region, the
+  list item must be undefined upon exit from the region.
+
+\item If the association status of a list item with the \code{POINTER}
+  attribute is disassociated or undefined on entry and if the list
+  item is associated with a pointer target inside a \code{target}
+  region, then the pointer association status must become
+  disassociated before the end of the region; otherwise the behavior
+  is unspecified.
+  
 \end{itemize}
 \end{fortranspecific}
 \end{samepage}
