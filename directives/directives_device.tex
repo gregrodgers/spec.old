@@ -135,7 +135,6 @@ if(\plc{[} target data :\plc{] scalar-expression})
 device(\plc{integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 use\_device\_ptr(\plc{list})
-use\_device\_addr(\plc{list})
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -157,7 +156,6 @@ if(\plc{[} target data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 use\_device\_ptr(\plc{list})
-use\_device\_addr(\plc{list})
 \end{indentedcodelist}
 
 The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{target}~\code{data} construct.
@@ -170,18 +168,11 @@ The binding task set for a \code{target}~\code{data} region is the generating ta
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
-List items that appear in a \code{use\_device\_ptr} clause will result in a
-device pointer to their corresponding list item in the device data environment
-when evaluated in a reference context for the duration of the construct.  List
-items that appear in a \code{use\_device\_addr} clause will result in the device
-address of their corresponding list item in the device data environment when
-evaluated in a reference context for the duration of the construct.  Evaluating
-a list item listed in either of these clauses in a value context will have
-implementation-defined behavior.  If a \code{use\_device\_ptr} or
-\verb`use_device_addr` clause and one or more \code{map} clauses are present on
-the same construct, the initialization of the firstprivate vslue will occur as
-if performed after all variables are mapped according to those \code{map}
-clauses.
+List items that appear in a \code{use\_device\_ptr} clause are converted into
+device pointers to the corresponding list items in the device data environment.
+If a \code{use\_device\_ptr} clause and one or more \code{map} clauses are
+present on the same construct, this conversion will occur as if performed after
+all variables are mapped according to those \code{map} clauses.
 
 \def\omptTargetRegionEvents#1#2#3
 {
@@ -225,8 +216,7 @@ as its \plc{endpoint} argument, as appropriate, and
 
   \item At most one \code{if} clause can appear on the directive.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item At least one \code{map}, \code{use\_device\_addr} or
-    \code{use\_device\_ptr} clause must appear on the directive.
+  \item At least one \code{map} or \code{use\_device\_ptr} clause must appear on the directive.
 
 
   \item A list item in a \code{use\_device\_ptr} clause must have a
@@ -1187,7 +1177,7 @@ clause. The \code{declare mapper} directive is a declarative directive.
 The syntax of the \code{declare mapper} directive is as follows:
 
 \begin{boxedcode}
-#pragma omp declare mapper(\plc{[mapper-identifier:]}\plc{type} \plc{var})
+  \#pragma omp declare mapper(\plc{[mapper-identifier:]}\plc{type} \plc{var})
 \plc{[clause[ [},\plc{] clause] ... ] new-line}
 \end{boxedcode}
 
@@ -1236,7 +1226,7 @@ The default mapper for all types \plc{T} is as follows unless a custom mapper is
 specified for that type.
 
 \begin{boxedcode}
-#pragma omp declare mapper(\plc{T} v) map(tofrom: v) use_by_default
+  \#pragma omp declare mapper(\plc{T} v) map(tofrom: v) use_by_default
 \end{boxedcode}
 
 All \code{map} clauses on the construct are expanded into corresponding
@@ -1259,13 +1249,13 @@ in the program such that the following is valid.
   class C {
     int len;
   public:
-    #pragma omp declare mapper(Cmap: C v) map(v) map(p[:len]) use_by_default
+    \#pragma omp declare mapper(Cmap: C v) map(v) map(p[:len]) use_by_default
     T* p;
     C() : p(new T[1]), len(1) {}
   };
   void foo() {
     C<int> c;
-    #pragma omp target map(mapper(Cmap): c)
+    \#pragma omp target map(mapper(Cmap): c)
     c.p[0] = 1;
     assert(c.p[0] == 1);
   }
