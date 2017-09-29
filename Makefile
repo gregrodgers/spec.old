@@ -53,7 +53,7 @@ debug:
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
-	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf
+	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
 	rm -f openmp.synctex.gz
 	rm -rf *.tmpdir
 
