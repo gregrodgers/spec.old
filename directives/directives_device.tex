@@ -1218,7 +1218,8 @@ The variable declared by \plc{var} is available for use in all \code{map}
 clauses on the construct, and no part of the variable to be mapped is mapped by
 default.
 
-The default mapper for all types \plc{T} is as follows unless a custom mapper is
+The default mapper for all types \plc{T}, designated by the pre-defined
+mapper-identifier \code{default}, is as follows unless a custom mapper is
 specified for that type.
 
 \begin{boxedcode}
@@ -1229,16 +1230,15 @@ All \code{map} clauses on the construct are expanded into corresponding
 \code{map} clauses wherever this mapper is invoked, either by matching type or
 by being explicitly named in a \code{map} clause. A map clause with list-item
 \plc{var} invokes the default mapper behavior on \plc{var} and does not recurse.
-If another instance of \plc{type} is mapped in the same mapper, it must be
-an array section, and those maps will recurse unless the pointer is null, in
-which case the recursion will terminate.
+No other instances of the current type can be mapped as part of the mapper,
+whether directly or indirectly through another type.
 
 
 \begin{cppspecific}
-The \code{declare mapper} directive can also appear at points in the program at which
-a static data member could be declared. In this case, the visibility and accessibility of
-the declaration are the same as those of a static data member declared at the same point
-in the program such that the following is valid.
+The \code{declare mapper} directive can also appear at points in the program at
+which a static data member could be declared. In this case, the visibility and
+accessibility of the declaration are the same as those of a static data member
+declared at the same point in the program such that the following is valid.
 
 \begin{boxedcode}
   template<typename T>
@@ -1251,9 +1251,12 @@ in the program such that the following is valid.
   };
   void foo() {
     C<int> c;
-    \#pragma omp target map(mapper(Cmap): c)
+    \#pragma omp target map(mapper(C<int>::Cmap): c) // Cmap is used
     c.p[0] = 1;
     assert(c.p[0] == 1);
+    \#pragma omp target map(c) // Cmap is used
+    c.p[0] = 5;
+    assert(c.p[0] == 5);
   }
 \end{boxedcode}
 
