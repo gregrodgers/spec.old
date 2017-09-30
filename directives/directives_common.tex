@@ -510,8 +510,10 @@ columns):
 \index{constructs!extension@{\code{extension}}}
 
 \summary
-This construct declares the extensions an implementation must support in order
+This construct declares the extensions an implementation must provide in order
 for the code in the current translation unit to compile and execute correctly.
+\emph{Use of this directive makes your code less portable, be aware that not all
+  devices or implementations support all extensions.}
 
 
 \syntax
@@ -542,14 +544,14 @@ implementation defined extension clause.
 When this extension is active, the implementation guarantees that all devices
 accessible through OpenMP API routines and directives use a unified address
 space such that no two pointers used on any pair of devices accessible through
-OpenMP will use the same address to refer to different memory.  The pointers
-returned by \code{omp\_target\_alloc} and accessed through
-\code{use\_device\_ptr} are guaranteed to be pointer values that can support
-pointer arithmetic while still being native pointers.  The
+OpenMP will use the same address to refer to different physical memory
+locations.  The pointers returned by \code{omp\_target\_alloc} and accessed
+through \code{use\_device\_ptr} are guaranteed to be pointer values that can
+support pointer arithmetic while still being native pointers.  The
 \code{is\_device\_ptr} clause is not necessary for device pointers to be
-translated in \code{target} regions.  Target devices may still have discrete
-memories and dereferencing a device pointer on the host device remains
-unspecified behavior.
+translated in \code{target} regions, and pointers found not present are not set
+to null.  Target devices may still have discrete memories and dereferencing a
+device pointer on the host device remains unspecified behavior.
 
 \subsection{\code{unified\_memory} Clause}
 \label{subsec:unified_memory Clause}
@@ -557,18 +559,31 @@ unspecified behavior.
 The \code{unified\_memory} extension implies the \code{unified\_address}
 extension, inheriting all of its behaviors.  Additionally host addresses are
 valid device addresses for all devices accessible through OpenMP except as noted
-below.  Conversely every device address allocated through the OpenMP
-target API routines are valid host pointers.  Memory local to a specific
-execution context may not be accessible from devices other than the device
-executing that context while still conforming to this extension.
+below.  Every device address allocated through OpenMP target API routines are
+valid host pointers.  Memory local to a specific execution context may not be
+accessible from devices other than the device executing that context while still
+conforming to this extension.
 
-This extension makes the \code{map} clause optional, and prevents pointers from
-being nulled implicitly.  Note that scalar variables are still required to be
-\code{firstprivate} by default for target regions.  Cache coherence across
-devices \emph{is not} guaranteed except across synchronization points between
-the host and a given device where memory is flushed.  Mutable access to the same
-memory from two separate devices without synchronization remains a potential
-race condition.
+This extension makes the \code{map} clause optional on target constructs.  Note
+that scalar variables are still required to be \code{firstprivate} by default
+for target regions.  Cache coherence across devices \emph{is not} guaranteed
+except across synchronization points between the host and a given device where
+memory is flushed.  Mutable access to nearby addresses from two separate devices
+without synchronization remains a potential race condition.
+
+\subsection{\code{full\_system\_atomics} Extension}
+\label{subsec:full_system_atomics Extension}
+
+When this extension is active, the effective contention group for atomic
+constructs includes all threads across all devices accessible by OpenMP.
+Non-atomic accesses across devices remain non-cache-coherent.
+
+\subsection{\code{full\_system\_coherence} Extension}
+\label{subsec:full_system_coherence Extension}
+
+This extension builds on \code{unified\_memory} and additionally allows all
+devices accessible through to OpenMP interact cache-coherently across all memory
+in the system.
 
 \subsection{Implementation-Defined Clauses}
 \label{subsec:Implementation-Defined Clauses}
