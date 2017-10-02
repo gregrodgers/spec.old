@@ -13,7 +13,7 @@ CHAPTERS=openmp.tex \
          directives/directives_common.tex \
          directives/directives_parallel.tex \
          directives/directives_worksharing.tex \
-         directives/directives_independent.tex \
+         directives/directives_concurrent.tex \
          directives/directives_simd.tex \
          directives/directives_tasking.tex \
          directives/directives_device.tex \
