@@ -1174,9 +1174,12 @@ typedef void (*ompt_callback_target_data_op_t) (
   ompt_id_t \plc{target_id},
   ompt_id_t \plc{host_op_id},
   ompt_target_data_op_t \plc{optype},
-  void *\plc{host_addr},
-  void *\plc{device_addr},
-  size_t \plc{bytes}
+  void *\plc{src_addr},
+  int \plc{src_device_num},
+  void *\plc{dest_addr},
+  int \plc{dest_device_num},
+  size_t \plc{bytes},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \end{ccppspecific}
@@ -1189,10 +1192,13 @@ typedef void (*ompt_callback_target_data_op_t) (
 typedef struct ompt_record_target_data_op_s \{
   ompt_id_t \plc{host\_op\_id};
   ompt_target_data_op_t \plc{optype};
-  void *\plc{host\_addr};
-  void *\plc{device\_addr};
+  void *\plc{src\_addr};
+  int \plc{src_device_num};
+  void *\plc{dest\_addr};
+  int \plc{dest_device_num};
   size_t \plc{bytes};
   ompt_device_time_t \plc{end\_time};
+  const void *\plc{codeptr_ra};
 \} ompt_record_target_data_op_t;
 \end{boxedcode}
 \end{ccppspecific}
@@ -1205,13 +1211,24 @@ operations on a target device.
 
 The \callbackarg{} \plc{optype} indicates the kind of data mapping.
 
-The \callbackarg{} \plc{host\_addr} indicates the address of data on
-host side.
+The \callbackarg{} \plc{src\_addr} indicates the address of data 
+before the operation, where applicable.
 
-The \callbackarg{} \plc{device\_addr} indicates the address of data on
-device side.
+The \callbackarg{} \plc{src\_device\_num} indicates the source device number
+for the data operation, where applicable.
+
+The \callbackarg{} \plc{dest\_addr} indicates the address of data 
+after the operation.
+
+The \callbackarg{} \plc{dest\_device\_num} indicates the destination device
+number for the data operation.
+
+It is implementation defined whether in some operations \plc{src\_addr} 
+or \plc{dest\_addr} might point to an intermediate buffer.
 
 The \callbackarg{} \plc{bytes} indicates the size of data.
+
+\codeptrdesc
 
 \crossreferences
 \begin{itemize}
@@ -1236,7 +1253,8 @@ typedef void (*ompt_callback_target_map_t) (
   void **\plc{host_addr},
   void **\plc{device_addr},
   size_t *\plc{bytes},
-  unsigned int *\plc{mapping_flags}
+  unsigned int *\plc{mapping_flags},
+  const void *\plc{codeptr_ra}
 );
 \end{boxedcode}
 \end{ccppspecific}
@@ -1253,6 +1271,7 @@ typedef struct ompt_record_target_map_s \{
   void **\plc{device_addr};
   size_t *\plc{bytes};
   unsigned int *\plc{mapping_flags};
+  const void *\plc{codeptr_ra};
 \} ompt_record_target_map_t;
 \end{boxedcode}
 \end{ccppspecific}
@@ -1285,6 +1304,18 @@ The \callbackarg{} \plc{bytes} indicates an array of size of data.
 The \callbackarg{} \plc{mapping\_flags} indicates the kind of data
 mapping. Flags for a mapping include one or more values specified by the type
 \code{ompt\_target\_map\_flag\_t}.
+
+\codeptrdesc
+
+\descr
+An instance of a \code{target}, \code{target data}, or \code{target enter data} construct may contain one or more \code{map} clauses. 
+An OpenMP implementation may report the set of mappings associated with \code{map} clauses for a construct 
+with a single \code{ompt\_callback\_target\_map} callback to report the effect of all mappings or multiple 
+\code{ompt\_callback\_target\_map} callbacks with each reporting a subset of the mappings. 
+If an OpenMP implementation issues multiple \code{ompt\_callback\_target\_map}
+callbacks, these callbacks may be interleaved with \code{ompt\_callback\_target\_data\_op} callbacks 
+used to report data operations associated with the mappings. 
+
 
 \crossreferences
 \begin{itemize}
