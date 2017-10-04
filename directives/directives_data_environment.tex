@@ -801,10 +801,6 @@ the corresponding original list item. Inside the construct, all references to th
 list item are replaced by references to the new list item. In the rest of the region, it is 
 unspecified whether references are to the new list item or the original list item. 
 
-\begin{cppspecific}
-If the construct is contained in a member function, it is unspecified anywhere in the region if accesses through the implicit \code{this} pointer refer to the new list item or the original list item.
-\end{cppspecific}
-
 Therefore, if an attempt is made to reference the original item, its value after the region 
 is also unspecified. If a SIMD construct or a task does not reference a list item that 
 appears in a \code{private} clause, it is unspecified whether SIMD lanes or the task receive 
@@ -819,11 +815,16 @@ The value and/or allocation status of the original list item will change only:
 
 \item as a side effect of directives or clauses, or
 
-\newpage %% HACK
 \begin{fortranspecific}
 \item if accessed and modified via construct association.
 \end{fortranspecific}
 \end{itemize}
+
+\begin{cppspecific}
+If the construct is contained in a member function, it is unspecified
+anywhere in the region if accesses through the implicit \code{this}
+pointer refer to the new list item or the original list item.
+\end{cppspecific}
 
 List items that appear in a \code{private}, \code{firstprivate}, or
 \code{reduction} clause in a \code{parallel} construct may also appear
@@ -991,15 +992,16 @@ in any statement in the construct. The initialization is done prior to the execu
 construct.
 
 For a \code{firstprivate} clause on a \code{parallel}, \code{task},
-\code{taskloop}, \code{target}, or \code{teams} construct, the
-initial value of the new list item is the value of the original list
-item that exists immediately prior to the construct in the task region
-where the construct is encountered. For a \code{firstprivate} clause
-on a worksharing construct, the initial value of the new list item for
-each implicit task of the threads that execute the worksharing
-construct is the value of the original list item that exists in the
-implicit task immediately prior to the point in time that the
-worksharing construct is encountered.
+\code{taskloop}, \code{target}, or \code{teams} construct, the initial
+value of the new list item is the value of the original list item that
+exists immediately prior to the construct in the task region where the
+construct is encountered unless otherwise specified. For a
+\code{firstprivate} clause on a worksharing construct, the initial
+value of the new list item for each implicit task of the threads that
+execute the worksharing construct is the value of the original list
+item that exists in the implicit task immediately prior to the point
+in time that the worksharing construct is encountered unless otherwise
+specified.
 
 To avoid race conditions, concurrent updates of the original list item must be 
 synchronized with the read of the original list item that occurs as a result of the 
@@ -2486,6 +2488,10 @@ device data environment prior to the task encountering the construct.
 \item A list item cannot be a variable that is a member of a structure with a union type.
 
 \item A bit-field cannot appear in a \code{map} clause.
+
+\item A pointer that has a corresponding attached pointer may not be modified
+      for the duration of the lifetime of the array section to which the
+      corresponding pointer is attached in the device data environment.
 \end{ccppspecific}
 \end{itemize}
 
