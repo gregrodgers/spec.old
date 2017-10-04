@@ -543,7 +543,7 @@ for encountered \code{parallel} regions. There is one copy of this ICV per data
 environment. 
 
 \item \plc{nest-var} - controls whether nested parallelism is enabled for encountered \code{parallel} 
-regions. There is one copy of this ICV per data environment. 
+regions. There is one copy of this ICV per data environment. The \plc{nest-var} ICV has been deprecated.
 
 \item \plc{nthreads-var} - controls the number of threads requested for encountered \code{parallel} 
 regions. There is one copy of this ICV per data environment. 
@@ -597,6 +597,9 @@ points. There is one copy of this ICV for the whole program.
 \item \plc{default-device-var} - controls the default target device. There is one copy of this ICV 
 per data environment.
 
+\item \plc{target-offload-var} - controls the offloading behavior. There is one copy of this ICV 
+for the whole program.
+
 \item \plc{max-task-priority-var} - controls the maximum priority value that can be specified in the
 \code{priority} clause of the \code{task} construct. There is one copy of this ICV for the whole program.
 
@@ -649,7 +652,7 @@ environment variables, and initial values.
 \tablecaption{ICV Initial Values\label{tab:ICV Initial Values}}
 \begin{supertabular}{p{1.3in} p{1.7in} p{1.5in}}
 \plc{dyn-var} & \code{OMP\_DYNAMIC} & See description below\\
-\plc{nest-var} & \code{OMP\_NESTED} & \plc{false}\\
+\plc{nest-var} & \code{OMP\_NESTED} & Implementation defined\\
 \plc{nthreads-var} & \code{OMP\_NUM\_THREADS} & Implementation defined\\
 \plc{run-sched-var} & \code{OMP\_SCHEDULE} & Implementation defined\\
 \plc{def-sched-var} & (none) & Implementation defined\\
@@ -663,6 +666,7 @@ environment variables, and initial values.
 \plc{place-partition-var} & \code{OMP\_PLACES} & Implementation defined\\
 \plc{cancel-var} & \code{OMP\_CANCELLATION} & \plc{false}\\
 \plc{default-device-var} & \code{OMP\_DEFAULT\_DEVICE} & Implementation defined\\
+\plc{target-offload-var} & \code{OMP\_TARGET\_OFFLOAD} & \code{DEFAULT} \\
 \plc{max-task-priority-var} & \code{OMP\_MAX\_TASK\_PRIORITY} & \plc{zero}\\
 \plc{tool-var} & \code{OMP\_TOOL} & \plc{enabled}\\
 \plc{tool-libraries-var} & \code{OMP\_TOOL\_LIBRARIES} & \plc{empty string}\\
@@ -716,6 +720,8 @@ device's ICVs is implementation defined.
 \item \code{OMP\_CANCELLATION} environment variable, see \specref{sec:OMP_CANCELLATION}.
 
 \item \code{OMP\_DEFAULT\_DEVICE} environment variable, see \specref{sec:OMP_DEFAULT_DEVICE}.
+
+\item \code{OMP\_TARGET\_OFFLOAD} environment variable, see \specref{sec:OMP_TARGET_OFFLOAD}.
 
 \item \code{OMP\_MAX\_TASK\_PRIORITY} environment variable, see \specref{sec:OMP_MAX_TASK_PRIORITY}.
 
@@ -788,6 +794,8 @@ through OpenMP API routines.
 \plc{cancel-var} & (none) & \code{omp\_get\_cancellation()}\\
 
 \plc{default-device-var} & \code{omp\_set\_default\_device()} & \code{omp\_get\_default\_device()}\\
+
+\plc{target-offload-var} & (none) & (none)\\
 
 \plc{max-task-priority-var} & (none) & \code{omp\_get\_max\_task\_priority()}\\
 \plc{tool-var} & (none) & (none)\\
@@ -909,6 +917,7 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \plc{place-partition-var} & implicit task\\
 \plc{cancel-var} & global\\
 \plc{default-device-var} & data environment\\
+\plc{target-offload-var} & global\\
 \plc{max-task-priority-var} & global\\
 \plc{tool-var} & global\\
 \plc{tool-libraries-var} & global\\
@@ -1007,6 +1016,7 @@ among construct clauses and ICVs.
 \plc{place-partition-var} & (none)\\
 \plc{cancel-var} & (none)\\
 \plc{default-device-var} & (none)\\
+\plc{target-offload-var} & (none)\\
 \plc{max-task-priority-var} & (none)\\
 \plc{tool-var} & (none)\\
 \plc{tool-libraries-var} & (none)\\
@@ -1166,13 +1176,87 @@ Restrictions to array sections are as follows:
 
 \end{itemize}
 
+\section{Iterators}
+\index{iterators}
+\label{sec:iterators}
 
+Iterators are identifiers that expand to multiple values in the clause on which they appear.
 
+The syntax to define an iterator is the following:
+\begin{boxedcode}
+\plc{iterators-definition}
+\end{boxedcode}
+where \plc{iterators-definition} is either an \plc{iterator-specifier} or an \plc{iterator-specifier-list}.
 
+The syntax of an \plc{iterator-specifier} is one of the following:
+\begin{indentedcodelist}
+[\plc{iterator-type }] \plc{identifier} = \plc{range-specification}
+\end{indentedcodelist}
 
+where:
+\begin{itemize}
+\item \plc{identifier} is a base language identifier.
+\begin{ccppspecific}
+\item \plc{iterator-type} is a type name.
+\end{ccppspecific}
+\begin{fortranspecific}
+\item \plc{iterator-type} is a type specifier.
+\end{fortranspecific}
 
+\item \plc{range-specification} is of the form \plc{begin, end[, step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
+\end{itemize}
 
+The syntax of an \plc{iterator-specifier-list} is as follows:
+\begin{indentedcodelist}
+( \plc{iterator-specifier} )[, \plc{iterator-specifier-list}]
+\end{indentedcodelist}
 
+%Each \plc{iterator-specifier} specifies an explicit iterator.
 
+\begin{ccppspecific}
+\begin{itemize}
+\item The \plc{iterator-type} must be an integral or pointer type.
+\item In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is of \code{int} type.
+\end{itemize}
+\end{ccppspecific}
+\begin{fortranspecific}
+\begin{itemize}
+\item The \plc{iterator-type} must be an integer type.
+\item In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is default integer.
+\end{itemize}
+\end{fortranspecific}
 
+In a \plc{range-specification}, if the \plc{step} is not specified its value is implicitly defined to be 1.
 
+An iterator only exists in the context of the clause on which it appears. An iterator also hides all accessible symbols with the same name in the context of the clause.
+
+The use of a variable in an expression that appears in the \plc{range-specification} causes an implicit reference to the variable in all enclosing constructs.
+
+\begin{ccppspecific}
+The values of the iterator are the set of values $i_{0}$...$i_{N-1}$ where $i_{0}=begin$,  $i_{j}=i_{j-1} + step$ and
+\begin{itemize}
+\item $i_{N-1} < end$ and $i_{N-1} + step >= end$ if $step > 0$.
+\item $i_{N-1} > end$ and $i_{N-1} + step <= end$ if $step < 0$.
+\end{itemize}
+\end{ccppspecific}
+\begin{fortranspecific}
+The values of the iterator are the set of values $i_{1}$...$i_{N}$ where $i_{1}=begin$,  $i_{j}=i_{j-1} + step$ and
+\begin{itemize}
+\item $i_{N} <= end$ and $i_{N} + step > end$ if $step > 0$.
+\item $i_{N} >= end$ and $i_{N} + step < end$ if $step < 0$.
+\end{itemize}
+\end{fortranspecific}
+
+An expression containing an iterator identifier can only appear in clauses that
+explicitly allow expressions containing iterators. For those clauses, the
+effect is as if the list item is instantiated within the clause for each
+value of the iterator in the set defined above, substituting each occurrence of
+the iterator identifier in the expression with the iterator value.
+
+\restrictions
+
+\begin{itemize}
+\item If the \plc{step} expression of a \plc{range-specification} equals zero the behavior is unspecified.
+\item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
+\item Iterators cannot appear in the \plc{range-specification}.
+\end{itemize}
