@@ -167,28 +167,27 @@ single thread at a time.
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-\#pragma omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ] new-line}
+  \#pragma omp critical \plc{[}(\plc{name}) \plc{[[},\plc{]} hint(\plc{hint-expression})\plc{] ] new-line}
     \plc{structured-block}
 \end{boxedcode}
 
 where \plc{hint-expression} is an integer constant expression that
-evaluates to a valid lock hint (as described 
-in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
+evaluates to a valid synchronization hint (as described in~\specref{subsec:Synchronization Hints}).
 \end{ccppspecific}
 
 \begin{fortranspecific}
 The syntax of the \code{critical} construct is as follows:
 
 \begin{boxedcode}
-!\$omp critical \plc{[}(\plc{name}) \plc{[}hint(\plc{hint-expression})\plc{] ]}
+!\$omp critical \plc{[}(\plc{name}) \plc{[[},\plc{]} hint(\plc{hint-expression})\plc{] ]}
     \plc{structured-block}
 !\$omp end critical \plc{[}(\plc{name})\plc{]}  
 \end{boxedcode}
 
 where \plc{hint-expression} is a constant expression that evaluates to
-a scalar value with kind \code{omp\_lock\_hint\_kind} and  a value
-that is a valid lock hint (as described 
-in~\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}).
+a scalar value with kind \code{omp\_sync\_hint\_kind} and  a value
+that is a valid synchronization hint (as described 
+in~\specref{subsec:Synchronization Hints}).
 \end{fortranspecific}
 
 \binding
@@ -215,17 +214,13 @@ The threads of a contention group execute the \code{critical} region as if only 
 The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all 
 threads in the contention group, not just those threads in the current team.
 
+If present, the \code{hint} clause gives the implementation additional
+information about the expected runtime properties of the \code{critical} region
+that can optionally be used to optimize the implementation.
 The presence of a \code{hint} clause does not affect the isolation
 guarantees provided by the \code{critical} construct. If no
-\code{hint} clause is specified, the effect is as if \code{hint(omp\_lock\_hint\_none)}
+\code{hint} clause is specified, the effect is as if \code{hint(omp\_sync\_hint\_none)}
 had been specified.
-
-% Replaced by the above paragraph
-% If the \code{hint} clause is present, the effect of the \code{critical} 
-% construct is implementation defined, but retains the mutual exclusion 
-% semantics. If no
-% \code{hint} clause is specified, the effect is as if \code{hint(none)}
-% has been specified.
 
 \def\omptMutex#1#2{
 \events
@@ -297,8 +292,8 @@ specified on the \code{end}~\code{critical} directive.
 
 \crossreferences
 \begin{itemize}
-\item \code{omp\_init\_lock\_with\_hint} and \code{omp\_init\_nest\_lock\_with\_hint}, see 
-\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
+\item Synchronization Hints, see
+\specref{subsec:Synchronization Hints}.
 
 \item \code{ompt\_mutex\_critical}, see
 \specref{sec:ompt_mutex_kind_t}.
@@ -756,9 +751,11 @@ acquire
 \begin{ccppspecific}
 The syntax of the \code{atomic} construct takes one of the following forms:
 
-\begin{boxedcode}[fontsize=\small]
-\#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} \plc{atomic-clause} \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
-   \plc{expression-stmt}
+\begin{boxedcode}
+\#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} \plc{atomic-clause} 
+                   \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+                   \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
+    \plc{expression-stmt}
 \end{boxedcode}
 
 %% where \plc{atomic-clause} is one of the following:
@@ -773,14 +770,16 @@ The syntax of the \code{atomic} construct takes one of the following forms:
 or
 
 \begin{boxedcode}
-\#pragma omp atomic \plc{[memory-order-clause]} \plc{new-line}
-   \plc{expression-stmt}
+\#pragma omp atomic \plc{[memory-order-clause]} \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} \plc{new-line} 
+    \plc{expression-stmt}
 \end{boxedcode}
 
 or
 
-\begin{boxedcode}[fontsize=\small]
-\#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
+\begin{boxedcode}
+\#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} capture 
+                   \plc{[[},\plc{]}\plc{[}hint(\plc{hint-expression})\plc{]}
+                   \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
     \plc{structured-block}
 \end{boxedcode}
 
@@ -869,13 +868,16 @@ than \plc{binop}, or by using parentheses around \plc{expr} or subexpressions of
 \item For forms that allow multiple occurrences of \plc{x}, the number of times that \plc{x} is 
 evaluated is unspecified.
 \end{itemize}
+
 \end{ccppspecific}
 
-\fortranspecific start %% TODO: this needs to be changed.
+%% \fortranspecific start %% TODO: this needs to be changed
+\begin{fortranspecific}
 The syntax of the \code{atomic} construct takes any of the following forms: 
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause[},\plc{]]} read \plc{[[},\plc{]memory-order-clause]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} read \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+             \plc{[[},\plc{]memory-order-clause]} 
     \plc{capture-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -883,7 +885,8 @@ The syntax of the \code{atomic} construct takes any of the following forms:
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause[},\plc{]]} write \plc{[[},\plc{]memory-order-clause]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} write \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+             \plc{[[},\plc{]memory-order-clause]}
     \plc{write-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -891,7 +894,8 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause[},\plc{]]} update \plc{[[},\plc{]memory-order-clause]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} update \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+             \plc{[[},\plc{]memory-order-clause]}
     \plc{update-statement }
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
@@ -899,15 +903,17 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause]}
-    \plc{update-statement }
+!\$omp atomic \plc{[memory-order-clause]} \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+             \plc{[[},\plc{]memory-order-clause]}
+    \plc{update-statement}
 \plc{[}!\$omp end atomic\plc{]}
 \end{boxedcode}
 
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
+             \plc{[[},\plc{]memory-order-clause]}
     \plc{update-statement }
     \plc{capture-statement}
 !\$omp end atomic
@@ -916,7 +922,8 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+             \plc{[[},\plc{]memory-order-clause]}
     \plc{capture-statement}
     \plc{update-statement}
 !\$omp end atomic
@@ -925,7 +932,8 @@ or
 or
 
 \begin{boxedcode}
-!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]memory-order-clause]}
+!\$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} 
+             \plc{[[},\plc{]memory-order-clause]}
     \plc{capture-statement}
     \plc{write-statement}
 !\$omp end atomic
@@ -1005,12 +1013,13 @@ program entities.
 
 \item For forms that allow multiple occurrences of \plc{x}, the number of times that \plc{x} is 
 evaluated is unspecified.
-\fortranspecificend %% TODO: this needs to be changed.
-
 %% \item In all \code{atomic} construct forms, the \code{seq\_cst} clause and the clause that denotes the 
 %% type of the atomic construct can appear in any order. In addition, an optional comma 
 %% may be used to separate the clauses
 \end{itemize}
+\end{fortranspecific}
+%% \fortranspecificend %% TODO: this needs to be changed.
+
 
 \begin{samepage}
 
@@ -1123,6 +1132,13 @@ If the storage location designated by \plc{x} is not size-aligned (that is, if t
 of \plc{x} is not a multiple of the size of \plc{x}), then the behavior of the \code{atomic} region is 
 implementation defined.
 
+If present, the \code{hint} clause gives the implementation additional
+information about the expected properties of the atomic operation
+that can optionally be used to optimize the implementation.
+The presence of a \code{hint} clause does not affect the semantics of
+the \code{atomic} construct, and it is legal to ignore all hints.
+If no \code{hint} clause is specified, the effect is as if \code{hint(omp\_sync\_hint\_none)} had been specified.
+
 \needspace{16\baselineskip}\begin{samepage}
 
 \omptMutex{atomic}{an}
@@ -1159,10 +1175,21 @@ are required to have the same type and type parameters.
 \end{itemize}
 \end{fortranspecific}
 
+% Do we want this? I do not believe that we need it. This is not like
+% a critical section where different lock implementations might be used
+% by lexically different critical sections that name the same
+% lock. Here all implementations must inter-operate anyway.
+% \begin{itemize}
+% \item When a \code{hint} is present at the construct, all \code{atomic} constructs which
+% may simultaneously access the storage locations designated by
+% \plc{x} must have a hint expression that evaluates to the same value.
+% \end{itemize}
+
 \begin{itemize}
 \item OpenMP constructs may not be encountered during execution of an
 \code{atomic} region.
 \end{itemize}
+
 
 \crossreferences
 \begin{itemize}
@@ -1183,6 +1210,9 @@ are required to have the same type and type parameters.
 
 \item lock routines, see 
 \specref{sec:Lock Routines}.
+
+\item Synchronization Hints, see
+\specref{subsec:Synchronization Hints}.
 
 \item \code{ompt\_mutex\_atomic}, see
 \specref{sec:ompt_mutex_kind_t}.
@@ -1816,4 +1846,118 @@ type of x$_{i}$ without overflow.
 
 \item \code{ompt\_callback\_task\_dependence\_t}, see
 \specref{sec:ompt_callback_task_dependence_t}.
+\end{itemize}
+
+\subsection{Synchronization Hints}
+\index{synchronization hints}
+\index{clauses!hint@{\code{hint}}}
+\label{subsec:Synchronization Hints}
+Hints about the expected dynamic behavior or suggested implementation
+can be provided by the programmer to locks (by using 
+the \code{omp\_init\_lock\_with\_hint} or
+\code{omp\_init\_nest\_lock\_with\_hint} functions to initialize the lock), and to
+\code{atomic} and \code{critical} directives by using the \code{hint}
+clause.  The effect of a hint is implementation defined. The OpenMP
+implementation is free to ignore the hint since doing so cannot change
+program semantics.
+
+The C/C++ header file (\code{omp.h}) and the Fortran include file (\code{omp\_lib.h}) and/or Fortran~90 module file (\code{omp\_lib}) define the valid hint constants.  
+The valid constants must include the following, which can be extended with implementation-defined values:
+
+\begin{ccppspecific}
+\begin{codepar}
+typedef enum omp\_sync\_hint\_t \{
+  omp\_sync\_hint\_none = 0,
+  omp\_lock\_hint\_none = omp\_sync\_hint\_none,
+  omp\_sync\_hint\_uncontended = 1,
+  omp\_lock\_hint\_uncontended = omp\_sync\_hint\_uncontended,
+  omp\_sync\_hint\_contended = 2,
+  omp\_lock\_hint\_contended = omp\_sync\_hint\_contended,
+  omp\_sync\_hint\_nonspeculative = 4,
+  omp\_lock\_hint\_nonspeculative = omp\_sync\_hint\_nonspeculative,
+  omp\_sync\_hint\_speculative = 8
+  omp\_lock\_hint\_speculative = omp\_sync\_hint\_speculative
+\} omp\_sync\_hint\_t;
+
+typedef omp\_sync\_hint\_t omp\_lock\_hint\_t;
+\end{codepar}
+\end{ccppspecific}
+
+% \newpage
+
+\begin{fortranspecific}
+\begin{codepar}
+integer, parameter :: omp\_lock\_hint\_kind = omp\_sync\_hint\_kind
+
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_none = 0
+integer (kind=omp\_lock\_hint\_kind), &
+  parameter :: omp\_lock\_hint\_none = omp\_sync\_hint\_none
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_uncontended = 1
+integer (kind=omp\_lock\_hint\_kind), &
+  parameter :: omp\_lock\_hint\_uncontended = omp\_sync\_hint\_uncontended
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_contended = 2
+integer (kind=omp\_lock\_hint\_kind), &
+  parameter :: omp\_lock\_hint\_contended = omp\_sync\_hint\_contended
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_nonspeculative = 4
+integer (kind=omp\_lock\_hint\_kind), &
+  parameter :: omp\_lock\_hint\_nonspeculative = omp\_sync\_hint\_nonspeculative
+integer (kind=omp\_sync\_hint\_kind), &
+  parameter :: omp\_sync\_hint\_speculative = 8
+integer (kind=omp\_lock\_hint\_kind), &
+  parameter :: omp\_lock\_hint\_speculative = omp\_sync\_hint\_speculative
+\end{codepar}
+\end{fortranspecific}
+
+The hints can be combined by using the \code{+} or \code{|} operators in C/C++ or the \code{+} operator in Fortran.  
+The effect of the combined hint is implementation defined and can be ignored by the implementation.
+Combining \code{omp\_sync\_hint\_none} with any other hint is equivalent to specifying the other hint.
+The following restrictions apply to combined hints; violating these 
+restrictions results in unspecified behavior:
+\begin{itemize}
+\item the hints \code{omp\_sync\_hint\_uncontended} and \code{omp\_sync\_hint\_contended} cannot be combined,
+\item the hints \code{omp\_sync\_hint\_nonspeculative} and \code{omp\_sync\_hint\_speculative} cannot be combined.
+\end{itemize}
+The rules for combining multiple values of \code{omp\_sync\_hint} apply equally to the
+corresponding values of \code{omp\_lock\_hint}, and expressions mixing the two types.
+
+The intended meaning of hints is
+\begin{itemize}
+\item \code{omp\_sync\_hint\_uncontended}: low contention is expected in this operation, that is,
+few threads are expected to be performing the operation simultaneously in a manner that requiressynchronization.
+\item \code{omp\_sync\_hint\_contended}: high contention is expected in this operation, that is,
+many threads are expected to be performing the operation simultaneously in a manner that requires synchronization.
+\item \code{omp\_sync\_hint\_speculative}: the programmer suggests that the operation should be implemented using
+speculative techniques such as transactional memory.
+\item \code{omp\_sync\_hint\_nonspeculative}: the programmer suggests that the operation should not be
+implemented using speculative techniques such as transactional memory.
+\end{itemize}
+
+\begin{note}
+Future OpenMP specifications may add additional hints to the
+\code{omp\_sync\_hint\_t} type and the \code{omp\_sync\_hint\_kind} kind.
+Implementers are advised to add implementation-defined hints starting from
+the most significant bit of the \code{omp\_sync\_hint\_t} type and
+\code{omp\_sync\_hint\_kind} kind and to include the name of the
+implementation in the name of the added hint to avoid name conflicts
+with other OpenMP implementations.
+\end{note}
+
+The \code{omp\_sync\_hint\_t} and \code{omp\_lock\_hint\_t} enumeration types and the equivalent types in Fortran
+are synonyms for each other.
+The type \code{omp\_lock\_hint\_t} has been deprecated.
+
+\crossreferences
+\begin{itemize}
+\item \code{atomic} construct, see
+\specref{subsec:atomic Construct}
+
+\item \code{critical} construct, see 
+\specref{subsec:critical Construct}.
+\item \code{omp\_init\_lock\_with\_hint} and
+  \code{omp\_init\_nest\_lock\_with\_hint}, see
+\specref{subsec:omp_init_lock_with_hint and omp_init_nest_lock_with_hint}.
 \end{itemize}
