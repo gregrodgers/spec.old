@@ -142,7 +142,7 @@ uses its \callbackarg{} \plc{lookup} to look up pointers
 to OMPT interface runtime entry points provided by the OpenMP
 implementation; this process is described in \specref{sec:ompt-bind}.
 After obtaining a pointer to the OpenMP runtime entry point known as
-known as \code{ompt\_set\_callback} with type signature
+\code{ompt\_set\_callback} with type signature
 \code{ompt\_set\_callback\_t}, the tool initializer should use it to
 register tool callbacks for OpenMP events, as described in
 \specref{sec:ompt-register-callbacks}.
@@ -388,7 +388,7 @@ A target device may or may not initialize a full OpenMP runtime system.
 Unless it does, it may not be possible to monitor activity 
 on a device using a tool interface based on callbacks.
 To accommodate such cases, the OMPT interface defines 
-a performance monitoring interface for tracing activity on target
+a monitoring interface for tracing activity on target
 devices. Tracing activity on a target device involves the following
 steps:
 
@@ -463,6 +463,10 @@ OpenMP specification.
 \item The tool will use the \code{ompt\_set\_trace\_native}
   and/or the \code{ompt\_set\_trace\_ompt} runtime entry point to specify what
   types of events or activities to monitor on the target device.
+  If the \code{ompt\_set\_trace\_native} and/or the 
+  \code{ompt\_set\_trace\_ompt} runtime entry point is called outside a device
+  initializer, registration of supported callbacks may fail with a return code of 
+  \code{ompt\_set\_error}.
 \item The tool will initiate tracing on the target device by 
   invoking \code{ompt\_start\_trace}. Arguments to \code{ompt\_start\_trace}
   include two tool callbacks for use by the OpenMP implementation to manage
@@ -517,7 +521,7 @@ OpenMP specification.
   argument.  
 \item A tool may start or stop tracing on a device at any time using the 
   \code{ompt\_start\_trace} or \code{ompt\_stop\_trace} runtime entry points,
-  respectively. When tracing is stopped on a device, the OpenMP implementatin will eventually 
+  respectively. When tracing is stopped on a device, the OpenMP implementation will eventually 
   gather all trace records already collected on the device and present to the tool using
   the buffer completion callback provided by the tool.
 \item It is legal to shut down an OpenMP implementation while device tracing 
@@ -741,22 +745,22 @@ when the thread is awaiting completion of a barrier.
   An OpenMP implementation may report \code{omp\_state\_wait\_barrier} 
   for implicit barriers.
   
-  \item \code{omp\_state\_wait\_barrier\_explicit\_parallel} 
+  \item \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
 
   The description of when a thread reports a state associated with an implicit barrier
   is described for state \code{omp\_state\_wait\_barrier\_implicit}.  
-  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_explicit\_parallel} 
+  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
   for an implicit barrier that occurs at the end of a parallel region. 
   As explained in \specref{sec:ompt_callback_sync_region_t},
   reporting the state \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
   permits a weaker contract between a runtime and a tool that 
   enables a simpler and faster implementation of parallel regions.
 
-  \item \code{omp\_state\_wait\_barrier\_explicit\_workshare} 
+  \item \code{omp\_state\_wait\_barrier\_implicit\_workshare} 
 
   The description of when a thread reports a state associated with an implicit barrier
   is described for state \code{omp\_state\_wait\_barrier\_implicit}.  
-  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_explicit\_parallel} 
+  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
   for an implicit barrier that occurs at the end of a worksharing construct.
 
   \item \code{omp\_state\_wait\_barrier\_explicit} 
@@ -1119,7 +1123,7 @@ use of \code{ompt\_frame\_t} objects with nested parallelism.
 A monitoring tool using asynchronous sampling can observe values
 of \plc{exit\_frame} and \plc{enter\_frame} at inconvenient times.
 Tools must be prepared to observe and handle \code{ompt\_frame\_t}
-objects observed just prior to when their field values should be set or reset.
+objects observed just prior to when their field values will be set or cleared.
 \end{note}
 
 \subsection{Tracing Support}
@@ -1199,7 +1203,7 @@ will be \code{ompt\_hwid\_none}.
 \begin{boxedcode}
 typedef struct ompt_record_ompt_s \{
   ompt_callbacks_t \plc{type};
-  ompt_target_time\_t \plc{time};
+  ompt_device_time\_t \plc{time};
   ompt_id_t \plc{thread_id};
   ompt_id_t \plc{target_id};
   union \{
@@ -1315,7 +1319,7 @@ A wait identifier may represent a critical section {\em name}, a lock, a program
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef \ulonglongint{} ompt_wait_id_t;
-const ompt_wait_id_t ompt_wait_id_none = 0;
+static const ompt_wait_id_t ompt_wait_id_none = 0;
 \end{boxedcode}
 \end{ccppspecific}
 }
@@ -1697,9 +1701,10 @@ typedef enum ompt_target_map_flag_e \{
 \begin{ccppspecific}
 \begin{boxedcode}
 typedef enum ompt_task_dependence_flag_e \{
-  ompt_task_dependence_type_out       = 1,
-  ompt_task_dependence_type_in        = 2,
-  ompt_task_dependence_type_inout     = 3
+  ompt_task_dependence_type_out             = 1,
+  ompt_task_dependence_type_in              = 2,
+  ompt_task_dependence_type_inout           = 3,
+  ompt_task_dependence_type_mutexinoutset   = 4
 \} ompt_task_dependence_flag_t;
 \end{boxedcode}
 \end{ccppspecific}

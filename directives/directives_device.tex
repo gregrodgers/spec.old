@@ -228,9 +228,6 @@ as its \plc{endpoint} argument, as appropriate, and
   \item References in the construct to a list item that appears in a
     \code{use\_device\_ptr} clause must be to the address of the list item.
 
-  \item A pointer that has a corresponding attached pointer may not be modified
-  in a \code{target}~\code{data} region.  
-
 \end{itemize}
 
 
@@ -351,6 +348,7 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 
 \item At most one \code{if} clause can appear on the directive.
 \item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{to} or \code{alloc}.
+\item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
 \crossreferences
@@ -454,6 +452,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
   \code{omp\_get\_num\_devices()}.
 \item At most one \code{if} clause can appear on the directive.
 \item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{from}, \code{release}, or \code{delete}.
+\item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
 \crossreferences
@@ -510,6 +509,7 @@ if(\plc{[} target :\plc{] scalar-expression})
 device(\plc{integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
+in_reduction(\plc{reduction-identifier }:\plc{ list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 is\_device\_ptr(\plc{list})
@@ -537,6 +537,7 @@ if(\plc{[} target :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
+in_reduction(\plc{reduction-identifier }:\plc{ list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 is\_device\_ptr(\plc{list})
@@ -564,7 +565,22 @@ The functionality added to the \code{target} directive is the inclusion of an ex
 
 The \code{target} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target} region.
 
-All clauses are evaluated when the \code{target} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target} construct.  A variable that appears as a list item in a \code{reduction} clause on the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}. Likewise, a variable that is mapped in the \code{target} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
+All clauses are evaluated when the \code{target} construct is encountered.
+The data environment of the \plc{target task} is created according to the
+data-sharing attribute clauses on the \code{target} construct, per-data
+environment ICVs, and any default data-sharing attribute rules that apply to
+the \code{target} construct.  If a variable or part of a variable appears as a
+list item in a \code{reduction} clause on the \code{target} construct and does
+not appear as a list item in an \code{in\_reduction} clause on the construct,
+the variable has a default data-sharing attribute of shared in the data
+environment of the \plc{target task}. Likewise, if a variable or part of a
+variable is mapped by the \code{target} construct, the variable has a default
+data-sharing attribute of shared in the data environment of the \plc{target
+task}.
+
+If an \code{in\_reduction} clause is present on the \code{target} construct,
+the behavior is as if a \code{reduction} clause with the same reduction
+operator and list items is present on the construct.
 
 Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
@@ -589,21 +605,21 @@ directive.
 
 If an array section is a list item in a \code{map} clause and it has a named
 pointer that is a scalar variable with a predetermined data-sharing attribute
-of firstprivate (see \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct})
-then prior to the execution of the construct:
+of firstprivate (see \specref{subsubsec:Data-sharing Attribute Rules for
+Variables Referenced in a Construct}) then on entry to the \code{target}
+region:
 
 \begin{itemize}
+\item If the list item is not a zero-length array section, the corresponding 
+private variable is initialized relative to the address of the storage
+location of the corresponding array section in the device data environment
+that is created by the \code{map} clause.
 
-\item If the list item is not a zero-length array section, the corresponding
-private variable is initialized with the address of the storage location of the
-corresponding array section in the device data environment.
-
-\item If the list item is a zero-length array section, the corresponding private
-variable is initialized with the address of the corresponding storage location
-in the device data environment.  If the corresponding storage location is not
-present in the device data environment, the corresponding private variable
-is initialized to NULL.  
-
+\item If the list item is a zero-length array section, the corresponding
+private variable is initialized relative to the address of the 
+corresponding storage location in the device data environment. If the
+corresponding storage location is not present in the device data environment,
+the corresponding private variable is initialized to NULL.
 \end{itemize}
 
 \end{ccppspecific}
@@ -647,6 +663,8 @@ must also appear as a list item in a \code{map} clause.
 declared in the \code{target} region must appear in a \code{declare}~\code{target} directive. 
 
 \item At most one \code{defaultmap} clause can appear on the directive.
+
+\item At most one \code{nowait} clause can appear on the directive.
 
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
 
@@ -869,6 +887,8 @@ clause expression evaluates to \plc{false} then no assignments occur.
       of \code{omp\_get\_num\_devices()}.
 
 \item At most one \code{if} clause can appear on the directive. 
+
+\item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
 \crossreferences
@@ -1173,7 +1193,7 @@ may only be specified within an implicit \plc{extended-list}.
 \index{device constructs!teams@{\code{teams}}}
 \label{subsec:teams Construct}
 \summary
-The \code{teams} construct creates a league of thread teams and the master thread of each 
+The \code{teams} construct creates a league of initial teams and the initial thread in each 
 team executes the region.
 
 \syntax
@@ -1229,12 +1249,13 @@ The binding thread set for a \code{teams} region is the encountering thread,
 which is the initial thread of the \code{target} region.
 
 \descr
-When a thread encounters a \code{teams} construct, a league of thread teams is created and 
-the master thread of each thread team executes the \code{teams} region.
+When a thread encounters a \code{teams} construct, a league of teams is
+created. Each team is an initial team, and the initial thread in each team
+executes the \code{teams} region.
 
 The number of teams created is implementation defined, but is less than or equal to the 
 value specified in the \code{num\_teams} clause.
-A thread may obtain the number of teams by a call to the \code{omp\_get\_num\_teams} routine.
+A thread may obtain the number of initial teams created by the construct by a call to the \code{omp\_get\_num\_teams} routine.
 
 \end{samepage}
 
@@ -1247,12 +1268,14 @@ On a combined or composite construct that includes \code{target} and
 \code{thread\_limit} clauses are evaluated on the host device on
 entry to the \code{target} construct.
 
-Once the teams are created, the number of teams remains constant for the duration of the 
+Once the teams are created, the number of initial teams remains constant for the duration of the 
 \code{teams} region.
 
-Within a \code{teams} region, team numbers uniquely identify each team. Team numbers are 
-consecutive whole numbers ranging from zero to one less than the number of teams. A 
-thread may obtain its own team number by a call to the \code{omp\_get\_team\_num} library 
+Within a \code{teams} region, initial team numbers uniquely identify each
+initial team. Initial team numbers are 
+consecutive whole numbers ranging from zero to one less than the number of
+initial teams. A 
+thread may obtain its own initial team number by a call to the \code{omp\_get\_team\_num} library 
 routine.
 
 After the teams have completed execution of the \code{teams} region, the encountering thread 
@@ -1312,8 +1335,8 @@ that may be strictly nested inside the \code{teams} region.
 \label{subsec:distribute Construct}
 \summary
 The \code{distribute} construct specifies that the iterations of one or more loops will be 
-executed by the thread teams in the context of their implicit tasks. The iterations are 
-distributed across the master threads of all teams that execute the \code{teams} region to 
+executed by the initial teams in the context of their implicit tasks. The iterations are 
+distributed across the initial threads of all initial teams that execute the \code{teams} region to 
 which the \code{distribute} region binds.
 
 \syntax
@@ -1372,10 +1395,10 @@ termination statement, then the directive can only be specified for the outermos
 \begin{samepage}
 
 \binding
-The binding thread set for a \code{distribute} region is the set of master
+The binding thread set for a \code{distribute} region is the set of initial
 threads executing an enclosing \code{teams} region. A \code{distribute} region
-binds to this \code{teams} region. Only the threads executing the binding \code{teams} region participate in the 
-execution of the loop iterations.
+binds to this \code{teams} region. 
+%Only the threads executing the binding \code{teams} region participate in the execution of the loop iterations.
 
 \descr
 The \code{distribute} construct is associated with a loop nest consisting of one or more 
@@ -1400,15 +1423,23 @@ of all associated loops are collapsed into one larger iteration space. The seque
 execution of the iterations in all associated loops determines the order of the iterations in 
 the collapsed iteration space.
 
+If more than one loop is associated with the \code{distribute}
+construct then the number of times that any intervening code between
+any two associated loops will be executed is unspecified but will be
+at least once per iteration of the loop enclosing the intervening code
+and at most once per iteration of the innermost loop associated with
+the construct.
+
 The iteration count for each associated loop is computed before entry to the outermost loop. If execution of any associated loop changes any of the values used to compute any of the iteration counts, then the behavior is unspecified. 
 
 The integer type (or kind, for Fortran) used to compute the iteration count for the collapsed loop is implementation defined.
 
 If \code{dist\_schedule} is specified, \plc{kind} must be \code{static}. If specified, iterations are 
-divided into chunks of size \plc{chunk\_size}, chunks are assigned to the teams of the league in 
-a round-robin fashion in the order of the team number. When no \plc{chunk\_size} is specified, 
+divided into chunks of size \plc{chunk\_size}, chunks are assigned to the
+initial teams of the league in 
+a round-robin fashion in the order of the initial team number. When no \plc{chunk\_size} is specified, 
 the iteration space is divided into chunks that are approximately equal in size, and at 
-most one chunk is distributed to each team of the league. The size of the 
+most one chunk is distributed to each initial team of the league. The size of the 
 chunks is unspecified in this case.
 
 When no \code{dist\_schedule} clause is specified, the schedule is implementation defined.
@@ -1506,6 +1537,8 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
 
 \item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+
+\item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
 
 \crossreferences
@@ -1590,6 +1623,7 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \item The restrictions for the \code{distribute} and parallel loop constructs apply.
 \item No \code{ordered} clause can be specified.
 \item No \code{linear} clause can be specified.
+\item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
 
 %% BRONIS: Another ugly trick to avoid page starting with end c/C++ sentinel
@@ -1686,6 +1720,7 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \item The restrictions for the \code{distribute} and parallel loop SIMD constructs apply.
 \item No \code{ordered} clause can be specified.
 \item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+\item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
 
 \crossreferences
