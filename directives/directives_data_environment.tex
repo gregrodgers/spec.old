@@ -801,10 +801,6 @@ the corresponding original list item. Inside the construct, all references to th
 list item are replaced by references to the new list item. In the rest of the region, it is 
 unspecified whether references are to the new list item or the original list item. 
 
-\begin{cppspecific}
-If the construct is contained in a member function, it is unspecified anywhere in the region if accesses through the implicit \code{this} pointer refer to the new list item or the original list item.
-\end{cppspecific}
-
 Therefore, if an attempt is made to reference the original item, its value after the region 
 is also unspecified. If a SIMD construct or a task does not reference a list item that 
 appears in a \code{private} clause, it is unspecified whether SIMD lanes or the task receive 
@@ -819,11 +815,16 @@ The value and/or allocation status of the original list item will change only:
 
 \item as a side effect of directives or clauses, or
 
-\newpage %% HACK
 \begin{fortranspecific}
 \item if accessed and modified via construct association.
 \end{fortranspecific}
 \end{itemize}
+
+\begin{cppspecific}
+If the construct is contained in a member function, it is unspecified
+anywhere in the region if accesses through the implicit \code{this}
+pointer refer to the new list item or the original list item.
+\end{cppspecific}
 
 List items that appear in a \code{private}, \code{firstprivate}, or
 \code{reduction} clause in a \code{parallel} construct may also appear
@@ -991,15 +992,16 @@ in any statement in the construct. The initialization is done prior to the execu
 construct.
 
 For a \code{firstprivate} clause on a \code{parallel}, \code{task},
-\code{taskloop}, \code{target}, or \code{teams} construct, the
-initial value of the new list item is the value of the original list
-item that exists immediately prior to the construct in the task region
-where the construct is encountered. For a \code{firstprivate} clause
-on a worksharing construct, the initial value of the new list item for
-each implicit task of the threads that execute the worksharing
-construct is the value of the original list item that exists in the
-implicit task immediately prior to the point in time that the
-worksharing construct is encountered.
+\code{taskloop}, \code{target}, or \code{teams} construct, the initial
+value of the new list item is the value of the original list item that
+exists immediately prior to the construct in the task region where the
+construct is encountered unless otherwise specified. For a
+\code{firstprivate} clause on a worksharing construct, the initial
+value of the new list item for each implicit task of the threads that
+execute the worksharing construct is the value of the original list
+item that exists in the implicit task immediately prior to the point
+in time that the worksharing construct is encountered unless otherwise
+specified.
 
 To avoid race conditions, concurrent updates of the original list item must be 
 synchronized with the read of the original list item that occurs as a result of the 
@@ -1752,17 +1754,18 @@ Clauses} and \ref{subsubsec:Reduction Participating Clauses}.
 For \code{parallel} and worksharing constructs, a private copy of each list item is created, 
 one for each implicit task, as if the \code{private} clause had been used. For the \code{simd} 
 construct, a private copy of each list item is created, one for each SIMD lane as if the 
-\code{private} clause had been used. 
-For the \code{taskloop} construct, private copies are created according to the rules of the reduction scoping clauses. 
-For the \code{target} construct, a private
-copy of each list item is created and initialized for the initial task as if
-the \code{private} clause had been used. For the \code{teams} construct, a
-private copy of each list item is created and initialized, one for each team in
-the league as if the \code{private} clause had been used. At the end of the
-region for  which the \code{reduction} clause was specified, the original list
-item is updated by combining its original value with the final value of each of
-the private copies, using the combiner of the specified
-\plc{reduction-identifier}.
+\code{private} clause had been used.  For the \code{taskloop} construct,
+private copies are created according to the rules of the reduction scoping
+clauses.  For the \code{target} construct, a private copy of each list item is
+created and initialized for the initial task, and the list item present in the
+data environment of its associated target task is the original list
+item. For the \code{teams} construct, a private copy of each list item is
+created and initialized, one for each team in the league as if the
+\code{private} clause had been used. At the end of the region for  which the
+\code{reduction} clause was specified, the original list item is updated by
+combining its original value with the final value of each of the private
+copies, using the combiner of the specified \plc{reduction-identifier}.
+
 
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the 
@@ -1863,8 +1866,12 @@ The \code{in\_reduction} clause specifies that a task participates in a reductio
 Where \plc{reduction-identifier} is defined in Section \ref{subsubsec:Properties Common To All Reduction Clauses}
 
 \descr
-The \code{in\_reduction} clause is a reduction participating clause, as described in
-Section \ref{subsubsec:Reduction Participating Clauses}.
+The \code{in\_reduction} clause is a reduction participating clause, as
+described in Section \ref{subsubsec:Reduction Participating Clauses}, that
+defines a task to be a participant in the task reduction defined by an
+enclosing \code{taskgroup} region for the list item. For the \code{task}
+construct, the generated task becomes the participating task. For the
+\code{target} construct, the target task becomes the participating task.
 
 \restrictions
 The restrictions to the \code{in\_reduction} clause are as follows:
@@ -1875,8 +1882,8 @@ Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
 this clause.
 
 
-\item A list item that appears in an \code{in\_reduction} clause of a \code{task}
-construct must appear in a \code{task\_reduction} clause of a construct
+\item A list item that appears in an \code{in\_reduction} clause of a
+task-generating construct must appear in a \code{task\_reduction} clause of a construct
 associated with a taskgroup region that includes the participating task in its
 \plc{taskgroup set}. The construct associated with the innermost region that meets
 this condition must specify the same \plc{reduction-identifier} as the
@@ -2486,6 +2493,10 @@ device data environment prior to the task encountering the construct.
 \item A list item cannot be a variable that is a member of a structure with a union type.
 
 \item A bit-field cannot appear in a \code{map} clause.
+
+\item A pointer that has a corresponding attached pointer may not be modified
+      for the duration of the lifetime of the array section to which the
+      corresponding pointer is attached in the device data environment.
 \end{ccppspecific}
 \end{itemize}
 
