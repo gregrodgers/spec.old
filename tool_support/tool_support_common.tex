@@ -67,7 +67,8 @@ OpenMP implementation interact to accomplish these tasks.
 \label{sec:ompt-check-tool}
 
 A tool indicates its interest in using the OMPT interface 
-by providing a non-\code{NULL} pointer to an \code{ompt\_fns\_t}
+by providing a non-\code{NULL} pointer to an
+\code{ompt\_start\_tool\_result\_t}
 structure to an OpenMP implementation as a return value from 
 \code{ompt\_start\_tool}. There are three ways
 that a tool can provide a definition of \code{ompt\_start\_tool} to an
@@ -112,19 +113,19 @@ in the list.
 
 If a tool-provided definition of \code{ompt\_start\_tool} is found using
 either method, the OpenMP implementation will invoke it; if it returns
-a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure, 
+a non-\code{NULL} pointer to an \code{ompt\_start\_tool\_result\_t} structure,
 the OpenMP implementation will know
-that a tool is present that wants to use the OMPT interface.
+that a tool expects to use the OMPT interface.
 
 Next, the OpenMP implementation will initialize itself. If a tool
-provided a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
+provided a non-\code{NULL} pointer to an \code{ompt\_start\_tool\_result\_t} structure,
 the OpenMP runtime will prepare itself for use of the OMPT interface by a tool. 
 
 \crossreferences
 \begin{itemize}
-\item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
 \item \plc{tool-libraries-var} ICV, see \specref{sec:Internal Control Variables}.
-\item \code{ompt\_fns\_t}, see \specref{sec:ompt_fns_t}.
+\item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
+\item \code{ompt\_start\_tool\_result\_t}, see \specref{sec:ompt_start_tool_result_t}.
 \item \code{ompt\_start\_tool}, see \specref{sec:ompt_start_tool}.
 \end{itemize}
 
@@ -133,7 +134,7 @@ the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
 \label{sec:tool-initialize}
 
 If a tool-provided implementation of \code{ompt\_start\_tool} returns a
-non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
+non-\code{NULL} pointer to an \code{ompt\_start\_tool\_result\_t} structure,
 the OpenMP implementation will invoke the tool initializer specified
 in this structure prior to the occurrence of any OpenMP \emph{event}. 
 
@@ -141,9 +142,10 @@ A tool's initializer, described in \specref{sec:ompt_initialize_t}
 uses its \callbackarg{} \plc{lookup} to look up pointers
 to OMPT interface runtime entry points provided by the OpenMP
 implementation; this process is described in \specref{sec:ompt-bind}.
-After obtaining a pointer to the OpenMP runtime entry point known as
+Typically, a tool initializer will first
+obtain a pointer to the OpenMP runtime entry point known as
 \code{ompt\_set\_callback} with type signature
-\code{ompt\_set\_callback\_t}, the tool initializer should use it to
+\code{ompt\_set\_callback\_t} and then use this runtime entry point to
 register tool callbacks for OpenMP events, as described in
 \specref{sec:ompt-register-callbacks}.
 
@@ -153,9 +155,9 @@ entry points known as \code{ompt\_enumerate\_states} and
 \code{ompt\_enumerate\_states\_t} and
 \code{ompt\_enumerate\_mutex\_impls\_t}, to determine what thread
 states and implementations of mutual exclusion a particular OpenMP
-implementation employs. The descriptions of the enumeration runtime entry point
-type signatures show how to use them to determine what
-thread states and mutual exclusion mechanisms an OpenMP implementation supports.
+implementation employs. 
+
+%The descriptions of the enumeration runtime entry point type signatures show how to use them to determine what thread states and mutual exclusion mechanisms an OpenMP implementation supports.
 
 If a tool initializer returns a non-zero value, the tool will be
 \emph{activated} for the execution; otherwise, the tool will be
@@ -163,6 +165,9 @@ inactive.
 
 \crossreferences
 \begin{itemize}
+\item \code{ompt\_start\_tool\_result\_t}, see
+  \specref{sec:ompt_start_tool_result_t}.
+\item \code{ompt\_start\_tool}, see \specref{sec:ompt_start_tool}.
 \item \code{ompt\_initialize\_t}, see \specref{sec:ompt_initialize_t}.
 \item \code{ompt\_callback\_thread\_begin\_t}, see \specref{sec:ompt_callback_thread_begin_t}.
 \item \code{ompt\_enumerate\_states\_t}, see \specref{sec:ompt_enumerate_states_t}.
@@ -578,32 +583,38 @@ implementation shuts down.
 \label{sec:ompt-data-types}
 
 \subsection{Tool Initialization and Finalization}
-\label{sec:ompt_fns_t}
+\label{sec:ompt_start_tool_result_t}
 
 \summary
 A tool's implementation of \code{ompt\_start\_tool} returns a pointer to an
-\code{ompt\_fns\_t} structure that contains pointers to the tool's 
-initializer and finalizer functions.
+\code{ompt\_start\_tool\_result\_t} structure, which 
+contains pointers to the tool's 
+initialization and finalization callbacks as well as an
+\code{ompt\_data\_t} object for use by the tool.
 
 \vbox{
 \begin{ccppspecific}
 \begin{boxedcode}
-typedef struct ompt_fns_t \{
+typedef struct ompt_start_tool_result_t \{
   ompt_initialize_t \plc{initialize};
   ompt_finalize_t \plc{finalize};
-\} ompt_fns_t;
+  ompt_data_t \plc{tool_data};
+\} ompt_start_tool_result_t;
 \end{boxedcode}
 \end{ccppspecific}
 }
 
 \restrictions
 
-Both the \plc{initialize} and \plc{finalize} function pointers in an
-\code{ompt\_fns\_t} structure returned by \code{ompt\_start\_tool} must be
+The \plc{initialize} and \plc{finalize} callback pointer values in an
+\code{ompt\_start\_tool\_result\_t} structure returned by \code{ompt\_start\_tool} must be
 non-\code{NULL}.
 
 \crossreferences
 \begin{itemize}
+\item \code{ompt\_data\_t}, see \specref{sec:ompt_data_t}.
+\item \code{ompt\_finalize\_t}, see \specref{sec:ompt_finalize_t}.
+\item \code{ompt\_initialize\_t}, see \specref{sec:ompt_initialize_t}.
 \item \code{ompt\_start\_tool}, see \specref{sec:ompt_start_tool}.
 \end{itemize}
 
@@ -1804,7 +1815,7 @@ the tool must implement the function \code{ompt\_start\_tool} to announce its in
 \vbox{
 \cspecificstart
 \begin{boxedcode}
-ompt_fns_t *ompt_start_tool(
+ompt_start_tool_result_t *ompt_start_tool(
   unsigned int \plc{omp_version},
   const char *\plc{runtime_version}
 );
@@ -1820,8 +1831,10 @@ function \code{ompt\_start\_tool}.
 A tool may indicate its intent to use the OMPT interface provided
 by an OpenMP implementation by having
 \code{ompt\_start\_tool} return a non-\code{NULL} pointer to an
-\code{ompt\_fns\_t} structure, which contains pointers to
-a tool's initializer and finalizer functions.
+\code{ompt\_start\_tool\_result\_t} structure, which contains pointers to
+tool initialization and finalization callbacks along with
+a tool data word that an OpenMP implementation must pass by reference
+to these callbacks.
 
 A tool may use its \callbackarg{} \plc{omp\_version} to determine
 whether it is compatible with the OMPT interface provided by an OpenMP
@@ -1849,7 +1862,8 @@ an immutable string that is defined for the lifetime of a program
 execution.
 
 \effect
-If a tool returns a non-\code{NULL} pointer to an \code{ompt\_fns\_t} structure,
+If a tool returns a non-\code{NULL} pointer to an
+\code{ompt\_start\_tool\_result\_t} structure,
 an OpenMP implementation will call the tool initializer specified by the
 \plc{initialize} field in this structure before
 beginning execution of any OpenMP construct
@@ -1862,6 +1876,7 @@ implementation shuts down.
 
 \crossreferences
 \begin{itemize}
-    \item \code{ompt\_fns\_t}, see \specref{sec:ompt_fns_t}.
+    \item \code{ompt\_start\_tool\_result\_t}, see
+      \specref{sec:ompt_start_tool_result_t}.
 \end{itemize}
 
