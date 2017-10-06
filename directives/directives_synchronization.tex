@@ -602,6 +602,11 @@ suspended until the \emph{predecessor tasks} of this task complete execution.
 
 \omptSyncRegion{taskwait}
 
+\restrictions
+
+The \code{mutexinoutset} \plc{dependence-type} may not appear in a
+\code{depend} clause on a \code{taskwait} construct.
+
 \crossreferences
 \begin{itemize}
 \item \code{task} construct, see \specref{subsec:task Construct}.
@@ -1131,15 +1136,14 @@ The following restrictions apply to the \code{atomic} construct:
 \begin{itemize}
 \item At most one \plc{memory-order-clause} may appear on the construct.
 
-\item If the \code{read} clause appears on the construct then
-\plc{memory-order-clause} must not be \code{acq\_rel} or \code{release}.
+\item If \plc{atomic-clause} is \code{read} then \plc{memory-order-clause}
+    must not be \code{acq\_rel} or \code{release}.
 
-\item If the \code{write} clause appears on the construct then
-\plc{memory-order-clause} must not be \code{acq\_rel} or \code{acquire}.
+\item If \plc{atomic-clause} is \code{write} then \plc{memory-order-clause}
+    must not be \code{acq\_rel} or \code{acquire}.
 
-\item If the \code{read}, \code{write}, and \code{capture} clauses do not
-appear on the construct then \plc{memory-order-clause} must not be \code{acq\_rel}
-or \code{acquire}.
+\item If \plc{atomic-clause} is \code{update} or not present then \plc{memory-order-clause}
+    must not be \code{acq\_rel} or \code{acquire}.
 \end{itemize}
 
 \begin{ccppspecific}
@@ -1207,7 +1211,7 @@ are required to have the same type and type parameters.
 \label{subsec:flush Construct}
 \summary
 The \code{flush} construct executes the OpenMP flush operation. This operation makes a 
-thread’s temporary view of memory consistent with memory and enforces an order on 
+thread's temporary view of memory consistent with memory and enforces an order on 
 the memory operations of the variables explicitly specified or implied. See the memory 
 model description in \specref{sec:Memory Model} for more details. The \code{flush} construct is a 
 stand-alone directive.
@@ -1252,7 +1256,7 @@ The binding thread set for a \code{flush} region is the encountering thread. Exe
 \code{flush} region affects the memory and the temporary view of memory of only the thread 
 that executes the region. It does not affect the temporary view of other threads. Other 
 threads must themselves execute a flush operation in order to be guaranteed to observe 
-the effects of the encountering thread’s flush operation
+the effects of the encountering thread's flush operation
 
 \descr
 A \code{flush} construct without a list, executed on a given thread, operates as if the whole 
@@ -1627,6 +1631,7 @@ where \plc{dependence-type} is one of the following:
 in
 out
 inout
+mutexinoutset
 \end{indentedcodelist}
 
 or
@@ -1662,19 +1667,31 @@ constant non-negative integer.
 
 \descr
 Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list 
-items when \plc{dependence-type} is \code{in}, \code{out}, or \code{inout}.
+items when \plc{dependence-type} is \code{in}, \code{out}, \code{inout}, or \code{mutexinoutset}.
 
 For the \code{in} \plc{dependence-type}, if the storage location of at least one
 of the list items is the same as the storage location of a list item appearing
-in a \code{depend} clause with an \code{out} or \code{inout} \plc{dependence-type} on a construct
+in a \code{depend} clause with an \code{out}, \code{inout}, or \code{mutexinoutset} \plc{dependence-type} on a construct
 from which a sibling task was previously generated, then the generated task
 will be a dependent task of that sibling task.
 
 For the \code{out} and \code{inout} \plc{dependence-types}, if the storage location of at least one
 of the list items is the same as the storage location of a list item appearing
+in a \code{depend} clause with an \code{in}, \code{out}, \code{inout}, or \code{mutexinoutset} \plc{dependence-type} on
+a construct from which a sibling task was previously generated, then the
+generated task will be a dependent task of that sibling task.
+
+For the \code{mutexinoutset} \plc{dependence-type}, if the storage location of at least one
+of the list items is the same as the storage location of a list item appearing
 in a \code{depend} clause with an \code{in}, \code{out}, or \code{inout} \plc{dependence-type} on
 a construct from which a sibling task was previously generated, then the
 generated task will be a dependent task of that sibling task.
+
+If a list item appearing in a \code{depend} clause with a \code{mutexinoutset}
+\plc{dependence-type} on a task-generating construct has the same storage location as
+a list item appearing in a \code{depend} clause with a \code{mutexinoutset}
+\plc{dependence-type} on a different task generating construct, and both constructs
+generate sibling tasks, the sibling tasks will be mutually exclusive tasks.
 
 \begin{fortranspecific}
 If a list item has the \code{ALLOCATABLE} attribute and its allocation

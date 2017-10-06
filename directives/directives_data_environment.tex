@@ -384,7 +384,7 @@ copy. The storage of all copies of a threadprivate variable is freed according t
 static variables are handled in the base language, but at an unspecified point in the 
 program.
 
-A program in which a thread references another thread’s copy of a threadprivate variable 
+A program in which a thread references another thread's copy of a threadprivate variable 
 is non-conforming.
 
 The content of a threadprivate variable can change across a task scheduling point if the 
@@ -396,8 +396,8 @@ task scheduling, see
 In \code{parallel} regions, references by the master thread will be to the copy of the 
 variable in the thread that encountered the \code{parallel} region. 
 
-During a sequential part references will be to the initial thread’s copy of the variable. 
-The values of data in the initial thread’s copy of a threadprivate variable are guaranteed 
+During a sequential part references will be to the initial thread's copy of the variable. 
+The values of data in the initial thread's copy of a threadprivate variable are guaranteed 
 to persist between any two consecutive references to the variable in the program. 
 
 The values of data in the threadprivate variables of non-initial threads 
@@ -420,9 +420,9 @@ then threads with the same thread number in their respective regions will refere
 same copy of that variable.
 
 \begin{ccppspecific}
-If the above conditions hold, the storage duration, lifetime, and value of a thread’s copy 
+If the above conditions hold, the storage duration, lifetime, and value of a thread's copy 
 of a threadprivate variable that does not appear in any \code{copyin} clause on the second 
-region will be retained. Otherwise, the storage duration, lifetime, and value of a thread’s 
+region will be retained. Otherwise, the storage duration, lifetime, and value of a thread's 
 copy of the variable in the second region is unspecified.
 
 If the value of a variable referenced in an explicit initializer of a threadprivate variable 
@@ -440,10 +440,10 @@ variables of class type are called is unspecified.
 A variable is affected by a \code{copyin} clause if the variable appears in the \code{copyin} clause 
 or it is in a common block that appears in the \code{copyin} clause. 
 
-If the above conditions hold, the definition, association, or allocation status of a thread’s 
+If the above conditions hold, the definition, association, or allocation status of a thread's 
 copy of a threadprivate variable or a variable in a threadprivate common 
 block, that is not affected by any \code{copyin} clause that appears on the second region, will 
-be retained. Otherwise, the definition and association status of a thread’s copy of the 
+be retained. Otherwise, the definition and association status of a thread's copy of the 
 variable in the second region are undefined, and the allocation status of an allocatable 
 variable will be implementation defined. 
 
@@ -801,10 +801,6 @@ the corresponding original list item. Inside the construct, all references to th
 list item are replaced by references to the new list item. In the rest of the region, it is 
 unspecified whether references are to the new list item or the original list item. 
 
-\begin{cppspecific}
-If the construct is contained in a member function, it is unspecified anywhere in the region if accesses through the implicit \code{this} pointer refer to the new list item or the original list item.
-\end{cppspecific}
-
 Therefore, if an attempt is made to reference the original item, its value after the region 
 is also unspecified. If a SIMD construct or a task does not reference a list item that 
 appears in a \code{private} clause, it is unspecified whether SIMD lanes or the task receive 
@@ -819,11 +815,16 @@ The value and/or allocation status of the original list item will change only:
 
 \item as a side effect of directives or clauses, or
 
-\newpage %% HACK
 \begin{fortranspecific}
 \item if accessed and modified via construct association.
 \end{fortranspecific}
 \end{itemize}
+
+\begin{cppspecific}
+If the construct is contained in a member function, it is unspecified
+anywhere in the region if accesses through the implicit \code{this}
+pointer refer to the new list item or the original list item.
+\end{cppspecific}
 
 List items that appear in a \code{private}, \code{firstprivate}, or
 \code{reduction} clause in a \code{parallel} construct may also appear
@@ -991,15 +992,16 @@ in any statement in the construct. The initialization is done prior to the execu
 construct.
 
 For a \code{firstprivate} clause on a \code{parallel}, \code{task},
-\code{taskloop}, \code{target}, or \code{teams} construct, the
-initial value of the new list item is the value of the original list
-item that exists immediately prior to the construct in the task region
-where the construct is encountered. For a \code{firstprivate} clause
-on a worksharing construct, the initial value of the new list item for
-each implicit task of the threads that execute the worksharing
-construct is the value of the original list item that exists in the
-implicit task immediately prior to the point in time that the
-worksharing construct is encountered.
+\code{taskloop}, \code{target}, or \code{teams} construct, the initial
+value of the new list item is the value of the original list item that
+exists immediately prior to the construct in the task region where the
+construct is encountered unless otherwise specified. For a
+\code{firstprivate} clause on a worksharing construct, the initial
+value of the new list item for each implicit task of the threads that
+execute the worksharing construct is the value of the original list
+item that exists in the implicit task immediately prior to the point
+in time that the worksharing construct is encountered unless otherwise
+specified.
 
 To avoid race conditions, concurrent updates of the original list item must be 
 synchronized with the read of the original list item that occurs as a result of the 
@@ -1754,17 +1756,18 @@ Clauses} and \ref{subsubsec:Reduction Participating Clauses}.
 For \code{parallel} and worksharing constructs, a private copy of each list item is created, 
 one for each implicit task, as if the \code{private} clause had been used. For the \code{simd} 
 construct, a private copy of each list item is created, one for each SIMD lane as if the 
-\code{private} clause had been used. 
-For the \code{taskloop} construct, private copies are created according to the rules of the reduction scoping clauses. 
-For the \code{target} construct, a private
-copy of each list item is created and initialized for the initial task as if
-the \code{private} clause had been used. For the \code{teams} construct, a
-private copy of each list item is created and initialized, one for each team in
-the league as if the \code{private} clause had been used. At the end of the
-region for  which the \code{reduction} clause was specified, the original list
-item is updated by combining its original value with the final value of each of
-the private copies, using the combiner of the specified
-\plc{reduction-identifier}.
+\code{private} clause had been used.  For the \code{taskloop} construct,
+private copies are created according to the rules of the reduction scoping
+clauses.  For the \code{target} construct, a private copy of each list item is
+created and initialized for the initial task, and the list item present in the
+data environment of its associated target task is the original list
+item. For the \code{teams} construct, a private copy of each list item is
+created and initialized, one for each team in the league as if the
+\code{private} clause had been used. At the end of the region for  which the
+\code{reduction} clause was specified, the original list item is updated by
+combining its original value with the final value of each of the private
+copies, using the combiner of the specified \plc{reduction-identifier}.
+
 
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the 
@@ -1865,8 +1868,12 @@ The \code{in\_reduction} clause specifies that a task participates in a reductio
 Where \plc{reduction-identifier} is defined in Section \ref{subsubsec:Properties Common To All Reduction Clauses}
 
 \descr
-The \code{in\_reduction} clause is a reduction participating clause, as described in
-Section \ref{subsubsec:Reduction Participating Clauses}.
+The \code{in\_reduction} clause is a reduction participating clause, as
+described in Section \ref{subsubsec:Reduction Participating Clauses}, that
+defines a task to be a participant in the task reduction defined by an
+enclosing \code{taskgroup} region for the list item. For the \code{task}
+construct, the generated task becomes the participating task. For the
+\code{target} construct, the target task becomes the participating task.
 
 For each list item, a private copy may be created as if the \code{private}
 clause had been used.
@@ -1884,8 +1891,8 @@ Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
 this clause.
 
 
-\item A list item that appears in an \code{in\_reduction} clause of a \code{task}
-construct must appear in a \code{task\_reduction} clause of a construct
+\item A list item that appears in an \code{in\_reduction} clause of a
+task-generating construct must appear in a \code{task\_reduction} clause of a construct
 associated with a taskgroup region that includes the participating task in its
 \plc{taskgroup set}. The construct associated with the innermost region that meets
 this condition must specify the same \plc{reduction-identifier} as the
@@ -1933,7 +1940,7 @@ An associate name preserves the association with the selector established at the
 \index{clauses!copyin@{\code{copyin}}}
 \label{subsubsec:copyin clause}
 \summary
-The \code{copyin} clause provides a mechanism to copy the value of the master thread’s 
+The \code{copyin} clause provides a mechanism to copy the value of the master thread's 
 threadprivate variable to the threadprivate variable of each other member of the team 
 executing the \code{parallel} region. 
 
@@ -1949,8 +1956,8 @@ copyin(\plc{list})
 The copy is done after the team is formed and prior to the start of execution of the 
 associated structured block. For variables of non-array type, the copy occurs by copy 
 assignment. For an array of elements of non-array type, each element is copied as if by 
-assignment from an element of the master thread’s array to the corresponding element of 
-the other thread’s array. 
+assignment from an element of the master thread's array to the corresponding element of 
+the other thread's array. 
 \end{ccppspecific}
 
 \begin{cppspecific}
@@ -1962,13 +1969,13 @@ assignment operators for different variables of class type are called is unspeci
 The copy is done, as if by assignment, after the team is formed and prior to the start of 
 execution of the associated structured block.
 
-On entry to any \code{parallel} region, each thread’s copy of a variable that is affected by 
+On entry to any \code{parallel} region, each thread's copy of a variable that is affected by 
 a \code{copyin} clause for the \code{parallel} region will acquire the allocation, association, and 
-definition status of the master thread’s copy, according to the following rules:
+definition status of the master thread's copy, according to the following rules:
 
 \begin{itemize}
 \item If the original list item has the \code{POINTER} attribute, each copy receives the same 
-association status of the master thread’s copy as if by pointer assignment.
+association status of the master thread's copy as if by pointer assignment.
 
 \item If the original list item does not have the \code{POINTER} attribute, each copy becomes 
 defined with the value of the master thread's copy as if by intrinsic assignment, 
@@ -2495,6 +2502,10 @@ device data environment prior to the task encountering the construct.
 \item A list item cannot be a variable that is a member of a structure with a union type.
 
 \item A bit-field cannot appear in a \code{map} clause.
+
+\item A pointer that has a corresponding attached pointer may not be modified
+      for the duration of the lifetime of the array section to which the
+      corresponding pointer is attached in the device data environment.
 \end{ccppspecific}
 \end{itemize}
 
