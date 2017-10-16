@@ -57,63 +57,11 @@ modified by the program itself, are ignored by the OpenMP implementation. Howeve
 the settings of some of the ICVs can be modified during the execution of the OpenMP 
 program by the use of the appropriate directive clauses or OpenMP API routines.
 
-The environment variables are as follows:
+The following examples demonstrate how the OpenMP environment variables can
+be set in different environments:
 
 \begin{itemize}
-\item \code{OMP\_SCHEDULE} sets the \plc{run-sched-var} ICV that specifies the runtime schedule type 
-and chunk size. It can be set to any of the valid OpenMP schedule types.
-
-\item \code{OMP\_NUM\_THREADS} sets the \plc{nthreads-var} ICV that specifies the number of threads 
-to use for parallel regions.
-
-\item \code{OMP\_DYNAMIC} sets the \plc{dyn-var} ICV that specifies the dynamic adjustment of 
-threads to use for \code{parallel} regions.
-
-\item \code{OMP\_PROC\_BIND} sets the \plc{bind-var} ICV that controls the OpenMP thread affinity 
-policy. 
-
-\item \code{OMP\_PLACES} sets the \plc{place-partition-var} ICV that defines the OpenMP places that 
-are available to the execution environment.
-
-\item \code{OMP\_NESTED} sets the \plc{nest-var} ICV that enables or disables nested parallelism.
-
-\item \code{OMP\_STACKSIZE} sets the \plc{stacksize-var} ICV that specifies the size of the stack for 
-threads created by the OpenMP implementation.
-
-\item \code{OMP\_WAIT\_POLICY} sets the \plc{wait-policy-var} ICV that controls the desired behavior 
-of waiting threads. 
-
-\item \code{OMP\_MAX\_ACTIVE\_LEVELS} sets the \plc{max-active-levels-var} ICV that controls the 
-maximum number of nested active \code{parallel} regions. 
-
-\item \code{OMP\_THREAD\_LIMIT} sets the \plc{thread-limit-var} ICV that controls the maximum 
-number of threads participating in a contention group.
-
-\item \code{OMP\_CANCELLATION} sets the \plc{cancel-var} ICV that enables or disables cancellation.
-
-\item \code{OMP\_DISPLAY\_ENV} instructs the runtime to display the OpenMP version number 
-and the initial values of the ICVs, once, during initialization of the runtime.
-
-\item \code{OMP\_DEFAULT\_DEVICE} sets the \plc{default-device-var} ICV that controls the default 
-device number.
-
-\item \code{OMP\_MAX\_TASK\_PRIORITY} sets the \plc{max-task-priority-var} ICV that specifies the maximum
-value that can be specified in the \code{priority} clause of the \code{task} construct.
-
-\item \code{OMP\_TOOL} sets the \plc{tool-var} ICV that controls whether or not an OpenMP will try to register a performance tool.
-
-\item \code{OMP\_TOOL\_LIBRARIES} sets the \plc{tool-libraries-var} ICV 
-that contains a colon-separated list of tool libraries that the runtime searches to find
-one appropriate for use on a device where an OpenMP implementation is being initialized.
-
-\end{itemize}
-
-The examples in this chapter only demonstrate how these variables might be set in Unix 
-C shell (csh) environments. In Korn shell (ksh) and DOS environments the actions are 
-similar, as follows:
-
-\begin{itemize}
-\item csh:
+\item csh-like shells:
 \end{itemize}
 
 \begin{boxedcode}
@@ -121,7 +69,7 @@ setenv OMP\_SCHEDULE "dynamic"
 \end{boxedcode}
 
 \begin{itemize}
-\item ksh:
+\item bash-like shells:
 \end{itemize}
 
 \begin{boxedcode}
@@ -129,7 +77,7 @@ export OMP\_SCHEDULE="dynamic"
 \end{boxedcode}
 
 \begin{itemize}
-\item DOS:
+\item Windows Command Line:
 \end{itemize}
 
 \begin{boxedcode}
@@ -511,7 +459,7 @@ to 3, 4 to 7, 8 to 11, and 12 to 15.
 \index{OMP\_NESTED@{\code{OMP\_NESTED}}}
 \index{environment variables!OMP\_NESTED@{\code{OMP\_NESTED}}}
 \label{sec:OMP_NESTED}
-The \code{OMP\_NESTED} environment variable controls nested parallelism by setting the 
+The deprecated \code{OMP\_NESTED} environment variable controls nested parallelism by setting the 
 initial value of the \plc{nest-var} ICV. The value of this environment variable must be \code{true} 
 or \code{false}. If the environment variable is set to \code{true}, nested parallelism is enabled; if 
 set to \code{false}, nested parallelism is disabled. The behavior of the program is 
@@ -835,12 +783,70 @@ Example:
 \end{itemize}
 
 
+
+
+
+
+\section{\code{OMP\_TARGET\_OFFLOAD}}
+\index{OMP\_TARGET\_OFFLOAD@{\code{OMP\_TARGET\_OFFLOAD}}}
+\index{environment variables!OMP\_TARGET\_OFFLOAD@{\code{OMP\_TARGET\_OFFLOAD}}}
+\label{sec:OMP_TARGET_OFFLOAD}
+%
+The \code{OMP\_TARGET\_OFFLOAD} environment variable sets the initial value of the \plc{target-offload-var} ICV.
+The value of the \code{OMP\_TARGET\_OFFLOAD} environment variable may be set to one of these 
+values:
+
+\code{MANDATORY \textnormal{|}  DISABLED \textnormal{|} DEFAULT }
+
+The \code{MANDATORY} value specifies that a device construct or a device memory routine must execute on a target device. If the device construct cannot execute on its target device, or if a device memory routine fails to execute, a warning is issued and the program execution aborts. Device constructs are exempt from this behavior when an if-clause is present and the if-clause expression evaluates to false. 
+
+The support of \code{DISABLED}  is implementation defined. If an implementation supports it, the behavior should be that a device construct must execute on the host.  The behavior with this environment value is equivalent to an if clause present on all device constructs, where each of these if clause expressions evaluate to false. Device memory routines behave as if all device number parameters are set to the value returned by \code{omp\_get\_initial\_device()}. The \code{omp\_get\_initial\_device()} routine returns that no target device is available
+
+The \code{DEFAULT} value specifies that when one or more target devices are available, the runtime behaves as if this environment variable is set to \code{MANDATORY}; otherwise, the runtime behaves as if this environment variable is set to \code{DISABLED}.
+
+Example:
+\begin{boxedcode}
+\% setenv OMP\_TARGET\_OFFLOAD MANDATORY
+\end{boxedcode}
+
+\crossreferences
+\begin{itemize}
+\item \plc{target-offload-icv} ICV, see \specref{sec:Internal Control Variables}.
+\item device constructs, \specref{sec:Device Constructs}.
+\end{itemize}
+
+
+
+
+\section{\code{OMP\_MAX\_TASK\_PRIORITY}}
+\index{OMP\_MAX\_TASK\_PRIORITY\_DEVICE@{\code{OMP\_MAX\_TASK\_PRIORITY}}}
+\index{environment variables!OMP\_MAX\_TASK\_PRIORITY@{\code{OMP\_MAX\_TASK\_PRIORITY}}}
+\label{sec:OMP_MAX_TASK_PRIORITY}
+
+The \code{OMP\_MAX\_TASK\_PRIORITY} environment variable controls the use of task
+priorities by setting the initial value of the \plc{max-task-priority-var} ICV. The
+value of this environment variable must be a non-negative integer. 
+
+Example:
+\begin{boxedcode}
+\% setenv OMP\_MAX\_TASK\_PRIORITY 20
+\end{boxedcode}
+
+\crossreferences
+\begin{itemize}
+\item \plc{max-task-priority-var} ICV, see \specref{sec:Internal Control Variables}.
+\item Tasking Constructs, see \specref{sec:Tasking Constructs}.
+\item \code{omp\_get\_max\_task\_priority} routine, see \specref{subsec:omp_get_max_task_priority}.
+\end{itemize}
+
+
 \section{\code{OMP\_TOOL}}
 \index{OMP\_TOOL@{\code{OMP\_TOOL}}}
 \index{environment variables!OMP\_TOOL@{\code{OMP\_TOOL}}}
 \label{sec:OMP_TOOL}
 
-The \code{OMP\_TOOL} environment variable sets the \plc{tool-var} ICV which controls whether an OpenMP runtime will try to register a performance tool.
+The \code{OMP\_TOOL} environment variable sets the \plc{tool-var} ICV which controls whether an OpenMP runtime will try to register a
+first party tool.
 The value of this environment variable must be \code{enabled} or \code{disabled}.
 If \code{OMP\_TOOL} is set to any value other than \code{enabled} or \code{disabled}, the behavior is unspecified.
 If \code{OMP\_TOOL} is not defined, the default value for \plc{tool-var} is \code{enabled}.
