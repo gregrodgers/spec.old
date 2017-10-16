@@ -509,9 +509,8 @@ columns):
 \index{requires@{\code{requires}}}
 \index{directives!requires@{\code{requires}}}
 
-\summary
-This directive declares the requirements an implementation must provide in order
-for the code in the current translation unit to compile and execute correctly.
+\summary The \code{requires} directive specifies the features an implementation
+must provide in order for the code to compile and execute correctly.
 
 
 
@@ -540,60 +539,53 @@ implementation defined requirement clause.
 
 \begin{indentedcodelist}
   unified_address
-  unified_memory
+  unified_shared_memory
   full_system_atomics
   full_system_coherence
 \end{indentedcodelist}
 
 \descr
 
-The \code{requires} directive asserts to an implementation what the code of the
-current translation unit, or program unit in Fortran, requires to function
-correctly.  Behaviors specified by a requirement \emph{override} restrictions
-and behaviors specified elsewhere in the OpenMP specification wherever they
-conflict.
+The \code{requires} directive specifies features an implementation must support
+for correct execution of the current translation unit, or in Fortran the main
+program, subprogram or module.  The behavior specified by a \code{requires}
+directive clause may override the normal behavior specified elsewhere in this
+document.
 
 \begin{note}
 Use of this directive makes your code less portable, be aware that not all
 devices or implementations support all requirements.
 \end{note}
 
-The \code{unified\_address} requirement is active if the \code{unified\_address}
-clause appears on a \code{requirements} directive in the current translation
-unit, or program unit in Fortran.
-When the \code{unified\_address} requirement is active, the implementation
-guarantees that all devices accessible through OpenMP API routines and
-directives use a unified address space such that no two pointers used on any
-pair of devices accessible through OpenMP will use the same address to refer to
-different physical memory locations.  The pointers returned by
-\code{omp\_target\_alloc} and accessed through \code{use\_device\_ptr} are
-guaranteed to be pointer values that can support pointer arithmetic while still
-being native pointers.  The \code{is\_device\_ptr} clause is not necessary for
-device pointers to be translated in \code{target} regions, and pointers found
-not present are not set to null. Memory local to a specific execution context may be
-exempt from this, following the restrictions of locality to a given team or
-thread.  Target devices may still have discrete
-memories and dereferencing a device pointer on the host device remains
-unspecified behavior.
+When the \code{unified\_address} requirement appears on a \code{requirements}
+directive, the implementation guarantees that all devices accessible through
+OpenMP API routines and directives use a unified address space. In this address
+space, a pointer will always refer to the same location in memory regardless of
+the device it is used from.  The pointers returned by \code{omp\_target\_alloc}
+and accessed through \code{use\_device\_ptr} are guaranteed to be pointer values
+that can support pointer arithmetic while still being native device pointers.
+The \code{is\_device\_ptr} clause is not necessary for device pointers to be
+translated in \code{target} regions, and pointers found not present are not set
+to null but keep their original value. Memory local to a specific execution
+context may be exempt from this, following the restrictions of locality to a
+given team or thread.  Target devices may still have discrete memories and
+dereferencing a device pointer on the host device remains unspecified behavior.
 
-The \code{unified\_memory} requirement is active if the \code{unified\_memory}
-clause appears on a \code{requirements} directive in the current translation
-unit, or program unit in Fortran.  The \code{unified\_memory} requirement
-implies the \code{unified\_address} requirement, inheriting all of its
-behaviors.  Additionally host addresses are valid device addresses for all
-devices accessible through OpenMP except as noted below.  Every device address
-allocated through OpenMP device memory routines are valid host pointers.  Memory
-local to an execution context as defined in unified address above may
-remain inaccessible between devices.
+The \code{unified\_shared\_memory} requirement implies the
+\code{unified\_address} requirement, inheriting all of its behaviors.
+Additionally host addresses are valid device addresses for all devices
+accessible through OpenMP except as noted below.  Every device address allocated
+through OpenMP device memory routines are valid host pointers.  Memory local to
+an execution context as defined in unified address above may remain inaccessible
+between devices.
 
-Further the \code{unified\_memory} requirement makes the \code{map} clause
+Further the \code{unified\_shared\_memory} requirement makes the \code{map} clause
 optional on target constructs as well as the \code{declare}~\code{target}
 directive on global variables accessed in \code{declare}~\code{target}
-functions.  Note that scalar variables are still made \code{firstprivate} by
-default for target regions.  Cache coherence across devices \emph{is not}
-guaranteed except across synchronization points between the host and a given
-device where memory is flushed.  Accesses to the same memory unit from different
-devices without synchronization remains a potential race condition.
+functions.  Scalar variables are still made \code{firstprivate} by
+default for target regions.  Values stored into shared memory by one device may
+not be visible to other devices until those two devices synchronize with each
+other or both synchronize with the host.
 
 Implementors are allowed to include additional implementation defined
 requirement clauses.  Requirement names that do not start with \code{ext\_} are
@@ -606,7 +598,7 @@ The restrictions for the \code{requires} directive are as follows:
 
 \begin{itemize}
   \item In an application composed of multiple translation units, all
-    translation units must activate the same requirements.
+    translation units must have the same requirements.
 \end{itemize}
 
 
