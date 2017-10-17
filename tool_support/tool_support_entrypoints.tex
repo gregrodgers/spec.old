@@ -346,7 +346,7 @@ event.
 \caption{Return codes for \code{ompt\_set\_callback} and
     \code{ompt\_set\_trace\_ompt}.\label{table:ToolsSupport_set_rc}}
 \begin{boxedcode}
-typedef enum ompt_set_result_e \{
+typedef enum ompt_set_result_t \{
   ompt_set_error            = 0,
   ompt_set_never            = 1,
   ompt_set_sometimes        = 2,
@@ -405,8 +405,7 @@ argument is undefined.
 
 The \callbackarg{} \plc{which} indicates the callback being inspected.
 
-The \callbackarg{} \plc{callback} is a pointer to a return value that
-will be assigned the value of the callback being inspected.
+The \callbackarg{} \plc{callback} returns a pointer to the callback being inspected.
 
 \constraints
 The second argument passed to the entry point must be a reference
@@ -460,6 +459,43 @@ This runtime entry point is \emph{async signal safe}.
 \begin{itemize}
 \item \code{ompt\_data\_t} type, see \specref{sec:ompt_data_t}.
 \end{itemize}
+
+
+\omptruntimeentrypoint{\code{ompt\_get\_num\_procs\_t}}
+\label{sec:ompt_get_num_procs_t}
+
+\summary
+
+A runtime entry point known as
+\code{ompt\_get\_num\_procs} with type signature
+\code{ompt\_get\_num\_procs\_t}  returns
+the number of processors currently available to the execution
+environment on the host device.
+
+\format
+\vbox{
+\begin{ccppspecific}
+\begin{boxedcode}
+typedef int (*ompt_get_num_procs_t)(void);
+\end{boxedcode}
+\end{ccppspecific}
+}
+
+\binding
+
+The binding thread set for runtime entry point known as
+\code{ompt\_get\_num\_procs} is all threads on a device. The effect
+of executing this routine is not related to any specific region
+corresponding to any construct or API routine.
+
+\descr
+The \code{ompt\_get\_num\_procs} runtime entry point returns the
+number of processors that are available on the host device at the time
+the routine is called. This value may change between the time that
+it is determined and the time that it is read in the calling context due to
+system actions outside the control of the OpenMP implementation.
+
+This runtime entry point is \emph{async signal safe}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% Alex new proc_bind calls
@@ -592,7 +628,7 @@ available to the execution environment in the specified place.
 A runtime entry point known as
 \code{ompt\_get\_place\_num} with type signature
 \code{ompt\_get\_place\_num\_t} returns
-the place number of the place to which the encountering
+the place number of the place to which the current
 thread is bound.
 
 \format
@@ -606,18 +642,18 @@ typedef int (*ompt_get_place_num_t)(void);
 
 \binding
 
-The binding thread set for the region
+The binding thread set 
 of the runtime entry point known as \code{ompt\_get\_place\_num}
-is the encountering thread.
+is the current thread.
 
 \descr
 
-When the encountering thread is bound to a place,
+When the current thread is bound to a place,
 the runtime entry point known as \code{ompt\_get\_place\_num}
 returns the place number associated with the thread.
 The returned value is between 0 and one less than the value returned
 by runtime entry point known as \code{ompt\_get\_num\_places}, inclusive.
-When the encountering thread is not bound to a place, the routine returns -1.
+When the current thread is not bound to a place, the routine returns -1.
 
 This runtime entry point is \emph{async signal safe}.
 
@@ -648,9 +684,9 @@ typedef int (*ompt_get_partition_place_nums_t)(
 
 \binding
 
-The binding task set for the region
-of the runtime entry point known as \code{ompt\_get\_partition\_place\_nums}
-is the encountering implicit task.
+The binding task set for 
+the runtime entry point known as \code{ompt\_get\_partition\_place\_nums}
+is the current implicit task.
 
 \descr
 
@@ -705,7 +741,7 @@ In both cases, the routine returns the number of places in the
 A runtime entry point known as
 \code{ompt\_get\_proc\_id} with type signature
 \code{ompt\_get\_proc\_id\_t} returns the numerical identifier
-of the processor of the encountering thread.
+of the processor of the current thread.
 
 \format
 \vbox{
@@ -718,15 +754,15 @@ typedef int (*ompt_get_proc_id_t)(void);
 
 \binding
 
-The binding thread set for the region
-of the runtime entry point known as \code{ompt\_get\_proc\_id}
-is the encountering thread.
+The binding thread set for 
+the runtime entry point known as \code{ompt\_get\_proc\_id}
+is the current thread.
 
 \descr
 
 The runtime entry point known as
 \code{ompt\_get\_proc\_id} returns the numerical identifier
-of the processor of the encountering thread.
+of the processor of the current thread.
 A defined numerical identifier is non-negative, and
 its meaning is implementation defined.
 A negative number indicates a failure to retrieve the numerical identifier.
@@ -903,7 +939,7 @@ context.
 \begin{boxedcode}
 typedef int (*ompt_get_task_info_t)(
   int \plc{ancestor_level},
-  ompt_task_type_t *\plc{type},
+  int *\plc{type},
   ompt_data_t **\plc{task_data},
   ompt_frame_t **\plc{task_frame},
   ompt_data_t **\plc{parallel_data},
@@ -956,30 +992,26 @@ to the active task; information about
 ancestor tasks found in the current execution context may be queried at
 higher ancestor levels.
 
-The \callbackarg{} \plc{type} is pointer to a task type return
-value or a \code{NULL} if no task type return value is required.
+The \callbackarg{} \plc{type} returns the task type 
+if the argument is not \code{NULL}.
 
-The \callbackarg{} \plc{task\_data} is a pointer to a task data
-pointer return value
-or a \code{NULL} if no task data pointer return value is required.
+The \callbackarg{} \plc{task\_data} returns the task data
+if the argument is not \code{NULL}.
 
+The \callbackarg{} \plc{task\_frame} returns the task frame
+pointer 
+if the argument is not \code{NULL}.
 
-The \callbackarg{} \plc{task\_frame} is a pointer to a task frame
-pointer return value
-or a \code{NULL} if no task frame pointer return value is required.
+The \callbackarg{} \plc{parallel\_data} returns the parallel data
+if the argument is not \code{NULL}.
 
-The \callbackarg{} \plc{parallel\_data} is a pointer to a parallel
-data pointer return value
-or a \code{NULL} if no parallel data pointer return value is required.
-
-The \callbackarg{} \plc{thread\_num} is a pointer to a return value
-for a thread number
-or a \code{NULL} if no thread number return value is required.
+The \callbackarg{} \plc{thread\_num} returns the thread number
+if the argument is not \code{NULL}.
 
 \effect
 
 
-If the runtime entry point returns 0 or 1, no return values will be set.
+If the runtime entry point returns 0 or 1, no argument is modified.
 Otherwise, the entry point has the effects described below.
 
 If a non-\code{NULL} value was passed for \plc{type},
@@ -1041,12 +1073,12 @@ typedef int (*ompt_get_target_info_t)(
 A tool can query whether an OpenMP thread is in a target region by
 invoking the entry point known as \code{ompt\_get\_target\_info}
 with type signature \code{ompt\_get\_target\_info\_t}.
-This runtime entry point returns 1 if the invoking thread is
+This runtime entry point returns 1 if the current thread is
 in a target region and 0 otherwise. If the entry point returns 0,
 the values of the variables passed by reference as its arguments
 are undefined.
 
-If the invoking thread is in a target region, the entry point will
+If the current thread is in a target region, the entry point will
 return information about the current device, active target region, and
 active host operation, if any.
 
@@ -1054,21 +1086,17 @@ This runtime entry point is \emph{async signal safe}.
 
 \argdesc
 
-The \callbackarg{} \plc{device\_num} is a pointer to a return value for
-the current device. If the host is in a \code{target} region,
-the target device will be returned in *\plc{device\_num}.
+If the host is in a \code{target} region,
+\plc{device\_num} returns the target device.
 
-The \callbackarg{} \plc{target\_id} is a pointer to a return value for
-the target region identifier. If the host is in a \code{target} region,
-the \code{target} region identifier will be returned in *\plc{target\_id}.
+If the host is in a \code{target} region,
+\plc{target\_id} returns the \code{target} region identifier.
 
-The \callbackarg{} \plc{host\_op\_id} is a pointer to a return value
-for an identifer for an operation being initiated on a \code{target}
-device.  If the invoking thread is in the process of initiating an
+If the current thread is in the process of initiating an
 operation on a target device (e.g., copying data to or from an
-accelerator or launching a kernel) the identifier for the operation
-being initiated will be returned in *\plc{host\_op\_id}; otherwise,
-*\plc{host\_op\_id}.  will be set to \code{ompt\_id\_none}.
+accelerator or launching a kernel) \plc{host\_op\_id} returns 
+the identifier for the operation; otherwise,
+\plc{host\_op\_id} returns \code{ompt\_id\_none}.
 
 \constraints
 
@@ -1140,6 +1168,49 @@ This runtime entry point is \emph{async signal safe}.
 
 \subsection{Entry Points in the OMPT Device Tracing Interface}
 \label{sec:ompt-tracing-entry-points}
+
+
+\omptruntimeentrypoint{\code{ompt\_get\_device\_num\_procs\_t}}
+\label{sec:ompt_get_device_num_procs_t}
+
+\summary
+
+A runtime entry point for a device known as
+\code{ompt\_get\_device\_num\_procs} with type signature
+\code{ompt\_get\_device\_num\_procs\_t} returns
+the number of processors currently available to the execution
+environment on the specified device.
+
+\format
+\vbox{\begin{ccppspecific}
+\begin{boxedcode}
+typedef int (*ompt_get_device_num_procs_t)(
+  ompt_device_t *\plc{device}
+);
+\end{boxedcode}
+\end{ccppspecific}}
+
+\descr
+A runtime entry point for a device known
+as \code{ompt\_get\_device\_num\_procs} with type signature
+\code{ompt\_get\_device\_num\_procs\_t} returns the
+number of processors that are available on the device at the time
+the routine is called. This value may change between the time that
+it is determined and the time that it is read in the calling context due to
+system actions outside the control of the OpenMP implementation.
+
+\argdesc
+
+The \callbackarg{} \plc{device} is a pointer to an opaque object that
+represents the target device instance. The pointer to the device
+instance object is used by functions in the device tracing interface
+to identify the device being addressed.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt\_device\_t},
+see \specref{sec:ompt_device_t}.
+\end{itemize}
 
 \omptruntimeentrypoint{\code{ompt\_get\_device\_time\_t}}
 \label{sec:ompt_get_device_time_t}
@@ -1287,7 +1358,7 @@ others.
 
 \begin{table}
 \centering
-\caption{Meaning of return codes for \code{ompt\_trace\_set\_ompt} and
+\caption{Meaning of return codes for \code{ompt\_set\_trace\_ompt} and
     \code{ompt\_set\_trace\_native}.\label{table:record_set}}
 \begin{tabular}{|l|l|}
 \hline
@@ -1387,7 +1458,7 @@ typedef int (*ompt_start_trace_t)(
 \end{ccppspecific}}
 
 \descr
-A tool may initiate tracing on a device by invoking the device’s \code{ompt\_start\_trace}
+A tool may initiate tracing on a device by invoking the device's \code{ompt\_start\_trace}
 runtime entry point.
 
 Under normal operating conditions, every event buffer provided to
@@ -1528,7 +1599,7 @@ typedef int (*ompt_advance_buffer_cursor_t)(
 \end{ccppspecific}}
 
 \descr
-It returns \code{true} if the advance is successful and the next
+It returns \plc{true} if the advance is successful and the next
 position in the buffer is valid.
 
 \argdesc
@@ -1543,8 +1614,8 @@ bytes.
 
 The \callbackarg{} \plc{current} is an opaque buffer cursor.
 
-The \callbackarg{} \plc{next} is a pointer to a return value for the
-next value of a opaque buffer cursor.
+The \callbackarg{} \plc{next} returns the next value of a opaque buffer cursor.
+
 
 \crossreferences
 \begin{itemize}
@@ -1762,6 +1833,8 @@ part of the OMPT interface.
 \vbox{
 \begin{ccppspecific}
 \begin{boxedcode}
+typedef void (*ompt_interface_fn_t)(void);
+
 typedef ompt_interface_fn_t (*ompt_function_lookup_t) (
   const char *\plc{interface_function_name}
 );
