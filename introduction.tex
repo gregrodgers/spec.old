@@ -400,7 +400,7 @@ For an \emph{inactive parallel region}, the \emph{team} comprises only the \emph
 
 \glossaryterm{league}
 \glossarydefstart
-The set of \emph{thread teams} created by a \code{teams} construct.
+The set of \emph{teams} created by a \code{teams} construct.
 \glossarydefend
 
 \glossaryterm{contention group}
@@ -1143,6 +1143,22 @@ COMMENT: The original and corresponding \emph{variables} may share storage.
 \end{quote}
 \glossarydefend
 
+\glossaryterm{map-type decay}
+\glossarydefstart
+The process used to determine the final map type used when mapping a variable
+with a user defined mapper.  The combination of the two map types determines the
+final map type based on the following table.
+
+\begin{tabular}{l|c|c|c|c|c|c}
+  & alloc & to    & from  & tofrom & release & delete \\
+  \hline
+alloc  & alloc & alloc & alloc & alloc  & release & delete \\
+to     & alloc & to    & alloc & to     & release & delete \\
+from   & alloc & alloc & from  & from   & release & delete \\
+tofrom & alloc & to    & from  & tofrom & release & delete \\
+\end{tabular}
+\glossarydefend
+
 \glossaryterm{mappable type}
 \glossarydefstart
 A type that is valid for a \emph{mapped variable}. If a type is composed from other types 
@@ -1299,7 +1315,7 @@ are documented in Appendix~\ref{chap:OpenMP Implementation-Defined Behaviors}.
 
 \glossaryterm{deprecated} 
 \glossarydefstart
-Implies a construct, clause or other feature is normative in the current specification but is considered obsolescent and will be removed in the future.
+Implies a construct, clause, or other feature is normative in the current specification but is considered obsolescent and will be removed in the future.
 \glossarydefend
 
 \subsection{Tool Terminology}
@@ -1502,6 +1518,15 @@ implicit parallel region is guaranteed by the time the program exits.
 When any thread encounters a \code{simd} construct, the iterations of the loop associated with
 the construct may be executed concurrently using the SIMD lanes that are available to
 the thread.
+
+When a thread encounters a \code{concurrent} construct, an implementation may
+choose to apply optimizations, parallelization, and/or vectorization, including
+scheduling loop iterations in ways that cannot be directly represented in
+OpenMP. When a \code{concurrent} construct is encountered, an implementation
+must guarantee that the logical iterations of the associated loops are executed
+exactly once. When encountering a \code{concurrent} construct an implementation
+will not generate a new league of thread teams, but may use any thread teams
+currently available on which to execute. 
 
 The \code{cancel} construct can alter the previously described flow of execution in an
 OpenMP region. The effect of the \code{cancel} construct depends on its 
@@ -1844,7 +1869,7 @@ directives.
 \label{subsec:Tool Support}
 
 To enable development of high-quality, portable, \emph{first-party}
-tools that support monitoring and performance
+tools that support monitoring, performance or correctness
 analysis of OpenMP programs developed using any implementation of 
 the OpenMP API, the OpenMP API includes a tool interface 
 known as OMPT.
@@ -2045,8 +2070,6 @@ following features are not supported:
 \item Procedures bound to a type as operators
 
 \item Overriding a type-bound procedure
-
-\item Polymorphic entities
 
 \item \code{SELECT}~\code{TYPE} construct
 
