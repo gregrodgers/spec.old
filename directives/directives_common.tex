@@ -560,32 +560,37 @@ devices or implementations support all requirements.
 
 When the \code{unified\_address} clause appears on a \code{requires}
 directive, the implementation guarantees that all devices accessible through
-OpenMP API routines and directives use a unified address space. In this address
-space, a pointer will always refer to the same location in memory regardless of
-the device it is used from.  The pointers returned by \code{omp\_target\_alloc}
-and accessed through \code{use\_device\_ptr} are guaranteed to be pointer values
-that can support pointer arithmetic while still being native device pointers.
-The \code{is\_device\_ptr} clause is not necessary for device pointers to be
-translated in \code{target} regions, and pointers found not present are not set
-to null but keep their original value. Memory local to a specific execution
-context may be exempt from this, following the restrictions of locality to a
-given team or thread.  Target devices may still have discrete memories and
-dereferencing a device pointer on the host device remains unspecified behavior.
+OpenMP API routines and directives use a unified address space. In this
+address space, a pointer will always refer to the same location in memory
+regardless of the device it is used from.  The pointers returned by
+\code{omp\_target\_alloc} and accessed through \code{use\_device\_ptr} are
+guaranteed to be pointer values that can support pointer arithmetic while
+still being native device pointers. The \code{is\_device\_ptr} clause is not
+necessary for device pointers to be translated in \code{target} regions, and
+pointers found not present are not set to null but keep their original value.
+Memory local to a specific execution context may be exempt from this,
+following the restrictions of locality to a given execution context, thread or
+contention group.  Target devices may still have discrete memories and
+dereferencing a device pointer on the host device remains unspecified
+behavior.
 
 The \code{unified\_shared\_memory} clause implies the \code{unified\_address}
-requirement, inheriting all of its behaviors.  Additionally host addresses are
-valid device addresses for all devices accessible through OpenMP except as noted
-below.  Every device address allocated through OpenMP device memory routines are
-valid host pointers.  Memory local to an execution context as defined in unified
-address above may remain inaccessible between devices.
+requirement, inheriting all of its behaviors.  Additionally memory in the
+device data environment of any device visible to OpenMP, including but not
+limited to the host, is considered part of the device data environment of all
+devices accessible through OpenMP except as noted below.  Every device address
+allocated through OpenMP device memory routines is a valid host pointer. Memory
+local to an execution context as defined in unified address above may remain
+part of distinct device data environments as long as the execution context is
+local to the device containing that environment.
 
-Further the \code{unified\_shared\_memory} clause makes the \code{map} clause
-optional on \code{target} constructs as well as the \code{declare}~\code{target}
-directive on global variables accessed in \code{declare}~\code{target}
-functions.  Scalar variables are still made \code{firstprivate} by
-default for \code{target} regions.  Values stored into shared memory by one device may
-not be visible to other devices until those two devices synchronize with each
-other or both synchronize with the host.
+The \code{unified\_shared\_memory} clause makes the \code{map} clause optional
+on \code{target} constructs as well as the \code{declare}~\code{target}
+directive on static lifetime variables accessed as part of
+\code{declare}~\code{target} functions.  Scalar variables are still made
+\code{firstprivate} by default for \code{target} regions.  Values stored into
+memory by one device may not be visible to other devices until those two
+devices synchronize with each other or both synchronize with the host.
 
 Implementers are allowed to include additional implementation defined
 requirement clauses.  Requirement names that do not start with \code{ext\_} are
