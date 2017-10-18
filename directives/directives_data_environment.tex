@@ -2179,7 +2179,12 @@ release
 delete
 \end{indentedcodelist}
 
-and \plc{map-type-modifier} is \code{always}.
+and \plc{map-type-modifier} is one of the following:
+
+\begin{indentedcodelist}
+always
+mapper(\plc{mapper-identifier})
+\end{indentedcodelist}
 
 \descr
 The list items that appear in a \code{map} clause may include array sections and structure elements.
@@ -2189,7 +2194,17 @@ The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{m
 For a given construct, the effect of a \code{map} clause with the \code{to},
 \code{from}, or \code{tofrom} \plc{map-type} is ordered before the effect of a
 \code{map} clause with the \code{alloc}, \code{release}, or \code{delete}
-\plc{map-type}.
+\plc{map-type}. If a mapper is specified for the type being mapped, or
+explicitly specified with the \verb`mapper` \plc{map-type-modifier}, then the
+effective \code{map-type} of a list item will be determined according to the
+rules of map-type decay.
+
+If a mapper is specified for the type being mapped, or explicitly specified with
+the \verb`mapper` \plc{map-type-modifier}, then all map clauses that appear on the
+\verb`declare mapper` directive are treated as though they appeared on the
+construct with the \verb`map` clause.  Array sections of a mapper type are
+mapped as normal, then each element in the array section is mapped according to
+the rules of the mapper.
 
 \begin{ccppspecific}
 If a list item in a \code{map} clause is a variable of structure type then it
@@ -2357,7 +2372,7 @@ decremented because of the effect of a \code{map} clause on the
 construct then:
 \begin{enumerate}
 \item If the \plc{map-type} is not \code{delete}, then the corresponding list
-    item's reference count is decremented by one.
+                item's reference count is decremented by one.
 \end{enumerate}
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
@@ -2368,27 +2383,27 @@ construct then:
 \item If the \plc{map-type} is \code{from} or \code{tofrom} then:
 \begin{itemize}
 
-    \item For each part of the list item that is an attached pointer:  \begin{itemize}
+              \item For each part of the list item that is an attached pointer:  \begin{itemize}
 
-        \item That part of the original list item will
-        have the value it had immediately prior to the effect of the \code{map} clause;
+                  \item That part of the original list item will
+                    have the value it had immediately prior to the effect of the \code{map} clause;
 
-   \end{itemize}
+                \end{itemize}
 
-    \item For each part of the list item that is not an attached pointer: \begin{itemize}
+              \item For each part of the list item that is not an attached pointer: \begin{itemize}
 
-        \item The value of that part of the
-        corresponding list item is assigned to that part of the original list item; 
+                  \item The value of that part of the
+                    corresponding list item is assigned to that part of the original list item;
 
-   \end{itemize}
+                \end{itemize}
 
-   \item To avoid race conditions: \begin{itemize}
+              \item To avoid race conditions: \begin{itemize}
 
-        \item Concurrent reads or updates of any part
-        of the original list item must be synchronized with the update of the
-        original list item that occurs as a result of the \code{map} clause;
+                  \item Concurrent reads or updates of any part
+                    of the original list item must be synchronized with the update of the
+                    original list item that occurs as a result of the \code{map} clause;
 
-   \end{itemize}
+                \end{itemize}
 
 
 \end{itemize}
@@ -2477,6 +2492,9 @@ device data environment prior to the task encountering the construct.
 \item A list item must have a mappable type.
 
 \item \code{threadprivate} variables cannot appear in a \code{map} clause.
+
+\item If a \code{mapper} map-type-modifier is specified, its type must match the type of the list-items passed to that map clause.
+  
 
 \begin{cppspecific}
 \item If the type of a list item is a reference to a type \plc{T} then the type will be considered to be \plc{T} for all purposes of this clause.

@@ -768,8 +768,8 @@ depend(\plc{dependence-type} : \plc{locator-list}[:\plc{iterators-definition}])
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to(\plc{list})
-from(\plc{list})
+to([mapper(\plc{mapper-identifier}):]\plc{list})
+from([mapper(\plc{mapper-identifier}):]\plc{list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -792,8 +792,8 @@ depend(\plc{dependence-type} : \plc{locator-list}[:\plc{iterators-definition}])
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to(\plc{list})
-from(\plc{list})
+to([mapper(\plc{mapper-identifier}):]\plc{list})
+from([mapper(\plc{mapper-identifier}):]\plc{list})
 \end{indentedcodelist}
 \end{fortranspecific}
 
@@ -808,7 +808,13 @@ region binds to the corresponding \plc{target task} region.
 \descr
 For each list item in a \code{to} or \code{from} clause there is a corresponding list item and an 
 original list item. If the corresponding list item is not present in the device data environment then no assignment occurs to or from the original list item. Otherwise, each corresponding list item in the 
-device data environment has an original list item in the current task's data environment.
+device data environment has an original list item in the current task's data
+environment.  If a \code{mapper()} modifier appears in a \code{to} clause, each list item is
+replaced with the list items that the given mapper specifies are to be mapped
+with a \code{to} or \code{tofrom} map-type. If a \code{mapper()} modifier
+appears in a \code{from} clause, each list item is replaced with the list items
+that the given mapper specifies are to be mapped with a \code{from} or
+\code{tofrom} map-type.
 
 For each list item in a \code{from} or a \code{to} clause: \begin{itemize}
 
@@ -1202,10 +1208,112 @@ may only be specified within an implicit \plc{extended-list}.
 \end{fortranspecific}
 
 
+\subsection{\code{declare}~\code{mapper} Directive}
+\index{declare mapper@{\code{declare}~\code{mapper}}}
+\index{directives!declare mapper@{\code{declare}~\code{mapper}}}
+\index{constructs!declare mapper@{\code{declare}~\code{mapper}}}
+\index{device constructs!declare mapper@{\code{declare}~\code{mapper}}}
+\label{subsec:declare mapper Directive}
+
+\summary
+
+The \code{declare mapper} directive declares a user-defined mapper for a given
+type, and may define a \plc{mapper-identifier} that can be used in a \code{map}
+clause. The \code{declare mapper} directive is a declarative directive.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{declare mapper} directive is as follows:
+
+\begin{boxedcode}
+\#pragma omp declare mapper(\plc{[mapper-identifier:]type var})
+\plc{[clause[ [\code{,}] clause] ... ] new-line}
+\end{boxedcode}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{declare mapper} directive is as follows:
+
+\begin{boxedcode}
+!\$omp declare mapper(\plc{[mapper-identifier:] type \code{::} var})
+\plc{[clause[ [\code{,}] clause] ... ]}
+\end{boxedcode}
+
+\end{fortranspecific}
+
+where:
+
+\begin{itemize}
+  \item \plc{mapper-identifier} is a base-language identifier
+  \item \plc{type} is a valid type in scope
+  \item \plc{var} is a valid base-language identifier
+  \item \plc{clause} is one of the following:
+    \begin{itemize}
+      \item \code{map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})}
+      \item \code{use\_by\_default}
+    \end{itemize}
+  \item \plc{map-type} is one of the following:
+    \begin{itemize}
+      \item \code{alloc}
+      \item \code{to}
+      \item \code{from}
+      \item \code{tofrom}
+    \end{itemize}
+  \item and \plc{map-type-modifier} is \code{always}
+\end{itemize}
+
+\descr
 
 
+User-defined mappers can be defined using the \code{declare mapper} directive.
+The type and, if specified, the \plc{mapper-identifier}, uniquely identify the
+mapper for use in a \code{map} clause later in the program.  The visibility and
+accessibility of this declaration are the same as those of a variable declared
+at the same point in the program.
+
+The \code{use\_by\_default} clause makes this mapper the default for all
+variables of \plc{type}, so that all map clauses with this construct in scope
+that map a list item of \plc{type} will use this mapper unless another is
+explicitly specified.
+
+The variable declared by \plc{var} is available for use in all \code{map}
+clauses on the directive, and no part of the variable to be mapped is mapped by
+default.
+
+The default mapper for all types \plc{T}, designated by the pre-defined
+mapper-identifier \code{default}, is as follows unless a user-defined mapper is
+specified for that type.
+
+\begin{boxedcode}
+
+  declare mapper(\plc{T} v) map(tofrom: v) use\_by\_default
+
+\end{boxedcode}
+
+All \code{map} clauses on the dirctive are expanded into corresponding
+\code{map} clauses wherever this mapper is invoked, either by matching type or
+by being explicitly named in a \code{map} clause. A \code{map} clause with list item
+\plc{var} maps var as though no mapper were specified.
 
 
+\begin{cppspecific}
+The \code{declare mapper} directive can also appear at points in the program at
+which a static data member could be declared. In this case, the visibility and
+accessibility of the declaration are the same as those of a static data member
+declared at the same point in the program.
+
+\end{cppspecific}
+
+\restrictions
+
+\begin{itemize}
+\item If the \code{use\_by\_default} clause is not specified, then a
+  mapper-identifier is required.
+\item No instance of the mapper type can be mapped as part of the mapper,
+  either directly or indirectly through another type, except the instance passed
+  as the list item.
+\end{itemize}
 
 \subsection{\code{teams} Construct}
 \index{teams@{\code{teams}}}
