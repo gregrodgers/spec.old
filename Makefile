@@ -13,6 +13,7 @@ CHAPTERS=openmp.tex \
          directives/directives_common.tex \
          directives/directives_parallel.tex \
          directives/directives_worksharing.tex \
+         directives/directives_concurrent.tex \
          directives/directives_simd.tex \
          directives/directives_tasking.tex \
          directives/directives_device.tex \
@@ -68,7 +69,7 @@ clean:
 ifdef DIFF_TO
     VC_DIFF_TO := -r ${DIFF_TO}
 else
-    VC_DIFF_TO := -r HEAD
+    VC_DIFF_TO :=
 endif
 ifdef DIFF_FROM
     VC_DIFF_FROM := -r ${DIFF_FROM}
@@ -105,12 +106,12 @@ openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 
-openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
+openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 
 # Slow but portable diffs
-openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir openmp.pdf
+openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 

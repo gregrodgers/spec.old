@@ -43,18 +43,17 @@
 %             This is a \plc{var-name}.
 %
 
-
 \chapter{Environment Variables}
 \index{environment variables}
 \index{variables, environment}
 \label{chap:Environment Variables}
-This chapter describes the OpenMP environment variables that specify the settings of 
-the ICVs that affect the execution of OpenMP programs (see \specref{sec:Internal Control Variables}). 
-The names of the environment variables must be upper case. The values assigned to the 
-environment variables are case insensitive and may have leading and trailing white 
-space. Modifications to the environment variables after the program has started, even if 
-modified by the program itself, are ignored by the OpenMP implementation. However, 
-the settings of some of the ICVs can be modified during the execution of the OpenMP 
+This chapter describes the OpenMP environment variables that specify the settings of
+the ICVs that affect the execution of OpenMP programs (see \specref{sec:Internal Control Variables}).
+The names of the environment variables must be upper case. The values assigned to the
+environment variables are case insensitive and may have leading and trailing white
+space. Modifications to the environment variables after the program has started, even if
+modified by the program itself, are ignored by the OpenMP implementation. However,
+the settings of some of the ICVs can be modified during the execution of the OpenMP
 program by the use of the appropriate directive clauses or OpenMP API routines.
 
 The following examples demonstrate how the OpenMP environment variables can
@@ -83,14 +82,6 @@ export OMP\_SCHEDULE="dynamic"
 \begin{boxedcode}
 set OMP\_SCHEDULE=dynamic
 \end{boxedcode}
-
-
-
-
-
-
-
-
 
 
 \section{\code{OMP\_SCHEDULE}}
@@ -738,10 +729,159 @@ OPENMP DISPLAY ENVIRONMENT END
 \end{boxedcode}
 
 
+\section{\code{OMP\_DISPLAY\_AFFINITY}}
+\index{OMP\_DISPLAY\_AFFINITY@{\code{OMP\_DISPLAY\_AFFINITY}}}
+\index{environment variables!OMP\_DISPLAY\_AFFINITY@{\code{OMP\_DISPLAY\_AFFINITY}}}
+\index{\_OPENMP@{\code{\_OPENMP} macro}}
+\label{sec:OMP_DISPLAY_AFFINITY}
+The \code{OMP\_DISPLAY\_AFFINITY} environment variable instructs the runtime to display formatted 
+affinity information for OpenMP threads upon entering the first parallel region
+ and when there is any change in thread affinity thereafter. 
+If there is a change of affinity of any thread in a parallel region, thread affinity information for all threads
+in that region will be displayed.  There is no specific order in displaying thread affinity information
+for all threads in the same parallel region. 
+
+The value of the \code{OMP\_DISPLAY\_AFFINITY} environment variable may be set to one of these 
+values:
+
+\code{TRUE \textnormal{|} FALSE}
+
+%The default is set to \code{FALSE}.
+
+The \code{TRUE} value instructs the runtime to display the OpenMP thread affinity information, and uses the 
+format setting defined in the \plc{affinity-format-var} ICV. 
+
+The runtime does not display the OpenMP thread affinity information when the value of the \code{OMP\_DISPLAY\_AFFINITY}
+environment variable is \code{FALSE} or undefined. For all values of the environment
+variable other than \code{TRUE} or \code{FALSE}, the display action is implementation defined.
+
+Example: 
+\begin{boxedcode}
+setenv OMP\_DISPLAY\_AFFINITY TRUE
+\end{boxedcode}
+
+The above example causes an OpenMP implementation to display OpenMP thread affinity information during execution of
+the program, in a format given by the \plc{affinity-format-var} ICV.  The following is a sample output:
+\begin{boxedcode}
+thread_level=   1,   thread_id=   0,   thread_affinity=    0,1  
+thread_level=   1,   thread_id=   1,   thread_affinity=    2,3
+\end{boxedcode}
+
+\crossreferences
+\begin{itemize}
+
+\item Controlling OpenMP thread affinity, see 
+\specref{subsec:Controlling OpenMP Thread Affinity}. 
+\item \code{OMP\_AFFINITY\_FORMAT} environment variable, see 
+\specref{sec:OMP_AFFINITY_FORMAT}.
+\item \code{omp\_set\_affinity\_format} routine, see \specref{subsec:omp_set_affinity_format}.
+\item \code{omp\_get\_affinity\_format} routine, see \specref{subsec:omp_get_affinity_format}.
+\item \code{omp\_display\_affinity} routine, see \specref{subsec:omp_display_affinity}.
+\item \code{omp\_capture\_affinity} routine, see \specref{subsec:omp_capture_affinity}.
+\end{itemize}
 
 
+\section{\code{OMP\_AFFINITY\_FORMAT}}
+\index{OMP\_AFFINITY\_FORMAT@{\code{OMP\_AFFINITY\_FORMAT}}}
+\index{environment variables!OMP\_AFFINITY\_FORMAT@{\code{OMP\_AFFINITY\_FORMAT}}}
+\index{\_OPENMP@{\code{\_OPENMP} macro}}
+\label{sec:OMP_AFFINITY_FORMAT}
+
+The \code{OMP\_AFFINITY\_FORMAT} environment variable sets the initial value of the 
+\plc{affinity-format-var} ICV which defines the format when displaying OpenMP
+thread affinity information.
+
+%The default value for \code{OMP\_AFFINITY\_FORMAT} is implementation defined.  
+
+The value of this environment variable is a character string that may contain as
+substrings one or more field specifiers, in addition to other characters.
+The format of each field specifier is “\%[0[.]\plc{size}]\plc{type}”,
+where an individual field specifier must contain the percent symbol (\%) and a type. 
+The type can be a single character short name or its corresponding long name delimited with curly braces,
+ such as “\%n” or “\%\{thread\_num\}”.
+%(The “0”, “.” and \plc{size} are optional.)
+A literal percent is specified as “\%\%”.  Field specifiers can be provided in any order.
+
+The “0” indicates whether or not to add leading zeros to the output.
+The “.” indicates the output should be right justified when \plc{size} is specified.
+By default, output is left justified. 
+The minimum field length is \plc{size}.
+If no \plc{size} is specified, the actual length needed to print the field will be used. 
+
+Any other characters in the format string that are not part of a field specifier will be included literally
+in the output.
+
+Available field types are:
+
+% Table
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Short Name}} & \textsf{\textbf{Long Name}} & \textsf{\textbf{Meaning}}\\
+\hline \\[-3ex]
+}
+\tablehead{%
+\multicolumn{3}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Short Name}} & \textsf{textbf{Long Name}} & \textsf{\textbf{Meaning}}\\
+\hline \\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{3}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Available Field Types for Formatting OpenMP Thread Affinity Information \label{tab:Available Field Types for Formatting OpenMP Thread Affinity Information}}
+\begin{supertabular}{ p{0.06\textwidth} p{0.24\textwidth} p{0.6\textwidth}}
+\code{L} & \code{thread\_level} & The value returned by \code{omp\_get\_level()}. \\
+\code{n} & \code{thread\_num} &  The value returned by \code{omp\_get\_thread\_num()}. \\
+\code{h} & \code{host} & The name for the host machine on which the OpenMP program is running. \\
+\code{P} & \code{process\_id} & The process identifier used by the implementation. \\
+\code{T} & \code{thread\_identifier} & The thread identifier for a native thread defined by the implementation. \\
+\code{N} & \code{num\_threads} & The value returned by \code{omp\_get\_num\_threads()}. \\
+\code{A} & \code{ancestor\_tnum} & The value returned by \code{omp\_get\_ancestor\_thread\_num(\plc{level})}, where \plc{level} is 
+\code{omp\_get\_level()} minus 1. \\
+\code{a} & \code{thread\_affinity} & The list of numerical identifiers, in the format of a comma-separated list of integers or integer ranges, representing processors on which a thread may execute, subject to OpenMP thread affinity control and/or other external affinity mechanisms. \\
+
+\end{supertabular}
+
+\linenumbers
+
+%Often a descriptive string is used to prefix a field, as in the format  “thread\_level=\%.5L”,         
+%and a comma or space is often used to separate the output of each field, as in the format 
+%"thread\_num=\%0.4n affinity=\%a”. 
+% A literal percent is specified as “\%\%”.  
+
+Implementations may define additional field types.  If an implementation does not have information
+for a field type, “undefined” is printed for this field when displaying the OpenMP thread affinity information.
+
+%As an example, some compilers may wish to define field names corresponding to MPI rank information.
 
 
+Example: 
+\begin{boxedcode}
+setenv OMP\_AFFINITY\_FORMAT 
+       “Thread Affinity: %0.3L %.8n %.15\{thread_affinity\} %.12h”
+\end{boxedcode}
+
+The above example causes an OpenMP implementation to display OpenMP thread affinity information in the following form:
+\begin{boxedcode}
+Thread Affinity: 001        0      0-1,16-17      nid003
+Thread Affinity: 001        1      2-3,18-19      nid003
+\end{boxedcode}
+
+\crossreferences
+\begin{itemize}
+\item Controlling OpenMP thread affinity, see 
+\specref{subsec:Controlling OpenMP Thread Affinity}. 
+\item \code{OMP\_DISPLAY\_AFFINITY} environment variable, see 
+\specref{sec:OMP_DISPLAY_AFFINITY}.
+\item \code{omp\_set\_affinity\_format} routine, see \specref{subsec:omp_set_affinity_format}.
+\item \code{omp\_get\_affinity\_format} routine, see \specref{subsec:omp_get_affinity_format}.
+\item \code{omp\_display\_affinity} routine, see \specref{subsec:omp_display_affinity}.
+\item \code{omp\_capture\_affinity} routine, see \specref{subsec:omp_capture_affinity}.
+\end{itemize}
 
 
 \section{\code{OMP\_DEFAULT\_DEVICE}}
