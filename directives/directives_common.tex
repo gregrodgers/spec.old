@@ -723,6 +723,14 @@ There is one copy of this ICV for the whole program.
 
 \end{itemize}
 
+The following ICVs store values that affect default memory allocation.
+
+\begin{itemize}
+
+\item \plc{def-allocator-var} - determines the memory allocator to be used by memory allocation routines, directives and clauses when a memory allocator is not specified by the user. There is one copy of this ICV per implicit task.
+
+\end{itemize}
+
 
 
 
@@ -778,6 +786,7 @@ environment variables, and initial values.
 \plc{max-task-priority-var} & \code{OMP\_MAX\_TASK\_PRIORITY} & \plc{zero}\\
 \plc{tool-var} & \code{OMP\_TOOL} & \plc{enabled}\\
 \plc{tool-libraries-var} & \code{OMP\_TOOL\_LIBRARIES} & \plc{empty string}\\
+\plc{def-allocator-var} & \code{OMP\_ALLOCATOR} & Implementation defined\\
 \end{supertabular}
 \linenumbers
 
@@ -840,6 +849,10 @@ device's ICVs is implementation defined.
 \item \code{OMP\_TOOL} environment variable, see \specref{sec:OMP_TOOL}.
 
 \item \code{OMP\_TOOL\_LIBRARIES} environment variable, see \specref{sec:OMP_TOOL_LIBRARIES}.
+
+\item \code{OMP\_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
+
+\item \code{OMP\_TARGET\_ALLOCATOR} environment variable, see \specref{sec:OMP_TARGET_ALLOCATOR}.
 \end{itemize}
 
 
@@ -917,6 +930,8 @@ through OpenMP API routines.
 \plc{tool-var} & (none) & (none)\\
 \plc{tool-libraries-var} & (none) & (none)\\
 
+\plc{def-allocator-var} & \code{omp\_set\_default\_allocator()} & \code{omp\_get\_default\_allocator()}\\
+
 \end{supertabular}
 \linenumbers} % end of \small block
 
@@ -987,6 +1002,13 @@ Detailed values in the \plc{place-partition-var} ICV are retrieved using the run
 
 \item \code{omp\_get\_max\_task\_priority} routine, see \specref{subsec:omp_get_max_task_priority}.
 
+\item \code{omp\_set\_default\_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+
+\item \code{omp\_get\_default\_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+\item \code{omp\_set\_target\_default\_allocator} routine, see \specref{subsec:omp_set_target_default_allocator}.
+
+\item \code{omp\_get\_target\_default\_allocator} routine, see \specref{subsec:omp_get_target_default_allocator}.
 \end{itemize}
 
 
@@ -1043,6 +1065,8 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \plc{max-task-priority-var} & global\\
 \plc{tool-var} & global\\
 \plc{tool-libraries-var} & global\\
+\plc{def-allocator-var} & implicit task\\
+\plc{def-target-allocator-var} & implicit task\\
 \end{supertabular}
 \renewcommand{\arraystretch}{1.5} % restore the previous value
 
@@ -1072,6 +1096,8 @@ data environment of their binding tasks.
 When a \code{task} construct or \code{parallel} construct is encountered, the generated task(s)
 inherit the values of the data environment scoped ICVs from the generating task's ICV
 values.
+
+When a \code{parallel} construct is encountered, the value of each ICV witch implicit task scope is inherited, unless otherwise specified, from the implicit binding task of the generating task unless otherwise specified.
 
 When a \code{task} construct is encountered, the generated task inherits the value of
 \plc{nthreads-var} from the generating task's \plc{nthreads-var} value. When a \code{parallel}
@@ -1144,6 +1170,7 @@ among construct clauses and ICVs.
 \plc{max-task-priority-var} & (none)\\
 \plc{tool-var} & (none)\\
 \plc{tool-libraries-var} & (none)\\
+\plc{def-allocator-var} & \code{allocator}\\
 \end{supertabular}
 \linenumbers
 
@@ -1383,4 +1410,62 @@ the iterator identifier in the expression with the iterator value.
 \item If the \plc{step} expression of a \plc{range-specification} equals zero the behavior is unspecified.
 \item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
 \item Iterators cannot appear in the \plc{range-specification}.
+\end{itemize}
+
+\section{Memory Allocators}
+\label{sec:Memory Allocators}
+\index{memory allocators}
+
+OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive memory in its associated storage resources of at least the size being requested. This allocation will not alias with any other existing allocation from an OpenMP memory allocator. Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators. The use of a given memory allocator expresses an intent to use storage with certain traits for the allocations. The actual storage resources that each memory allocator will use are implementation defined.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Allocator name}} & \textsf{\textbf{Storage selection intent}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Allocator name}} & \textsf{\textbf{Storage selection intent}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Predefined Allocators\label{tab:Predefined Allocators}}
+\begin{supertabular}{p{2.1in}p{3in}}
+\code{omp\_default\_mem\_alloc} & Use default storage for allocations.\\
+\code{omp\_large\_cap\_mem\_alloc} & Use storage with large capacity.\\
+\code{omp\_const\_mem\_alloc} & Use storage optimized for read-only variables. The result of writing to memory returned by this memory allocator is unspecified.\\
+\code{omp\_high\_bw\_mem\_alloc} & Use storage with high bandwidth.\\
+\code{omp\_low\_lat\_mem\_alloc} & Use storage with low latency.\\
+\code{omp\_cgroup\_mem\_alloc} & Use storage that is close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by this allocator from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior.\\
+\code{omp\_pteam\_mem\_alloc} & Use storage that is close to all threads that bind to the same \code{parallel} region of the thread requesting the allocation. Attempts to access the memory returned by this allocator from a thread that does not bind to the same \code{parallel} region as the thread that allocated the memory results in unspecified behavior.\\
+\code{omp\_thread\_mem\_alloc} & Use storage that is close to the \plc{thread} requesting the allocation. Attempts to access the memory returned by this allocator from a thread other than the one that allocated the memory results in unspecified behavior.\\
+\end{supertabular}
+
+For memory allocators other than \code{omp\_cgroup\_mem\_alloc}, \code{omp\_pteam\_mem\_alloc} and \code{omp\_thread\_mem\_alloc} the returned memory must be accessible by all threads in the device where the allocation was requested. %The allocator will return the value zero it fails to allocate the requested memory.
+
+\begin{fortranspecific}
+If any operation of the base language causes a reallocation of an array that is allocated with a memory allocator then that memory allocator will be used to release the current memory and to allocate the new memory.
+\end{fortranspecific}
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_set\_default\_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+
+\item \code{omp\_get\_default\_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+\item \code{omp\_set\_target\_default\_allocator} routine, see \specref{subsec:omp_set_target_default_allocator}.
+
+\item \code{omp\_get\_target\_default\_allocator} routine, see \specref{subsec:omp_get_target_default_allocator}.
+
+\item \code{OMP\_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
+
+\item \code{OMP\_TARGET\_ALLOCATOR} environment variable, see \specref{sec:OMP_TARGET_ALLOCATOR}.
+
 \end{itemize}
