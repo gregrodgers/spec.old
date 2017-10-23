@@ -46,42 +46,15 @@
 \section{Data Environment}
 \label{sec:Data Environment}
 \index{data environment}
-This section presents a directive and several clauses for controlling the data environment 
-during the execution of \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions.
-
-\begin{itemize}
-\item \specref{subsec:Data-sharing Attribute Rules} 
-describes how the data-sharing attributes of variables
-referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, and worksharing regions are determined.
-
-\item The \code{threadprivate} directive, which is provided to create threadprivate memory, 
-is described in \specref{subsec:threadprivate Directive}.
-
-\item Clauses that may be specified on directives to control the data-sharing attributes of 
-variables referenced in \code{teams}, \code{parallel}, \code{simd}, task generating, or worksharing constructs are described in \specref{subsec:Data-Sharing Attribute Clauses}
-
-\item Clauses that may be specified on directives to copy data values from private or 
-threadprivate variables on one thread to the corresponding variables on other threads 
-in the team are described in \specref{subsec:Data Copying Clauses}.
-
-\item Clauses that may be specified on directives to control the data-mapping of variables to a device data environment are described in \specref{subsec:map Clause}.
-\end{itemize}
-
-
-
-
-
-
-
-
-
+This section presents a directive and several clauses for controlling data environments. 
 
 \subsection{Data-sharing Attribute Rules}
 \label{subsec:Data-sharing Attribute Rules}
 \index{data-sharing attribute rules}
 \index{attributes, data-sharing}
 This section describes how the data-sharing attributes of variables referenced in 
-\code{target}, \code{parallel}, \code{task}, \code{taskloop}, \code{simd}, and worksharing regions are determined. The following two cases are described separately:
+data enviroments are determined. 
+The following two cases are described separately:
 
 \begin{itemize}
 \item \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced in a Construct} 
@@ -127,9 +100,10 @@ construct are private.
 \item Static data members are shared.
 
 \item The loop iteration variable(s) in the associated \plc{for-loop(s)} of a
-\code{for}, \code{parallel}~\code{for}, \code{taskloop}, or \code{distribute} construct is (are) private.
+  \code{for}, \code{parallel}~\code{for}, \code{taskloop}, or \code{distribute} construct is (are) private.
 
-\item The loop iteration variable in the associated \plc{for-loop} of a \code{simd} construct with just 
+\item The loop iteration variable in the associated \plc{for-loop} of a
+  \code{simd} or \code{concurrent}  construct with just 
 one associated \plc{for-loop} is linear with a \plc{linear-step} that is the increment of
 the associated \plc{for-loop}.
 
@@ -152,10 +126,12 @@ the named pointer is firstprivate.
 \item Variables and common blocks appearing in \code{threadprivate} directives are 
 threadprivate. 
 
-\item The loop iteration variable(s) in the associated \plc{do-loop(s)} of a \code{do}, \code{parallel}~\code{do},
+\item The loop iteration variable(s) in the associated \plc{do-loop(s)} of a
+  \code{do}, \code{parallel}~\code{do},
 \code{taskloop}, or \code{distribute} construct is (are) private.
 
-\item The loop iteration variable in the associated \plc{do-loop} of a \code{simd} construct with just 
+\item The loop iteration variable in the associated \plc{do-loop} of a
+  \code{simd} or \code{concurrent}  construct with just 
 one associated \plc{do-loop} is linear with a \plc{linear-step} that is the increment of
 the associated \plc{do-loop}.
 
@@ -796,7 +772,10 @@ private(\plc{list})
 Each task that references a list item that appears in a \code{private} clause in any statement 
 in the construct receives a new list item. Each SIMD lane used in a \code{simd} construct that 
 references a list item that appears in a private clause in any statement in the construct 
-receives a new list item. Language-specific attributes for new list items are derived from 
+receives a new list item. For each reference to a list item that appears in a
+\code{private} clause on a \code{concurrent} construct, the behavior will be
+as if a private copy of the list item is created for each logical loop
+iteration. Language-specific attributes for new list items are derived from 
 the corresponding original list item. Inside the construct, all references to the original 
 list item are replaced by references to the new list item. In the rest of the region, it is 
 unspecified whether references are to the new list item or the original list item. 
@@ -841,6 +820,10 @@ List items that appear in a \code{private}, \code{firstprivate},
 \code{lastprivate}, or \code{reduction} clause in a worksharing
 construct may also appear in a \code{private} clause in an enclosed
 \code{parallel}, \code{task}, \code{simd}, or \code{target} construct.
+
+List items that appear in a \code{private} or \code{firstprivate} clause on a
+\code{concurrent} construct may also appear in a \code{private} or
+\code{firstprivate} clause in an enclosed \code{parallel} construct.
 
 \begin{ccppspecific}
 A new list item of the same type, with automatic storage duration, is allocated for the 
@@ -1084,6 +1067,8 @@ clause.
 
 \item Assumed-size arrays may not appear in the \code{firstprivate}
 clause in a \code{target}, \code{teams}, or \code{distribute} construct.
+
+\item If the list item is a polymorphic variable with the \code{ALLOCATABLE} attribute, the behavior is unspecified.
 \end{fortranspecific}
 \end{itemize}
 
@@ -1155,16 +1140,18 @@ lexically last \code{section} construct, have unspecified values after the
 construct.  Unassigned subcomponents also have unspecified values after the
 construct.
 
-The original list item becomes defined at the end of the construct if there is an implicit 
-barrier at that point. To avoid race conditions, concurrent reads or updates of the original 
-list item must be synchronized with the update of the original list item that occurs as a 
-result of the \code{lastprivate} clause.
+If the \code{lastprivate} clause is used on a construct to which neither
+the \code{nowait} nor the \code{nogroup} clauses are applied, the original list item
+becomes defined at the end of the construct.  To avoid race conditions,
+concurrent reads or updates of the original list item must be synchronized with
+the update of the original list item that occurs as a result of the
+\code{lastprivate} clause.
 
-If the \code{lastprivate} clause is used on a construct that does not end with
-an implicit barrier, accesses to the original list item may create a data race.
-To avoid this, if an assignment to the original list item occurs
-then synchronization must be inserted to ensure that the assignment completes and
-the original list item is flushed to memory.
+Otherwise, If the \code{lastprivate} clause is used on a construct to which
+the \code{nowait} or the \code{nogroup} clauses are applied, accesses to the original
+list item may create a data race.  To avoid this, if an assignment to the
+original list item occurs then synchronization must be inserted to ensure that
+the assignment completes and the original list item is flushed to memory.
 
 If a list item appears in both \code{firstprivate} and \code{lastprivate} clauses, the update 
 required for \code{lastprivate} occurs after all initializations for \code{firstprivate}.
@@ -1219,6 +1206,8 @@ construct has a reference type then it must bind to the same object for all thre
 \item Variables that appear in namelist statements, in variable format expressions, or in 
 expressions for statement function definitions, may not appear in a \code{lastprivate} 
 clause.
+
+\item If the list item is a polymorphic variable with the \code{ALLOCATABLE} attribute, the behavior is unspecified.
 \end{fortranspecific}
 \end{itemize}
 
@@ -1764,8 +1753,13 @@ created and initialized, one for each team in the league as if the
 \code{private} clause had been used. At the end of the region for  which the
 \code{reduction} clause was specified, the original list item is updated by
 combining its original value with the final value of each of the private
-copies, using the combiner of the specified \plc{reduction-identifier}.
-
+copies, using the combiner of the specified \plc{reduction-identifier}. For the
+\code{concurrent} construct, the behavior will be as if a private copy of each
+list item is created for each loop iteration. At the end of the
+region for  which the \code{reduction} clause was specified, the original list
+item is updated by combining its original value with the final value of each of
+the private copies, using the combiner of the specified
+\plc{reduction-identifier}.
 
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the 
@@ -1994,6 +1988,8 @@ specify the whole common block.
 
 \item A common block name that appears in a \code{copyin} clause must be declared to be a 
 common block in the same scoping unit in which the \code{copyin} clause appears.
+
+\item If the list item is a polymorphic variable with the \code{ALLOCATABLE} attribute, the behavior is unspecified.
 \end{itemize}
 \end{fortranspecific}
 
@@ -2088,6 +2084,8 @@ requires an accessible unambiguous copy assignment operator for the class type.
 \item Pointers with the \code{INTENT(IN)} attribute may not appear in the \code{copyprivate} 
 clause.
 \item The list item with the \code{ALLOCATABLE} attribute must have the allocation status of allocated when the intrinsic assignment is performed. 
+
+\item If the list item is a polymorphic variable with the \code{ALLOCATABLE} attribute, the behavior is unspecified.
 \end{fortranspecific}
 \end{itemize}
 
@@ -2127,6 +2125,8 @@ on a \code{declare}~\code{target} directive then it is treated as if it had appe
 
 \begin{cppspecific}
 \item A variable that is of type reference to pointer is treated as if it had appeared in a \code{map} clause as a zero-length array section.
+\item A class member variable is treated as if the \plc{this[:1]} expression
+  had appeared in a \code{map} clause.
 \end{cppspecific}
 \end{itemize}
 
@@ -2179,7 +2179,12 @@ release
 delete
 \end{indentedcodelist}
 
-and \plc{map-type-modifier} is \code{always}.
+and \plc{map-type-modifier} is one of the following:
+
+\begin{indentedcodelist}
+always
+mapper(\plc{mapper-identifier})
+\end{indentedcodelist}
 
 \descr
 The list items that appear in a \code{map} clause may include array sections and structure elements.
@@ -2189,7 +2194,17 @@ The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{m
 For a given construct, the effect of a \code{map} clause with the \code{to},
 \code{from}, or \code{tofrom} \plc{map-type} is ordered before the effect of a
 \code{map} clause with the \code{alloc}, \code{release}, or \code{delete}
-\plc{map-type}.
+\plc{map-type}. If a mapper is specified for the type being mapped, or
+explicitly specified with the \verb`mapper` \plc{map-type-modifier}, then the
+effective \code{map-type} of a list item will be determined according to the
+rules of map-type decay.
+
+If a mapper is specified for the type being mapped, or explicitly specified with
+the \verb`mapper` \plc{map-type-modifier}, then all map clauses that appear on the
+\verb`declare mapper` directive are treated as though they appeared on the
+construct with the \verb`map` clause.  Array sections of a mapper type are
+mapped as normal, then each element in the array section is mapped according to
+the rules of the mapper.
 
 \begin{ccppspecific}
 If a list item in a \code{map} clause is a variable of structure type then it
@@ -2238,15 +2253,9 @@ construct is encountered then:
 \end{itemize}
 
 \begin{fortranspecific}
-\begin{itemize}
-\item If a list item in a \code{map} clause has the POINTER attribute
-  and if the association status of the list item is associated, then
-  it is treated as if the pointer target is a list item in the clause.
-
-\item If a list item in a \code{map} clause is a pointer component of
-  an array of derived type, the containing structure must be present
-  in the device data environment.
-\end{itemize}
+If a list item in a \code{map} clause has the POINTER attribute and if
+the association status of the list item is associated, then it is
+treated as if the pointer target is a list item in the clause.
 \end{fortranspecific}
 
 \begin{ccppspecific}
@@ -2261,13 +2270,13 @@ ordered as follows:
 \item If the \code{map} clauses appear on a \code{target},
 \code{target}~\code{data}, or \code{target}~\code{enter}~\code{data} construct
 then on entry to the region the effect of the \code{map} clause on the pointer
-variable are ordered to occur before the effect of the \code{map} clause on
+variable is ordered to occur before the effect of the \code{map} clause on
 the array section.
 
 \item If the \code{map} clauses appears on a \code{target},
 \code{target}~\code{data}, or \code{target}~\code{exit}~\code{data} construct
 then on exit from the region the effect of the \code{map} clause on the array
-section are ordered to occur before the effect of the \code{map} clause on the
+section is ordered to occur before the effect of the \code{map} clause on the
 pointer variable.
 
 \end{itemize}
@@ -2288,6 +2297,23 @@ for the corresponding array section.
 
 \end{ccppspecific}
 
+\begin{cppspecific}
+If a \plc{lambda} is mapped explicitly or implicitly, variables
+that are captured by the \plc{lambda} behave as follows:
+\begin{itemize}
+\item the variables that are of pointer type are treated as if they had
+appeared in a \code{map} clause as zero-length array sections
+
+\item the variables that are of reference type are treated as if they
+had appeared in a \code{map} clause.
+\end{itemize}
+
+If a member variable is captured by a \plc{lambda} in class scope, and
+the \plc{lambda} is later mapped explicitly or implicitly with its
+full static type, the \plc{this} pointer is treated as if it had
+appeared on a \code{map} clause.
+
+\end{cppspecific}
 
 The original and corresponding list items may share storage such that writes to either
 item by one task followed by a read or write of the other item by another task without
@@ -2363,7 +2389,7 @@ decremented because of the effect of a \code{map} clause on the
 construct then:
 \begin{enumerate}
 \item If the \plc{map-type} is not \code{delete}, then the corresponding list
-    item's reference count is decremented by one.
+                item's reference count is decremented by one.
 \end{enumerate}
 \item If the \plc{map-type} is \code{delete}, then the corresponding list item's reference count is set to zero. 
 \end{enumerate}
@@ -2374,27 +2400,27 @@ construct then:
 \item If the \plc{map-type} is \code{from} or \code{tofrom} then:
 \begin{itemize}
 
-    \item For each part of the list item that is an attached pointer:  \begin{itemize}
+              \item For each part of the list item that is an attached pointer:  \begin{itemize}
 
-        \item That part of the original list item will
-        have the value it had immediately prior to the effect of the \code{map} clause;
+                  \item That part of the original list item will
+                    have the value it had immediately prior to the effect of the \code{map} clause;
 
-   \end{itemize}
+                \end{itemize}
 
-    \item For each part of the list item that is not an attached pointer: \begin{itemize}
+              \item For each part of the list item that is not an attached pointer: \begin{itemize}
 
-        \item The value of that part of the
-        corresponding list item is assigned to that part of the original list item; 
+                  \item The value of that part of the
+                    corresponding list item is assigned to that part of the original list item;
 
-   \end{itemize}
+                \end{itemize}
 
-   \item To avoid race conditions: \begin{itemize}
+              \item To avoid race conditions: \begin{itemize}
 
-        \item Concurrent reads or updates of any part
-        of the original list item must be synchronized with the update of the
-        original list item that occurs as a result of the \code{map} clause;
+                  \item Concurrent reads or updates of any part
+                    of the original list item must be synchronized with the update of the
+                    original list item that occurs as a result of the \code{map} clause;
 
-   \end{itemize}
+                \end{itemize}
 
 
 \end{itemize}
@@ -2484,8 +2510,19 @@ device data environment prior to the task encountering the construct.
 
 \item \code{threadprivate} variables cannot appear in a \code{map} clause.
 
+\item If a \code{mapper} map-type-modifier is specified, its type must match the type of the list-items passed to that map clause.
+  
+
 \begin{cppspecific}
 \item If the type of a list item is a reference to a type \plc{T} then the type will be considered to be \plc{T} for all purposes of this clause.
+
+\item If the list item is a \plc{lambda}, any pointers and references captured by
+the \plc{lambda} must have the corresponding list item in the device
+data environment prior to the task encountering the construct.
+
+\item In the class scope, if the \plc{lambda} is passed as a parameter to a
+function in which it is specified in the \code{map} clause, the
+behavior is unspecified.
 \end{cppspecific}
 
 \begin{ccppspecific}
@@ -2545,7 +2582,12 @@ initialization and assignment.
   region, then the pointer association status must become
   disassociated before the end of the region; otherwise the behavior
   is unspecified.
-  
+
+\item If the allocation status of the original list item with the
+  \code{ALLOCATABLE} attribute is changed on the host device data
+  environment and the corresponding list item is already present on
+  the device data environment, the behavior is unspecified.
+
 \end{itemize}
 \end{fortranspecific}
 \end{samepage}
@@ -2573,26 +2615,21 @@ are referenced in a \code{target} construct and would otherwise be
 implicitly determined.
 
 \syntax
-\begin{ccppspecific}
 The syntax of the \code{defaultmap} clause is as follows:
 
 \begin{boxedcode}
 defaultmap(tofrom:scalar)
+defaultmap(none)
 \end{boxedcode}
-\end{ccppspecific}
-
-\begin{fortranspecific}
-The syntax of the \code{defaultmap} clause is as follows:
-
-\begin{boxedcode}
-defaultmap(tofrom:scalar)
-\end{boxedcode}
-\end{fortranspecific}
 
 \descr
 The \code{defaultmap(tofrom:scalar)} clause causes all scalar variables
 referenced in the construct that have implicitly determined data-mapping
 attributes to have the \code{tofrom} \plc{map-type}.
+
+The \code{defaultmap(none)} clause requires all variables referenced in the
+construct to have explicit data-mapping or data sharing attributes, or to be
+listed in an \code{is\_device\_ptr} clause.
 
 
 
