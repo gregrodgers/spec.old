@@ -31,6 +31,13 @@ CHAPTERS=openmp.tex \
          tool_support/tool_support_common.tex \
          tool_support/tool_support_callbacks.tex \
          tool_support/tool_support_entrypoints.tex \
+         tool_support/tool_support_debug.tex \
+         tool_support/ompd/ompd_activating_a_third_party_tool.tex \
+         tool_support/ompd/ompd_data_types_for_third_party_tools.tex \
+         tool_support/ompd/ompd_introduction.tex \
+         tool_support/ompd/ompd_runtime_entry_points.tex \
+         tool_support/ompd/ompd_third_party_callback_interface.tex \
+         tool_support/ompd/ompd_third_party_tool_interface_routines.tex \
          environment_variables.tex \
          appendices/stubs.tex \
          appendices/stubs_ccpp.tex \

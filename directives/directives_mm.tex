@@ -1,0 +1,134 @@
+\section{Memory Management Directives}
+\label{sec:Memory Management Directives}
+\index{memory management}
+\index{directives!memory management directives}
+\index{memory management directives!memory management directives}
+
+
+\subsection{\code{allocate} Directive}
+\index{allocate@{\code{allocate}}}
+\index{directives!allocate@{\code{allocate}}}
+\label{subsec:allocate Directive}
+\summary
+
+The \code{allocate} directive specifies how a set of variables are allocated. The \code{allocate} directive is a declarative directive if it is not associated with an allocation statement.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{allocate} directive is as follows:
+
+\begin{boxedcode}
+\#pragma omp allocate(\plc{list}) \plc{[clause[ [ [},\plc{] clause] ... ]] new-line}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+allocator(\plc{allocator})
+\end{indentedcodelist}
+
+where \plc{allocator} is an expression of \code{const omp\_allocator\_t *} type.
+
+\end{ccppspecific}
+\medskip
+
+\begin{fortranspecific}
+The syntax of the \code{allocate} directive is as follows:
+
+\begin{boxedcode}
+!\$omp allocate(\plc{list}) \plc{[clause[ [ [},\plc{] clause] ... ]]}
+\end{boxedcode}
+
+or
+\begin{boxedcode}
+!\$omp allocate[(\plc{list})] \plc{clause[ [ [},\plc{] clause] ... ]}
+[!\$omp allocate(\plc{list}) \plc{clause[ [ [},\plc{] clause] ... ]}]
+[...]
+   \plc{allocate statement}
+\end{boxedcode}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+allocator(\plc{allocator})
+\end{indentedcodelist}
+
+where \plc{allocator} is an integer expression of \code{omp\_allocator\_kind} \plc{kind}.
+
+\end{fortranspecific}
+
+\descr
+
+If the directive is not associated with a statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through a memory allocator. If no clause is specified then the memory allocator specified by the \plc{def-allocator-var} ICV will be used. If the \code{allocator} clause is specified, the memory allocator specified in the clause will be used. If a memory allocator is unable to fulfill the allocation request for any list item the result of the behavior is implementation defined.
+
+The scope of this allocation is that of the list item in the base language. At the end of the scope for a given list item the memory allocator used to allocate that list item deallocates the storage.
+
+\begin{fortranspecific}
+If the directive is associated with an \code{allocate} statement, the same list items appearing in the directive list and the \code{allocate} statement list are allocated with the memory allocator of the directive.
+If no list items are specified then all variables listed in the \code{allocate} statement are allocated with the memory allocator of the directive.
+\end{fortranspecific}
+
+\restrictions
+\begin{itemize}
+\item A variable that is part of another variable (as an array or structure element) cannot appear in an \code{allocate} directive.
+\item The directive must appear in the same scope of the \plc{list item} declaration and before its first use.
+\item At most one \code{allocator} clause can appear on the \code{allocate} directive.
+\begin{ccppspecific}
+\item If a list item has a static storage type, only predefined memory allocator variables can be used in the \code{allocator} clause.
+\end{ccppspecific}
+\begin{fortranspecific}
+\item List items specified in the \code{allocate} directive must not have the \code{ALLOCATABLE} attribute unless the directive is associated with an \code{allocate} statement.
+\item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be \code{ALLOCATABLE} variables or \code{POINTER} variables allocated by the \code{allocate} statement.
+\item Multiple directives can only be associated with an \code{allocate} statement if list items are specified on each \code{allocate} directive.
+\item If a list item has the \code{SAVE} attribute, or if the list item is a common block name, or if a list item is declared in the scope of a module, then only predefined memory allocator variables can be used in the \code{allocator} clause.
+\item \code{allocate} directives appearing in a \code{target} region must specify an \code{allocator} clause and the \plc{allocator} must be a constant expression.
+\end{fortranspecific}
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item Memory allocators, see \specref{sec:Memory Allocators}.
+\item \code{omp\_allocator\_t} and \code{omp\_allocator\_kind}, see \specref{subsec:Memory Management Types}.
+\item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
+\end{itemize}
+
+\subsection{\code{allocate} Clause}
+\index{allocate@{\code{allocate}}}
+\index{clauses!allocate@{\code{allocate}}}
+\label{subsec:allocate Clause}
+\summary
+The \code{allocate} clause specifies the memory allocator to be used to obtain storage for private variables of a directive.
+
+\syntax
+
+The syntax of the \code{allocate} clause is as follows:
+
+\begin{boxedcode}
+allocate(\plc{[allocator}:\plc{] list})
+\end{boxedcode}
+\needspace{10\baselineskip}
+
+\begin{ccppspecific}
+where \plc{allocator} is an expression of the \code{const omp\_allocator\_t *} type.
+\end{ccppspecific}
+\begin{fortranspecific}
+where \plc{allocator} is an integer expression of the \code{omp\_allocator\_kind} \plc{kind}.
+\end{fortranspecific}
+
+\descr
+
+The storage for new list items that arise from \plc{list items} that appear in the directive will be provided through a memory allocator. If an \plc{allocator} is specified in the clause this will be the memory allocator used for allocations. For all directives except for the \code{target} directive, if no \plc{allocator} is specified in the clause then the memory allocator specified by the \plc{def-allocator-var} ICV will be used for the \plc{list items} specified in the \code{allocate} clause. If a memory allocator is unable to fulfill the allocation request for any list item the result of the behavior is implementation defined.
+
+\restrictions
+\begin{itemize}
+\item For any list item that is specified in the \code{allocate} clause on a directive, a data-sharing attribute clause that may create a private copy of that list item must be specified on the same directive.
+\item For \code{task}, \code{taskloop} or \code{target} directives, allocation requests to the \code{omp\_thread\_mem\_alloc} memory allocator result in unspecified behavior.
+\item \code{allocate} clauses appearing in a \code{target} construct or in a \code{target} region must specify an \plc{allocator} and it must be a constant expression.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item Memory allocators, see \specref{sec:Memory Allocators}.
+\item \code{omp\_allocator\_t} and \code{omp\_allocator\_kind}, see \specref{subsec:Memory Management Types}.
+\item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
+\end{itemize}

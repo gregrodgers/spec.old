@@ -508,8 +508,106 @@ columns):
 
 
 
+\section{\code{requires} Directive}
+\label{sec:requires Directive}
+\index{requires@{\code{requires}}}
+\index{directives!requires@{\code{requires}}}
+
+\summary The \code{requires} directive specifies the features an implementation
+must provide in order for the code to compile and execute correctly.
 
 
+
+
+\syntax
+\begin{ccppspecific}
+  The syntax of the \code{requires} directive is as follows:
+\begin{boxedcode}
+  \#pragma omp requires \plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{boxedcode}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+  The syntax of the \code{requires} directive is as follows:
+
+\begin{boxedcode}
+!\$omp requires \plc{[clause[ [},\plc{] clause] ... ]}
+\end{boxedcode}
+
+\end{fortranspecific}
+
+Where \plc{clause} is either one of the requirement clauses listed below or a
+clause of the form \code{ext\_\plc{implementation-defined-requirement}} for an
+implementation defined requirement clause.
+
+\begin{indentedcodelist}
+  unified_address
+  unified_shared_memory
+\end{indentedcodelist}
+
+\descr
+
+The \code{requires} directive specifies features an implementation must support
+for correct execution of the current translation unit, or in Fortran the main
+program, subprogram or module.  The behavior specified by a requirement clause
+may override the normal behavior specified elsewhere in this document.
+
+\begin{note}
+Use of this directive makes your code less portable. Users should be aware that not all
+devices or implementations support all requirements.
+\end{note}
+
+When the \code{unified\_address} clause appears on a \code{requires}
+directive, the implementation guarantees that all devices accessible through
+OpenMP API routines and directives use a unified address space. In this
+address space, a pointer will always refer to the same location in memory
+from all devices accessible through OpenMP.  The pointers returned by
+\code{omp\_target\_alloc} and accessed through \code{use\_device\_ptr} are
+guaranteed to be pointer values that can support pointer arithmetic while
+still being native device pointers. The \code{is\_device\_ptr} clause is not
+necessary for device pointers to be translated in \code{target} regions, and
+pointers found not present are not set to null but keep their original value.
+Memory local to a specific execution context may be exempt from this,
+following the restrictions of locality to a given execution context, thread or
+contention group.  Target devices may still have discrete memories and
+dereferencing a device pointer on the host device remains unspecified
+behavior.
+
+The \code{unified\_shared\_memory} clause implies the \code{unified\_address}
+requirement, inheriting all of its behaviors.  Additionally memory in the
+device data environment of any device visible to OpenMP, including but not
+limited to the host, is considered part of the device data environment of all
+devices accessible through OpenMP except as noted below.  Every device address
+allocated through OpenMP device memory routines is a valid host pointer. Memory
+local to an execution context as defined in \code{unified\_address} above may remain
+part of distinct device data environments as long as the execution context is
+local to the device containing that environment.
+
+The \code{unified\_shared\_memory} clause makes the \code{map} clause optional
+on \code{target} constructs as well as the \code{declare}~\code{target}
+directive on static lifetime variables accessed as part of
+\code{declare}~\code{target} functions.  Scalar variables are still made
+\code{firstprivate} by default for \code{target} regions.  Values stored into
+memory by one device may not be visible to other devices until those two
+devices synchronize with each other or both synchronize with the host.
+
+Implementers are allowed to include additional implementation defined
+requirement clauses.  Requirement names that do not start with \code{ext\_} are
+reserved. All implementation-defined requirements should begin with
+\code{ext\_}.
+
+\restrictions
+
+The restrictions for the \code{requires} directive are as follows:
+
+\begin{itemize}
+
+  \item In an application composed of multiple translation units or in
+  Fortran more than one main program, subprogram or module all must have the
+  same requirements.
+
+\end{itemize}
 
 
 \section{Internal Control Variables}
@@ -613,7 +711,8 @@ for the whole program.
 
 \end{itemize}
 
-The following ICVs store values that affect the operation of the tool interface.
+The following ICVs store values that affect the operation of the
+first-party tool interface.
 
 \begin{itemize}
 
@@ -625,7 +724,24 @@ There is one copy of this ICV for the whole program.
 
 \end{itemize}
 
+The following ICVs store values that relate to the operation of the
+OMPD tool interface.
 
+\begin{itemize}
+\item
+  \plc{ompd-tool-var} - determines whether an OpenMP implementation will collect
+  information that an OMPD-plugin can access to satisfy requests from
+  a tool.
+  There is one copy of this ICV for the whole program.
+\end{itemize}
+
+The following ICVs store values that affect default memory allocation.
+
+\begin{itemize}
+
+\item \plc{def-allocator-var} - determines the memory allocator to be used by memory allocation routines, directives and clauses when a memory allocator is not specified by the user. There is one copy of this ICV per implicit task.
+
+\end{itemize}
 
 
 
@@ -680,6 +796,8 @@ environment variables, and initial values.
 \plc{max-task-priority-var} & \code{OMP\_MAX\_TASK\_PRIORITY} & \plc{zero}\\
 \plc{tool-var} & \code{OMP\_TOOL} & \plc{enabled}\\
 \plc{tool-libraries-var} & \code{OMP\_TOOL\_LIBRARIES} & \plc{empty string}\\
+\plc{ompd-tool-var} & \code{OMPD\_ENABLED} & \plc{not set} \\
+\plc{def-allocator-var} & \code{OMP\_ALLOCATOR} & Implementation defined\\
 \end{supertabular}
 \linenumbers
 
@@ -742,6 +860,12 @@ device's ICVs is implementation defined.
 \item \code{OMP\_TOOL} environment variable, see \specref{sec:OMP_TOOL}.
 
 \item \code{OMP\_TOOL\_LIBRARIES} environment variable, see \specref{sec:OMP_TOOL_LIBRARIES}.
+
+\item \code{OMPD\_ENABLED} environment variable, see \specref{sec:OMPD_ENABLED}.
+
+\item \code{OMP\_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
+
+\item \code{OMP\_TARGET\_ALLOCATOR} environment variable, see \specref{sec:OMP_TARGET_ALLOCATOR}.
 \end{itemize}
 
 
@@ -818,6 +942,9 @@ through OpenMP API routines.
 \plc{max-task-priority-var} & (none) & \code{omp\_get\_max\_task\_priority()}\\
 \plc{tool-var} & (none) & (none)\\
 \plc{tool-libraries-var} & (none) & (none)\\
+\plc{ompd-tool-var} & (none) & (none) \\
+
+\plc{def-allocator-var} & \code{omp\_set\_default\_allocator()} & \code{omp\_get\_default\_allocator()}\\
 
 \end{supertabular}
 \linenumbers} % end of \small block
@@ -889,6 +1016,13 @@ Detailed values in the \plc{place-partition-var} ICV are retrieved using the run
 
 \item \code{omp\_get\_max\_task\_priority} routine, see \specref{subsec:omp_get_max_task_priority}.
 
+\item \code{omp\_set\_default\_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+
+\item \code{omp\_get\_default\_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+\item \code{omp\_set\_target\_default\_allocator} routine, see \specref{subsec:omp_set_target_default_allocator}.
+
+\item \code{omp\_get\_target\_default\_allocator} routine, see \specref{subsec:omp_get_target_default_allocator}.
 \end{itemize}
 
 
@@ -945,6 +1079,10 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \plc{max-task-priority-var} & global\\
 \plc{tool-var} & global\\
 \plc{tool-libraries-var} & global\\
+\plc{ompd-tool-var} & global \\
+\plc{third-party-tool-var} & global \\
+\plc{def-allocator-var} & implicit task\\
+\plc{def-target-allocator-var} & implicit task\\
 \end{supertabular}
 \renewcommand{\arraystretch}{1.5} % restore the previous value
 
@@ -974,6 +1112,8 @@ data environment of their binding tasks.
 When a \code{task} construct or \code{parallel} construct is encountered, the generated task(s)
 inherit the values of the data environment scoped ICVs from the generating task's ICV
 values.
+
+When a \code{parallel} construct is encountered, the value of each ICV witch implicit task scope is inherited, unless otherwise specified, from the implicit binding task of the generating task unless otherwise specified.
 
 When a \code{task} construct is encountered, the generated task inherits the value of
 \plc{nthreads-var} from the generating task's \plc{nthreads-var} value. When a \code{parallel}
@@ -1046,6 +1186,8 @@ among construct clauses and ICVs.
 \plc{max-task-priority-var} & (none)\\
 \plc{tool-var} & (none)\\
 \plc{tool-libraries-var} & (none)\\
+\plc{ompd-tool-var} & (none) \\
+\plc{def-allocator-var} & \code{allocator}\\
 \end{supertabular}
 \linenumbers
 
@@ -1285,4 +1427,62 @@ the iterator identifier in the expression with the iterator value.
 \item If the \plc{step} expression of a \plc{range-specification} equals zero the behavior is unspecified.
 \item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
 \item Iterators cannot appear in the \plc{range-specification}.
+\end{itemize}
+
+\section{Memory Allocators}
+\label{sec:Memory Allocators}
+\index{memory allocators}
+
+OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive memory in its associated storage resources of at least the size being requested. This allocation will not alias with any other existing allocation from an OpenMP memory allocator. Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators. The use of a given memory allocator expresses an intent to use storage with certain traits for the allocations. The actual storage resources that each memory allocator will use are implementation defined.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Allocator name}} & \textsf{\textbf{Storage selection intent}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Allocator name}} & \textsf{\textbf{Storage selection intent}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Predefined Allocators\label{tab:Predefined Allocators}}
+\begin{supertabular}{p{2.1in}p{3in}}
+\code{omp\_default\_mem\_alloc} & Use default storage for allocations.\\
+\code{omp\_large\_cap\_mem\_alloc} & Use storage with large capacity.\\
+\code{omp\_const\_mem\_alloc} & Use storage optimized for read-only variables. The result of writing to memory returned by this memory allocator is unspecified.\\
+\code{omp\_high\_bw\_mem\_alloc} & Use storage with high bandwidth.\\
+\code{omp\_low\_lat\_mem\_alloc} & Use storage with low latency.\\
+\code{omp\_cgroup\_mem\_alloc} & Use storage that is close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by this allocator from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior.\\
+\code{omp\_pteam\_mem\_alloc} & Use storage that is close to all threads that bind to the same \code{parallel} region of the thread requesting the allocation. Attempts to access the memory returned by this allocator from a thread that does not bind to the same \code{parallel} region as the thread that allocated the memory results in unspecified behavior.\\
+\code{omp\_thread\_mem\_alloc} & Use storage that is close to the \plc{thread} requesting the allocation. Attempts to access the memory returned by this allocator from a thread other than the one that allocated the memory results in unspecified behavior.\\
+\end{supertabular}
+
+For memory allocators other than \code{omp\_cgroup\_mem\_alloc}, \code{omp\_pteam\_mem\_alloc} and \code{omp\_thread\_mem\_alloc} the returned memory must be accessible by all threads in the device where the allocation was requested. %The allocator will return the value zero it fails to allocate the requested memory.
+
+\begin{fortranspecific}
+If any operation of the base language causes a reallocation of an array that is allocated with a memory allocator then that memory allocator will be used to release the current memory and to allocate the new memory.
+\end{fortranspecific}
+
+\crossreferences
+\begin{itemize}
+\item \code{omp\_set\_default\_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+
+\item \code{omp\_get\_default\_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+\item \code{omp\_set\_target\_default\_allocator} routine, see \specref{subsec:omp_set_target_default_allocator}.
+
+\item \code{omp\_get\_target\_default\_allocator} routine, see \specref{subsec:omp_get_target_default_allocator}.
+
+\item \code{OMP\_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
+
+\item \code{OMP\_TARGET\_ALLOCATOR} environment variable, see \specref{sec:OMP_TARGET_ALLOCATOR}.
+
 \end{itemize}
