@@ -26,9 +26,10 @@ CHAPTERS=openmp.tex \
          directives/directives_nesting.tex \
          directives/directives_udr.tex \
          runtime_library.tex \
+	 runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
-         runtime_library/runtime_library_others.tex \
 	 runtime_library/runtime_library_mm.tex \
+         runtime_library/runtime_library_others.tex \
 	 runtime_library/runtime_library_tools.tex \
          tool_support.tex \
          tool_support/tool_support_common.tex \
