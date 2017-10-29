@@ -19,14 +19,18 @@ CHAPTERS=openmp.tex \
          directives/directives_device.tex \
          directives/directives_combined.tex \
          directives/directives_if.tex \
+	 directives/directives_mm.tex \
          directives/directives_synchronization.tex \
          directives/directives_cancellation.tex \
          directives/directives_data_environment.tex \
          directives/directives_nesting.tex \
          directives/directives_udr.tex \
          runtime_library.tex \
+	 runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
+	 runtime_library/runtime_library_mm.tex \
          runtime_library/runtime_library_others.tex \
+	 runtime_library/runtime_library_tools.tex \
          tool_support.tex \
          tool_support/tool_support_common.tex \
          tool_support/tool_support_callbacks.tex \
