@@ -29,6 +29,7 @@ CHAPTERS=openmp.tex \
          runtime_library/runtime_library_execution.tex \
          runtime_library/runtime_library_others.tex \
 	 runtime_library/runtime_library_mm.tex \
+	 runtime_library/runtime_library_tools.tex \
          tool_support.tex \
          tool_support/tool_support_common.tex \
          tool_support/tool_support_callbacks.tex \
