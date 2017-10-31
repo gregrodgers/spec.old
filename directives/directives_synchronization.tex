@@ -137,64 +137,75 @@ regions are defined in Section \ref{subsec:flush Construct}, and they have the
 following synchronizing behavior:
 
 \begin{itemize}
-    \item When executing a \code{critical} region, each thread in a contention
-	group performs an acquire flush on entry to the \code{critical}
-	region and a release flush on exit from the \code{critical} region,
-	and the behavior is as if the release flush executed by one thread synchronizes
-	with the acquire flush executed by the next thread to execute the
-	\code{critical} region.
+    \item When two different threads execute a \code{critical} region that
+        corresponds to a \code{critical} construct having the same name, the
+        behavior is as if the release flush performed on exit from one of the
+        regions synchronizes with the acquire flush performed on entry to the
+        other region.
 
-    \item When executing a \code{barrier} region, each thread in the team
-	performs a release flush and an acquire flush, and the
-	behavior is as if each thread's release flush synchronizes with
-	every other thread's acquire flush.
+    \item When a team of threads execute a \code{barrier} region, the
+	behavior is as if the release flush performed by each thread within
+        the region synchronizes with the acquire flush performed by all other
+        threads within the region.
 
     \item When executing a \code{taskwait} region, the behavior is as if each
-	remaining child task performs a release flush upon its completion
-	that synchronizes with an acquire flush performed during the
-	\code{taskwait} region.
+	thread executing a remaining child task performs a release flush upon
+        completion of the child task that synchronizes with an acquire flush
+        performed during the \code{taskwait} region.
 
     \item When executing a \code{taskgroup} region, the behavior is as if each
-	remaining descendant task performs a release flush upon its
-	completion that synchronizes with an acquire flush performed on
-	exit from the \code{taskgroup} region.
+	thread executing a remaining descendant task performs a release flush
+        upon completion of the descendant task that synchronizes with an
+        acquire flush performed on exit from the \code{taskgroup} region.
 
     \item When executing an \code{ordered} region that does not arise from
-	stand-alone \code{ordered} directive, a thread performs an acquire
-        flush on entry to the \code{ordered} region and a
-	release flush on exit from the \code{ordered} region,
-        and the behavior is as if the release flush executed by one thread
-        synchronizes with the acquire flush executed by the next thread to
-        execute the \code{ordered} region.
+        stand-alone \code{ordered} directive, the behavior is as if the
+        release flush performed by a thread on exit from the region
+        synchronizes with the acquire flush performed on entry to an
+        \code{ordered} region in the next logical iteration to be executed by
+        a different thread, if it exists.
 
     \item When executing an \code{ordered} region that arises from a
-	stand-alone \code{ordered} directive, a release flush is performed
-	when the directive has a \code{depend} clause with a \code{source}
-	dependence-type, and an acquire flush is performed when the
-	directive has a \code{depend} clause with a \code{sink}
-	dependence-type. The behavior is as if the release flush
-	performed by the \code{ordered} region from a given source iteration
-	synchronizes with the acquire flush performed by all
-	\code{ordered} regions waiting for dependences on that iteration to be
-	satisfied.
+        stand-alone \code{ordered} directive, the behavior is as if the
+        release flush performed by the \code{ordered} region from a given
+        source iteration synchronizes with the acquire flush performed by all
+        \code{ordered} regions executed by a different thread that are waiting
+        for dependences on that iteration to be satisfied.
 
-    \item When executing dependent sibling tasks, the behavior is as if each
-	release flush performed on completion of a task with
-	one or more dependent tasks synchronizes with the acquire flush
-	performed when scheduling its dependent tasks.
+    \item When executing a \code{parallel} region, the release flush performed
+        by the master thread on entry to the \code{parallel} region
+        synchronizes with the acquire flush performed on entry to each
+        implicit task that is assigned to a different thread.
 
-    \item When executing an \code{omp\_unset\_lock} region that causes the
+    \item When generating an explicit task, the thread executing the
+        generating task performs a release flush that synchronizes with the
+        acquire flush performed when scheduling the explicit task on a
+        different thread.
+
+    \item When scheduling a dependent task with one or more predecessor tasks
+        on a given thread, the behavior is as if each release flush performed
+        by a different thread on completion of a predecessor task synchronizes
+        with the acquire flush performed when scheduling the dependent task.
+
+    \item When scheduling a task that is mutually exclusive with respect to
+        another sibling task that is executed by a different thread, the behavior is
+        as if each release flush performed on completion of the sibling task
+        synchronizes with the acquire flush performed when scheduling the
+        task.
+
+    \item When executing an \code{omp_unset_lock} region that causes the
 	specified lock to be unset, a release flush is
-	performed that synchronizes with an acquire flush that
-	is performed by the next \code{omp\_set\_lock} or
-	\code{omp\_test\_lock} region that causes the specified lock to be set.
+        performed that synchronizes with an acquire flush that is performed by
+        the next \code{omp_set_lock} or \code{omp_test_lock} region to be
+        executed by a different thread that causes the specified lock to be
+        set.
 
-    \item When executing an \code{omp\_unset\_nest\_lock} region that causes
+    \item When executing an \code{omp_unset_nest_lock} region that causes
 	the specified nested lock to be unset, a release flush
 	is performed that synchronizes with an acquire flush
-	that is performed by the next \code{omp\_set\_nest\_lock} or
-	\code{omp\_test\_nest\_lock} region that causes the specified nested
-	lock to be set.
+	that is performed by the next \code{omp_set_nest_lock} or
+	\code{omp_test_nest_lock} region to be executed by a different
+        thread that causes the specified nested lock to be set.
 \end{itemize}
 
 The OpenMP API defines the following synchronization constructs, and these are
@@ -1496,7 +1507,7 @@ without \plc{memory-order-clause} present is implied at the following locations:
 \item During a barrier region.
 \item At entry to and exit from \code{parallel} and \code{target} regions.
 \item At exit from worksharing regions unless a \code{nowait} is present.
-\item During a \code{cancel} or \code{cancellation point} region, if the \plc{cancel-var} ICV is \plc{true} and cancellation has been activated.
+\item During a \code{cancel} or \code{cancellation}~\code{point} region, if the \plc{cancel-var} ICV is \plc{true} and cancellation has been activated.
 \end{itemize}
 
 A \code{flush} region arising from a \code{flush} directive without a list and
@@ -1504,12 +1515,11 @@ with the \code{release} clause present is implied at the following
 locations:
 \begin{itemize}
 \item At exit from \code{critical} regions.
-\item During \code{omp\_set\_lock}, \code{omp\_test\_lock},
-    \code{omp\_set\_nest\_lock}, and \code{omp\_test\_nest\_lock} regions, if
-    the region causes the lock to be set.
+\item During \code{omp_unset_lock} and \code{omp_unset_nest_lock}
+    regions.
 \item Immediately before every task scheduling point.
-\item At entry to a \code{target update} region whose corresponding construct has a \code{to} clause.
-\item At entry to a \code{target enter data} and \code{target data} region.
+\item At entry to a \code{target}~\code{update} region whose corresponding construct has a \code{to} clause.
+\item At entry to a \code{target}~\code{enter}~\code{data} and \code{target}~\code{data} region.
 \item At exit from an \code{ordered} region, if a \code{threads} clause is
     present, if a \code{depend} clause with a \code{source} dependence type is
     present, or if no clauses are present.
@@ -1520,11 +1530,13 @@ with the \code{acquire} clause present is implied at the following
 locations:
 \begin{itemize}
 \item At entry to \code{critical} regions.
-\item During \code{omp\_unset\_lock} and \code{omp\_unset\_nest\_lock}
-    regions.
+\item During \code{omp_set_lock}, \code{omp_test_lock},
+    \code{omp_set_nest_lock}, and \code{omp_test_nest_lock} regions, if
+    the region causes the lock to be set.
 \item Immediately after every task scheduling point.
-\item At exit from a \code{target update} region whose corresponding construct has a \code{from} clause.
-\item At exit from a \code{target exit data} and \code{target data} region.
+\item At entry to the task region of each implicit task.
+\item At exit from a \code{target}~\code{update} region whose corresponding construct has a \code{from} clause.
+\item At exit from a \code{target}~\code{exit}~\code{data} and \code{target}~\code{data} region.
 \item At entry to an \code{ordered} region, if a \code{threads} clause is
     present, if a \code{depend} clause with a \code{sink} dependence type is
     present, or if no clauses are present.
