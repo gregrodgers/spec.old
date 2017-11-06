@@ -16,7 +16,6 @@ CHAPTERS=openmp.tex \
 	 introduction/introduction_normative_refs.tex \
 	 introduction/introduction_organization.tex \
 	 introduction/introduction_scope.tex \
-	 introduction/introduction_scope.tex \
 	 introduction/introduction_tools.tex \
          directives.tex \
          directives/worksharing-schedule-loop.tex \
@@ -62,9 +61,9 @@ CHAPTERS=openmp.tex \
          appendices/features_history.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex 
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 quick:
