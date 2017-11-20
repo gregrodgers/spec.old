@@ -563,21 +563,25 @@ breaklines=true,
 \newlength{\sblen}                          % total width of horizontal rule
 \newlength{\sbht}                           % height of arrows
 \newlength{\sbhadj}                         % vertical adjustment for aligning arrows with the line
-\newlength{\sbns}\setlength{\sbns}{7\baselineskip}       % arg for \needspace for downward arrows
+\newlength{\sbns}\setlength{\sbns}{8\baselineskip}       % arg for \needspace for downward arrows
 
 % \notelinewitharrows is a helper command that makes a black Note marker:
 %     arg 1 = 1 or -1 for up or down arrows
 %     arg 2 = solid or dashed or loosely dashed, etc.
 \newcommand{\notelinewitharrows}[2]{%
-    \needspace{0.1\baselineskip}%
-    \vbox{\begin{tikzpicture}%
-        \setlength{\sblen}{\linewidth}%
+  \needspace{0.1\baselineskip}%
+  %\VSPb
+  \vbox{%
+    \begin{tikzpicture}%
+        \setlength{\sblen}{.99\linewidth}%
         \setlength{\sbht}{#1\sbsz}\setlength{\sbht}{1.4\sbht}%
         \setlength{\sbhadj}{#1\sblw}\setlength{\sbhadj}{0.25\sbhadj}%
         \filldraw (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);
         \draw[line width=\sblw, #2] (2\sbsz - \sblw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);
         \filldraw (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);
-    \end{tikzpicture}}}
+    \end{tikzpicture}
+  }%\VSPa
+}
 
 % \linewitharrows is a helper command that makes a blue horizontal line, up or down arrows, and some text:
 % arg 1 = 1 or -1 for up or down arrows
@@ -585,20 +589,28 @@ breaklines=true,
 % arg 3 = text
 % arg 4 = text width
 \newcommand{\linewitharrows}[4]{%
-    \needspace{0.1\baselineskip}%
-    \vbox to 1\baselineskip {\begin{tikzpicture}%
-        \setlength{\sbtw}{#4}%
-        \setlength{\sblen}{\linewidth}%
+  \needspace{0.1\baselineskip}% noindent, but works in itemize
+%  \tikz[remember picture] \node (linearrow) {};
+  \ifdim#1\sbsz=-1\sbsz \VSPb \else \penalty 10000 \fi %
+%  \ifdim#1\sbsz=-1\sbsz BEGIN \fi %
+  \settowidth{\sbtw}{\large \textsf{\textup{xxxx#3}}}
+  \vbox {%
+    \begin{tikzpicture}[overlay]%
+        \setlength{\sblen}{.99\linewidth}%
         \setlength{\sbht}{#1\sbsz}\setlength{\sbht}{1.4\sbht}%
         \setlength{\sbhadj}{#1\sblw}\setlength{\sbhadj}{0.25\sbhadj}%
-        \filldraw[color=blue!40] (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);
-        \draw[line width=\sblw, color=blue!40, #2] (2\sbsz - \sblw, \sbhadj) -- (0.5\sblen - 0.5\sbtw, \sbhadj);
-        \draw[line width=\sblw, color=blue!40, #2] (0.5\sblen + 0.5\sbtw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);
-        \filldraw[color=blue!40] (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);
-        \node[color=blue!90] at (0.5\sblen, 0) {\large  \textsf{\textup{#3}}};
-    \end{tikzpicture}}}
+        \filldraw[color=blue!40] (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);%
+        \draw[line width=\sblw, color=blue!40, #2] (2\sbsz - \sblw, \sbhadj) -- (0.5\sblen - 0.5\sbtw, \sbhadj);%
+        \draw[line width=\sblw, color=blue!40, #2] (0.5\sblen + 0.5\sbtw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);%
+        \filldraw[color=blue!40] (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);%
+        \node[color=blue!90] at (0.5\sblen, 0) {\large \textsf{\textup{#3}}};%
+    \end{tikzpicture}
+  }
+%  \ifdim#1\sbsz=1\sbsz END \fi %
+  \ifdim#1\sbsz=1\sbsz \penalty -100 \VSPa \fi %
+}
 
-\newcommand{\VSPb}{\vspace{0.5ex plus 5ex minus 0.25ex}}
+\newcommand{\VSPb}{\vspace{0.25ex plus 5ex minus 0.25ex}}
 \newcommand{\VSPa}{\vspace{0.25ex plus 5ex minus 0.25ex}}
 
 % C
@@ -607,8 +619,8 @@ breaklines=true,
 \newenvironment{cspecific}{\cspecificstart}{\cspecificend}
 
 % C/C++
-\newcommand{\ccppspecificstart}{\VSPb\linewitharrows{-1}{solid}{C / C++}{6em}\VSPa}
-\newcommand{\ccppspecificend}{\VSPb\linewitharrows{1}{solid}{C / C++}{6em}\VSPa}
+\newcommand{\ccppspecificstart}{\needspace{\sbns}\linewitharrows{-1}{solid}{C / C++}{6em}}
+\newcommand{\ccppspecificend}{\linewitharrows{1}{solid}{C / C++}{6em}\bigskip}
 \newenvironment{ccppspecific}{\ccppspecificstart}{\ccppspecificend}
 
 % C++
@@ -627,16 +639,25 @@ breaklines=true,
 \newenvironment{c99specific}{\cNinetyNinespecificstart}{\cNinetyNinespecificend}
 
 % Fortran
-\newcommand{\fortranspecificstart}{\VSPb\linewitharrows{-1}{solid}{Fortran}{6em}\VSPa}
-\newcommand{\fortranspecificend}{\VSPb\linewitharrows{1}{solid}{Fortran}{6em}\VSPa}
+\newcommand{\fortranspecificstart}{\needspace{\sbns}\linewitharrows{-1}{solid}{Fortran}{6em}}
+\newcommand{\fortranspecificend}{\linewitharrows{1}{solid}{Fortran}{6em}\bigskip}
 \newenvironment{fortranspecific}{\fortranspecificstart}{\fortranspecificend}
 
 % Note
-\newcommand{\notestart}{\VSPb\notelinewitharrows{-1}{solid}\VSPa}
-\newcommand{\noteend}{\VSPb\notelinewitharrows{1}{solid}\VSPa}
+\newcommand{\notestart}{\needspace{\sbns}\notelinewitharrows{-1}{solid}}
+\newcommand{\noteend}{\notelinewitharrows{1}{solid}\bigskip}
 \newcommand{\noteheader}{{\textrm{\textsf{\textbf\textup\normalsize{{{{Note }}}}}}}}
 \newenvironment{note}{\notestart\noteheader -- }{\noteend}
 
+%% Helper to check all begin/end of *specific
+%\renewcommand{\cspecificstart}{\needspace{\sbns}\linewitharrows{-1}{solid}{SPECIF}{8em}}
+%\renewcommand{\cspecificend}{\linewitharrows{1}{solid}{SPECIE}{8em}\bigskip}
+%\renewenvironment{cspecific}{\cspecificstart}{\cspecificend}
+%\renewenvironment{ccppspecific}{\cspecificstart}{\cspecificend}
+%\renewenvironment{cppspecific}{\cspecificstart}{\cspecificend}
+%\renewenvironment{c90specific}{\cspecificstart}{\cspecificend}
+%\renewenvironment{c99specific}{\cspecificstart}{\cspecificend}
+%\renewenvironment{fortranspecific}{\cspecificstart}{\cspecificend}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Glossary formatting
