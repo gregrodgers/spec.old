@@ -5,19 +5,19 @@ all: openmp.pdf
 
 .PHONY: clean quick all git-diff-all
 
-CHAPTERS=openmp.tex \
+TEXFILES=openmp.tex \
          titlepage.tex \
          introduction.tex \
-	 introduction/introduction_compliance.tex \
-	 introduction/introduction_execution_model.tex \
-	 introduction/introduction_glossary.tex \
-	 introduction/introduction_introduction.tex \
-	 introduction/introduction_memory_model.tex \
-	 introduction/introduction_normative_refs.tex \
-	 introduction/introduction_organization.tex \
-	 introduction/introduction_scope.tex \
-	 introduction/introduction_scope.tex \
-	 introduction/introduction_tools.tex \
+         introduction/introduction_compliance.tex \
+         introduction/introduction_execution_model.tex \
+         introduction/introduction_glossary.tex \
+         introduction/introduction_introduction.tex \
+         introduction/introduction_memory_model.tex \
+         introduction/introduction_normative_refs.tex \
+         introduction/introduction_organization.tex \
+         introduction/introduction_scope.tex \
+         introduction/introduction_scope.tex \
+         introduction/introduction_tools.tex \
          directives.tex \
          directives/worksharing-schedule-loop.tex \
          directives/directives_common.tex \
@@ -29,18 +29,18 @@ CHAPTERS=openmp.tex \
          directives/directives_device.tex \
          directives/directives_combined.tex \
          directives/directives_if.tex \
-	 directives/directives_mm.tex \
+         directives/directives_mm.tex \
          directives/directives_synchronization.tex \
          directives/directives_cancellation.tex \
          directives/directives_data_environment.tex \
          directives/directives_nesting.tex \
          directives/directives_udr.tex \
          runtime_library.tex \
-	 runtime_library/runtime_library_device_mem.tex \
+         runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
-	 runtime_library/runtime_library_mm.tex \
+         runtime_library/runtime_library_mm.tex \
          runtime_library/runtime_library_others.tex \
-	 runtime_library/runtime_library_tools.tex \
+         runtime_library/runtime_library_tools.tex \
          tool_support.tex \
          tool_support/tool_support_common.tex \
          tool_support/tool_support_callbacks.tex \
@@ -61,7 +61,7 @@ CHAPTERS=openmp.tex \
          appendices/tool_support_frames.tex \
          appendices/features_history.tex
 
-openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
+openmp.pdf: $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
 	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
@@ -127,7 +127,7 @@ openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 
-openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir
+openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 
