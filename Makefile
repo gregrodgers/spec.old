@@ -8,16 +8,15 @@ all: openmp.pdf
 TEXFILES=openmp.tex \
          titlepage.tex \
          introduction.tex \
-         introduction/introduction_compliance.tex \
-         introduction/introduction_execution_model.tex \
-         introduction/introduction_glossary.tex \
-         introduction/introduction_introduction.tex \
-         introduction/introduction_memory_model.tex \
-         introduction/introduction_normative_refs.tex \
-         introduction/introduction_organization.tex \
-         introduction/introduction_scope.tex \
-         introduction/introduction_scope.tex \
-         introduction/introduction_tools.tex \
+	 introduction/introduction_compliance.tex \
+	 introduction/introduction_execution_model.tex \
+	 introduction/introduction_glossary.tex \
+	 introduction/introduction_introduction.tex \
+	 introduction/introduction_memory_model.tex \
+	 introduction/introduction_normative_refs.tex \
+	 introduction/introduction_organization.tex \
+	 introduction/introduction_scope.tex \
+	 introduction/introduction_tools.tex \
          directives.tex \
          directives/worksharing-schedule-loop.tex \
          directives/directives_common.tex \
@@ -61,10 +60,10 @@ TEXFILES=openmp.tex \
          appendices/tool_support_frames.tex \
          appendices/features_history.tex
 
-openmp.pdf: $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
+	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex 
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 quick:
