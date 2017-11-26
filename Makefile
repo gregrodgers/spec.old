@@ -68,7 +68,7 @@ TEXFILES=openmp.tex \
          tool_support/wait_id.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex 
+	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
@@ -85,7 +85,7 @@ clean:
 	rm -f openmp.synctex.gz
 	rm -rf *.tmpdir
 
-#NOTE: set these either as environment variables or on the command line, 
+#NOTE: set these either as environment variables or on the command line,
 #      DO NOT change these default values and check them in
 #      Either of these work:
 #
