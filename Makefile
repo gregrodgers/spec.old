@@ -7,33 +7,42 @@ all: openmp.pdf
 
 TEXFILES=openmp.tex \
          titlepage.tex \
-         introduction.tex \
-	 introduction/introduction_compliance.tex \
-	 introduction/introduction_execution_model.tex \
-	 introduction/introduction_glossary.tex \
-	 introduction/introduction_introduction.tex \
-	 introduction/introduction_memory_model.tex \
-	 introduction/introduction_normative_refs.tex \
-	 introduction/introduction_organization.tex \
-	 introduction/introduction_scope.tex \
-	 introduction/introduction_tools.tex \
+         appendices/features_history.tex \
+         appendices/implementation_defined.tex \
+         appendices/interface_declarations.tex \
+         appendices/ompd_diagram.tex \
+         appendices/stubs.tex \
+         appendices/stubs_ccpp.tex \
+         appendices/stubs_fortran.tex \
+         appendices/tool_support_frames.tex \
          directives.tex \
-         directives/worksharing-schedule-loop.tex \
-         directives/directives_common.tex \
-         directives/directives_parallel.tex \
-         directives/directives_worksharing.tex \
-         directives/directives_concurrent.tex \
-         directives/directives_simd.tex \
-         directives/directives_tasking.tex \
-         directives/directives_device.tex \
+         directives/directives_cancellation.tex \
          directives/directives_combined.tex \
+         directives/directives_common.tex \
+         directives/directives_concurrent.tex \
+         directives/directives_data_environment.tex \
+         directives/directives_device.tex \
          directives/directives_if.tex \
          directives/directives_mm.tex \
-         directives/directives_synchronization.tex \
-         directives/directives_cancellation.tex \
-         directives/directives_data_environment.tex \
          directives/directives_nesting.tex \
+         directives/directives_parallel.tex \
+         directives/directives_simd.tex \
+         directives/directives_synchronization.tex \
+         directives/directives_tasking.tex \
          directives/directives_udr.tex \
+         directives/directives_worksharing.tex \
+         directives/worksharing-schedule-loop.tex \
+         environment_variables.tex \
+         introduction.tex \
+         introduction/introduction_compliance.tex \
+         introduction/introduction_execution_model.tex \
+         introduction/introduction_glossary.tex \
+         introduction/introduction_introduction.tex \
+         introduction/introduction_memory_model.tex \
+         introduction/introduction_normative_refs.tex \
+         introduction/introduction_organization.tex \
+         introduction/introduction_scope.tex \
+         introduction/introduction_tools.tex \
          runtime_library.tex \
          runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
@@ -41,24 +50,22 @@ TEXFILES=openmp.tex \
          runtime_library/runtime_library_others.tex \
          runtime_library/runtime_library_tools.tex \
          tool_support.tex \
-         tool_support/tool_support_common.tex \
-         tool_support/tool_support_callbacks.tex \
-         tool_support/tool_support_entrypoints.tex \
-         tool_support/tool_support_debug.tex \
+         tool_support/foundation.tex \
+         tool_support/frames.tex \
          tool_support/ompd/ompd_activating_a_third_party_tool.tex \
          tool_support/ompd/ompd_data_types_for_third_party_tools.tex \
          tool_support/ompd/ompd_introduction.tex \
          tool_support/ompd/ompd_runtime_entry_points.tex \
          tool_support/ompd/ompd_third_party_callback_interface.tex \
          tool_support/ompd/ompd_third_party_tool_interface_routines.tex \
-         environment_variables.tex \
-         appendices/stubs.tex \
-         appendices/stubs_ccpp.tex \
-         appendices/stubs_fortran.tex \
-         appendices/interface_declarations.tex \
-         appendices/implementation_defined.tex \
-         appendices/tool_support_frames.tex \
-         appendices/features_history.tex
+         tool_support/ompd_dll.tex \
+         tool_support/start_tool.tex \
+         tool_support/thread_states.tex \
+         tool_support/tool_support_callbacks.tex \
+         tool_support/tool_support_common.tex \
+         tool_support/tool_support_debug.tex \
+         tool_support/tool_support_entrypoints.tex \
+         tool_support/wait_id.tex
 
 openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
 	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex 
