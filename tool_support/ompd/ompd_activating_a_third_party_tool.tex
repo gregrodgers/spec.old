@@ -1,13 +1,13 @@
 \subsection{Activating an OMPD Tool}
-\label{ompd:activating}
+\label{subsec:activating}
 
 The tool and the OpenMP program the tool controls
 exist as separate processes.; thus coordination is required between the OpenMP runtime
-%resident in the OpenMP program 
+%resident in the OpenMP program
 and the external tool for OMPD to be used successfully.
 
 \subsubsection{Enabling the Runtime for OMPD}
-\label{ompd:enabling-ompd}
+\label{subsubsec:enabling-ompd}
 
 In order to support external tools, the OpenMP runtime may need to collect
 and maintain information that it might otherwise not do, perhaps
@@ -16,75 +16,75 @@ The OpenMP runtime collects whatever information is necessary
 to support OMPD if at least one of the following conditions is true:
 \begin{enumerate}
 \item
-  the environment variable \code{OMPD\_ENABLED} is set
+  the environment variable \code{OMPD_ENABLED} is set
 \item
   the OpenMP program defines the function
-  \code{ompd\_enable}
-  (See \specref{ompd:ompd_enable})
+  \code{ompd_enable}
+  (See \specref{subsubsec:ompd_enable})
   and it returns logical true (i.e., non-zero) when
   the OpenMP runtime calls this function.
   Immediately before the OpenMP implementation initializes itself
-  it will check to see whether the \code{ompd\_enable} function
+  it will check to see whether the \code{ompd_enable} function
   is defined in the OpenMP program or one of its dynamically-linked libraries.
   If a definition is found, the OpenMP will call the function it finds to determine what it returns.
 %  The OpenMP runtime will enable data collection for the external tool
-%  if \code{ompd\_enable} returns logical true (i.e., non-zero).
+%  if \code{ompd_enable} returns logical true (i.e., non-zero).
 \end{enumerate}
 %These methods are equivalent, and either can be used.
 In some cases it may not be possible to control an OpenMP program's
 environment.
-\code{ompd\_enable} allows an OpenMP program itself to turn on
+\code{ompd_enable} allows an OpenMP program itself to turn on
 data collection for OMPD.
 The function can be positioned in an otherwise empty DLL the
 programmer can link with the OpenMP program.
 This leaves the OpenMP program code unmodified.
 A tool implementor may choose to distribute a DLL defining
-\code{ompd\_enable} as a convenience to programmers.
+\code{ompd_enable} as a convenience to programmers.
 
 \crossreferences
 \begin{itemize}
 \item
-  \code{OMPD\_ENABLED}, \specref{sec:OMPD_ENABLED}
+  \code{OMPD_ENABLED}, \specref{sec:OMPD_ENABLED}
 \item
-  \code{ompd\_enable}, \specref{ompd:ompd_enable}
+  \code{ompd_enable}, \specref{subsubsec:ompd_enable}
 \item
   Activating an OMPT Tool, \specref{sec:ompt-initialization}
 \end{itemize}
 
 \subsubsection{Finding the OMPD plugin}
-\label{ompd:finding-the-ompd}
+\label{subsubsec:finding-the-ompd}
 
-An OpenMP runtime may have more than one matching OMPD plugin for 
+An OpenMP runtime may have more than one matching OMPD plugin for
 tools to use.
 The tool must be able to locate the right plugin to use
 for the OpenMP program it is examining.
 
 As part of the OpenMP interface, OMPD requires that the OpenMP
-runtime system provides a public variable \code{ompd\_dll\_locations},
+runtime system provides a public variable \code{ompd_dll_locations},
 which is an \code{argv}-style vector of filename string pointers that
 provides the pathnames(s) of any compatible OMPD plugin implementations.
-\code{ompd\_dll\_locations} must have \code{C} linkage.
+\code{ompd_dll_locations} must have \code{C} linkage.
 The tool uses the name of the variable verbatim,
 and in particular, will not apply any name mangling before
 performing the look up.
 The pathnames may be relative to the directory containing the OpenMP runtime or absolute.
 
-\code{ompd\_dll\_locations} points to a NULL-terminated
+\code{ompd_dll_locations} points to a NULL-terminated
 vector of zero or more NULL-terminated pathname strings.
 There are no filename conventions for pathname strings.
 The last entry in the vector is NULL.
 The vector of string pointers must be fully initialized \emph{before}
-\code{ompd\_dll\_locations} is set to a non-NULL value,
+\code{ompd_dll_locations} is set to a non-NULL value,
 such that if the tool, such as a debugger,
 stops execution of the OpenMP program at any point where
-\code{ompd\_dll\_locations} is non-NULL,
+\code{ompd_dll_locations} is non-NULL,
 then the vector of strings it points to is valid and complete.
 
 The programming model or architecture of the tool (and hence
 that of the required OMPD) does not have to match that of the OpenMP program
 being examined.
 It is the responsibility of the tool to interpret the contents
-of \code{ompd\_dll\_locations} to find a suitable OMPD that matches
+of \code{ompd_dll_locations} to find a suitable OMPD that matches
 its own architectural characteristics.
 On platforms that support different programming models
 (\textit{e.g.}, 32-bit vs 64-bit), OpenMP implementers are encouraged
@@ -96,36 +96,10 @@ by loading a 32-bit OMPD that can manage a 64-bit OpenMP runtime.
 
 \crossreferences
 \begin{itemize}
-	\item Identifying the Matching OMPD, \specref{ompd:ompd_dll_locations}
-	%\item \code{ompd\_enable}, \specref{ompd:ompd_enable}
+	\item Identifying the Matching OMPD, \specref{subsubsec:ompd_dll_locations}
+	%\item \code{ompd_enable}, \specref{subsubsec:ompd_enable}
 	%\item Activating an OMPT Tool, \specref{ompd:ompt-initialization}
 \end{itemize}
 
-\begin{comment}
-Depending on how the OpenMP runtime is implemented, \code{ompd\_dll\_locations}
-might not be a static variable, and therefore needs to be initialized
-at runtime.
-The OpenMP runtime notifies tools that \code{ompd\_dll\_locations}
-is valid by allowing execution to pass through a location identified
-by the symbol \code{ompd\_dll\_locations\_valid}.
-This symbol has external, \code{C}, linkage.
-Conceptually, \code{ompd\_dll\_locations\_valid} has the signature
-\code{void ompd\_dll\_locations\_valid~(~void~);}.
-If \code{ompd\_dll\_locations} is NULL, a tool like a debugger
-can place a breakpoint at \code{ompd\_dll\_locations\_valid} to be notified
-when the vector of name strings has been setup, and is valid.
-
-\code{ompd\_dll\_locations\_valid} does not need not be a function,
-and can instead be a labeled location in the code through which
-execution passes once the vector is valid.
-
-\crossreferences
-\begin{itemize}
-\item
-  \code{ompd\_dll\_locations}, \specref{ompd:ompd_dll_locations}
-\item
-  \code{ompd\_dll\_locations\_valid}, \specref{ompd:ompd_dll_locations_valid}
-\end{itemize}
-\end{comment}
 
 

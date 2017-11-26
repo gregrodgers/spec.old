@@ -1,22 +1,22 @@
 \subsubsection{Thread States}
 \label{sec:thread-states}
 
-To enable a tool to understand the behavior of an executing program, 
-an OpenMP implementation maintains a state for each thread. 
+To enable a tool to understand the behavior of an executing program,
+an OpenMP implementation maintains a state for each thread.
 The state maintained for a thread is an
-approximation of the thread's instantaneous state. 
+approximation of the thread's instantaneous state.
 
-\vbox{
+
 \begin{ccppspecific}
-A thread's state will be one of the values of the  
-enumeration type \code{omp\_state\_t} or
-an implementation-defined state value of 512 or higher. 
-Thread states in the enumeration fall into several classes: 
-work, barrier wait, task wait, mutex wait, target wait, 
-and miscellaneous. 
+A thread's state will be one of the values of the
+enumeration type \code{omp_state_t} or
+an implementation-defined state value of 512 or higher.
+Thread states in the enumeration fall into several classes:
+work, barrier wait, task wait, mutex wait, target wait,
+and miscellaneous.
 
-\begin{boxedcode}
-typedef enum omp_state_t \{
+\begin{ompcEnum}
+typedef enum omp_state_t {
   omp_state_work_serial                      = 0x000,
   omp_state_work_parallel                    = 0x001,
   omp_state_work_reduction                   = 0x002,
@@ -40,148 +40,148 @@ typedef enum omp_state_t \{
   omp_state_wait_target_map                  = 0x081,
   omp_state_wait_target_update               = 0x082,
 
-  omp_state_idle                             = 0x100, 
-  omp_state_overhead                         = 0x101, 
+  omp_state_idle                             = 0x100,
+  omp_state_overhead                         = 0x101,
   omp_state_undefined                        = 0x102
-\} omp_state_t;
-\end{boxedcode}
+} omp_state_t;
+\end{ompcEnum}
 \end{ccppspecific}
-}
-
-
-A tool can query the OpenMP state of a thread at any time. 
-If a tool queries the state of a thread that is not associated 
-with OpenMP, the implementation reports the state as \code{omp\_state\_undefined}.
 
 
 
-Some values of the enumeration type \code{omp\_state\_t} are used by all 
-OpenMP implementations, 
-e.g., \code{omp\_state\_work\_serial}, 
-which indicates that a thread is executing in a serial region, and  
-\code{omp\_state\_work\_parallel}, 
+A tool can query the OpenMP state of a thread at any time.
+If a tool queries the state of a thread that is not associated
+with OpenMP, the implementation reports the state as \code{omp_state_undefined}.
+
+
+
+Some values of the enumeration type \code{omp_state_t} are used by all
+OpenMP implementations,
+e.g., \code{omp_state_work_serial},
+which indicates that a thread is executing in a serial region, and
+\code{omp_state_work_parallel},
 which indicates that a thread is executing in a parallel region.
-Other values of the enumeration type describe a thread's state at 
-different levels of specificity. 
-For instance, an OpenMP implementation may use 
-the state \code{omp\_state\_wait\_barrier}  to represent all 
+Other values of the enumeration type describe a thread's state at
+different levels of specificity.
+For instance, an OpenMP implementation may use
+the state \code{omp_state_wait_barrier}  to represent all
 waiting at barriers. It may differentiate between waiting at implicit or explicit barriers using
-\code{omp\_state\_wait\_barrier\_implicit} and \code{omp\_state\_wait\_barrier\_explicit}. 
-To provide full detail about the type of an implicit barrier, a runtime may report 
-\code{omp\_state\_wait\_barrier\_implicit\_parallel} or 
-\code{omp\_state\_wait\_barrier\_implicit\_workshare} as appropriate.
+\code{omp_state_wait_barrier_implicit} and \code{omp_state_wait_barrier_explicit}.
+To provide full detail about the type of an implicit barrier, a runtime may report
+\code{omp_state_wait_barrier_implicit_parallel} or
+\code{omp_state_wait_barrier_implicit_workshare} as appropriate.
 
-For states that represent waiting, an OpenMP implementation has the 
+For states that represent waiting, an OpenMP implementation has the
 choice of transitioning a thread to such states early or late.
 For instance, when an OpenMP thread is trying to acquire a lock,
 there are several points at which an OpenMP implementation
-transition the thread to the \code{omp\_state\_wait\_lock} state.
-One implementation may transition the thread to the state 
+transition the thread to the \code{omp_state_wait_lock} state.
+One implementation may transition the thread to the state
 early before the thread attempts to acquire a
-lock. Another implementation may transition the thread to the state 
+lock. Another implementation may transition the thread to the state
 late, only if the thread begins to spin or
 block to wait for an unavailable lock. A third implementation
 may transition the thread to the state even later, e.g., only
-after the thread waits for a significant amount of time. 
+after the thread waits for a significant amount of time.
 
 The following sections describe the classes of states and the states in each class.
 \subsubsubsection{Work States}
-An OpenMP implementation reports a thread in a work state 
+An OpenMP implementation reports a thread in a work state
 when the thread is performing serial work, parallel work, or a reduction.
 
 \begin{description}
 
-\item \code{omp\_state\_work\_serial} 
+\item \code{omp_state_work_serial}
 
-  The thread is executing code outside all parallel regions. 
+  The thread is executing code outside all parallel regions.
 
-\item \code{omp\_state\_work\_parallel} 
+\item \code{omp_state_work_parallel}
 
   The thread is executing code within the scope of a parallel region construct.
 
 \sloppy
-\item \code{omp\_state\_work\_reduction} 
- 
-  The thread is combining partial reduction results from threads in its team. 
-  An OpenMP implementation  
+\item \code{omp_state_work_reduction}
+
+  The thread is combining partial reduction results from threads in its team.
+  An OpenMP implementation
   might never report a thread in this state; a thread
   combining partial reduction results may have its state reported as
-  \code{omp\_state\_work\_parallel} or \code{omp\_state\_overhead}.
+  \code{omp_state_work_parallel} or \code{omp_state_overhead}.
 
 \end{description}
 
 
 \subsubsubsection{Barrier Wait States}
 
-An OpenMP implementation reports that a thread is in a barrier wait state 
+An OpenMP implementation reports that a thread is in a barrier wait state
 when the thread is awaiting completion of a barrier.
 
 
 \begin{description}
 
-  \item \code{omp\_state\_wait\_barrier} 
-  
+  \item \code{omp_state_wait_barrier}
+
   \sloppy
   The thread is waiting at either an implicit or explicit barrier.
   A thread may enter this state
   early, when the thread encounters a barrier, or late, when the
   thread begins to wait at the barrier. An implementation may never report a thread in this state; instead, a thread may have its state reported
-  as \code{omp\_state\_wait\_barrier\_implicit}  or \code{omp\_state\_wait\_barrier\_explicit}, as appropriate.
-  
-  \item \code{omp\_state\_wait\_barrier\_implicit} 
-  
+  as \code{omp_state_wait_barrier_implicit}  or \code{omp_state_wait_barrier_explicit}, as appropriate.
+
+  \item \code{omp_state_wait_barrier_implicit}
+
   \sloppy
-  The thread is waiting at an implicit barrier in a parallel region. 
+  The thread is waiting at an implicit barrier in a parallel region.
   A  thread may enter this state
   early, when the thread encounters a barrier, or late, when the
   thread begins to wait at the barrier.
-  An OpenMP implementation may report \code{omp\_state\_wait\_barrier} 
+  An OpenMP implementation may report \code{omp_state_wait_barrier}
   for implicit barriers.
-  
-  \item \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
+
+  \item \code{omp_state_wait_barrier_implicit_parallel}
 
   The description of when a thread reports a state associated with an implicit barrier
-  is described for state \code{omp\_state\_wait\_barrier\_implicit}.  
-  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
-  for an implicit barrier that occurs at the end of a parallel region. 
+  is described for state \code{omp_state_wait_barrier_implicit}.
+  An OpenMP implementation may report \code{omp_state_wait_barrier_implicit_parallel}
+  for an implicit barrier that occurs at the end of a parallel region.
   As explained in \specref{sec:ompt_callback_sync_region_t},
-  reporting the state \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
-  permits a weaker contract between a runtime and a tool that 
+  reporting the state \code{omp_state_wait_barrier_implicit_parallel}
+  permits a weaker contract between a runtime and a tool that
   enables a simpler and faster implementation of parallel regions.
 
-  \item \code{omp\_state\_wait\_barrier\_implicit\_workshare} 
+  \item \code{omp_state_wait_barrier_implicit_workshare}
 
   The description of when a thread reports a state associated with an implicit barrier
-  is described for state \code{omp\_state\_wait\_barrier\_implicit}.  
-  An OpenMP implementation may report \code{omp\_state\_wait\_barrier\_implicit\_parallel} 
+  is described for state \code{omp_state_wait_barrier_implicit}.
+  An OpenMP implementation may report \code{omp_state_wait_barrier_implicit_parallel}
   for an implicit barrier that occurs at the end of a worksharing construct.
 
-  \item \code{omp\_state\_wait\_barrier\_explicit} 
+  \item \code{omp_state_wait_barrier_explicit}
 
-  The thread is waiting at an explicit barrier  in a parallel region. 
+  The thread is waiting at an explicit barrier  in a parallel region.
   A thread may enter this state
   early, when the thread encounters a barrier, or late, when the
   thread begins to wait at the barrier.
-  An implementation may report \code{omp\_state\_wait\_barrier} 
+  An implementation may report \code{omp_state_wait_barrier}
   for explicit barriers.
 
-  
+
 \end{description}
-  
+
 \subsubsubsection{Task Wait States}
 
 \begin{description}
 
-\item \code{omp\_state\_wait\_taskwait} 
+\item \code{omp_state_wait_taskwait}
 
-  The thread is waiting at a taskwait construct. A 
+  The thread is waiting at a taskwait construct. A
   thread may enter this state early, when the
   thread encounters a taskwait construct, or late, when the thread
   begins to wait for an uncompleted task.
 
-\item \code{omp\_state\_wait\_taskgroup} 
+\item \code{omp_state_wait_taskgroup}
 
-  The thread is waiting at the end of a taskgroup construct. A 
+  The thread is waiting at the end of a taskgroup construct. A
   thread may enter this state early, when the
   thread encounters the end of a taskgroup construct, or late, when the thread
   begins to wait for an uncompleted task.
@@ -200,73 +200,73 @@ or ordered section.
 An OpenMP implementation may report a thread waiting for any type
 of mutual exclusion using either a state that precisely identifies
 the type of mutual exclusion, or  a more generic state such as
-\code{omp\_state\_wait\_mutex} or \code{omp\_state\_wait\_lock}.  This
+\code{omp_state_wait_mutex} or \code{omp_state_wait_lock}.  This
 flexibility may significantly simplify the maintenance of states
 associated with mutual exclusion in the runtime when various
 mechanisms for mutual exclusion rely on a common implementation,
 e.g., locks.
 
-% Section~\ref{sec:wait-identifier} describes how each thread maintains a wait identifier to identify what a thread is awaiting. Before a thread enters any state indicating that it is awaiting mutual exclusion, the OpenMP runtime will update the thread's wait identifier to indicate what the thread is awaiting. 
+% Section~\ref{sec:wait-identifier} describes how each thread maintains a wait identifier to identify what a thread is awaiting. Before a thread enters any state indicating that it is awaiting mutual exclusion, the OpenMP runtime will update the thread's wait identifier to indicate what the thread is awaiting.
 
 \begin{description}
 
-\item \code{omp\_state\_wait\_mutex}
+\item \code{omp_state_wait_mutex}
 
-  The thread is waiting for a mutex of an unspecified type. A 
+  The thread is waiting for a mutex of an unspecified type. A
   thread may enter this state early, when a thread encounters a lock acquisition or a region that requires mutual exclusion, or late, when the thread begins to wait.
 
-\item \code{omp\_state\_wait\_lock}
+\item \code{omp_state_wait_lock}
 
-  The thread is waiting for a  lock  or nest lock. A 
+  The thread is waiting for a  lock  or nest lock. A
   thread may enter this state early, when a thread
   encounters a lock \code{set} routine, or late, when the thread
   begins to wait for a lock.
 
-\item \code{omp\_state\_wait\_critical} 
+\item \code{omp_state_wait_critical}
 
-  The thread is waiting to enter a critical region. A 
+  The thread is waiting to enter a critical region. A
   thread may enter this state early, when the
   thread encounters a critical construct, or late, when the thread
-  begins to wait to enter the critical region. 
+  begins to wait to enter the critical region.
 
 
-\item \code{omp\_state\_wait\_atomic} 
+\item \code{omp_state_wait_atomic}
 
-  The thread is waiting to enter an atomic region. A 
+  The thread is waiting to enter an atomic region. A
   thread may enter this state early, when the thread
   encounters an atomic construct, or late, when the thread begins
-  to wait to enter the atomic region. 
+  to wait to enter the atomic region.
   An implementation may opt not to report
   this state when using atomic hardware instructions that support non-blocking atomic implementations.
-  
 
-\item \code{omp\_state\_wait\_ordered} 
 
-  The thread is waiting to enter an ordered region. A 
+\item \code{omp_state_wait_ordered}
+
+  The thread is waiting to enter an ordered region. A
   thread may enter this state early, when the thread encounters
   an ordered construct, or late, when the thread begins
-  to wait to enter the ordered region. 
-  
+  to wait to enter the ordered region.
+
 \end{description}
-  
+
 \subsubsubsection{Target Wait States}
 
 \begin{description}
 
-\item \code{omp\_state\_wait\_target} 
+\item \code{omp_state_wait_target}
 
   The thread is waiting for a target region to complete.
-  
-\item \code{omp\_state\_wait\_target\_map} 
 
-  The thread is waiting for a target data mapping operation to complete. 
-  An implementation may report \code{omp\_state\_wait\_target} 
+\item \code{omp_state_wait_target_map}
+
+  The thread is waiting for a target data mapping operation to complete.
+  An implementation may report \code{omp_state_wait_target}
   for target data constructs.
 
-\item \code{omp\_state\_wait\_target\_update} 
+\item \code{omp_state_wait_target_update}
 
-  The thread is waiting for a target  update operation to complete. 
-  An implementation may report \code{omp\_state\_wait\_target} 
+  The thread is waiting for a target  update operation to complete.
+  An implementation may report \code{omp_state_wait_target}
   for target update constructs.
 
 \end{description}
@@ -275,20 +275,20 @@ e.g., locks.
 \subsubsubsection{Miscellaneous States}
 
 \begin{description}
-\item \code{omp\_state\_idle} 
+\item \code{omp_state_idle}
 
   The thread is idle, waiting for work.
 
-\item \code{omp\_state\_overhead} 
+\item \code{omp_state_overhead}
 
-  A thread may be reported as being in the overhead state at any point while 
+  A thread may be reported as being in the overhead state at any point while
   executing within an OpenMP runtime, except while waiting indefinitely
   at a synchronization point.
-%  e.g., while preparing to execute a parallel, task, or worksharing construct. 
+%  e.g., while preparing to execute a parallel, task, or worksharing construct.
   An OpenMP implementation report a thread's state as a work state for
   some or all of the time the thread spends in executing in the OpenMP runtime.
 
-\item \code{omp\_state\_undefined} 
+\item \code{omp_state_undefined}
 
   This state is reserved for threads that are not user threads,
   initial threads, threads currently in an OpenMP team, or threads
