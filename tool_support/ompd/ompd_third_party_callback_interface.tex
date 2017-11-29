@@ -357,7 +357,8 @@ typedef ompd_rc_t (*ompd_callback_symbol_addr_fn_t) (
   ompd_address_space_context_t *\plc{address_space_context},
   ompd_thread_context_t *\plc{thread_context},
   const char *\plc{symbol_name},
-  ompd_address_t *\plc{symbol_addr}
+  ompd_address_t *\plc{symbol_addr},
+  const char *\plc{file\_name}
 );
 \end{ompSyntax}
 \end{cspecific}
@@ -368,20 +369,40 @@ addresses of symbols within an specified address space of the tool.
 
 \argdesc
 This callback looks up the symbol provided in \plc{symbol_name}.
-The \plc{thread_context} is an optional input parameter which should
-be NULL for global memory access.
 
-If  \plc{thread_context} is not NULL,
-it gives the thread specific
-context for the symbol lookup, for the purpose of calculating thread
-local storage~(TLS) addresses.
+The \plc{address_space_context} input parameter is the tool's representation of the address 
+space of the process, core file, or device. The use of a NULL \plc{address_space_context}
+results in unspecified behavior.
 
-The \plc{symbol_name} supplied by the OMPD plugin is used verbatim by
-the tool, and in particular, no name mangling, demangling
-or other transformations are performed prior to the lookup.
+The \plc{thread_context} is an optional input parameter which should be NULL for global memory 
+access. If  \plc{thread_context} is not NULL, it gives the thread specific context for the symbol 
+lookup, for the purpose of calculating thread local storage~(TLS) addresses.
+If the \plc{thread_context} parameter is not NULL, the thread that the \plc{thread_context} 
+argument refers to must be associated either to the process or to the device that corresponds to 
+the \plc{address_space_context} argument.
 
-The callback returns the address
-of the symbol in \plc{*symbol_addr}.
+The \plc{symbol_name} supplied by the OMPD plugin is used verbatim by the tool, and in particular, 
+no name mangling, demangling or other transformations are performed prior to the lookup.
+The \plc{symbol_name} parameter must correspond to a statically allocated symbol within the 
+specified address space. The symbol can correspond to any type of object, such as a variable, 
+thread local storage variable, function, or untyped label. The symbol must be defined and can have 
+a local, global, or weak binding.
+
+The \plc{file_name} parameter is an optional input parameter that indicates the 
+name of the shared library where the symbol is defined, and is intended to help the third party tool 
+disambiguate symbols that are defined multiple times across the executable or shared library files. 
+The shared library name may not be an exact match for the name seen by the tool. If the 
+\plc{file_name} parameter is NULL, the tool will try first finding the symbol in the executable file, 
+and, if the symbol is not found, the tool will try finding the symbol in the shared libraries in the order 
+in which the shared libraries are loaded into the address space. If the \plc{file_name} parameter is 
+not NULL, the tool will try first finding the symbol in the libraries that match the name in the 
+\plc{file_name} parameter, and, if the symbol is not found, the tool will find the symbol following
+the procedure as if the \plc{file_name} parameter is NULL.
+
+The callback does not support finding symbols that are dynamically allocated on the call 
+stack, or statically allocated symbols defined within the scope of a function or subroutine.
+
+The callback returns the address of the symbol in \plc{*symbol_addr}.
 
 \crossreferences
 \begin{itemize}
