@@ -93,10 +93,6 @@ clean:
 #
 #      make DIFF_FROM=upstream/master make openmp-diff.pdf
 #
-DIFF_TO:=HEAD
-DIFF_FROM:=$$(git merge-base origin/master ${DIFF_TO})
-DIFF_TYPE:=UNDERLINE
-
 ifdef DIFF_TO
     VC_DIFF_TO := -r ${DIFF_TO}
 else
@@ -107,6 +103,10 @@ ifdef DIFF_FROM
 else
     VC_DIFF_FROM := -r master
 endif
+
+DIFF_TO:=HEAD
+DIFF_FROM:=master
+DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole \
                   --append-textcmd=plc,code,glossaryterm \
