@@ -104,8 +104,8 @@ else
     VC_DIFF_FROM := -r master
 endif
 
-DIFF_FROM:=master
 DIFF_TO:=HEAD
+DIFF_FROM:=master
 DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole \
@@ -124,7 +124,7 @@ git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
 
-%.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png)
+%.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png) $(wildcard *.aux) openmp.pdf
 	mkdir -p $@/appendices
 	cp -f $^ "$@/" || true
 	cp -f appendices/callstack-cropped.pdf "$@/appendices"
