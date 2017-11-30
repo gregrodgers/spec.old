@@ -67,7 +67,7 @@ TEXFILES=openmp.tex \
          tool_support/tool_support_entrypoints.tex \
          tool_support/wait_id.tex
 
-openmp.pdf: $(CHAPTERS) openmp.sty openmp-index.ist openmp-logo.png Makefile
+openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
 	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
