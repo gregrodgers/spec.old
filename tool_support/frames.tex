@@ -1,0 +1,110 @@
+\subsubsection{Frames}
+\index{frames}
+\label{sec:omp_frame_t}
+
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef struct omp_frame_t {
+  void *\plc{exit_frame};
+  void *\plc{enter_frame};
+} omp_frame_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\descr
+
+When executing an OpenMP program, at times, one or more procedure frames associated with
+the OpenMP runtime may appear on a thread's stack between frames
+associated with tasks. To help a tool determine whether a procedure
+frame on the call stack belongs to a task or not,
+for each task whose frames appear on the stack, the runtime
+maintains an \code{omp_frame_t} object
+that indicates a contiguous sequence of
+procedure frames associated with the task.
+Each \code{omp_frame_t} object is associated with the task to which the procedure frames belong.
+Each non-merged initial, implicit, explicit, or target task with one or more frames on a thread's stack
+will have an associated \code{omp_frame_t} object.
+
+
+
+An \code{omp_frame_t} object associated with a task contains a pair
+of pointers: \plc{exit_frame} and \plc{enter_frame}. The field names were
+chosen, respectively, to reflect that they typically contain a pointer to a procedure frame on the stack when
+\emph{exiting} the OpenMP runtime into code for a task or \emph{entering} the OpenMP runtime from a task.
+
+The \plc{exit_frame} field of a task's \code{omp_frame_t} object
+contains the canonical frame address for the procedure frame that
+transfers control to the structured block for the task.
+The value of \plc{exit_frame} is \code{NULL} until just prior to
+beginning execution of the structured block for the task.
+A task's \plc{exit_frame} may point to a procedure frame that belongs
+to the OpenMP runtime or one that belongs to another task.
+The \plc{exit_frame} for the \code{omp_frame_t} object associated
+with an \emph{initial task} is \code{NULL}.
+
+The \plc{enter_frame} field of a task's \code{omp_frame_t} object
+contains the canonical frame address of a task procedure frame that invoked the
+OpenMP runtime causing the current task to suspend and another task to
+execute.
+If a task with frames on the stack has not suspended, the value of
+\plc{enter_frame} for the \code{omp_frame_t} object
+associated with the task may contain \code{NULL}.
+The value of \plc{enter_frame} in a task's \code{omp_frame_t} is
+reset to \code{NULL} just before a suspended task resumes execution.
+
+An \code{omp_frame_t}'s lifetime begins when a task is created
+and ends when the task is destroyed. Tools should not assume that
+a frame structure remains at a constant location in memory throughout
+a task's lifetime. A pointer to a task's \code{omp_frame_t} object is passed to
+some callbacks; a pointer to a task's \code{omp_frame_t} object
+can also be retrieved by a tool at any time, including in a signal
+handler, by invoking the
+\code{ompt_get_task_info} runtime entry point (described in
+Section~\ref{sec:ompt_get_task_info}).
+
+
+
+
+
+\begin{table}
+\begin{center}
+\caption{Meaning of various states of an \code{omp_frame_t}
+    object.\label{tab:frame}}
+\begin{tabular}{|p{1in}||p{2in}|p{2in}|}
+\hline
+{\splc{exit_frame}} / {\splc{enter_frame}} 	state & {\splc{enter_frame}} is
+{\scode{NULL}}
+& {\splc{enter_frame}} is non-{\scode{NULL}} \\
+\hline
+\hline
+{\splc{exit_frame}} is {\scode{NULL}} &
+case 1)  initial task during execution\newline
+case 2) task that is created but not yet scheduled or already finished &
+initial task suspended while another task executes
+\\\hline
+{\splc{exit_frame}} is non-{\scode{NULL}} 	& non-initial task that has
+been scheduled &
+non-initial task
+suspended while another task executes
+\\\hline
+\end{tabular}
+\vspace{1ex}
+\end{center}
+\end{table}
+
+Table~\ref{tab:frame} describes various states in which
+an \code{omp_frame_t} object may be observed and their meaning.
+In the presence of nested parallelism, a tool may
+observe a sequence of \code{omp_frame_t} objects for a thread.
+Appendix~\ref{chap:frames} illustrates
+use of \code{omp_frame_t} objects with nested parallelism.
+
+\needspace{6\baselineskip}\begin{note}
+A monitoring tool using asynchronous sampling can observe values
+of \plc{exit_frame} and \plc{enter_frame} at inconvenient times.
+Tools must be prepared to observe and handle \code{omp_frame_t}
+objects observed just prior to when their field values will be set or
+cleared.
+\end{note}

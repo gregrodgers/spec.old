@@ -1,0 +1,435 @@
+
+In this section, we define the types, structures, and functions for the OMPD API.
+
+\subsubsection{Basic Types}
+The following describes the basic OMPD API types.
+
+\subsubsubsection{Size Type}
+\label{subsubsubsec:ompd_size_t}
+
+This type is used to specify the number of bytes in opaque data objects passed across the OMPD API.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef uint64_t ompd_size_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsubsection{Wait ID Type}
+\label{subsubsubsec:ompd_wait_id_t}
+
+This type identifies what a thread is waiting for.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef uint64_t ompd_wait_id_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsubsection{Basic Value Types}
+\label{subsubsubsec:ompd_addr_t}
+\label{subsubsubsec:ompd_word_t}
+\label{subsubsubsec:ompd_seg_t}
+
+These definitions represent a word, address, and segment value types.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef uint64_t ompd_addr_t;
+typedef int64_t  ompd_word_t;
+typedef uint64_t ompd_seg_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+The \plc{ompd_addr_t} type represents an unsigned integer address in an
+OpenMP process.
+The \plc{ompd_word_t} type represents a signed version of  \plc{ompd_addr_t} to hold a signed
+integer of the OpenMP process.
+The \plc{ompd_seg_t} type represents an unsigned integer segment value.
+
+\subsubsubsection{Address Type}
+\label{subsubsubsec:ompd_address_t}
+
+This type is a structure that OMPD uses to specify device addresses,
+which may or may not be segmented.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompEnv}
+typedef struct {
+  ompd_seg_t \plc{segment};
+  ompd_addr_t \plc{address};
+} ompd_address_t;
+
+#define OMPD_SEGMENT_UNSPECIFIED 0
+\end{ompEnv}
+\end{ccppspecific}
+
+
+For non segmented architectures, use \code{OMPD_SEGMENT_UNSPECIFIED} in the \plc{segment}
+field of \code{ompd_address_t}.
+
+\subsubsection{System Device Identifiers}
+
+Different OpenMP runtimes may utilize different underlying devices.
+The type used to hold an device identifier can vary in size and format, and
+therefore is not explicitly represented in the OMPD API. Device identifiers are
+passed across the interface using a device-identifier `kind', a pointer to where
+the device identifier is stored, and the size of the device identifier in bytes.
+The OMPD library and tool using it must agree on the format
+of what is being passed.
+Each different kind of device identifier uses a unique
+unsigned 64-bit integer value.
+
+Recommended values of \code{omp_device_kind_t} are defined in the \code{ompd_types.h}
+header file, which is available on \url{http://www.openmp.org/}.
+
+\label{ompd:omp_device_kind_t}
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef uint64_t omp_device_kind_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsection{Thread Identifiers}
+
+Different OpenMP runtimes may use different underlying native
+thread implementations.
+The type used to hold a thread identifier can vary in size and format, and
+therefore is not explicitly represented in the OMPD API. Thread identifiers are
+passed across the interface using a thread-identifier `kind', a pointer to where
+the thread identifier is stored, and the size of the thread identifier in bytes.
+The OMPD library and tool using it must agree on the format
+of what is being passed.
+Each different kind of thread identifier uses a unique
+unsigned 64-bit integer value.
+
+Recommended values of \code{ompd_thread_id_kind_t} are defined in the \code{ompd_types.h}
+header file, which is available on \url{http://www.openmp.org/}.
+
+\label{ompd:ompd_thread_id_kind_t}
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef uint64_t ompd_thread_id_kind_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsection{OMPD Handle Types}
+\label{subsubsec:ompd_address_space_handle_t}
+\label{subsubsec:ompd_thread_handle_t}
+\label{subsubsec:ompd_parallel_handle_t}
+\label{subsubsec:ompd_task_handle_t}
+
+Each operation of the OMPD interface that applies to a particular address space, thread, parallel
+region, or task must explicitly specify
+a \emph{handle} for the operation.
+OMPD employs handles for address spaces (for a host or target device), threads, parallel regions,
+and tasks. A handle for an entity is constant while the entity itself is alive. Handles are defined by
+the OMPD plugin, and are opaque to the tool. The following defines the OMPD
+handle types:
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef struct _ompd_aspace_handle_s ompd_address_space_handle_t;
+typedef struct _ompd_thread_handle_s ompd_thread_handle_t;
+typedef struct _ompd_parallel_handle_s ompd_parallel_handle_t;
+typedef struct _ompd_task_handle_s ompd_task_handle_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+Defining externally visible type names in this way introduces type safety to the interface, and helps
+to catch instances where incorrect handles are passed by the tool to the OMPD
+library. The \code{struct}s do not need to be defined at all. The OMPD library
+must cast incoming (pointers to) handles to the appropriate internal, private types.
+
+\subsubsection{Tool Context Types}
+\label{subsubsec:ompd_address_space_context_t}
+\label{subsubsec:ompd_thread_context_t}
+
+A third-party tool uses contexts to uniquely  identifies abstractions. These contexts are opaque to
+the OMPD library and are defined as follows:
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef struct _ompd_aspace_cont_s ompd_address_space_context_t;
+typedef struct _ompd_thread_cont_s ompd_thread_context_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsection{Return Code Types}
+\label{subsubsec:ompd_rc_t}
+
+Each OMPD operation has a return code. The return code types and their semantics are defined as
+follows:
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum {
+  ompd_rc_ok = 0,
+  ompd_rc_unavailable = 1,
+  ompd_rc_stale_handle = 2,
+  ompd_rc_bad_input = 3,
+  ompd_rc_error = 4,
+  ompd_rc_unsupported = 5,
+  ompd_rc_needs_state_tracking = 6,
+  ompd_rc_incompatible = 7,
+  ompd_rc_device_read_error = 8,
+  ompd_rc_device_write_error = 9,
+  ompd_rc_nomem = 10,
+} ompd_rc_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\descr
+\label{ompd:ompd_rc_ok}
+\code{ompd_rc_ok} is returned when the operation is successful.
+
+\label{ompd:ompd_rc_unavailable}
+\code{ompd_rc_unavailable} is returned when
+information is not available for the specified context.
+
+\label{ompd:ompd_rc_stale_handle}
+\code{ompd_rc_stale_handle} is returned when
+the specified handle is no longer valid.
+
+\label{ompd:ompd_rc_bad_input}
+\code{ompd_rc_bad_input} is returned when
+the input parameters (other than handle) are invalid.
+
+\label{ompd:ompd_rc_error}
+\code{ompd_rc_error} is returned when
+a fatal error occurred.
+
+\label{ompd:ompd_rc_unsupported}
+\code{ompd_rc_unsupported} is returned when
+the requested operation is not supported.
+
+\label{ompd:ompd_rc_needs_state_tracking}
+\code{ompd_rc_needs_state_tracking} is returned when
+the state tracking operation failed because state tracking is not currently enabled.
+
+\label{ompd:ompd_rc_incompatible}
+\code{ompd_rc_incompatible} is returned when
+this OMPD is incompatible with the OpenMP program.
+
+\label{ompd:ompd_rc_device_read_error}
+\code{ompd_rc_device_read_error} is returned when
+a read operation failed on the device
+
+\label{ompd:ompd_rc_device_write_error}
+\code{ompd_rc_device_write_error} is returned when
+a write operation failed to the device.
+
+\label{ompd:ompd_rc_nomem}
+\code{ompd_rc_nomem} is returned when
+unable to allocate memory.
+
+\subsubsection{OpenMP Scheduling Types}
+\label{subsubsec:ompd_sched_t}
+
+The following enumeration defines \code{ompd_sched_t}, which is the OMPD API definition
+corresponding to the OpenMP enumeration type \code{omp_sched_t} (see
+
+\specref{subsec:omp_set_schedule}).
+\code{ompd_sched_t} also defines \code{ompd_sched_vendor_lo} and
+\code{ompd_sched_vendor_hi} to define the range of implementation-specific
+\code{omp_sched_t} values than can be handle by the OMPD API.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum {
+  ompd_sched_static = 1,
+  ompd_sched_dynamic = 2,
+  ompd_sched_guided = 3,
+  ompd_sched_auto = 4,
+  ompd_sched_vendor_lo = 5,
+  ompd_sched_vendor_hi = 0x7fffffff
+} ompd_sched_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsection{OpenMP Proc Binding Types}
+\label{subsubsec:ompd_proc_bind_t}
+
+The following enumeration defines \code{ompd_proc_bind_t}, which is the OMPD
+API definition corresponding to the OpenMP enumeration type
+\code{omp_proc_bind_t} (\specref{subsec:omp_get_proc_bind}).
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum {
+  ompd_proc_bind_false = 0,
+  ompd_proc_bind_true = 1,
+  ompd_proc_bind_master = 2,
+  ompd_proc_bind_close = 3,
+  ompd_proc_bind_spread = 4
+} ompd_proc_bind_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\subsubsection{Primitive Types}
+\label{subsubsec:ompd_device_type_sizes_t}
+The following structure contains members that the OMPD library can use
+to interrogate the tool about the ``sizeof'' of primitive types in the OpenMP architecture
+address space.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef struct {
+  uint8_t \plc{sizeof_char};
+  uint8_t \plc{sizeof_short};
+  uint8_t \plc{sizeof_int};
+  uint8_t \plc{sizeof_long};
+  uint8_t \plc{sizeof_long_long};
+  uint8_t \plc{sizeof_pointer};
+} ompd_device_type_sizes_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\descr
+The fields of \code{ompd_device_type_sizes_t} give the sizes of
+the eponymous basic types used by the OpenMP runtime.
+As the tool and the OMPD plugin, by definition, have the same
+architecture and programming model, the size of the fields can be given
+as \code{int}.
+
+\crossreferences
+\begin{itemize}
+	\item
+	\code{ompd_callback_sizeof_fn_t}, \specref{subsubsubsec:ompd_callback_sizeof_fn_t}
+\end{itemize}
+
+\subsubsection{Runtime State Types}
+
+The OMPD runtime states mirror those in OMPT (\specref{sec:ompt_get_state_t}). Note that there is no guarantee that
+the numeric values of the corresponding members of the enumerations are identical.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum {
+  ompd_state_work_serial = 0x00,
+  ompd_state_work_parallel = 0x01,
+  ompd_state_work_reduction = 0x02,
+  ompd_state_idle = 0x10,
+  ompd_state_overhead = 0x20,
+  ompd_state_wait_barrier = 0x40,
+  ompd_state_wait_barrier_implicit = 0x41,
+  ompd_state_wait_barrier_explicit = 0x42,
+  ompd_state_wait_taskwait = 0x50,
+  ompd_state_wait_taskgroup = 0x51,
+  ompd_state_wait_mutex = 0x60,
+  ompd_state_wait_lock = 0x61,
+  ompd_state_wait_critical = 0x62,
+  ompd_state_wait_atomic = 0x63,
+  ompd_state_wait_ordered = 0x64,
+  ompd_state_undefined = 0x70,
+  ompd_state_first = 0x71,
+} ompd_state_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+
+\descr
+\label{ompd_state_work_serial}
+\code{ompd_state_work_serial} -
+working outside parallel
+
+\label{ompd_state_work_parallel}
+\code{ompd_state_work_parallel} -
+working within parallel
+
+\label{ompd_state_work_reduction}
+\code{ompd_state_work_reduction} -
+performing a reduction
+
+\label{ompd_state_idle}
+\code{ompd_state_idle} -
+waiting for work
+
+\label{ompd_state_overhead}
+\code{ompd_state_overhead} -
+non-wait overhead
+
+\label{ompd_state_wait_barrier}
+\code{ompd_state_wait_barrier} -
+generic barrier
+
+\label{ompd_state_wait_barrier_implicit}
+\code{ompd_state_wait_barrier_implicit} -
+implicit barrier
+
+\label{ompd_state_wait_barrier_explicit}
+\code{ompd_state_wait_barrier_explicit} -
+explicit barrier
+
+\label{ompd_state_wait_taskwait}
+\code{ompd_state_wait_taskwait} -
+waiting at a taskwait
+
+\label{ompd_state_wait_taskgroup}
+\code{ompd_state_wait_taskgroup} -
+waiting at a taskgroup
+
+\label{ompd_state_wait_mutex}
+\code{ompd_state_wait_mutex} -
+waiting for any mutex kind
+
+\label{ompd_state_wait_lock}
+\code{ompd_state_wait_lock} -
+waiting for lock
+
+\label{ompd_state_wait_critical}
+\code{ompd_state_wait_critical} -
+waiting for critical
+
+\label{ompd_state_wait_atomic}
+\code{ompd_state_wait_atomic} -
+waiting for atomic
+
+\label{ompd_state_wait_ordered}
+\code{ompd_state_wait_ordered} -
+waiting for ordered
+
+\label{ompd_state_undefined}
+\code{ompd_state_undefined} -
+undefined thread state
+
+\label{ompd_state_first}
+\code{ompd_state_first} -
+initial enumeration state

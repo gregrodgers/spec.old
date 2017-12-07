@@ -7,20 +7,20 @@ Dependencies
 The following packages provide the necessary components to build the LaTeX OpenMP specification.
 While the package names provided below are for Debian based distributions, other
 package managers should provide TeX packages with similar names:
-    * texlive-latex-base 
-    * texlive-fonts-recommended 
-    * texlive-humanities 
-    * tex-gyre 
-    * texlive-latex-extra 
-    * texlive-latex-recommended 
+    * texlive-latex-base
+    * texlive-fonts-recommended
+    * texlive-humanities
+    * tex-gyre
+    * texlive-latex-extra
+    * texlive-latex-recommended
     * texlive-generic-recommended
 
 Or, if you prefer to download a rather large set of packages:
     * texlive-full
 
-Building the diff PDFs also require the following:    
-    * latexdiff 
-    * pdftk 
+Building the diff PDFs also require the following:
+    * latexdiff
+    * pdftk
 
 Building the Specification
 --------------------------
