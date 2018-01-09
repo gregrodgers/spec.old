@@ -123,8 +123,7 @@ VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --flatten --type="${DIFF_TYPE
 VC_DIFF_MINIMAL_OPTS:= --only-changes
 
 # check for branches names with "ticket_XXX"
-DIFF_TICKET_ID=$(shell git branch | grep ^"\\* ticket_[:alpha]*" | sed 's/. //')
-
+DIFF_TICKET_ID=$(shell git branch | grep ^"\\* ticket_[0-9]*" | sed 's/. \(ticket_[0-9]*\)_.*\|. \(ticket_[0-9]*\)/\1\2/')
 
 git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
@@ -150,4 +149,4 @@ openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
 openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
-	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp openmp-diff-minimal.pdf.pdf openmp-diff-minimal.pdf-$(DIFF_TICKET_ID).pdf; fi
+	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp openmp-diff-minimal.pdf.pdf openmp-diff-minimal-$(DIFF_TICKET_ID).pdf; fi
