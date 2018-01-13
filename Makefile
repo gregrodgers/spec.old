@@ -143,10 +143,11 @@ openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
-	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp openmp-diff-abridged.pdf openmp-diff-abridged-$(DIFF_TICKET_ID).pdf; fi
+	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ $(shell basename $@ .pdf)-$(DIFF_TICKET_ID).pdf; fi
 
 # Slow but portable diffs
 openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
-	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp openmp-diff-minimal.pdf.pdf openmp-diff-minimal-$(DIFF_TICKET_ID).pdf; fi
+	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ $(shell basename $@ .pdf)-$(DIFF_TICKET_ID).pdf; fi
+
