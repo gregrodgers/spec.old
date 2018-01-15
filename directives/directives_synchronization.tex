@@ -1134,33 +1134,21 @@ binding thread set without regard to the teams to which the threads belong.
 
 \descr
 
-All \code{atomic} constructs force an atomic operation on the storage location
-designated by \plc{x} to be performed by the encountering thread, preceded
-and/or followed by implicit flush operations as described in this section. The
-implicit flushes are performed as if they are part of the same atomic
-operation applied to \plc{x}.  Each non-synchronizable implicit flush is a
-strong flush. If \plc{memory-order-clause} is present and is \code{seq_cst},
-each synchronizable implicit flush is a strong flush; otherwise,
-each synchronizable implicit flush is a weak flush.
 
-The \code{atomic} construct with the \code{read} clause forces an atomic read of the location
-designated by \plc{x} regardless of the native machine word size. The atomic
-read is immediately preceded by a non-synchronizable read flush of \plc{x}.
+The \code{atomic} construct with the \code{read} clause forces an atomic read of the location 
+designated by \plc{x} regardless of the native machine word size.
 \end{samepage}
 
-The \code{atomic} construct with the \code{write} clause forces an atomic write of the location
-designated by \plc{x} regardless of the native machine word size. The atomic
-write is immediately followed by a non-synchronizable write flush of \plc{x}.
+The \code{atomic} construct with the \code{write} clause forces an atomic write of the location 
+designated by \plc{x} regardless of the native machine word size.
 
-The \code{atomic} construct with the \code{update} clause forces an atomic update of the location
-designated by \plc{x} using the designated operator or intrinsic. Note that when no clause is
-present, the semantics are equivalent to atomic update. Only the read and write of the
-location designated by \plc{x} are performed mutually atomically. The evaluation of \plc{expr} or
-\plc{expr_list} need not be atomic with respect to the read or write of the location designated
-by \plc{x}. No task scheduling points are allowed between the read and the write of the
-location designated by \plc{x}. The atomic update is immediately preceded by
-a non-synchronizable read flush of \plc{x} and immediately followed by a
-non-synchronizable write flush of \plc{x}.
+The \code{atomic} construct with the \code{update} clause forces an atomic update of the location 
+designated by \plc{x} using the designated operator or intrinsic. Note that when no clause is 
+present, the semantics are equivalent to atomic update. Only the read and write of the 
+location designated by \plc{x} are performed mutually atomically. The evaluation of \plc{expr} or 
+\plc{expr_list} need not be atomic with respect to the read or write of the location designated 
+by \plc{x}. No task scheduling points are allowed between the read and the write of the 
+location designated by \plc{x}.
 
 The \code{atomic} construct with the \code{capture} clause forces an atomic
 captured update --- an atomic update of the
@@ -1173,18 +1161,26 @@ the location designated by \plc{x} are performed mutually atomically. Neither th
 of \plc{expr} or \plc{expr_list}, nor the write to the location designated by \plc{v}, need be atomic with
 respect to the read or write of the location designated by \plc{x}. No task scheduling points
 are allowed between the read and the write of the location designated by
-\plc{x}. The atomic captured update is immediately preceded by a
-non-synchronizable read flush of \plc{x} and immediately followed by a
-non-synchronizable write flush of \plc{x}.
+\plc{x}.
 
-A release flush operation applied to all variables, with a
-sync-set containing \plc{x}, is implied at entry to the atomic operation when
-the \code{read} clause is not present and the \code{release}, \code{acq_rel},
-or \code{seq_cst} clause is present.  An acquire flush
-operation applied to all variables, with a sync-set containing \plc{x}, is
-implied at exit from the atomic operation when the \code{read} or
-\code{capture} clause is present and the \code{acquire}, \code{acq_rel}, or
-\code{seq_cst} clause is present.
+The \code{atomic} construct may be used to enforce memory consistency between
+threads, based on the guarantees provided by \specref{subsec:OpenMP Memory
+Consistency}.  If the \code{seq_cst} clause is specified, a strong flush on
+all shared memory locations is performed on entry to and exit from the atomic
+operation, ensuring that the set of all sequentially consistent atomic
+operations in the program has a total completion order.  If the \code{seq_cst}
+clause is not specified, a strong flush on the location designated by \plc{x}
+is performed on entry to and exit from the atomic operation, ensuring that the
+set of all atomic operations in the program applied to the same location has a
+total completion order.  If the atomic operation is a write, update, or
+captured update and the \code{release}, \code{acq_rel}, or \code{seq_cst}
+clause is specified, the flush on entry to the atomic operation is a release
+flush. If the atomic operation is a read or captured update and the
+\code{acquire}, \code{acq_rel}, or \code{seq_cst} clause is specified, the
+flush on exit from the atomic operation is an acquire flush.  Therefore, if
+\plc{memory-order-clause} is specified, release and/or acquire flush
+operations are implied and permit synchronization between the threads without
+the use of explicit \code{flush} directives.
 
 % \begin{note}
 % As with other implicit flush regions,
@@ -1388,36 +1384,27 @@ threads must themselves execute a flush operation in order to be guaranteed to o
 the effects of the encountering thread's flush operation
 
 \descr
-A \code{flush} construct without a list, executed on a given thread, operates as if the whole
-thread-visible data state of the program, as defined by the base language, is flushed. A
-\code{flush} construct with a list applies the flush operation to the items in the list, and does
-not return until the operation is complete for all specified list items. An implementation
-may implement a \code{flush} with a list by ignoring the list, and treating it the same as a
-\code{flush} without a list.
+If \plc{memory-order-clause} is not specified then the \code{flush} constructs
+results in a strong flush operation with the following behavior. A \code{flush}
+construct without a list, executed on a given thread, operates as if the whole
+thread-visible data state of the program, as defined by the base language, is
+flushed. A \code{flush} construct with a list applies the flush operation to
+the items in the list, and does not return until the operation is complete for
+all specified list items. An implementation may implement a \code{flush} with
+a list by ignoring the list, and treating it the same as a \code{flush}
+without a list.
 
-If list items are specified on the \code{flush} construct, the flush operation
-is a non-synchronizable flush.  Otherwise, the flush operation is a
-synchronizable flush for which the sync-set contains all variables that are
-flushed.
-
-The flush operation's flush properties are determined according to
-\plc{memory-order-clause}, if present:
+If no list items are specified, the flush operation has the release and/or
+acquire flush properties:
 
 \begin{itemize}
-\item If \plc{memory-order-clause} is not specified, the flush operation has the
-strong, write, and read flush properties and is both a release flush and an
-acquire flush if the flush does not have a list.
+\item If \plc{memory-order-clause} is not specified or is \code{acq_rel}, the flush operation
+is both a release flush and an acquire flush.
 
-\item If \plc{memory-order-clause} is \code{acq_rel}, the flush operation has the
-write and read flush properties and is both a release flush and an acquire flush.
+\item If \plc{memory-order-clause} is \code{release}, the flush operation is a release flush.
 
-\item If \plc{memory-order-clause} is \code{release}, the flush operation has
-the write flush property and is a release flush.
-
-\item If \plc{memory-order-clause} is \code{acquire}, the flush operation has
-the read flush property and is an acquire flush.
+\item If \plc{memory-order-clause} is \code{acquire}, the flush operation is an acquire flush.
 \end{itemize}
-
 
 \begin{ccppspecific}
 If a pointer is present in the list, the pointer itself is flushed, not the memory block to
