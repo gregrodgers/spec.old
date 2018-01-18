@@ -504,7 +504,7 @@ must provide in order for the code to compile and to execute correctly.
   The syntax of the \code{requires} directive is as follows:
 
 \begin{ompfPragma}
-!$omp requires \plc{[clause[ [},\plc{] clause] ... ]}
+!\$omp requires \plc{[clause[ [},\plc{] clause] ... ]}
 \end{ompfPragma}
 
 \end{fortranspecific}
@@ -516,6 +516,7 @@ implementation defined requirement clause.
 \begin{indentedcodelist}
 unified_address
 unified_shared_memory
+atomic_default_mem_order(seq_cst \textnormal{|} acq_rel \textnormal{|} relaxed)
 \end{indentedcodelist}
 
 \descr
@@ -563,6 +564,28 @@ directive on static lifetime variables accessed as part of
 \code{firstprivate} by default for \code{target} regions.  Values stored into
 memory by one device may not be visible to other devices until those two
 devices synchronize with each other or both synchronize with the host.
+
+The \code{atomic_default_mem_order} clause specifies the default memory ordering
+behavior for \code{atomic} constructs that must be provided by an
+implementation. If the default memory ordering is specified as \code{seq_cst}, all
+\code{atomic} constructs on which \plc{memory-order-clause} is not specified
+behave as if the \code{seq_cst} clause appears. If the default memory
+ordering is specified as \code{relaxed}, all \code{atomic} constructs on which
+\plc{memory-order-clause} is not specified behave as if the \code{relaxed}
+clause appears.
+
+If the default memory ordering is specified as \code{acq_rel}, \code{atomic}
+constructs on which \plc{memory-order-clause} is not specified behave in the
+following manner:
+
+\begin{itemize}
+    \item as if the \code{release} clause is present if the construct performs
+        an atomic write or atomic update operation;
+    \item as if the \code{acquire} clause is present if the construct performs
+        an atomic read operation;
+    \item as if the \code{acq_rel} clause is present if the construct
+        performs an atomic captured update operation.
+\end{itemize}
 
 Implementers are allowed to include additional implementation defined
 requirement clauses.  Requirement names that do not start with \code{ext_} are
@@ -630,7 +653,7 @@ regions. There is one copy of this ICV per device.
 
 \item \plc{place-partition-var} -- controls the place partition available to the execution
 environment for encountered \code{parallel} regions. There is one copy of this ICV per
-implicit task.
+implicit    task.
 
 \item \plc{active-levels-var} - the number of nested, active parallel regions enclosing the current
 task such that all of the \code{parallel} regions are enclosed by the outermost initial task
