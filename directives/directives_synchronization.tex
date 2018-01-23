@@ -138,23 +138,23 @@ following synchronizing behavior:
 
 \begin{itemize}
     \item When two different threads execute a \code{critical} region that
-        corresponds to a \code{critical} construct having the same name, the
+        corresponds to a \code{critical} construct that has the same name, the
         behavior is as if the release flush performed on exit from one of the
         regions synchronizes with the acquire flush performed on entry to the
         other region.
 
-    \item When a team of threads execute a \code{barrier} region, the
+    \item When a thread team executes a \code{barrier} region, the
 	behavior is as if the release flush performed by each thread within
         the region synchronizes with the acquire flush performed by all other
         threads within the region.
 
     \item When executing a \code{taskwait} region, the behavior is as if each
-	thread executing a remaining child task performs a release flush upon
+	thread that executes a remaining child task performs a release flush upon
         completion of the child task that synchronizes with an acquire flush
-        performed during the \code{taskwait} region.
+        performed in the \code{taskwait} region.
 
     \item When executing a \code{taskgroup} region, the behavior is as if each
-	thread executing a remaining descendant task performs a release flush
+	thread that executes a remaining descendant task performs a release flush
         upon completion of the descendant task that synchronizes with an
         acquire flush performed on exit from the \code{taskgroup} region.
 
@@ -167,45 +167,48 @@ following synchronizing behavior:
 
     \item When executing an \code{ordered} region that arises from a
         stand-alone \code{ordered} directive, the behavior is as if the
-        release flush performed by the \code{ordered} region from a given
-        source iteration synchronizes with the acquire flush performed by all
+        release flush performed in the \code{ordered} region from a given
+        source iteration synchronizes with the acquire flush performed in all
         \code{ordered} regions executed by a different thread that are waiting
         for dependences on that iteration to be satisfied.
 
-    \item When executing a \code{parallel} region, the release flush performed
-        by the master thread on entry to the \code{parallel} region
-        synchronizes with the acquire flush performed on entry to each
-        implicit task that is assigned to a different thread.
+    \item When executing a \code{parallel} region, the behavior is as if the
+        release flush performed by the master thread on entry to the
+        \code{parallel} region synchronizes with the acquire flush performed
+        on entry to each implicit task that is assigned to a different thread.
 
-    \item When generating an explicit task, the thread executing the
-        generating task performs a release flush that synchronizes with the
-        acquire flush performed when scheduling the explicit task on a
-        different thread.
+    \item When generating an explicit task that begins execution on a
+        different thread, the behavior is as if the thread that is executing
+        the generating task performs a release flush that synchronizes with
+        the acquire flush performed by the thread that begins to execute the
+        explicit task.
 
-    \item When scheduling a dependent task with one or more predecessor tasks
-        on a given thread, the behavior is as if each release flush performed
-        by a different thread on completion of a predecessor task synchronizes
-        with the acquire flush performed when scheduling the dependent task.
+    \item When a dependent task with one or more predecessor tasks begins
+        execution on a given thread, the behavior is as if each release flush
+        performed by a different thread on completion of a predecessor task
+        synchronizes with the acquire flush performed by the thread that
+        begins to execute the dependent task.
 
-    \item When scheduling a task that is mutually exclusive with respect to
-        another sibling task that is executed by a different thread, the behavior is
-        as if each release flush performed on completion of the sibling task
-        synchronizes with the acquire flush performed when scheduling the
-        task.
+    \item When a task begins execution on a given thread and it is mutually
+        exclusive with respect to another sibling task that is executed by a
+        different thread, the behavior is as if each release flush performed
+        on completion of the sibling task synchronizes with the acquire flush
+        performed by the thread that begins to execute the task.
 
     \item When executing an \code{omp_unset_lock} region that causes the
-	specified lock to be unset, a release flush is
-        performed that synchronizes with an acquire flush that is performed by
-        the next \code{omp_set_lock} or \code{omp_test_lock} region to be
-        executed by a different thread that causes the specified lock to be
-        set.
+	specified lock to be unset, the behavior is as if a release flush is
+        performed during the \code{omp_unset_lock} region that synchronizes
+        with an acquire flush that is performed during the next
+        \code{omp_set_lock} or \code{omp_test_lock} region to be executed by a
+        different thread that causes the specified lock to be set.
 
     \item When executing an \code{omp_unset_nest_lock} region that causes
-	the specified nested lock to be unset, a release flush
-	is performed that synchronizes with an acquire flush
-	that is performed by the next \code{omp_set_nest_lock} or
-	\code{omp_test_nest_lock} region to be executed by a different
-        thread that causes the specified nested lock to be set.
+	the specified nested lock to be unset, the behavior is as if a release flush
+        is performed during the \code{omp_unset_nest_lock} region that
+        synchronizes with an acquire flush that is performed during the next
+        \code{omp_set_nest_lock} or \code{omp_test_nest_lock} region to be
+        executed by a different thread that causes the specified nested lock
+        to be set.  
 \end{itemize}
 
 The OpenMP API defines the following synchronization constructs, and these are
@@ -1134,34 +1137,40 @@ binding thread set without regard to the teams to which the threads belong.
 
 \descr
 
+If \plc{atomic-clause} is not present on the construct, the behavior is as if
+the \code{update} clause is specified.
 
-The \code{atomic} construct with the \code{read} clause forces an atomic read of the location 
+The \code{atomic} construct with the \code{read} clause forces an
+atomic read of the location 
 designated by \plc{x} regardless of the native machine word size.
 \end{samepage}
 
-The \code{atomic} construct with the \code{write} clause forces an atomic write of the location 
+The \code{atomic} construct with the \code{write} clause forces an
+atomic write of the location 
 designated by \plc{x} regardless of the native machine word size.
 
-The \code{atomic} construct with the \code{update} clause forces an atomic update of the location 
-designated by \plc{x} using the designated operator or intrinsic. Note that when no clause is 
-present, the semantics are equivalent to atomic update. Only the read and write of the 
-location designated by \plc{x} are performed mutually atomically. The evaluation of \plc{expr} or 
-\plc{expr_list} need not be atomic with respect to the read or write of the location designated 
-by \plc{x}. No task scheduling points are allowed between the read and the write of the 
-location designated by \plc{x}.
+The \code{atomic} construct with the \code{update} clause forces an
+atomic update of the location designated by \plc{x} using the
+designated operator or intrinsic.  Only the read and write of the
+location designated by \plc{x} are performed mutually atomically. The
+evaluation of \plc{expr} or \plc{expr_list} need not be atomic with respect to
+the read or write of the location designated by \plc{x}. No task scheduling
+points are allowed between the read and the write of the location designated
+by \plc{x}. 
 
-The \code{atomic} construct with the \code{capture} clause forces an atomic
-captured update --- an atomic update of the
-location designated by \plc{x} using the designated operator or intrinsic while also capturing
-the original or final value of the location designated by \plc{x} with respect to the atomic
-update. The original or final value of the location designated by \plc{x} is written in the
-location designated by \plc{v} depending on the form of the \code{atomic} construct structured
-block or statements following the usual language semantics. Only the read and write of
-the location designated by \plc{x} are performed mutually atomically. Neither the evaluation
-of \plc{expr} or \plc{expr_list}, nor the write to the location designated by \plc{v}, need be atomic with
-respect to the read or write of the location designated by \plc{x}. No task scheduling points
-are allowed between the read and the write of the location designated by
-\plc{x}.
+The \code{atomic} construct with the \code{capture} clause forces an
+atomic captured update --- an atomic update of the
+location designated by \plc{x} using the designated operator or intrinsic
+while also capturing the original or final value of the location designated by
+\plc{x} with respect to the atomic update. The original or final value of the
+location designated by \plc{x} is written in the location designated by
+\plc{v} depending on the form of the \code{atomic} construct structured block
+or statements following the usual language semantics. Only the read and write
+of the location designated by \plc{x} are performed mutually atomically.
+Neither the evaluation of \plc{expr} or \plc{expr_list}, nor the write to the
+location designated by \plc{v}, need be atomic with respect to the read or
+write of the location designated by \plc{x}. No task scheduling points are
+allowed between the read and the write of the location designated by \plc{x}.
 
 The \code{atomic} construct may be used to enforce memory consistency between
 threads, based on the guarantees provided by \specref{subsec:OpenMP Memory
@@ -1172,15 +1181,15 @@ operations in the program has a total completion order.  If the \code{seq_cst}
 clause is not specified, a strong flush on the location designated by \plc{x}
 is performed on entry to and exit from the atomic operation, ensuring that the
 set of all atomic operations in the program applied to the same location has a
-total completion order.  If the atomic operation is a write, update, or
-captured update and the \code{release}, \code{acq_rel}, or \code{seq_cst}
-clause is specified, the flush on entry to the atomic operation is a release
-flush. If the atomic operation is a read or captured update and the
-\code{acquire}, \code{acq_rel}, or \code{seq_cst} clause is specified, the
-flush on exit from the atomic operation is an acquire flush.  Therefore, if
-\plc{memory-order-clause} is specified, release and/or acquire flush
-operations are implied and permit synchronization between the threads without
-the use of explicit \code{flush} directives.
+total completion order.  If the \code{write}, \code{update}, or \code{capture}
+clause is specified and the \code{release}, \code{acq_rel}, or
+\code{seq_cst} clause is specified, the flush on entry to the atomic operation is a
+release flush.  If the \code{read} or \code{capture} clause
+is specified and the \code{acquire}, \code{acq_rel}, or \code{seq_cst}
+clause is specified, the flush on exit from the atomic operation is an acquire flush.
+Therefore, if \plc{memory-order-clause} is specified, release and/or acquire
+flush operations are implied and permit synchronization between the threads
+without the use of explicit \code{flush} directives.
 
 % \begin{note}
 % As with other implicit flush regions,
