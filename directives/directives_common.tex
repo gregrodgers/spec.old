@@ -1426,14 +1426,9 @@ OpenMP memory spaces represent storage where variables are defined. Table~\ref{t
 {\scode{omp_const_mem_space}} & Represents storage optimized for read-only variables. The result of writing to this storage is unspecified.\\
 {\scode{omp_high_bw_mem_space}} & Represents storage with high bandwidth.\\
 {\scode{omp_low_lat_mem_space}} & Represents storage with low latency.\\
-%{\scode{omp_cgroup_mem_space}} & Represents storage that is close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by this allocator from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior.\\
-%{\scode{omp_pteam_mem_space}} & Represents storage that is close to all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by this allocator from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory results in unspecified behavior.\\
-%{\scode{omp_thread_mem_space}} & Represents storage that is close to the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by this allocator from a thread other than the one that allocated the memory results in unspecified behavior.\\
 \end{supertabular}
 
 \linenumbers
-
-%Memory spaces other than \code{omp_cgroup_mem_space}, \code{omp_pteam_mem_space} and \code{omp_thread_mem_space} must represent memory accessible by all threads in the device where the allocation was %requested. 
 
 \crossreferences
 \begin{itemize}
@@ -1444,7 +1439,7 @@ OpenMP memory spaces represent storage where variables are defined. Table~\ref{t
 \label{sec:Memory Allocators}
 \index{memory allocators}
 
-OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive memory in its associated memory space resources of at least the size being requested. This allocation will not alias with any other existing allocation from an OpenMP memory allocator. 
+OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive memory in its associated memory space resources of at least the size being requested. This allocation will not overlap with any other existing allocation from an OpenMP memory allocator. 
 
 The behavior of the allocation process can be affected by the allocator traits the user specifies. Table~\ref{tab:Allocator traits} shows the allowed allocators traits, their possible values and the default value of each trait. Trait names and their values are not case sensitive.
 
@@ -1469,15 +1464,14 @@ The behavior of the allocation process can be affected by the allocator traits t
 \tablecaption{Predefined Allocators\label{tab:Allocator traits}}
 \begin{supertabular}{p{1.2in}p{2.4in}p{1.2in}}
 {\scode{threadmodel}} & {\scode{shared},\scode{exclusive}} & {\scode{shared}}\\
-{\scode{alignment}} & 0, power of two integer & 0\\
+{\scode{alignment}} & power of two integer & 1\\
 {\scode{access}} & {\scode{all}, \scode{cgroup}, \scode{pteam}, \scode{thread}} & {\scode{all}}\\
 \end{supertabular}
 \linenumbers
 
-When an allocator {\scode{threadmodel}} trait is defined to be {\scode{exclusive}} the implementation can assume that no operation will be performed on the allocator by more than one thread at a time.
-If the allocator {\scode{alignment}} trait is greater than zero the allocated memory will be byte aligned to at least the value specified for the trait.
+When an allocator {\scode{threadmodel}} trait is defined to be {\scode{exclusive}} the implementation can assume that no operation will be performed on the allocator by more than one thread at a time. Allocated memory will be byte aligned to at least the value specified for the {\scode{alignment}} trait of the allocator.
 
-Allocators with the \scode{access} trait defined to be \scode{all} must return memory accessible by all threads in the device where the allocation was requested. Allocators with the \scode{access} trait defined to be \scode{cgroup} will return memory close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{cgroup} from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior. Allocators with the \scode{access} trait defined to be \scode{pteam} will return memory close to all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by  an allocators with the \scode{access} trait defined to be \scode{pteam} from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory result in unspecified behavior. Allocators with the \scode{access} trait defined to be \scode{thread} return memory close to the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by an allocators with the \scode{access} trait defined to be \scode{thread} from a thread other than the one that allocated the memory result in unspecified behavior.
+Allocated memory by allocators with the \scode{access} trait defined to be \scode{all} must be accessible by all threads in the device where the allocation was requested. Allocated memory by allocators with the \scode{access} trait defined to be \scode{cgroup} will be memory close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{cgroup} from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior. Allocated memory by allocators with the \scode{access} trait defined to be \scode{pteam} will be memory close to all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by  an allocators with the \scode{access} trait defined to be \scode{pteam} from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory result in unspecified behavior. Allocated memory by allocators with the \scode{access} trait defined to be \scode{thread} will be memory close to the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by an allocators with the \scode{access} trait defined to be \scode{thread} from a thread other than the one that allocated the memory result in unspecified behavior.
 
 Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
 
