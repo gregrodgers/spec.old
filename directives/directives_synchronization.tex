@@ -130,88 +130,10 @@ that are executed as part of the region corresponding to the construct.
 
 Synchronization through the use of synchronizing flush operations and atomic
 operations is described in Section \ref{subsec:The Flush Operation} and
-Section \ref{subsec:OpenMP Memory Consistency}. Synchronizing flush operations
-that are implied on entry to and exit from atomic operations are defined in
-Section \ref{subsec:atomic Construct}. Synchronizing flush operations that are
-implied at various other locations in an OpenMP program are defined in Section
-\ref{subsec:flush Construct}, and they have the following behavior:
+Section \ref{subsec:OpenMP Memory Consistency}. The behavior of synchronizing
+flush operations that are implied at various other locations in an OpenMP
+program are defined in Section \ref{subsec:implicit flushes}.
 
-\begin{itemize}
-    \item When two different threads execute a \code{critical} region that
-        corresponds to a \code{critical} construct that has the same name, the
-        behavior is as if the release flush performed on exit from one of the
-        regions synchronizes with the acquire flush performed on entry to the
-        other region.
-
-    \item When a thread team executes a \code{barrier} region, the
-	behavior is as if the release flush performed by each thread within
-        the region synchronizes with the acquire flush performed by all other
-        threads within the region.
-
-    \item When executing a \code{taskwait} region that corresponds to a
-        \code{taskwait} construct on which a \code{depend} clause is not
-        present, the behavior is as if each thread that executes a remaining
-        child task performs a release flush upon completion of the child task
-        that synchronizes with an acquire flush performed in the
-        \code{taskwait} region.
-
-    \item When executing a \code{taskgroup} region, the behavior is as if each
-	thread that executes a remaining descendant task performs a release flush
-        upon completion of the descendant task that synchronizes with an
-        acquire flush performed on exit from the \code{taskgroup} region.
-
-    \item When executing an \code{ordered} region that does not arise from
-        stand-alone \code{ordered} directive, the behavior is as if the
-        release flush performed by a thread on exit from the region
-        synchronizes with the acquire flush performed on entry to an
-        \code{ordered} region in the next logical iteration to be executed by
-        a different thread, if it exists.
-
-    \item When executing an \code{ordered} region that arises from a
-        stand-alone \code{ordered} directive, the behavior is as if the
-        release flush performed in the \code{ordered} region from a given
-        source iteration synchronizes with the acquire flush performed in all
-        \code{ordered} regions executed by a different thread that are waiting
-        for dependences on that iteration to be satisfied.
-
-    \item When executing a \code{parallel} region, the behavior is as if the
-        release flush performed by the master thread on entry to the
-        \code{parallel} region synchronizes with the acquire flush performed
-        on entry to each implicit task that is assigned to a different thread.
-
-    \item When generating an explicit task that begins execution on a
-        different thread, the behavior is as if the thread that is executing
-        the generating task performs a release flush that synchronizes with
-        the acquire flush performed by the thread that begins to execute the
-        explicit task.
-
-    \item When a dependent task with one or more predecessor tasks begins
-        execution on a given thread, the behavior is as if each release flush
-        performed by a different thread on completion of a predecessor task
-        synchronizes with the acquire flush performed by the thread that
-        begins to execute the dependent task.
-
-    \item When a task begins execution on a given thread and it is mutually
-        exclusive with respect to another sibling task that is executed by a
-        different thread, the behavior is as if each release flush performed
-        on completion of the sibling task synchronizes with the acquire flush
-        performed by the thread that begins to execute the task.
-
-    \item When executing an \code{omp_unset_lock} region that causes the
-	specified lock to be unset, the behavior is as if a release flush is
-        performed during the \code{omp_unset_lock} region that synchronizes
-        with an acquire flush that is performed during the next
-        \code{omp_set_lock} or \code{omp_test_lock} region to be executed by a
-        different thread that causes the specified lock to be set.
-
-    \item When executing an \code{omp_unset_nest_lock} region that causes
-	the specified nested lock to be unset, the behavior is as if a release flush
-        is performed during the \code{omp_unset_nest_lock} region that
-        synchronizes with an acquire flush that is performed during the next
-        \code{omp_set_nest_lock} or \code{omp_test_nest_lock} region to be
-        executed by a different thread that causes the specified nested lock
-        to be set.  
-\end{itemize}
 
 The OpenMP API defines the following synchronization constructs, and these are
 described in the sections that follow:
@@ -1496,10 +1418,40 @@ executed.
 \end{note}
 \bigskip
 
+\events
+
+The \plc{flush} event occurs in a thread encountering the
+\code{flush} construct.
+
+\tools
+
+A thread dispatches a registered \code{ompt_callback_flush} callback
+for each occurrence of a \plc{flush} event in that thread. This
+callback has the type signature \code{ompt_callback_flush_t}.
+
+\restrictions
+
+The following restrictions apply to the \code{flush} construct:
+
+\begin{itemize}
+\item If \plc{memory-order-clause} is \code{release}, \code{acquire}, or
+    \code{acq_rel}, list items must not be specified on the \code{flush} directive.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt_callback_flush_t}, see
+\specref{sec:ompt_callback_flush_t}.
+\end{itemize}
+
+\subsubsection{Implicit Flushes}
+\index{implicit flushes}
+\label{subsec:implicit flushes}
+
 Flush operations implied when executing an \code{atomic} region are described in
 Section \ref{subsec:atomic Construct}.
 
-A \code{flush} region arising from a \code{flush} directive without a list and
+A \code{flush} region that corresponds to a \code{flush} directive without a list and
 without \plc{memory-order-clause} present is implied at the following locations:
 \begin{itemize}
 \item During a barrier region.
@@ -1545,30 +1497,83 @@ A \code{flush} region is not implied at the following locations:
 \end{itemize}
 \end{note}
 
-\events
-
-The \plc{flush} event occurs in a thread encountering the
-\code{flush} construct.
-
-\tools
-
-A thread dispatches a registered \code{ompt_callback_flush} callback
-for each occurrence of a \plc{flush} event in that thread. This
-callback has the type signature \code{ompt_callback_flush_t}.
-
-\restrictions
-
-The following restrictions apply to the \code{flush} construct:
+The synchronization behavior of implicit flushes is as follows:
 
 \begin{itemize}
-\item If \plc{memory-order-clause} is \code{release}, \code{acquire}, or
-    \code{acq_rel}, list items must not be specified on the \code{flush} directive.
-\end{itemize}
+    \item When two different threads execute a \code{critical} region that
+        corresponds to a \code{critical} construct that has the same name, the
+        behavior is as if the release flush performed on exit from one of the
+        regions synchronizes with the acquire flush performed on entry to the
+        other region.
 
-\crossreferences
-\begin{itemize}
-\item \code{ompt_callback_flush_t}, see
-\specref{sec:ompt_callback_flush_t}.
+    \item When a thread team executes a \code{barrier} region, the
+	behavior is as if the release flush performed by each thread within
+        the region synchronizes with the acquire flush performed by all other
+        threads within the region.
+
+    \item When executing a \code{taskwait} region that corresponds to a
+        \code{taskwait} construct on which a \code{depend} clause is not
+        present, the behavior is as if each thread that executes a remaining
+        child task performs a release flush upon completion of the child task
+        that synchronizes with an acquire flush performed in the
+        \code{taskwait} region.
+
+    \item When executing a \code{taskgroup} region, the behavior is as if each
+	thread that executes a remaining descendant task performs a release flush
+        upon completion of the descendant task that synchronizes with an
+        acquire flush performed on exit from the \code{taskgroup} region.
+
+    \item When executing an \code{ordered} region that does not arise from
+        stand-alone \code{ordered} directive, the behavior is as if the
+        release flush performed by a thread on exit from the region
+        synchronizes with the acquire flush performed on entry to an
+        \code{ordered} region in the next logical iteration to be executed by
+        a different thread, if it exists.
+
+    \item When executing an \code{ordered} region that arises from a
+        stand-alone \code{ordered} directive, the behavior is as if the
+        release flush performed in the \code{ordered} region from a given
+        source iteration synchronizes with the acquire flush performed in all
+        \code{ordered} regions executed by a different thread that are waiting
+        for dependences on that iteration to be satisfied.
+
+    \item When executing a \code{parallel} region, the behavior is as if the
+        release flush performed by the master thread on entry to the
+        \code{parallel} region synchronizes with the acquire flush performed
+        on entry to each implicit task that is assigned to a different thread.
+
+    \item When generating an explicit task that begins execution on a
+        different thread, the behavior is as if the thread that is executing
+        the generating task performs a release flush that synchronizes with
+        the acquire flush performed by the thread that begins to execute the
+        explicit task.
+
+    \item When a dependent task with one or more predecessor tasks begins
+        execution on a given thread, the behavior is as if each release flush
+        performed by a different thread on completion of a predecessor task
+        synchronizes with the acquire flush performed by the thread that
+        begins to execute the dependent task.
+
+    \item When a task begins execution on a given thread and it is mutually
+        exclusive with respect to another sibling task that is executed by a
+        different thread, the behavior is as if each release flush performed
+        on completion of the sibling task synchronizes with the acquire flush
+        performed by the thread that begins to execute the task.
+
+    \item When executing an \code{omp_unset_lock} region that causes the
+	specified lock to be unset, the behavior is as if a release flush is
+        performed during the \code{omp_unset_lock} region that synchronizes
+        with an acquire flush that is performed during the next
+        \code{omp_set_lock} or \code{omp_test_lock} region to be executed by a
+        different thread that causes the specified lock to be set.
+
+    \item When executing an \code{omp_unset_nest_lock} region that causes
+	the specified nested lock to be unset, the behavior is as if a release flush
+        is performed during the \code{omp_unset_nest_lock} region that
+        synchronizes with an acquire flush that is performed during the next
+        \code{omp_set_nest_lock} or \code{omp_test_nest_lock} region to be
+        executed by a different thread that causes the specified nested lock
+        to be set.  
 \end{itemize}
 
 
