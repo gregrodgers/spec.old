@@ -387,11 +387,11 @@ region are stopped.
 \argdesc
 The input argument \plc{parallel_handle} is an opaque handle for a parallel region
  and selects the parallel region to operate on.
-The input argument \code{nth_handles} selects the thread of the team to be returned.
+The input argument \code{nth_handle} selects the thread of the team to be returned.
 On return the output argument \plc{thread_handle} is an opaque handle for the selected thread.
 
 \restrictions
-The value of \code{nth_handles} must be a non-negative integer smaller than the
+The value of \code{nth_handle} must be a non-negative integer smaller than the
 team size provided as the \plc{ompd-team-size-var} from \code{ompd_get_icv_from_scope}.
 
 \crossreferences
@@ -437,7 +437,7 @@ team size provided as the \plc{ompd-team-size-var} from \code{ompd_get_icv_from_
 %
 %\argdesc
 %The input argument \plc{parallel_handle} is an opaque handle for the parallel team.
-%The input argument \code{nth_handles} selects the thread of the team to be returned.
+%The input argument \code{nth_handle} selects the thread of the team to be returned.
 %On return the output argument \plc{thread_handle} is an opaque handle for the selected thread.
 %
 %\crossreferences
@@ -1048,48 +1048,53 @@ still on the stack of execution on the same thread and was deferred in favor of 
 	\item \code{ompd_release_task_handle} call, see \specref{subsubsubsec:ompd_release_task_handle}.
 \end{itemize}
 
-\subsubsubsection{\hcode{ompd_get_implicit_task_in_parallel}}
-\label{subsubsubsec:ompd_get_implicit_task_in_parallel}
+\subsubsubsection{\hcode{ompd_get_task_in_parallel}}
+\label{subsubsubsec:ompd_get_task_in_parallel}
 \summary
-The \code{ompd_get_implicit_task_in_parallel}  operation enables a tool to obtain a
-vector of pointers to task handles for all implicit tasks associated with a parallel region.
+The  \code{ompd_get_task_in_parallel} operation enables a tool to obtain handles for
+the implicit tasks associated with a parallel region.
 
 \format
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_get_implicit_task_in_parallel(
+ompd_rc_t ompd_get_task_in_parallel(
   ompd_parallel_handle_t *\plc{parallel_handle},
-  ompd_task_handle_t ***\plc{task_handle_vector},
-  int *\plc{num_handles}
+  int \plc{nth_handle},
+  ompd_task_handle_t **\plc{task_handle}
 );
 \end{ompSyntax}
 \end{cspecific}
 
 
 \descr
-This call is meaningful only if all threads associated with the parallel region are stopped.
-The OMPD library must use the memory allocation callback to obtain the memory for the vector of
-pointers to task handles returned by the operation. If the OMPD library needs to allocate
-heap memory for the task handles it returns, it must use the callbacks to acquire this memory.
-After the call the vector and the task handles are `owned' by the tool, which is responsible for
-deallocating them. The task handles must be released calling \code{ompd_release_task_handle}.
-The vector was allocated by the OMPD library using the
-allocation routine passed to it during the call to \code{ompd_initialize}.
-The tool itself must deallocate the vector in a compatible manner.
+A successful invocation of  \code{ompd_get_task_in_parallel} returns a pointer to
+a task handle in \code{*task_handle}.
+This call yields meaningful results only if all OpenMP threads in the parallel
+region are stopped.
 
 \argdesc
-The input argument \plc{parallel_handle} is an opaque handle for a parallel region and selects the parallel region to operate on.
-On return the output argument \plc{task_handle} is set to a handle for the implicit task
-executing on \plc{nth} thread of the parallel region.
+The input argument \plc{parallel_handle} is an opaque handle for a parallel region
+and selects the parallel region to operate on.
+The input argument \code{nth_handle} selects the implicit task of the team to be 
+returned.
+The selected implicit task would return \code{nth_handle} from a call of the 
+\code{omp_get_thread_num()} routine.
+On return the output argument \plc{task_handle} is an opaque handle for the selected 
+implicit task.
+
+\restrictions
+The value of \code{nth_handle} must be a non-negative integer smaller than the
+team size returned by a call to \code{ompd_get_num_threads}.
 
 \crossreferences
 \begin{itemize}
-  \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
-	\item \code{ompd_parallel_handle_t} type, see \specref{subsubsec:ompd_parallel_handle_t}.
+	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
+	\item \code{ompd_parallel_handle_t} type, see 
+	\specref{subsubsec:ompd_parallel_handle_t}.
 	\item \code{ompd_task_handle_t} type, see \specref{subsubsec:ompd_task_handle_t}.
-	\item \code{ompd_release_task_handle} call, see \specref{subsubsubsec:ompd_release_task_handle}.
-	\item \code{ompd_initialize} call, see \specref{subsubsubsec:ompd_initialize}.
+	\item \code{ompd_get_num_threads} call, see 
+	\specref{subsubsubsec:ompd_get_num_threads}.
 \end{itemize}
 
 \subsubsubsection{\hcode{ompd_release_task_handle}}
