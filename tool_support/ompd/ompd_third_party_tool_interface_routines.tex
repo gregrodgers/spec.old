@@ -6,9 +6,13 @@
 
 The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
 before it is unloaded. Per OpenMP process or core file initialization and finalization are also required.
-A tool starts the initialization by calling \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_initialize}).
-Once loaded, the tool can determine the version of the OMPD API supported by the plugin by
-calling \code{ompd_get_version} (see~\specref{subsubsubsec:ompd_get_version}).
+
+Once loaded, the tool can determine the version of the OMPD API supported by the
+plugin by calling \code{ompd_get_api_version} (see~\specref{subsubsubsec:ompd_get_api_version}). If the tool supports the version returned by \code{ompd_get_api_version},
+the tool starts the initialization by calling \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_initialize}) using the version
+of the OMPD API supported by the plugin.  If the tool does not support the version returned by \code{ompd_get_api_version}, it may attempt to call \code{ompd_initialize} with
+a different version.
+
 
 \subsubsubsection{\hcode{ompd_initialize}}
 \label{subsubsubsec:ompd_initialize}
@@ -20,7 +24,10 @@ The \code{ompd_initialize} function initializes the OMPD library.
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_initialize(const ompd_callbacks_t *\plc{callbacks});
+ompd_rc_t ompd_initialize(
+  ompd_word_t \plc{api_version},
+  const ompd_callbacks_t *\plc{callbacks}
+);
 \end{ompSyntax}
 \end{cspecific}
 
@@ -30,7 +37,11 @@ There may be more than one library present in a thid-party tool, such as a debug
 may be controlling a number of devices that may be using different runtime systems which require
 different OMPD libraries. This initialization must be performed exactly once before the tool
 can begin operating on a OpenMP process or core file.
+
 \argdesc
+The \plc{api_version} input argument is the OMPD API version that the tool is requesting to use.
+The tool may call \code{ompd_get_api_version} to obtain the latest version supported by the OMPD library.
+
 The tool provides the OMPD plugin with a set of callback functions in the \plc{callbacks} input argument
 which enables the OMPD plugin to allocate and deallocate memory in the tool's address space, to lookup the
 sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and
@@ -40,28 +51,28 @@ write memory in the device.
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
 	\item \code{ompd_callbacks_t} type, see \specref{subsubsec:ompd_callbacks_t}
+	\item \code{ompd_get_api_version} call, see \specref{subsubsubsec:ompd_get_api_version}
 \end{itemize}
 
-\subsubsubsection{\hcode{ompd_get_version}}
-\label{subsubsubsec:ompd_get_version}
+\subsubsubsection{\hcode{ompd_get_api_version}}
+\label{subsubsubsec:ompd_get_api_version}
 
 \summary
-The \code{ompd_get_version} function returns the OMPD API version.
+The \code{ompd_get_api_version} function returns the OMPD API version.
 
 \format
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_get_version(int *\plc{version});
+ompd_rc_t ompd_get_api_version(ompd_word_t *\plc{version});
 \end{ompSyntax}
 \end{cspecific}
 
-
 \descr
-The tool may call this function to obtain the version number of the OMPD plugin.
+The tool may call this function to obtain the latest OMPD API version number of the OMPD plugin.
 
 \argdesc
-The version number is returned in to the location pointed to by the \plc{version} output argument
+The latest version number is returned in to the location pointed to by the \plc{version} output argument
 
 \crossreferences
 \begin{itemize}
@@ -96,7 +107,7 @@ may be called before \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_init
 Accordingly, the OMPD library must not use heap or
 stack memory for the string it returns to the tool.
 
-The signatures of \code{ompd_get_version} (see~\specref{subsubsubsec:ompd_get_version})
+The signatures of \code{ompd_get_api_version} (see~\specref{subsubsubsec:ompd_get_api_version})
 and \code{ompd_get_version_string} are
 guaranteed not to change in future versions of the API. In contrast, the type definitions and
 prototypes in the rest of the API do not carry the same guarantee. Therefore an OMPD using tool
@@ -231,6 +242,8 @@ tool for this address space.
 \end{itemize}
 
 
+
+
 \subsubsubsection{\hcode{ompd_release_address_space_handle}}
 \label{subsubsubsec:ompd_release_address_space_handle}
 \summary
@@ -272,7 +285,76 @@ implementation must not install signal handlers or otherwise interfere with the 
 configuration.
 
 
-\subsubsection{Available Processors and Threads}
+\subsubsection{Address Space Information}
+
+\subsubsubsection{\hcode{ompd_get_omp_version}}
+\label{subsubsubsec:ompd_get_omp_version}
+
+\summary
+This function may be called by the tool to obtain the version of the OpenMP
+API associated with an address space.
+
+\format
+
+\begin{cspecific}
+\begin{ompSyntax}
+ompd_rc_t ompd_get_omp_version(
+  ompd_address_space_handle_t *\plc{address_space},
+  ompd_word_t *\plc{omp_version}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+The tool may call this function to obtain the version of the OpenMP API associated with the address space.
+
+\argdesc
+The input argument \plc{address_space} is an opaque handle provided by the tool
+to reference the address space of the OpenMP process or device.
+
+Upon return, the output argument \plc{omp_version} will contain the version of the OpenMP runtime in the \plc{_OPENMP} version macro format.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
+	\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
+\end{itemize}
+
+\subsubsubsection{\hcode{ompd_get_omp_version_string}}
+\label{subsubsubsec:ompd_get_omp_version_string}
+
+\summary
+The \code{ompd_get_omp_version_string} function returns a descriptive string for the OpenMP
+API version associated with an address space.
+
+\format
+
+\begin{cspecific}
+\begin{ompSyntax}
+ompd_rc_t ompd_get_omp_version_string(
+  ompd_address_space_handle_t *\plc{address_space},
+  const char **\plc{string}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+After initialization, the tool may call this function to obtain the version of the OpenMP
+API associated with an address space.
+
+\argdesc
+The input argument \plc{address_space} is an opaque handle provided by the tool
+to reference the address space of the OpenMP process or device.
+A pointer to a descriptive version string will be placed into the *\plc{string} output argument.
+The string returned by the
+OMPD library is `owned' by the library, and it must not be modified or released by the tool.
+It is guaranteed to remain valid until the \plc{address_space} handle is released.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
+	\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
+\end{itemize}
 
 \subsubsubsection{\hcode{ompd_get_num_procs}}
 \label{subsubsubsec:ompd_get_num_procs}
