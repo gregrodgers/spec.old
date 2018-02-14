@@ -102,7 +102,7 @@ typedef int (*ompt_enumerate_states_t) (
 
 \descr
 An OpenMP implementation may support only a subset of the states defined by
-the \code{omp_states_t} enumeration type. In addition, an
+the \code{omp_state_t} enumeration type. In addition, an
 OpenMP implementation may support implementation-specific states.
 The \code{ompt_enumerate_states} runtime entry point enables a tool to
 enumerate the thread states supported by an OpenMP implementation.
@@ -177,7 +177,7 @@ while (ompt_enumerate_states_fn(state, &state, &state_name)) {
 \subsubsubsection{\hcode{ompt_enumerate_mutex_impls_t}}
 \label{sec:ompt_enumerate_mutex_impls_t}
 \label{sec:ompt_enumerate_mutex_impls}
-\label{sec:ompt_mutex_impl_unknown}
+\label{sec:ompt_mutex_impl_none}
 
 \summary
 
@@ -197,11 +197,10 @@ typedef int (*ompt_enumerate_mutex_impls_t) (
   int *\plc{next_impl},
   const char **\plc{next_impl_name}
 );
-
-#define ompt_mutex_impl_unknown 0
 \end{omptInquiry}
 \end{ccppspecific}
 
+\code{ompt_mutex_impl_none} is defined as an integer with the value 0.
 
 \descr
 An OpenMP implementation may implement mutual exclusion for locks,
@@ -210,7 +209,7 @@ ways.  The \code{ompt_enumerate_mutex_impls} runtime entry point
 enables a tool to enumerate the
 kinds of mutual exclusion implementations that an OpenMP implementation
 employs.
-The value \code{ompt_mutex_impl_unknown} is reserved to indicate an invalid
+The value \code{ompt_mutex_impl_none} is reserved to indicate an invalid
 implementation.
 
 
@@ -233,7 +232,7 @@ indicating that the enumeration is complete.
 The argument \plc{current_impl} must be a mutex implementation
 kind supported by an OpenMP implementation.  To begin enumerating the
 mutex implementation kinds that an OpenMP implementation supports, a
-tool should pass \code{ompt_mutex_impl_unknown} as the first
+tool should pass \code{ompt_mutex_impl_none} as the first
 argument of the enumerate mutex kinds runtime entry point.  Subsequent
 invocations of the runtime entry point by the tool should pass the
 value assigned to the variable passed by reference as the second
@@ -264,7 +263,7 @@ has previously been assigned to \code{ompt_enumerate_mutex_impls_fn}.
 
 \begin{ccppspecific}
 \begin{omptOther}
-int kind = ompt_mutex_impl_unknown;
+int kind = ompt_mutex_impl_none;
 const char *impl_name;
 while (ompt_enumerate_mutex_impls_fn(impl, &impl, &impl_name)) {
   // note that the runtime supports a mutex value "impl"
@@ -787,7 +786,7 @@ current thread.
 \format
 \begin{ccppspecific}
 \begin{omptInquiry}
-typedef omp_state_t (*ompt_get_state_t) (
+typedef int (*ompt_get_state_t) (
   omp_wait_id_t *\plc{wait_id}
 );
 \end{omptInquiry}
@@ -803,6 +802,12 @@ that indicates the data object upon which the thread is waiting.
 To retrieve the state and wait identifier for the current thread,
 a tool uses the runtime entry point known as
 \code{ompt_get_state} with type signature \code{ompt_get_state_t}.
+
+The returned value may be any one of the states predefined by
+\code{omp_state_t} or a value that represents any implementation 
+specific state. 
+The tool may obtain a string representation for each state with the
+function known as \code{ompt_enumerate_states}.
 
 If the returned state indicates that the thread is waiting for a
 lock, nest lock, critical section, atomic region, or ordered region
@@ -827,6 +832,8 @@ to a variable of the specified type or \code{NULL}.
 \crossreferences
 \begin{itemize}
 \item \code{omp_wait_id_t} type, see \specref{sec:omp_wait_id_t}.
+\item \code{omp_state_t} type, see \specref{sec:omp_state_t}.
+\item \code{ompt_enumerate_states_t} type, see \specref{sec:ompt_enumerate_states_t}.
 \end{itemize}
 
 
@@ -1045,8 +1052,8 @@ indicates the number of the thread in the parallel region executing the task.
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
 \item \code{omp_frame_t} type, see \specref{sec:omp_frame_t}.
-\item \code{ompt_task_type_t} type, see
-  \specref{sec:ompt_task_type_t}.
+\item \code{ompt_task_t} type, see
+  \specref{sec:ompt_task_t}.
 \end{itemize}
 
 \subsubsubsection{\hcode{ompt_get_target_info_t}}
@@ -1649,7 +1656,7 @@ of a trace record for a device.
 \format
 \begin{ccppspecific}
 \begin{omptInquiry}
-typedef ompt_record_type_t (*ompt_get_record_type_t) (
+typedef ompt_record_t (*ompt_get_record_type_t) (
   ompt_buffer_t *\plc{buffer},
   ompt_buffer_cursor_t \plc{current}
 );
