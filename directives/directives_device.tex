@@ -175,18 +175,18 @@ all variables are mapped according to those \code{map} clauses.
 
 \def\omptTargetRegionEvents#1#2#3
 {
-The \plc{#3{-begin}} event occurs when a thread enters a
+The \plc{#3-begin} event occurs when a thread enters a
 #1 region.
 
-The \plc{#3{-end}} event occurs when a thread exits a
+The \plc{#3-end} event occurs when a thread exits a
 #1 region.
 }
 
 \def\omptTargetRegionTools#1#2#3#4
 {
 A thread dispatches a registered \code{ompt_callback_target}
-callback for each occurrence of a \plc{#3{-begin}} and
-\plc{#3{-end}} event in that thread in the context of #4.
+callback for each occurrence of a \plc{#3-begin} and
+\plc{#3-end} event in that thread in the context of #4.
 The callback has type signature
 \code{ompt_callback_target_t}. The callback receives
 \code{ompt_scope_begin} or \code{ompt_scope_end}
@@ -202,7 +202,7 @@ as its \plc{endpoint} argument, as appropriate, and
 \tools
 \omptTargetRegionTools{#1}{#2}{#3}{#4}
 }
-\omptTargetRegion{\code{target}~\code{data}}{ompt\_target\_enter\_data}{target-data}{the task encountering the construct}
+\omptTargetRegion{\code{target}~\code{data}}{ompt_target_enter_data}{target-data}{the task encountering the construct}
 
 \restrictions
 \begin{itemize}
@@ -331,7 +331,7 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 
 \omptTargetRegionTools{#1}{#2}{#3}{#4}
 }
-\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt\_target\_enter\_data}{target-enter-data}{the target task on the host}
+\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt_target_enter_data}{target-enter-data}{the target task on the host}
 
 
 
@@ -439,7 +439,7 @@ If there is no \code{device} clause, the default device is determined by the \pl
 
 When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 %\tools
-\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt\_target\_exit\_data}{target-exit}{the target task on the host}
+\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt_target_exit_data}{target-exit}{the target task on the host}
 
 \restrictions
 \begin{itemize}
@@ -627,14 +627,14 @@ the corresponding private variable is initialized to NULL.
 %\tools
 
 \events
-\omptTargetRegionEvents{\code{target}}{ompt\_target}{target}
+\omptTargetRegionEvents{\code{target}}{ompt_target}{target}
 
 The \plc{target-submit} event occurs prior to creating an initial task on a target device for a target
 region.
 
 % target task
 \tools
-\omptTargetRegionTools{\code{target}}{ompt\_target}{target}{target task on the host}
+\omptTargetRegionTools{\code{target}}{ompt_target}{target}{target task on the host}
 
 A thread dispatches a registered \code{ompt_callback_target_submit}
 callback for each occurrence of a \plc{target-submit} event
@@ -696,6 +696,15 @@ same \code{target} region, and the same thread that threw the exception must cat
   must be a dummy argument that does not have the \code{ALLOCATABLE},
   \code{POINTER} or \code{VALUE} attribute.
 \item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable with a \code{POINTER} or \code{ALLOCATABLE} attribute then the behavior is unspecified if the corresponding list item's variable is modified in the region.
+
+\item Any IEEE exception flag, floating point status, halting mode,
+  underflow mode or rounding mode is set prior to a \code{target} region,
+  the settings are unspecified in the region.
+
+\item Any IEEE exception flag, floating point status, halting mode,
+  underflow mode or rounding mode is set during or in a \code{target}
+  region, the settings are unspecified upon exiting the region.
+
 \end{fortranspecific}
 \end{itemize}
 
@@ -869,7 +878,7 @@ is determined by the \plc{default-device-var} ICV. When an \code{if} clause is p
 clause expression evaluates to \plc{false} then no assignments occur.
 
 %\tools
-\omptTarget{\code{target}~\code{update}}{ompt\_target\_update}{target-update}{the target task on the host}
+\omptTarget{\code{target}~\code{update}}{ompt_target_update}{target-update}{the target task on the host}
 
 \restrictions
 \begin{itemize}
@@ -1090,9 +1099,11 @@ file, namespace or class scope that appear between the two directives.
 The \plc{declaration-definition-seq} defined by a
 \code{declare}~\code{target} directive and an
 \code{end}~\code{declare}~\code{target} directive may contain
-\code{declare}~\code{target} directives without the \code{device_type} clause.
+\code{declare}~\code{target} directives. If a \code{device_type} clause
+is present on the contained \code{declare}~\code{target} directive, then its
+argument determines which versions are made available.
 If a list item appears both in an implicit and explicit list, the explicit
-list takes precedence.
+list determines which versions are made available.
 
 \end{ccppspecific}
 
@@ -1127,8 +1138,7 @@ The enclosing \code{device_type} clause implicitly applies to internal procedure
 \code{declare}~\code{target} directive and a \code{link} clause on
 another \code{declare}~\code{target} directive.
 
-\item The \code{implements} clause and \code{device_type} clause are the only valid combination
-that can appear if either one of them is present.
+\item The \code{implements} clause can only appear with \code{device_type} clause.
 
 \end{itemize}
 
@@ -1570,7 +1580,10 @@ construct then the number of times that any intervening code between
 any two associated loops will be executed is unspecified but will be
 at least once per iteration of the loop enclosing the intervening code
 and at most once per iteration of the innermost loop associated with
-the construct.
+the construct.  If the iteration count of any loop associated with the
+\code{distribute} construct that does not enclose the intervening code is zero
+then the behavior is unspecified.
+
 
 The iteration count for each associated loop is computed before entry to the outermost loop. If execution of any associated loop changes any of the values used to compute any of the iteration counts, then the behavior is unspecified.
 
@@ -1615,7 +1628,7 @@ strictly nested inside a \code{teams} region.
 \item \code{teams} construct, see
 \specref{subsec:teams Construct}
 
-\item \code{ompt_work_distribute}, see \specref{sec:ompt_work_type_t}.
+\item \code{ompt_work_distribute}, see \specref{sec:ompt_work_t}.
 \item \code{ompt_callback_work_t}, see
 \specref{sec:ompt_callback_work_t}.
 \end{itemize}

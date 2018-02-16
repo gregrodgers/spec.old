@@ -67,11 +67,15 @@ TEXFILES=openmp.tex \
          tool_support/tool_support_entrypoints.tex \
          tool_support/wait_id.tex
 
+# check for branches names with "ticket_XXX"
+DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
+
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
 	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 quick:
 	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
@@ -123,9 +127,6 @@ VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --flatten --type="${DIFF_TYPE
 
 VC_DIFF_MINIMAL_OPTS:= --only-changes
 
-# check for branches names with "ticket_XXX"
-DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
-
 git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
@@ -139,7 +140,7 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
-	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp openmp-diff-full.pdf openmp-diff-full-$(DIFF_TICKET_ID).pdf; fi
+	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
 	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
