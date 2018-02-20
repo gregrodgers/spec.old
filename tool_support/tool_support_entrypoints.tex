@@ -145,30 +145,6 @@ Any string returned through the argument
 \plc{next_state_name} must be immutable and defined
 for the lifetime of a program execution.
 
-\vspace{2ex}
-
-\needspace{6\baselineskip}
-\begin{note}
-The following example illustrates how a tool can
-enumerate all states supported by an OpenMP implementation.
-The example assumes that a function pointer to enumerate
-the thread states supported by an OpenMP implementation
-has previously been assigned to \code{ompt_enumerate_states_fn}.
-
-
-\begin{ccppspecific}
-\begin{omptOther}
-int state = omp_state_undefined;
-const char *state_name;
-while (ompt_enumerate_states_fn(state, &state, &state_name)) {
-  // note that the runtime supports a state value "state"
-  // associated with the name "state_name"
-}
-\end{omptOther}
-\end{ccppspecific}
-
-\end{note}
-
 \crossreferences
 \begin{itemize}
 \item \code{omp_state_t}, see \specref{sec:thread-states}.
@@ -250,30 +226,6 @@ the next mutex implementation.
 Any string returned through the argument
 \plc{next_impl_name} must be immutable and defined
 for the lifetime of a program execution.
-
-\needspace{6\baselineskip}
-\begin{note}
-The following example illustrates how a tool can
-enumerate all types of mutex implementations supported by an OpenMP runtime.
-The example assumes that a function pointer to enumerate
-the mutex implementations supported by an OpenMP runtime
-has previously been assigned to \code{ompt_enumerate_mutex_impls_fn}.
-\vspace{2ex}
-
-
-\begin{ccppspecific}
-\begin{omptOther}
-int kind = ompt_mutex_impl_none;
-const char *impl_name;
-while (ompt_enumerate_mutex_impls_fn(impl, &impl, &impl_name)) {
-  // note that the runtime supports a mutex value "impl"
-  // associated with the name "impl_name"
-}
-\end{omptOther}
-\end{ccppspecific}
-
-\end{note}
-
 
 \subsubsubsection{\hcode{ompt_set_callback_t}}
 \label{sec:ompt_set_callback_t}
@@ -435,6 +387,11 @@ typedef ompt_data_t *(*ompt_get_thread_data_t) (void);
 \end{omptInquiry}
 \end{ccppspecific}
 
+\binding
+
+The binding thread for runtime entry point known as
+\code{ompt_get_thread_data} is the current thread.
+
 \descr
 
 Each OpenMP thread has an associated thread data object of type
@@ -453,7 +410,6 @@ When an OpenMP thread is created, its data object will be initialized
 with value \code{ompt_data_none}.
 
 This runtime entry point is \emph{async signal safe}.
-
 \crossreferences
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
@@ -479,15 +435,13 @@ typedef int (*ompt_get_num_procs_t) (void);
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \binding
 
 The binding thread set for runtime entry point known as
-\code{ompt_get_num_procs} is all threads on a device. The effect
-of executing this routine is not related to any specific region
-corresponding to any construct or API routine.
+\code{ompt_get_num_procs} is all threads on a device. 
 
 \descr
+
 The \code{ompt_get_num_procs} runtime entry point returns the
 number of processors that are available on the host device at the time
 the routine is called. This value may change between the time that
@@ -519,14 +473,11 @@ typedef int (*ompt_get_num_places_t) (void);
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \binding
 
-The binding thread set for the region
-of the runtime entry point known as \code{ompt_get_num_places}
-is all threads on a device. The effect of executing this
-routine is not related to any specific region corresponding
-to any construct or API routine.
+The binding thread set for 
+the runtime entry point known as \code{ompt_get_num_places}
+is all threads on a device. 
 
 \descr
 
@@ -574,14 +525,11 @@ typedef int (*ompt_get_place_proc_ids_t) (
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \binding
 
-The binding thread set for the region
-of the runtime entry point known as \code{ompt_get_place_proc_ids}
-is all threads on a device. The effect of executing this
-routine is not related to any specific region corresponding
-to any construct or API routine.
+The binding thread set for 
+the runtime entry point known as \code{ompt_get_place_proc_ids}
+is all threads on a device. 
 
 \descr
 
@@ -638,11 +586,10 @@ typedef int (*ompt_get_place_num_t) (void);
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \binding
 
 The binding thread set
-of the runtime entry point known as \code{ompt_get_place_num}
+for the runtime entry point known as \code{ompt_get_place_num}
 is the current thread.
 
 \descr
@@ -679,7 +626,6 @@ typedef int (*ompt_get_partition_place_nums_t) (
 );
 \end{omptInquiry}
 \end{ccppspecific}
-
 
 \binding
 
@@ -750,7 +696,6 @@ typedef int (*ompt_get_proc_id_t) (void);
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \binding
 
 The binding thread set for
@@ -791,6 +736,11 @@ typedef int (*ompt_get_state_t) (
 );
 \end{omptInquiry}
 \end{ccppspecific}
+
+\binding
+
+The binding thread for runtime entry point known as
+\code{ompt_get_state} is the current thread.
 
 \descr
 
@@ -891,25 +841,29 @@ of interest to a tool by its ancestor level.  Ancestor level 0 refers
 to the innermost parallel region; information about enclosing parallel
 regions may be obtained using larger ancestor levels.
 
-If a parallel region exists at the specified ancestor level
-and the information is currently available,
-information will be returned in the variables \plc{parallel_data} and
-\plc{team_size} passed by reference to the entry point.
-Specifically, a reference to the parallel region's associated data
-object will be assigned to *\plc{parallel_data} and the number of
-threads in the parallel region's team will be assigned to
-*\plc{team_size}.
+The argument \plc{parallel_data} returns the parallel data 
+if the argument is not \code{NULL}.
 
-If no enclosing parallel region exists at the specified ancestor
-level, or the information is currently unavailable,
-the values of variables passed by reference
-*\plc{parallel_data} and *\plc{team_size} will be undefined when the
-entry point returns.
+The argument \plc{team_size} returns the team size if the argument is
+not \code{NULL}.
+
+\effect
+
+If the runtime entry point returns 0 or 1, no argument is modified. Otherwise,
+the entry point has the effects described below.
+
+If a non-\code{NULL} value was passed for \plc{parallel_data}, the
+value returned in *\plc{parallel_data} is a pointer to a data word
+associated with the parallel region at the specified level.
+
+If a non-\code{NULL} value was passed for \plc{team_size}, the value
+returned in *\plc{team_size} is the number of threads in the team
+associated with the parallel region.
 
 \constraints
 While argument \plc{ancestor_level} is passed by
-value, all other arguments to the entry point must be references
-to variables of the specified types.
+value, all other arguments to the entry point must be pointers
+to variables of the specified types or \code{NULL}.
 
 
 \restrictions
@@ -1047,6 +1001,11 @@ the value of *\plc{parallel_data} will be \code{NULL}.
 If a non-\code{NULL} value was passed for \plc{thread_num},
 the value returned in *\plc{thread_num}
 indicates the number of the thread in the parallel region executing the task.
+
+\constraints
+While argument \plc{ancestor_level} is passed by
+value, all other arguments to the entry point must be pointers
+to variables of the specified types or \code{NULL}.
 
 \crossreferences
 \begin{itemize}

@@ -198,122 +198,6 @@ plugin library that maps a thread identifier to a tool thread context.
 %On failure, the callback returns an error code from \code{ompd_rc_t}.
 
 
-\subsubsubsection{\hcode{ompd_callback_get_address_space_context_for_thread_fn_t}}
-\label{subsubsubsec:ompd_callback_get_address_space_context_for_thread_fn_t}
-% the use of \discretionary below overrides the character used for
-% hyphenation when an optional linebreak is used.
-% if \- were used, we'd get a "-" at the end of the line being
-% broken.  We probably don't wantthat, but instead want just a plain
-% linebreak without the "-".
-\index{ompd_callback_get_address_space_context_for_thread_fn_t@{{\scode{ompd_callback_get_address_space_context_\discretionary{}{}{}for_thread_fn_t}}}}
-
-\summary
-The type signature of the callback routine provided by the
-tool the OMPD plugin can use to find the address space context
-for a thread identified by a thread context.
-
-
-% the odd-looking spacing between type and argument name ensures
-% they line up in the pdf
-\begin{cspecific}
-\begin{ompSyntax}
-typedef ompd_rc_t
-(*ompd_callback_get_address_space_context_for_thread_fn_t) (
-  ompd_thread_context_t *\plc{thread_context},
-  ompd_address_space_context_t **\plc{address_space_context}
-);
-\end{ompSyntax}
-\end{cspecific}
-
-\descr
-This callback maps a tool thread context to its address space context.
-
-\argdesc
-This callback finds the tool address space context for the thread
-identified by the tool thread context \plc{thread_context}.
-The callback returns the address space context in \plc{*address_space_context}.
-If \plc{thread_context} refers to a host device thread,
-this function returns the context for the host address space.
-If \plc{thread_context} refers to a device thread,
-this function returns the device's address space.
-
-\crossreferences
-\begin{itemize}
-\item
-  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
-\item
-  \code{ompd_thread_context_t}, \specref{subsubsec:ompd_thread_context_t}
-\item
-  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
-\item
-  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
-\end{itemize}
-
-\subsubsubsection{\hcode{ompd_callback_get_process_context_for_address_space_context_fn_t}}
-\label{subsubsubsec:ompd_callback_get_process_context_for_address_space_context}
-% the use of \discretionary below overrides the character used for
-% hyphenation when an optional linebreak is used.
-% if \- were used, we'd get a "-" at the end of the line being
-% broken.  We probably don't wantthat, but instead want just a plain
-% linebreak without the "-".
-\index{ompd_callback_get_process_context_for_context_fn_t@{{\scode{ompd_callback_get_process_context_for_\discretionary{}{}{}context_fn_t}}}}
-
-\summary
-The type signature of the callback routine provided by the
-third party tool the OMPD library can use to map a tool address space context
-to a tool address space context of the OpenMP process.
-
-
-% the odd-looking spacing between type and argument name ensures
-% they line up in the pdf
-\begin{cspecific}
-\begin{ompSyntax}
-typedef ompd_rc_t
-(*ompd_callback_get_process_context_for_context_fn_t) (
-  ompd_address_space_context_t *\plc{target_device_address_space_context},
-  ompd_address_space_context_t **\plc{host_device_address_space_context},
-);
-\end{ompSyntax}
-\end{cspecific}
-
-\descr
-This callback maps a tool address space context for a target device to
-the address space context for the host device.
-
-\argdesc
-This callback maps the tool address space context
-for a target device provided in \plc{target_device_address_space_context} to
-the address space context of its containing host device which it returns
-in *\plc{host_device_address_space_context}.
-
-\crossreferences
-\begin{itemize}
-\item
-  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
-\item
-  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
-\item
-  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
-\end{itemize}
-\subsubsection{Sizes of Primitive Types}
-
-The tool provides the OMPD plugin with callbacks
-to discover information about the sizes of the basic primitive types
-in an address space.
-This information is important to an OMPD plugin because the architecture
-or programming model of the OpenMP runtime it is examining may be different
-from the its own and that of the tool which loaded it.
-On platforms with multiple programming models, an OMPD plugin may need
-to be able to handle OpenMP runtimes using different sizes for the
-basic types.
-
-\crossreferences
-\begin{itemize}
-\item
-  OMPD --- Overivew, \specref{sec:ompd-overview}
-\end{itemize}
-
-
 \subsubsubsection{\hcode{ompd_callback_sizeof_fn_t}}
 \label{subsubsubsec:ompd_callback_sizeof_fn_t}
 \index{ompd_callback_sizeof_fn_t@{\code{ompd_callback_sizeof_fn_t}}}
@@ -356,8 +240,15 @@ in \plc{*sizes}.
   \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
 \end{itemize}
 
-\subsubsection{\hcode{ompd_callback_symbol_addr_fn_t}}
-\label{subsubsec:ompd_callback_symbol_addr_fn_t}
+\subsubsection{Accessing Memory in the OpenMP Program or Runtime}
+
+The OMPD plugin may need to read from, or write to, the OpenMP program.
+It cannot do this directly, but instead must use the callbacks provided
+to it by the tool, which will perform the operation
+on its behalf.
+
+\subsubsubsection{\hcode{ompd_callback_symbol_addr_fn_t}}
+\label{subsubsubsec:ompd_callback_symbol_addr_fn_t}
 \index{ompd_callback_symbol_addr_fn_t@{\code{ompd_callback_symbol_addr_fn_t}}}
 
 \summary
@@ -433,13 +324,6 @@ The callback returns the address of the symbol in \plc{*symbol_addr}.
 \item
   \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
 \end{itemize}
-
-\subsubsection{Accessing Memory in the OpenMP Program or Runtime}
-
-The OMPD plugin may need to read from, or write to, the OpenMP program.
-It cannot do this directly, but instead must use the callbacks provided
-to it by the tool, which will perform the operation
-on its behalf.
 
 \subsubsubsection{\hcode{ompd_callback_memory_read_fn_t}}
 \label{subsubsubsec:ompd_callback_memory_read_fn_t}
@@ -634,8 +518,11 @@ size, and eventually deallocated when they are no longer needed.
   \code{ompd_size_t}, \specref{subsubsubsec:ompd_size_t}
 \end{itemize}
 
-\subsubsection{\hcode{ompd_callback_print_string_fn_t}}
-\label{subsubsec:ompd_callback_print_string_fn_t}
+\subsubsection{Output}
+\label{subsubsec:output}
+
+\subsubsubsection{\hcode{ompd_callback_print_string_fn_t}}
+\label{subsubsubsec:ompd_callback_print_string_fn_t}
 \index{ompd_callback_print_string_fn_t@{\code{ompd_callback_print_string_fn_t}}}
 
 \summary
@@ -643,24 +530,31 @@ size, and eventually deallocated when they are no longer needed.
 The type signature of the callback provided by the tool the
 OMPD plugin can use to emit output.
 
-
 % the odd-looking spacing between type and argument name ensures
 % they line up in the pdf
 \begin{cspecific}
 \begin{ompSyntax}
 typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (
-  const char *\plc{string}
+  const char *\plc{string},
+  int \plc{category}
 );
 \end{ompSyntax}
 \end{cspecific}
 
 \descr
-The OMPD plugin emits output, such as logging or debug information,
-using a callback supplied to it by the tool.
-It should not emit output directly.
+
+The OMPD plugin may call the \code{ompd_callback_print_string_fn_t} callback function to emit 
+output, such as logging or debug information. If the tool does not want to allow the OMPD plugin to 
+emit output, the tool can provide to the OMPD plugin a \code{NULL} value for the  
+\code{ompd_callback_print_string_fn_t} callback function. Note that the OMPD plugin is prohibited 
+from writing to file descriptors that it did not open.
+
 \argdesc
-\plc{string} is the null-terminated string to be printed.
+The input \plc{string} parameter is the null-terminated string to be printed.
 No conversion or formating is performed on the string.
+
+The input \plc{category} parameter is the category of the string to be printed. The value of 
+\plc{category} is implementation defined.
 
 \crossreferences
 \begin{itemize}
@@ -700,10 +594,6 @@ typedef struct {
   ompd_callback_device_host_fn_t \plc{host_to_device};
   ompd_callback_get_thread_context_for_thread_id_fn_t
     \plc{get_thread_context_for_thread_id};
-  ompd_callback_get_address_space_context_for_thread_fn_t
-    \plc{get_address_space_context_for_thread};
-  ompd_callback_get_process_context_for_address_space_context_fn_t
-    \plc{get_containing_process_context};
 } ompd_callbacks_t;
 \end{ompSyntax}
 }
@@ -751,9 +641,6 @@ memory in the OpenMP program, respectively.
 \plc{get_thread_context_for_thread_id} is a pointer to a function
 the OMPD plugin can use to obtain a thread context that corresponds to
 a thread identifier.
-\plc{get_address_space_context_for_thread} points to a callback
-the OMPD plugin can use to get the tool context that `owns' the
-thread represented by a tool thread context.
 
 
 \crossreferences
@@ -763,11 +650,11 @@ thread represented by a tool thread context.
 \item
   \code{ompd_callback_memory_free_fn_t}, \specref{subsubsubsec:ompd_callback_memory_free_fn_t}
 \item
-  \code{ompd_callback_print_string_fn_t}, \specref{subsubsec:ompd_callback_print_string_fn_t}
+  \code{ompd_callback_print_string_fn_t}, \specref{subsubsubsec:ompd_callback_print_string_fn_t}
 \item
   \code{ompd_callback_sizeof_fn_t}, \specref{subsubsubsec:ompd_callback_sizeof_fn_t}
 \item
-  \code{ompd_callback_symbol_addr_fn_t}, \specref{subsubsec:ompd_callback_symbol_addr_fn_t}
+  \code{ompd_callback_symbol_addr_fn_t}, \specref{subsubsubsec:ompd_callback_symbol_addr_fn_t}
 \item
   \code{ompd_callback_memory_read_fn_t}, \specref{subsubsubsec:ompd_callback_memory_read_fn_t}
 \item
@@ -776,9 +663,5 @@ thread represented by a tool thread context.
   \code{ompd_callback_device_host_fn_t}, \specref{subsubsubsec:ompd_callback_device_host_fn_t}
 \item
   \code{ompd_callback_get_thread_context_for_thread_id_fn_t}, \specref{subsubsubsec:ompd_callback_get_thread_context_for_thread_id_fn_t}
-\item
-  \code{ompd_callback_get_address_space_context_for_thread_fn_t}, \specref{subsubsubsec:ompd_callback_get_address_space_context_for_thread_fn_t}
-\item
-  \code{ompd_callback_get_process_context_for_address_space_context_fn_t}, \specref{subsubsubsec:ompd_callback_get_process_context_for_address_space_context}
 \end{itemize}
 
