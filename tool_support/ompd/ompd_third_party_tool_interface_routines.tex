@@ -880,83 +880,101 @@ currently executing on the thread.
 \end{itemize}
 
 % ilaguna: I'm not sure where to place this text.
-\littleheader{Retrieve the handle for an enclosing task.}
-The OMPD API includes operations to obtain the handle of the parent of a task represented by a
-given task handle. There are two notions of parenthood. The \emph{scheduling} parent task is the
-task that was active when the child task was scheduled to run. The \emph{generating} is the task
-that encountered the OpenMP that caused the child task to be created.
+%\littleheader{Retrieve the handle for an enclosing task.}
+%The OMPD API includes operations to obtain the handle of the parent of a task 
+%represented by a
+%given task handle. There are two notions of parenthood. The \emph{scheduling} parent 
+%task is the
+%task that was active when the child task was scheduled to run. The \emph{generating} is 
+%the task
+%that encountered the OpenMP that caused the child task to be created.
+%
+%The generating and scheduling parents need not be the same. This might happen if the 
+%thread
+%executing a task encounters an OpenMP construct. When this happens, the thread will 
+%enter the
+%runtime. The runtime will set up the tasks to implement the OpenMP program construct, 
+%and then
+%call its schedular to choose a task to execute. If the scheduler chooses a task other 
+%than one of
+%these newly created tasks to run, the scheduling parent of the selected task will not be 
+%the same
+%as its generating parent. The former is the task that the thread was executing most 
+%recently,
+%and from which it entered the runtime. The later is the task which encountered the OpenMP
+%construct it is executing.
 
-The generating and scheduling parents need not be the same. This might happen if the thread
-executing a task encounters an OpenMP construct. When this happens, the thread will enter the
-runtime. The runtime will set up the tasks to implement the OpenMP program construct, and then
-call its schedular to choose a task to execute. If the scheduler chooses a task other than one of
-these newly created tasks to run, the scheduling parent of the selected task will not be the same
-as its generating parent. The former is the task that the thread was executing most recently,
-and from which it entered the runtime. The later is the task which encountered the OpenMP
-construct it is executing.
-
-\subsubsubsection{\hcode{ompd_get_generating_ancestor_task_handle}}
-\label{subsubsubsec:ompd_get_generating_ancestor_task_handle}
+\subsubsubsection{\hcode{ompd_get_generating_task_handle}}
+\label{subsubsubsec:ompd_get_generating_task_handle}
 \summary
-A tool uses \code{ompd_get_generating_ancestor_task_handle} to obtain
-a pointer to the task handle for the task that encountered the OpenMP construct which caused the
-task represented by \code{task_handle} to be created.
+The OMPD tool interface routine \code{ompd_get_generating_task_handle} provides access to 
+the task that encountered the OpenMP task construct which caused the task represented by 
+\code{task_handle} to be created.
 
 \format
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_get_generating_ancestor_task_handle(
+ompd_rc_t ompd_get_generating_task_handle(
   ompd_task_handle_t *\plc{task_handle},
-  ompd_task_handle_t **\plc{parent_task_handle}
+  ompd_task_handle_t **\plc{generating_task_handle}
 );
 \end{ompSyntax}
 \end{cspecific}
 
 
 \descr
-This call is meaningful only if the thread executing the task specified by
-\verb|task_handle|  is stopped.
+
+In this operation, the generating task is the OpenMP task that was active when
+the task specified by \code{task_handle} was created. This call is meaningful only if the 
+thread executing the task specified
+by \code{task_handle}  is stopped. The generating task handle must be released by calling
+\code{ompd_release_task_handle}.
 
 \argdesc
 The input argument \plc{task_handle} is an opaque handle for a task and selects the task to operate on.
-On return the output argument \plc{task_handle} is set to a handle for the task
+On return the output argument \plc{generating_task_handle} is set to a handle for the task
 that created the selected task.
 
 \crossreferences
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
 	\item \code{ompd_task_handle_t} type, see \specref{subsubsec:ompd_task_handle_t}.
+	\item \code{ompd_release_task_handle} call, see 
+	\specref{subsubsubsec:ompd_release_task_handle}.
 \end{itemize}
 
 
-\subsubsubsection{\hcode{ompd_get_scheduling_ancestor_task_handle}}
-\label{subsubsubsec:ompd_get_scheduling_ancestor_task_handle}
+\subsubsubsection{\hcode{ompd_get_scheduling_task_handle}}
+\label{subsubsubsec:ompd_get_scheduling_task_handle}
 \summary
-The \code{ompd_get_scheduling_ancestor_task_handle} returns the
-scheduling parent of the task represented \code{task_handle}.
+The OMPD tool interface routine \code{ompd_get_generating_task_handle} provides access to 
+the task handle for the task that scheduled the task represented by \code{task_handle} on 
+a task scheduling point.
 
 \format
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_get_scheduling_ancestor_task_handle(
+ompd_rc_t ompd_get_scheduling_task_handle(
   ompd_task_handle_t *\plc{task_handle},
-  ompd_task_handle_t **\plc{parent_task_handle}
+  ompd_task_handle_t **\plc{scheduling_task_handle}
 );
 \end{ompSyntax}
 \end{cspecific}
 
 
 \descr
-In this operation, the scheduling parent task is the OpenMP task that was active when
-the child task was scheduled. This call is meaningful only if the thread executing the task specified
-by \code{task_handle}  is stopped. The parent task handle must be released by calling
-\code{ompd_release_task_handle}.
+The scheduling task in this routine is the OpenMP task that was active when
+the task specified by \code{task_handle} was scheduled. 
+This call is meaningful only if the thread executing the task specified
+by \code{task_handle}  is stopped. 
+The scheduling task handle must be released by calling \code{ompd_release_task_handle}.
 
 \argdesc
 The input argument \plc{task_handle} is an opaque handle for a task and selects the task to operate on.
-On return the output argument \plc{parent_task_handle} is set to a handle for the task that is
+On return the output argument \plc{scheduling_task_handle} is set to a handle for the 
+task that is
 still on the stack of execution on the same thread and was deferred in favor of executing the selected task.
 
 \crossreferences
