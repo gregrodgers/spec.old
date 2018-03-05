@@ -1,0 +1,233 @@
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+\section{Tool Control Routines}
+\index{tool control}
+\label{sec:control_tool}
+
+\summary
+The \code{omp_control_tool} routine enables a program to
+pass commands to an active tool.
+
+\format
+
+
+\begin{ccppspecific}
+\begin{ompcFunction}
+int omp_control_tool(int \plc{command}, int \plc{modifier}, void *\plc{arg});
+\end{ompcFunction}
+\end{ccppspecific}
+
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_control_tool(\plc{command}, \plc{modifier})
+integer (kind=omp_control_tool_kind) \plc{command}
+integer (kind=omp_control_tool_kind) \plc{modifier}
+\end{ompfFunction}
+\end{fortranspecific}
+
+\descr
+
+An OpenMP program may use \code{omp_control_tool} to pass commands to
+a tool.
+Using \code{omp_control_tool}, an application can request that
+a tool start or restart data collection when a code
+region of interest is encountered, pause data collection when
+leaving the region of interest,
+flush any data that it has collected so far, or
+end data collection.
+Additionally, \code{omp_control_tool} can be used to pass
+tool-specific commands to a particular tool.
+
+
+
+\begin{ccppspecific}
+\begin{ompcEnum}
+typedef enum omp_control_tool_result_t {
+  omp_control_tool_notool = -2,
+  omp_control_tool_nocallback = -1,
+  omp_control_tool_success = 0,
+  omp_control_tool_ignored = 1
+} omp_control_tool_result_t;
+\end{ompcEnum}
+\end{ccppspecific}
+
+
+
+\begin{fortranspecific}
+\begin{ompfEnum}
+integer (kind=omp_control_tool_result_kind), &
+        parameter :: omp_control_tool_notool = -2
+integer (kind=omp_control_tool_result_kind), &
+        parameter :: omp_control_tool_nocallback = -1
+integer (kind=omp_control_tool_result_kind), &
+        parameter :: omp_control_tool_success = 0
+integer (kind=omp_control_tool_result_kind), &
+        parameter :: omp_control_tool_ignored = 1
+\end{ompfEnum}
+\end{fortranspecific}
+
+
+If no tool is active, the OpenMP implementation will return
+\code{omp_control_tool_notool}. If a tool is active, but it has not
+registered a callback for the \plc{tool-control} event, the OpenMP
+implementation will return \code{omp_control_tool_nocallback}.
+An OpenMP implementation may return other implementation-defined negative
+values $< -64$; an application may assume that any negative return value
+indicates that a tool has not received the command.  A return value of
+\code{omp_control_tool_success} indicates that the tool has performed the
+specified command.  A return value of \code{omp_control_tool_ignored}
+indicates that the tool has ignored the specified command.
+A tool may return other positive values $> 64$ that are tool-defined.
+
+\constraints
+
+The following enumeration type defines four standard commands.
+Table~\ref{table:std-tool-cmds} describes the
+actions that these commands request from a tool.
+
+
+\begin{ccppspecific}
+\begin{ompcEnum}
+typedef enum omp_control_tool_t {
+  omp_control_tool_start = 1,
+  omp_control_tool_pause = 2,
+  omp_control_tool_flush = 3,
+  omp_control_tool_end = 4
+} omp_control_tool_t;
+\end{ompcEnum}
+\end{ccppspecific}
+
+
+
+\begin{fortranspecific}
+\begin{ompfEnum}
+integer (kind=omp_control_tool_kind), &
+          parameter :: omp_control_tool_start = 1
+integer (kind=omp_control_tool_kind), &
+          parameter :: omp_control_tool_pause = 2
+integer (kind=omp_control_tool_kind), &
+          parameter :: omp_control_tool_flush = 3
+integer (kind=omp_control_tool_kind), &
+          parameter :: omp_control_tool_end = 4
+\end{ompfEnum}
+\end{fortranspecific}
+
+
+Tool-specific values for \plc{command} must be $\geq$ 64.
+Tools must ignore \plc{command} values that they are not
+explicitly designed to handle.
+Other values accepted by a tool for \plc{command},
+and any values for \plc{modifier} and \plc{arg} are tool-defined.
+
+
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Command}} & \textsf{\textbf{Action}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Command}} & \textsf{\textbf{Action}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Standard tool control commands.\label{table:std-tool-cmds}}
+\begin{supertabular}{p{2in} p{3.0in}}
+{\scode{omp_control_tool_start}} & Start or
+restart monitoring if it is off. If monitoring is already on, this
+command is idempotent. If monitoring has already been turned off
+permanently, this command will have no effect.\\
+{\scode{omp_control_tool_pause}} & Temporarily
+turn monitoring off. If monitoring is already off, it is idempotent.\\
+{\scode{omp_control_tool_flush}} & Flush any data buffered by a tool.
+This command may be applied whether monitoring is on or off.\\
+{\scode{omp_control_tool_end}} & Turn monitoring off permanently;
+the tool finalizes itself and flushes all output.\\
+\end{supertabular}
+
+\linenumbers
+
+\events
+
+The \plc{tool-control} event occurs in the thread encountering a call
+to \code{omp_control_tool} at a point inside its corresponding OpenMP region.
+
+\tools
+
+A thread dispatches a registered
+\code{ompt_callback_control_tool} callback for each occurrence of a
+\plc{tool-control} event.  The callback executes in the context of the
+call that occurs in the user program.  This callback has type
+signature \code{ompt_callback_control_tool_t}.The callback may return
+any non-negative value, which will be returned to the application by
+the OpenMP implementation as the return value of the
+\code{omp_control_tool} call that triggered the callback.
+
+
+Arguments passed to the callback are those passed by the user to
+\code{omp_control_tool}. If the call is made in Fortran, the tool
+will be passed a \code{NULL} as the third argument to the callback. If
+any of the four standard commands is presented to a tool, the tool
+will ignore the \plc{modifier} and \plc{arg} argument values.
+
+
+
+\crossreferences
+\begin{itemize}
+\item Tool Interface, see
+\specchapterref{chap:ToolsSupport}
+\item \code{ompt_callback_control_tool_t}, see
+\specref{sec:ompt_callback_control_tool_t}
+\end{itemize}
+

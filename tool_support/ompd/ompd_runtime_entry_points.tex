@@ -1,0 +1,274 @@
+\subsection{Runtime Entry Points for OMPD}
+\label{subsec:runtime-entry-points-for-ompd}
+
+Most of the tool's OpenMP-related activity on an OpenMP
+program will be performed through the OMPD interface.
+However, supporting OMPD introduced some requirements of the OpenMP
+runtime.
+These fall into three categories: entrypoints the user's code in
+OpenMP program can call; locations in the OpenMP runtime through
+which control must pass when specific events occur; and data that must
+be accessible to the tool.
+
+Neither a tool nor an OpenMP runtime system know what
+application code a program will launch as parallel regions
+or tasks until the program invokes the runtime system and
+provides a code address as an argument.
+To help a tool control the execution of an OpenMP program
+launching parallel regions or tasks,
+the OpenMP runtime must define a number of symbols
+through which execution must pass when particular events occur
+\emph{and} data collection for OMPD is enabled.
+These locations may, but do not have to, be subroutines.
+They may, for example, be labeled locations.
+The symbols must all have external, \code{C}, linkage.
+
+A tool can gain notification of the event by planting a breakpoint
+at the corresponding named location.
+
+\subsubsection{Beginning Parallel Regions}
+\label{subsubsec:ompd_bp_parallel_begin}
+\index{ompd_bp_parallel_begin@{\code{ompd_bp_parallel_begin}}}
+
+\summary
+The OpenMP runtime must execute through
+\code{ompd_bp_parallel_begin} when a new parallel region is launched.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_parallel_begin ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When starting a new parallel region, the runtime must allow execution
+to flow through \code{ompd_bp_parallel_begin}.
+This should occur after a task encounters a parallel construct,
+but before any implicit task starts to execute the parallel
+region's work.
+
+Control passes through \code{ompd_bp_parallel_begin}
+once per region, and not once for each thread per region.
+
+At the point where the runtime reaches \code{ompd_bp_parallel_begin},
+a tool can map the encountering native thread to an OpenMP
+thread handle using
+\code{ompd_get_thread_handle}.
+At this point the handle returned by \code{ompd_get_current_parallel_handle}
+is that of the new parallel region.
+The tool can find the entry point of the user code that
+the new parallel region will execute by passing the parallel handle region
+to \code{ompd_get_parallel_function}.
+
+The actual number of threads, rather than the requested number of threads,
+in the team is returned by
+\code{ompd_get_num_threads}.
+
+The task handle returned by
+\code{ompd_get_current_task_handle}
+will be that of the task encountering the parallel construct.
+
+The `reenter runtime' address in the information returned by
+\code{ompd_get_task_frame}
+will be that of the stack frame where the thread called the OpenMP
+runtime to handle the parallel construct.
+The `exit runtime' address will be for the stack frame where the thread
+left the OpenMP runtime to execute the user code that encountered
+the parallel construct.
+
+\restrictions
+
+\code{ompd_bp_parallel_begin} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_parallel_begin} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+\crossreferences
+
+\begin{itemize}
+\item
+  \code{ompd_get_thread_handle}, \specref{subsubsubsec:ompd_get_thread_handle}
+\item
+  \code{ompd_get_current_parallel_handle}, \specref{subsubsubsec:ompd_get_current_parallel_handle}
+\item
+  \code{ompd_get_parallel_function}, \specref{subsubsubsec:ompd_get_parallel_function}
+\item
+  \code{ompd_get_num_threads}, \specref{subsubsubsec:ompd_get_num_threads}
+\item
+  \code{ompd_get_current_task_handle}, \specref{subsubsubsec:ompd_get_current_task_handle}
+\item
+  \code{ompd_get_task_frame}, \specref{subsubsubsec:ompd_get_task_frame}
+\end{itemize}
+
+\subsubsection{Ending Parallel Regions}
+\label{subsubsec:ompd_bp_parallel_end}
+\index{ompd_bp_parallel_end@{\code{ompd_bp_parallel_end}}}
+
+The OpenMP runtime must execute through \code{ompd_bp_parallel_end}
+when a parallel region ends.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_parallel_end ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When a parallel region finishes, the OpenMP runtime must allow execution
+to flow through \code{ompd_bp_parallel_end}.
+
+Control passes through \code{ompd_bp_parallel_end}
+once per region, and not once for each thread per region.
+
+At the point the runtime reaches \code{ompd_bp_parallel_end}
+the tool can map the encountering native thread
+to an OpenMP thread handle using \code{ompd_get_thread_handle}.
+\code{ompd_get_current_parallel_handle}
+returns the handle of the terminating parallel region.
+
+\code{ompd_get_current_task_handle}
+returns the handle of the task that encountered the
+parallel construct that initiated the parallel region just
+terminating.
+The `reenter runtime' address in the frame information returned by
+\code{ompd_get_task_frame}
+will be that for the stack frame in which the thread called the
+OpenMP runtime to start the parallel construct just terminating.
+The `exit runtime' address will refer to the stack frame where the
+thread left the OpenMP runtime to execute the user code that
+invoked the parallel construct just terminating.
+
+\restrictions
+
+\code{ompd_bp_parallel_end} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_parallel_end} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_get_thread_handle}, \specref{subsubsubsec:ompd_get_thread_handle}
+\item
+  \code{ompd_get_current_parallel_handle}, \specref{subsubsubsec:ompd_get_current_parallel_handle}
+\item
+  \code{ompd_get_current_task_handle}, \specref{subsubsubsec:ompd_get_current_task_handle}
+\item
+  \code{ompd_get_task_frame}, \specref{subsubsubsec:ompd_get_task_frame}
+\end{itemize}
+
+
+\subsubsection{Beginning Task Regions}
+\label{subsubsec:ompd_bp_task_begin}
+\index{ompd_bp_task_begin@{\code{ompd_bp_task_begin}}}
+
+The OpenMP runtime must execute through \code{ompd_bp_task_begin}
+when a new task is started.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_task_begin ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When starting a new task region, the OpenMP runtime system
+must allow control to pass through \code{ompd_bp_task_begin}.
+
+The OpenMP runtime system will execute through this location after the task
+construct is encountered, but before the new explicit task starts.
+At the point where the runtime reaches \code{ompd_bp_task_begin}
+the tool can map the native thread to an OpenMP handle using
+\code{ompd_get_thread_handle}.
+
+\code{ompd_get_current_task_handle} returns the handle of the new task region.
+The entry point of the user code to be executed by the new task
+is returned from
+\code{ompd_get_task_function}.
+
+\restrictions
+
+\code{ompd_bp_task_begin} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_task_begin} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_get_thread_handle}, \specref{subsubsubsec:ompd_get_thread_handle}
+\item
+  \code{ompd_get_current_task_handle}, \specref{subsubsubsec:ompd_get_current_task_handle}
+\item
+  \code{ompd_get_task_function}, \specref{subsubsubsec:ompd_get_task_function}
+\end{itemize}
+
+\subsubsection{Ending Task Regions}
+\label{subsubsec:ompd_bp_task_end}
+\index{ompd_bp_task_end@{\code{ompd_bp_task_end}}}
+
+\summary
+The OpenMP runtime must execute through \code{ompd_bp_task_end}
+when a task region ends.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_task_end ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When a task region completes, the OpenMP runtime system
+must allow execution to flow through the location \code{ompd_bp_task_end}.
+
+At the point where the runtime reaches \code{ompd_bp_task_end}
+the tool can use
+\code{ompd_get_thread_handle}
+to map the encountering native thread to the corresponding
+OpenMP thread handle.
+At this point \code{ompd_get_current_task_handle}
+returns the handle for the terminating task.
+
+\restrictions
+
+\code{ompd_bp_task_end} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_task_end} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_get_thread_handle}, \specref{subsubsubsec:ompd_get_thread_handle}
+\item
+  \code{ompd_get_current_task_handle}, \specref{subsubsubsec:ompd_get_current_task_handle}
+\end{itemize}
+

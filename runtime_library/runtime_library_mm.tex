@@ -1,0 +1,173 @@
+\section{Memory Management Routines}
+\index{memory management routines}
+\label{sec:Memory Management Routines}
+This section describes routines that support memory management on the current device.
+
+Instances of memory management types must be accessed only through the routines described in this section; programs that otherwise access instances of these types are non-conforming.
+
+\subsection{Memory Management Types}
+\label{subsec:Memory Management Types}
+
+The following type definitions are used by the memory management routines:
+
+\begin{ccppspecific}
+\begin{ompEnv}
+omp_allocator_t;
+
+enum { OMP_NULL_ALLOCATOR = NULL };
+\end{ompEnv}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfEnum}
+integer parameter omp_allocator_kind
+
+integer(kind=omp_allocator_kind), &
+        parameter :: omp_null_allocator = 0
+\end{ompfEnum}
+\end{fortranspecific}
+
+\subsection{\hcode{omp_set_default_allocator}}
+\index{omp_set_default_allocator@{\code{omp_set_default_allocator}}}
+\label{subsec:omp_set_default_allocator}
+
+\summary
+The \code{omp_set_default_allocator} routine sets the default memory allocator to be used by allocation calls, \code{allocate} directives and \code{allocate} clauses that do not specify an allocator.
+
+\format
+\begin{ccppspecific}
+\begin{ompcFunction}
+void omp_set_default_allocator (const omp_allocator_t *\plc{allocator});
+\end{ompcFunction}
+\end{ccppspecific}
+\begin{fortranspecific}
+\begin{ompfSubroutine}
+subroutine omp_set_default_allocator ( \plc{allocator} )
+integer(kind=omp_allocator_kind),intent(in) :: allocator
+\end{ompfSubroutine}
+\end{fortranspecific}
+
+\constraints
+
+The \plc{allocator} argument must point to a valid memory allocator.
+
+\binding
+The binding task set for an \code{omp_set_default_allocator} region is the \emph{binding implicit task}.
+
+\effect
+
+The effect of this routine is to set the value of the \plc{def-allocator-var} ICV of the \emph{binding implicit task} to the value specified in the \plc{allocator} argument.
+
+\crossreferences
+
+\begin{itemize}
+\item \plc{def-allocator-var} ICV, see \specref{sec:Internal Control Variables}.
+\item Memory Allocators, see \specref{sec:Memory Allocators}.
+\item \code{omp_alloc} routine, see \specref{subsec:omp_alloc}.
+\end{itemize}
+
+\subsection{\hcode{omp_get_default_allocator}}
+\index{omp_get_default_allocator@{\code{omp_get_default_allocator}}}
+\label{subsec:omp_get_default_allocator}
+
+\summary
+The \code{omp_get_default_allocator} routine returns the memory allocator to be used by allocation calls, \code{allocate} directives and \code{allocate} clauses that do not specify an allocator.
+
+\format
+\begin{ccppspecific}
+\begin{ompcFunction}
+const omp_allocator_t * omp_get_default_allocator (void);
+\end{ompcFunction}
+\end{ccppspecific}
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(kind=omp_allocator_kind)
+function omp_get_default_allocator ()
+\end{ompfFunction}
+\end{fortranspecific}
+
+\binding
+
+The binding task set for an \code{omp_get_default_allocator} region is the \emph{binding implicit task}.
+
+\effect
+
+The effect of this routine is to return the value of the \plc{def-allocator-var} ICV of the \emph{binding implicit task}.
+
+\crossreferences
+\begin{itemize}
+\item \plc{def-allocator-var} ICV, see \specref{sec:Internal Control Variables}.
+\item Memory Allocators, see \specref{sec:Memory Allocators}.
+\item \code{omp_alloc} routine, see \specref{subsec:omp_alloc}.
+\end{itemize}
+
+
+%\newpage %% HACK
+\vspace{3\baselineskip}
+\begin{ccppspecific}
+\vspace{-3\baselineskip}
+\subsection{\hcode{omp_alloc}}
+\index{omp_alloc@{\code{omp_alloc}}}
+\label{subsec:omp_alloc}
+
+\summary
+The \code{omp_alloc} routine requests a memory allocation from a memory allocator.
+
+\format
+\begin{cspecific}
+\begin{ompcFunction}
+void * omp_alloc (size_t \plc{size}, const omp_allocator_t *\plc{allocator});
+\end{ompcFunction}
+\end{cspecific}
+\begin{cppspecific}
+\begin{ompcFunction}
+void * omp_alloc (
+  size_t \plc{size},
+  const omp_allocator_t *\plc{allocator}=OMP_NULL_ALLOCATOR
+);
+\end{ompcFunction}
+\end{cppspecific}
+
+\constraints
+
+For \code{omp_alloc} invocations appearing in \code{target} regions the \plc{allocator} argument cannot be \code{OMP_NULL_ALLOCATOR} and it must be a constant expression.
+
+\effect
+
+The \code{omp_alloc} routine requests a memory allocation of \plc{size} bytes from the specified memory allocator. If the \plc{allocator} argument is
+\code{OMP_NULL_ALLOCATOR} the memory allocator used by the routine will be the one specified by the \plc{def-allocator-var} ICV of the \emph{binding implicit task}.
+Upon success it returns a pointer to the allocated memory. Otherwise, it returns \code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item Memory allocators, see \specref{sec:Memory Allocators}.
+\end{itemize}
+
+\subsection{\hcode{omp_free}}
+\index{omp_free@{\code{omp_free}}}
+\label{subsec:omp_free}
+
+\summary
+The \code{omp_free} routine deallocates previously allocated memory.
+
+\format
+
+\begin{cspecific}
+\begin{ompcFunction}
+void omp_free ( void *\plc{ptr}, const omp_allocator_t *\plc{allocator});
+\end{ompcFunction}
+\end{cspecific}
+\begin{cppspecific}
+\begin{ompcFunction}
+void omp_free (
+  void *\plc{ptr},
+  const omp_allocator_t *\plc{allocator}=OMP_NULL_ALLOCATOR
+);
+\end{ompcFunction}
+\end{cppspecific}
+
+\effect
+
+The \code{omp_free} routine deallocates the memory to which \plc{ptr} points. The \plc{ptr} argument must point to memory previously allocated with a memory allocator. If the \plc{allocator} argument is specified it must be the memory allocator to which the allocation request was made. If the \plc{allocator} argument is \code{OMP_NULL_ALLOCATOR} the implementation will find the memory allocator used to allocate the memory. Using \code{omp_free} on memory that was already deallocated results in unspecified behavior.
+
+\end{ccppspecific}

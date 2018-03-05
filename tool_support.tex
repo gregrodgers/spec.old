@@ -43,40 +43,30 @@
 %             This is a \plc{var-name}.
 %
 
-\newcommand\longlongint{uint64\_t}
-\newcommand\ulonglongint{uint64\_t}
-\newcommand\callbackarg{argument}
-
 \newcommand{\devicedesc}{
-The \callbackarg{} \plc{device} is a pointer to an opaque object that
+The argument \plc{device} is a pointer to an opaque object that
 represents the target device instance. The pointer to the device
 instance object is used by functions in the device tracing interface
 to identify the device being addressed.
 }
 
 \newcommand{\epdesc}{
-The \callbackarg{} \plc{endpoint} indicates whether the callback is
+The argument \plc{endpoint} indicates whether the callback is
 signalling the beginning or the end of a scope.
 }
 
 \newcommand\codeptrdesc{
-The \callbackarg{} \plc{codeptr\_ra} is used to relate the implementation
+The argument \plc{codeptr_ra} is used to relate the implementation
 of an OpenMP region back to its source code.  In cases where a runtime
 routine implements the region associated with this callback,
-\plc{codeptr\_ra} is expected to contain the return address of the
+\plc{codeptr_ra} is expected to contain the return address of the
 call to the runtime routine.  In cases where the implementation of
-this feature is inlined, \plc{codeptr\_ra} is expected to contain the
+this feature is inlined, \plc{codeptr_ra} is expected to contain the
 return address of the invocation of this callback.  In cases where
 attribution to source code is impossible or inappropriate,
-\plc{codeptr\_ra} may be \code{NULL}.
+\plc{codeptr_ra} may be \code{NULL}.
 }
 
-
-\newcommand{\ompttype}[1]{\subsubsection{#1}}  % section 4.5.7
-\newcommand{\ompttoolsignature}[1]{\subsection{#1}}  % section 4.8.2
-\newcommand{\omptcallbacksignature}[1]{\subsubsection{#1}}  % section 4.8.2
-\newcommand{\omptruntimeentrypoint}[1]{\subsubsection{#1}}  % sections 4.9.*
-\newcommand{\ompteventswithoutdirectives}[1]{\littleheader{#1}}
 
 \chapter{Tool Support}
 \index{tool support}
@@ -85,25 +75,85 @@ attribution to source code is impossible or inappropriate,
 %To enable development of high-quality, portable, \emph{first-party} tools
 %that support monitoring and performance analysis of OpenMP programs
 %developed using any implementation of the OpenMP API, the OpenMP API
-%includes a tool interface known as OMPT. 
+%includes a tool interface known as OMPT.
 
-This chapter describes OMPT---a tool interface for the OpenMP API.
-The chapter begins with an overview of the OMPT interface in
-Section~\ref{sec:ompt-overview}. Next,
-it describes how to initialize (Section~\ref{sec:ompt-initialization})
-and finalize (Sections~\ref{sec:ompt-finalization}) a tool.
+%OMPD-TODO: rewrite to add debugging interface here. Distrinction of 1st/3rd
+%party
+
+This chapter describes OMPT and OMPD, which are a pair of interfaces for first-party and third-party
+tools, respectively.  Section~\ref{sec:ompt-overview} describes OMPT---an interface for first-party tools.
+The section begins with a description of how to initialize (Section~\ref{sec:ompt-initialization})
+and finalize (Section~\ref{sec:ompt-finalization}) a tool.
 Subsequent sections describe details of the interface, including
 data types shared between an OpenMP implementation and a tool
-(Section~\ref{sec:ompt-data-types}), 
+(Section~\ref{sec:ompt-data-types}),
 an interface that enables an OpenMP implementation to determine that a
-tool is available (Section~\ref{sec:tool-interface}),
-type signatures for tool callbacks 
+tool is available (Section~\ref{sec:ompt-check-tool}),
+type signatures for tool callbacks
 that an OpenMP implementation may dispatch for OpenMP events
-(Section~\ref{sec:ompt-tool-callbacks}), and 
+(Section~\ref{sec:ompt-tool-callbacks}), and
 \emph{runtime entry points}---function interfaces
 provided by an OpenMP implementation for use by a tool
-(Section~\ref{sec:entry-points}). 
+(Section~\ref{sec:entry-points}).
 
+Section~\ref{sec:ompd-overview} describes
+OMPD---an interface for  third-party tools such as debuggers.
+Unlike OMPT, a third-party tool exists in a separate process from
+the OpenMP program.
+An OpenMP implementation need not maintain any extra information to support OMPD inquiries from third-party tools
+\emph{unless} it is explicitly instructed to do so.
+Section~\ref{subsec:activating} discusses the mechanisms for
+activating support for OMPD in the OpenMP runtime.
+Section~\ref{subsec:ompd-data-types}  describes the data types shared between the OMPD plugin and a third-party tool.
+Section~\ref{sec:third-party-tool-callback-interface} describes the API provided by the OMPD plugin for use by a third-party tool.
+An OMPD implementation will not interact directly with the OpenMP
+runtime for which it is designed to operate.
+Instead, the third-party tool must provide the OMPD with a set of
+callbacks that the OMPD uses to access the OpenMP runtime.
+This interface is given in
+Section~\ref{sec:third-party-tool-callback-interface}.
+In general, a third-party's tool's OpenMP-related activity will be
+conducted through the OMPD interface.
+However, there are a few instances where the third-party tool needs
+to access the OpenMP runtime directly;
+these cases are discussed in
+Section~\ref{subsec:runtime-entry-points-for-ompd}.
+
+\section{Tool Interfaces Definitions}
+\index{tool interfaces definitions}
+\index{tools header files}
+\label{sec:tool_interfaces_definitions}
+
+\begin{ccppspecific}
+
+A compliant implementation must supply a set of definitions for the OMPT runtime entry 
+points, OMPT callback signatures, OMPD runtime entry points, OMPD tool callback 
+signatures, OMPD tool interface routines, and the special data types of their parameters 
+and return values.
+
+The set of definitions is provided in a header file named \code{omp-tools.h} and must 
+contain a declaration for each of the types defined in 
+Sections~\ref{sec:ompt-data-types} - \ref{sec:entry-points} and
+\ref{subsec:ompd-data-types} - \ref{subsec:runtime-entry-points-for-ompd}. 
+
+In addition, the set of definitions may specify other implementation specific values.
+
+The \code{ompt_start_tool} function, the \code{ompd_dll_locations} function, all OMPD 
+tool interface functions, and all OMPD runtime entry points are external functions with 
+``C'' linkage.
+	
+			
+\end{ccppspecific}
+
+
+
+% OMPT
 \input{tool_support/tool_support_common.tex}
 \input{tool_support/tool_support_callbacks.tex}
 \input{tool_support/tool_support_entrypoints.tex}
+
+% OMPD
+\input{tool_support/tool_support_debug.tex}
+
+%\newpage %% HACK
+\input{tool_support/foundation.tex}

@@ -1,0 +1,667 @@
+\subsection{OMPD Tool Callback Interface}
+\label{subsec:ompd-tool-callback-interface}
+
+For the OMPD plugin to provide information about the internal state
+of the OpenMP runtime system in an OpenMP process or core file,
+it must have a means to extract information from
+the OpenMP process that the tool is debugging.
+The OpenMP process that the tool is operating on may be either a ``live'' process or a core file,
+and a thread may be either a ``live'' thread in an OpenMP process,
+or a thread in a core file.
+To enable OMPD to extract state information from an OpenMP process or core file,
+the tool must supply the OMPD with callback functions to inquire
+about the size of primitive types in the device of the OpenMP process,
+look up the addresses of symbols,
+as well as read and write memory in the device.
+OMPD then uses these callbacks to implement its interface operations.
+Signatures for the tool callbacks used by OMPD are given below.
+
+\subsubsection{Memory Management of OMPD Plugin}
+The OMPD library must not access the heap manager directly. Instead, if it needs heap memory it
+must use the memory allocation and deallocation callback functions that are described in this
+section, \code{ompd_callback_memory_alloc_fn_t} (see~\specref{subsubsubsec:ompd_callback_memory_alloc_fn_t})
+and 
+\code{ompd_callback_memory_free_fn_t} (see~\specref{subsubsubsec:ompd_callback_memory_free_fn_t}),
+which are
+provided by the tool to obtain and release heap memory. This will ensure that the library does not
+interfere with any custom memory management scheme that the tool may use.
+
+If the OMPD library is implemented in \code{C++}, memory management operators like \code{new}
+and \code{delete} in all their variants, \emph{must all} be overloaded and implemented in terms of
+the callbacks provided by the tool. The OMPD library must be coded so that any of its
+definitions of \code{new} or \code{delete} do not interfere with any defined by the tool.
+
+In some cases, the OMPD library will need to allocate memory to return results to the
+tool. This memory will then be `owned' by the tool, which will be responsible for releasing it. It is
+therefore vital that the OMPD library and the tool use the same memory manager.
+
+OMPD handles are created by the OMPD library. These are opaque to the
+tool, and depending on the specific implementation of OMPD may have complex
+internal structure. The tool cannot know whether the handle pointers returned by the API
+correspond to discrete heap allocations. Consequently, the tool must not simply deallocate a
+handle by passing an address it receives from the OMPD library to its own memory manager.
+Instead, the API includes functions that the tool must use when it no longer needs a handle.
+
+Contexts are created by a tool and passed to the OMPD library. The OMPD
+library does not need to release contexts; instead this will be done by the tool after it releases any
+handles that may be referencing the contexts.
+
+\subsubsubsection{\hcode{ompd_callback_memory_alloc_fn_t}}
+\label{subsubsubsec:ompd_callback_memory_alloc_fn_t}
+\index{ompd_callback_memory_alloc_fn_t@{\code{ompd_callback_memory_alloc_fn_t}}}
+
+\summary
+The type signature of the callback routine provided by the tool
+to be used by the OMPD plugin to allocate memory.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_memory_alloc_fn_t) (
+  ompd_size_t \plc{nbytes},
+  void **\plc{ptr}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+The OMPD plugin may call the \code{ompd_callback_memory_alloc_fn_t} callback function to allocate memory.
+
+\argdesc
+The argument \plc{nbytes} gives the size in bytes of the block of memory the
+OMPD wants allocated.
+
+The address of the newly allocated
+block of memory is returned in \plc{*ptr}.
+The newly allocated block is suitably aligned for any type of variable,
+and is not guaranteed to be zeroed.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_size_t}, \specref{subsubsubsec:ompd_size_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\end{itemize}
+
+\subsubsubsection{\hcode{ompd_callback_memory_free_fn_t}}
+\label{subsubsubsec:ompd_callback_memory_free_fn_t}
+\index{ompd_callback_memory_free_fn_t@{\code{ompd_callback_memory_free_fn_t}}}
+
+\summary
+The type signature of the callback routine provided by the
+tool to be used by the OMPD plugin to deallocate memory.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_memory_free_fn_t) (
+  void *\plc{ptr}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+The OMPD plugin calls the \code{ompd_callback_memory_free_fn_t} callback function to
+deallocate memory obtained from a prior call to the \code{ompd_callback_memory_alloc_fn_t}
+callback function.
+
+\argdesc
+\plc{ptr} is the address of the block to be deallocated.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_callback_memory_alloc_fn_t}, \specref{subsubsubsec:ompd_callback_memory_alloc_fn_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\end{itemize}
+
+\subsubsection{Context Management and Navigation}
+
+The tool provides the OMPD plugin with callbacks
+to manage and navigate context relationships.
+
+\subsubsubsection{\hcode{ompd_callback_get_thread_context_for_thread_id_fn_t}}
+\label{subsubsubsec:ompd_callback_get_thread_context_for_thread_id_fn_t}
+% the use of \discretionary below overrides the character used for
+% hyphenation when an optional linebreak is used.
+% if \- were used, we'd get a "-" at the end of the line being
+% broken.  We probably don't wantthat, but instead want just a plain
+% linebreak without the "-".
+\index{ompd_callback_get_thread_context_for_thread_id_fn_t@{{\scode{ompd_callback_get_thread_context_for_\discretionary{}{}{}thread_id_fn_t}}}}
+
+\summary
+The type signature of the callback routine provided by the
+third party tool the OMPD library can use to map a
+thread identifier to a tool \plc{thread context}.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t
+(*ompd_callback_get_thread_context_for_thread_id_fn_t) (
+  ompd_address_space_context_t *\plc{address_space_context},
+  ompd_thread_id_t \plc{kind},
+  ompd_size_t \plc{sizeof_thread_id},
+  const void *\plc{thread_id},
+  ompd_thread_context_t **\plc{thread_context}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+This callback maps a thread identifier within the address
+space identified by \plc{address_space_context} to a tool thread context. The OMPD plugin library
+can use the thread context, for example, to access
+thread local storage (TLS).
+
+\argdesc
+
+The input argument \plc{address_space_context} is an opaque handle provided by the tool
+to reference an address space.
+The input arguments \plc{kind},  \plc{sizeof_thread_id}, and \plc{thread_id} represent a thread identifier.
+On return the output argument \plc{thread_context} provides an opaque handle to the OMPD
+plugin library that maps a thread identifier to a tool thread context.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
+\item
+  \code{ompd_thread_id_t}, \specref{ompd:ompd_thread_id_t}
+\item
+  \code{ompd_size_t}, \specref{subsubsubsec:ompd_size_t}
+\item
+  \code{ompd_thread_context_t}, \specref{subsubsec:ompd_thread_context_t}
+\end{itemize}
+
+%On success the tool \plc{thread context} is returned in \plc{*thread_context}.
+%The \plc{thread context} is created, and remains owned, by the tool.
+%The OMPD plugin can assume that the \plc{thread context} is valid for
+%as long as the tool is holding any references to \plc{thread handles}
+%that may contain the \plc{thread context}.
+%The OMPD plugin library can use the \plc{thread context}, for example, to access
+%thread local storage (TLS).
+
+%On failure, the callback returns an error code from \code{ompd_rc_t}.
+
+
+\subsubsubsection{\hcode{ompd_callback_sizeof_fn_t}}
+\label{subsubsubsec:ompd_callback_sizeof_fn_t}
+\index{ompd_callback_sizeof_fn_t@{\code{ompd_callback_sizeof_fn_t}}}
+
+\summary
+The type signature of the callback routine provided by the
+tool the OMPD plugin can use to find the sizes of the primitive types
+in an address space.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_sizeof_fn_t) (
+  ompd_address_space_context_t *\plc{address_space_context},
+  ompd_device_type_sizes_t *\plc{sizes}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+This callback may be called by the OMPD library to obtain the sizes of the basic
+primitive types for a given address space.
+
+\argdesc
+The callback returns the sizes of
+the basic primitive types used by the \plc{address_space_context}
+in \plc{*sizes}.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
+\item
+  \code{ompd_device_type_sizes_t}, \specref{subsubsec:ompd_device_type_sizes_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\end{itemize}
+
+\subsubsection{Accessing Memory in the OpenMP Program or Runtime}
+
+The OMPD plugin may need to read from, or write to, the OpenMP program.
+It cannot do this directly, but instead must use the callbacks provided
+to it by the tool, which will perform the operation
+on its behalf.
+
+\subsubsubsection{\hcode{ompd_callback_symbol_addr_fn_t}}
+\label{subsubsubsec:ompd_callback_symbol_addr_fn_t}
+\index{ompd_callback_symbol_addr_fn_t@{\code{ompd_callback_symbol_addr_fn_t}}}
+
+\summary
+The type signature of the callback provided by the tool the
+OMPD plugin can use to look up the addresses of symbols in an OpenMP program.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_symbol_addr_fn_t) (
+  ompd_address_space_context_t *\plc{address_space_context},
+  ompd_thread_context_t *\plc{thread_context},
+  const char *\plc{symbol_name},
+  ompd_address_t *\plc{symbol_addr},
+  const char *\plc{file_name}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+This callback function may be called by the OMPD library to look up
+addresses of symbols within an specified address space of the tool.
+
+\argdesc
+This callback looks up the symbol provided in \plc{symbol_name}.
+
+The \plc{address_space_context} input parameter is the tool's representation of the address 
+space of the process, core file, or device. The use of a NULL \plc{address_space_context}
+results in unspecified behavior.
+
+The \plc{thread_context} is an optional input parameter which should be NULL for global memory 
+access. If  \plc{thread_context} is not NULL, it gives the thread specific context for the symbol 
+lookup, for the purpose of calculating thread local storage~(TLS) addresses.
+If the \plc{thread_context} parameter is not NULL, the thread that the \plc{thread_context} 
+argument refers to must be associated either to the process or to the device that corresponds to 
+the \plc{address_space_context} argument.
+
+The \plc{symbol_name} supplied by the OMPD plugin is used verbatim by the tool, and in particular, 
+no name mangling, demangling or other transformations are performed prior to the lookup.
+The \plc{symbol_name} parameter must correspond to a statically allocated symbol within the 
+specified address space. The symbol can correspond to any type of object, such as a variable, 
+thread local storage variable, function, or untyped label. The symbol must be defined and can have 
+a local, global, or weak binding.
+
+The \plc{file_name} parameter is an optional input parameter that indicates the 
+name of the shared library where the symbol is defined, and is intended to help the third party tool 
+disambiguate symbols that are defined multiple times across the executable or shared library files. 
+The shared library name may not be an exact match for the name seen by the tool. If the 
+\plc{file_name} parameter is NULL, the tool will try first finding the symbol in the executable file, 
+and, if the symbol is not found, the tool will try finding the symbol in the shared libraries in the order 
+in which the shared libraries are loaded into the address space. If the \plc{file_name} parameter is 
+not NULL, the tool will try first finding the symbol in the libraries that match the name in the 
+\plc{file_name} parameter, and, if the symbol is not found, the tool will find the symbol following
+the procedure as if the \plc{file_name} parameter is NULL.
+
+The callback does not support finding symbols that are dynamically allocated on the call 
+stack, or statically allocated symbols defined within the scope of a function or subroutine.
+
+The callback returns the address of the symbol in \plc{*symbol_addr}.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
+\item
+  \code{ompd_thread_context_t}, \specref{subsubsec:ompd_thread_context_t}
+\item
+  \code{ompd_address_t}, \specref{subsubsubsec:ompd_address_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\end{itemize}
+
+\subsubsubsection{\hcode{ompd_callback_memory_read_fn_t}}
+\label{subsubsubsec:ompd_callback_memory_read_fn_t}
+\index{ompd_callback_memory_read_fn_t@{\code{ompd_callback_memory_read_fn_t}}}
+
+\summary
+
+The type signature of the callback provided by the tool the
+OMPD plugin can use to read data out of an OpenMP program.
+
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_memory_read_fn_t) (
+  ompd_address_space_context_t *\plc{address_space_context},
+  ompd_thread_context_t *\plc{thread_context},
+  const ompd_address_t *\plc{addr},
+  ompd_size_t \plc{nbytes},
+  void *\plc{buffer}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+The OMPD plugin may call this function callback to have the tool read a block of data from a location within an
+address space into a provided buffer.
+
+\argdesc
+The address from which the data are to be read out of the OpenMP program
+specified by \plc{address_space_context} is given by \plc{addr}.
+\plc{nbytes} gives the number of bytes to be transfered.
+The \plc{thread_context} argument is optional for global memory access,
+and in this case should be NULL.
+If it is not NULL, \plc{thread_context} identifies the thread
+specific context for the memory access for the purpose of accessing
+thread local storage (TLS).
+
+The data are returned through \plc{buffer}, which is allocated and
+owned by the OMPD plugin.
+The contents of the buffer are unstructured, raw bytes.
+It is the responsibility of the OMPD plugin to arrange for
+any transformations such as byte-swapping that may be necessary
+(see~\specref{subsubsubsec:ompd_callback_device_host_fn_t}) to interpret the
+data returned.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
+\item
+  \code{ompd_thread_context_t}, \specref{subsubsec:ompd_thread_context_t}
+\item
+  \code{ompd_address_t}, \specref{subsubsubsec:ompd_address_t}
+\item
+  \code{ompd_size_t}, \specref{subsubsubsec:ompd_size_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callback_device_host_fn_t}, \specref{subsubsubsec:ompd_callback_device_host_fn_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\end{itemize}
+
+\subsubsubsection{\hcode{ompd_callback_memory_write_fn_t}}
+\label{subsubsubsec:ompd_callback_memory_write_fn_t}
+\index{ompd_callback_memory_write_fn_t@{\code{ompd_callback_memory_write_fn_t}}}
+
+\summary
+
+The type signature of the callback provided by the tool the
+OMPD plugin can use to write data to an OpenMP program.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_memory_write_fn_t) (
+  ompd_address_space_context_t *\plc{address_space_context},
+  ompd_thread_context_t *\plc{thread_context},
+  const ompd_address_t *\plc{addr},
+  ompd_size_t \plc{nbytes},
+  const void *\plc{buffer}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+The OMPD plugin may call this function callback to have the tool write a block of data
+to a location within an address space from a provided buffer.
+
+\argdesc
+The address to which the data are to be written in the OpenMP program
+specified by \plc{address_space_context} is given by \plc{addr}.
+\plc{nbytes} gives the number of bytes to be transfered.
+The \plc{thread_context} argument is optional for global memory access,
+and in this case should be NULL.
+If it is not NULL, \plc{thread_context} identifies the thread
+specific context for the memory access for the purpose of accessing
+thread local storage (TLS).
+
+The data to be written are passed through \plc{buffer}, which is allocated and
+owned by the OMPD plugin.
+The contents of the buffer are unstructured, raw bytes.
+It is the responsibility of the OMPD plugin to arrange for
+any transformations such as byte-swapping that may be necessary
+(see~\specref{subsubsubsec:ompd_callback_device_host_fn_t})
+to render the data into a form compatible with the OpenMP runtime.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_address_space_context_t} \specref{subsubsec:ompd_address_space_context_t}
+\item
+  \code{ompd_thread_context_t}, \specref{subsubsec:ompd_thread_context_t}
+\item
+  \code{ompd_address_t}, \specref{subsubsubsec:ompd_address_t}
+\item
+  \code{ompd_size_t}, \specref{subsubsubsec:ompd_size_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callback_device_host_fn_t}, \specref{subsubsubsec:ompd_callback_device_host_fn_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\end{itemize}
+
+\subsubsection{Data Format Conversion}
+\label{subsubsec:data-format-conversion}
+
+The architecuture and/or programming-model of tool and
+OMPD plugin may be different from that of the OpenMP program being
+examined.
+Consequently, the conventions for representing data will differ.
+The callback interface includes operations for converting between
+the conventions, such as byte order (`endianness'),
+used by the tool and OMPD plugin on the
+one hand, and the OpenMP program on the other.
+
+\subsubsubsection{\hcode{ompd_callback_device_host_fn_t}}
+\label{subsubsubsec:ompd_callback_device_host_fn_t}
+\index{ompd_callback_device_host_fn_t@{\code{ompd_callback_device_host_fn_t}}}
+
+\summary
+
+The type signature of the callback provided by the tool the
+OMPD plugin can use to convert data between the formats used by the
+tool and OMPD plugin, and the OpenMP program.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_device_host_fn_t) (
+  ompd_address_space_context_t *\plc{address_space_context},
+  const void *\plc{input},
+  ompd_size_t \plc{unit_size},
+  ompd_size_t \plc{count},
+  void *\plc{output}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+This callback function may be called by the OMPD plugin to convert
+data between formats used by the tool and OMPD plugin, and the OpenMP program.
+\argdesc
+The OpenMP address space associated with the data is given by
+\plc{address_space_context}.
+The source and destination buffers are given by \plc{input}
+and \plc{output}, respectively.
+\plc{unit_size} gives the size of each of the elements to be converted.
+\plc{count} is the number of elements to be transformed.
+
+The input and output buffers are allocated and owned by the OMPD plugin,
+and it is its responsibility to ensure that the buffers are the correct
+size, and eventually deallocated when they are no longer needed.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_address_space_context_t}, \specref{subsubsec:ompd_address_space_context_t}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\item
+  \code{ompd_size_t}, \specref{subsubsubsec:ompd_size_t}
+\end{itemize}
+
+\subsubsection{Output}
+\label{subsubsec:output}
+
+\subsubsubsection{\hcode{ompd_callback_print_string_fn_t}}
+\label{subsubsubsec:ompd_callback_print_string_fn_t}
+\index{ompd_callback_print_string_fn_t@{\code{ompd_callback_print_string_fn_t}}}
+
+\summary
+
+The type signature of the callback provided by the tool the
+OMPD plugin can use to emit output.
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+\begin{ompSyntax}
+typedef ompd_rc_t (*ompd_callback_print_string_fn_t) (
+  const char *\plc{string},
+  int \plc{category}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+
+The OMPD plugin may call the \code{ompd_callback_print_string_fn_t} callback function to emit 
+output, such as logging or debug information. If the tool does not want to allow the OMPD plugin to 
+emit output, the tool can provide to the OMPD plugin a \code{NULL} value for the  
+\code{ompd_callback_print_string_fn_t} callback function. Note that the OMPD plugin is prohibited 
+from writing to file descriptors that it did not open.
+
+\argdesc
+The input \plc{string} parameter is the null-terminated string to be printed.
+No conversion or formating is performed on the string.
+
+The input \plc{category} parameter is the category of the string to be printed. The value of 
+\plc{category} is implementation defined.
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_rc_t}, \specref{subsubsec:ompd_rc_t}
+\item
+  \code{ompd_callbacks_t}, \specref{subsubsec:ompd_callbacks_t}
+\end{itemize}
+
+\subsubsection{The Callback Interface}
+\label{subsubsec:ompd_callbacks_t}
+\index{ompd_callbacks_t@{\code{ompd_callbacks_t}}}
+
+\summary
+
+All the OMPD plugin's interactions with the OpenMP program
+must be through a set of callbacks provided to it by the
+tool which loaded it.
+These callbacks must also be used for allocating or releasing resources,
+such as memory, that the plugin needs.
+
+
+% the odd-looking spacing between type and argument name ensures
+% they line up in the pdf
+\begin{cspecific}
+{\small
+\begin{ompSyntax}
+typedef struct {
+  ompd_callback_memory_alloc_fn_t \plc{alloc_memory};
+  ompd_callback_memory_free_fn_t \plc{free_memory};
+  ompd_callback_print_string_fn_t \plc{print_string};
+  ompd_callback_sizeof_fn_t \plc{sizeof_type};
+  ompd_callback_symbol_addr_fn_t \plc{symbol_addr_lookup};
+  ompd_callback_memory_read_fn_t \plc{read_memory};
+  ompd_callback_memory_write_fn_t \plc{write_memory};
+  ompd_callback_device_host_fn_t \plc{device_to_host};
+  ompd_callback_device_host_fn_t \plc{host_to_device};
+  ompd_callback_get_thread_context_for_thread_id_fn_t
+    \plc{get_thread_context_for_thread_id};
+} ompd_callbacks_t;
+\end{ompSyntax}
+}
+\end{cspecific}
+
+
+\descr
+The set of callbacks the OMPD plugin should use is collected
+in the \code{ompd_callbacks_t} record structure.
+An instance of this type is passed to the OMPD plugin
+as a parameter to \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_initialize}).
+Each field points to a function that the OMPD plugin should use
+for interacting with the OpenMP program, or getting memory from
+the tool.
+
+The \plc{alloc_memory} and \plc{free_memory} fields are
+pointers to functions the OMPD plugin uses to allocate and release
+dynamic memory.
+
+\plc{print_string} points to a function that prints a string.
+
+The architectures or programming models of the OMPD plugin and
+party tool may be different from that of the OpenMP
+program being examined.
+\plc{sizeof_type} points to function that allows
+the OMPD plugin to determine the sizes of the basic integer
+and pointer types used by the OpenMP program.
+Because of the differences in architecture or programming model,
+the conventions for representing data in the OMPD plugin and
+the OpenMP program may be different.
+The \plc{device_to_host} field points to a function which translates
+data from the conventions used by the OpenMP program to that used
+by the tool and OMPD plugin.
+The reverse operation is performed by the function pointed
+to by the \plc{host_to_device} field.
+
+The OMPD plugin may need to access memory in the OpenMP program.
+The \plc{symbol_addr_lookup} field points to a callback the
+OMPD plugin can use to find the address of a global or thread
+local storage (TLS) symbol.
+The \plc{read_memory} and \plc{write_memory} fields are
+pointers to functions for reading from, and writing to, global or TLS
+memory in the OpenMP program, respectively.
+
+\plc{get_thread_context_for_thread_id} is a pointer to a function
+the OMPD plugin can use to obtain a thread context that corresponds to
+a thread identifier.
+
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_callback_memory_alloc_fn_t}, \specref{subsubsubsec:ompd_callback_memory_alloc_fn_t}
+\item
+  \code{ompd_callback_memory_free_fn_t}, \specref{subsubsubsec:ompd_callback_memory_free_fn_t}
+\item
+  \code{ompd_callback_print_string_fn_t}, \specref{subsubsubsec:ompd_callback_print_string_fn_t}
+\item
+  \code{ompd_callback_sizeof_fn_t}, \specref{subsubsubsec:ompd_callback_sizeof_fn_t}
+\item
+  \code{ompd_callback_symbol_addr_fn_t}, \specref{subsubsubsec:ompd_callback_symbol_addr_fn_t}
+\item
+  \code{ompd_callback_memory_read_fn_t}, \specref{subsubsubsec:ompd_callback_memory_read_fn_t}
+\item
+  \code{ompd_callback_memory_write_fn_t}, \specref{subsubsubsec:ompd_callback_memory_write_fn_t}
+\item
+  \code{ompd_callback_device_host_fn_t}, \specref{subsubsubsec:ompd_callback_device_host_fn_t}
+\item
+  \code{ompd_callback_get_thread_context_for_thread_id_fn_t}, \specref{subsubsubsec:ompd_callback_get_thread_context_for_thread_id_fn_t}
+\end{itemize}
+
