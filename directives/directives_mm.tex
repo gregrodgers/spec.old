@@ -91,7 +91,7 @@ Memory allocated will be byte aligned to at least the value specified for the {\
 
 Memory allocated by allocators with the \scode{access} trait defined to be \scode{all} must be accessible by all threads in the device where the allocation was requested. Memory allocated by allocators with the \scode{access} trait defined to be \scode{cgroup} will be memory close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{cgroup} from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocators with the \scode{access} trait defined to be \scode{pteam} will be memory close to all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by  an allocator with the \scode{access} trait defined to be \scode{pteam} from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocator with the \scode{access} trait defined to be \scode{thread} will be memory close to the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{thread} from a thread other than the one that allocated the memory result in unspecified behavior.
 
-The total amount of storage in bytes that an allocator can use is limited by the {\scode{pool_size}} trait. Requests that would result in using more storage than {\scode{pool_size}} will not be fulfilled by the allocator. 
+The total amount of storage in bytes that an allocator can use is limited by the {\scode{pool_size}} trait. For allocators with the \scode{access} trait defined to be \scode{all} this limit refers to allocations from all threads accessing the allocator. For allocators with the \scode{access} trait defined to be \scode{cgroup} this limit refers to allocations from threads accessing the allocator from the same contention group. For allocators with the \scode{access} trait defined to be \scode{pteam} this limit refers to allocations from threads accessing the allocator from the same parallel team. For allocators with the \scode{access} trait defined to be \scode{thread} this limit refers to allocations from each thread accessing the allocator. Requests that would result in using more storage than {\scode{pool_size}} will not be fulfilled by the allocator. 
 
 Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
 
@@ -212,6 +212,7 @@ If no list items are specified then all variables listed in the \code{allocate} 
 \item A variable that is part of another variable (as an array or structure element) cannot appear in an \code{allocate} directive.
 \item The directive must appear in the same scope of the \plc{list item} declaration and before its first use.
 \item At most one \code{allocator} clause can appear on the \code{allocate} directive.
+\item \code{allocate} directives appearing in a \code{target} region must specify an \code{allocator} clause unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same unit scope.
 \begin{ccppspecific}
 \item If a list item has a static storage type, only predefined memory allocator variables can be used in the \code{allocator} clause.
 \end{ccppspecific}
@@ -220,7 +221,6 @@ If no list items are specified then all variables listed in the \code{allocate} 
 \item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be \code{ALLOCATABLE} variables or \code{POINTER} variables allocated by the \code{allocate} statement.
 \item Multiple directives can only be associated with an \code{allocate} statement if list items are specified on each \code{allocate} directive.
 \item If a list item has the \code{SAVE} attribute, or if the list item is a common block name, or if a list item is declared in the scope of a module, then only predefined memory allocator variables can be used in the \code{allocator} clause.
-\item \code{allocate} directives appearing in a \code{target} region must specify an \code{allocator} clause and the \plc{allocator} expression must be evaluable by the compiler.
 \end{fortranspecific}
 \end{itemize}
 
@@ -262,7 +262,7 @@ The storage for new list items that arise from \plc{list items} that appear in t
 \begin{itemize}
 \item For any list item that is specified in the \code{allocate} clause on a directive, a data-sharing attribute clause that may create a private copy of that list item must be specified on the same directive.
 \item For \code{task}, \code{taskloop} or \code{target} directives, allocation requests to memory allocators with the trait \code{access} set to \code{thread} result in unspecified behavior.
-\item \code{allocate} clauses appearing in a \code{target} construct or in a \code{target} region must specify an \plc{allocator} expression must be evaluable by the compiler.
+\item \code{allocate} clauses appearing in a \code{target} construct or in a \code{target} region must specify an \plc{allocator} expression unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same unit scope.
 \end{itemize}
 
 \crossreferences
