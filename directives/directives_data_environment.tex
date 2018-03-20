@@ -53,7 +53,7 @@ This section presents a directive and several clauses for controlling data envir
 \index{data-sharing attribute rules}
 \index{attributes, data-sharing}
 This section describes how the data-sharing attributes of variables referenced in
-data enviroments are determined.
+data environments are determined.
 The following two cases are described separately:
 
 \begin{itemize}
@@ -2162,9 +2162,8 @@ data-sharing attribute, the following implicit data-mapping attribute rules
 apply:
 
 \begin{itemize}
-\item If a \code{defaultmap(tofrom:scalar)} clause is present then a scalar 
-variable is treated as if it had appeared in a \code{map} clause with a 
-\plc{map-type} of \code{tofrom}.
+  \item If a \code{defaultmap} clause is present for the category of the
+    variable, the data mapping attribute is determined by that clause.
 
 \item If a variable is not a scalar then it is treated as if it had appeared 
 in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
@@ -2643,7 +2642,7 @@ implicitly determined.
 The syntax of the \code{defaultmap} clause is as follows:
 
 \begin{ompSyntax}
-defaultmap(tofrom:scalar \textnormal{|} none)
+  defaultmap(\plc{implicit-behavior[:variable-category]})
 \end{ompSyntax}
 
 Where \plc{implicit-behavior} is one of:
@@ -2657,36 +2656,57 @@ Where \plc{implicit-behavior} is one of:
   default
 \end{indentedcodelist}
 
-and \plc{list-item-category} is one of:
+\begin{ccppspecific}
+and \plc{variable-category} is one of:
 \begin{indentedcodelist}
   scalar
   aggregate
   pointer
 \end{indentedcodelist}
+\end{ccppspecific}
 
-\descr The \code{defaultmap} clause sets the implicit mapping behavior for a
-target region.  The default set is equivalent to specifying
-\code{defaultmap(tofrom:aggregate)}, \code{defaultmap(default:pointer)} and
-\code{defaultmap(firstprivate:scalar)}.  Note that the default pointer behavior
-can only be specified with the \code{default} implicit behavior argument, any
-other choice will apply to the scalar storing the pointer but will skip the
-zero-length array section lookup based on the value of the pointer.  All
-variables of a given list-item category referenced in the construct that have
-implicitly determined data-mapping attributes use the specified data-mapping
-attribute.  If no list-item category is specified in the clause, the
-data-mapping attribute is used as the default for all categories.
+\begin{fortranspecific}
+and \plc{variable-category} is one of:
+\begin{indentedcodelist}
+  scalar
+  aggregate
+  allocatable
+  pointer
+\end{indentedcodelist}
+\end{fortranspecific}
 
-The \code{defaultmap(none)} clause requires all variables referenced in the
-construct to have explicit data-mapping or data sharing attributes, or to be
-listed in an \code{is_device_ptr} clause.
+\descr
+The defaultmap clause sets the implicit data-mapping attribute for all variables
+referenced in the construct. If variable-category is specified, the effect of
+the defaultmap clause is as follows:
 
-If a variable referenced in the construct is found to have the data-mapping
-attribute none, the program is malformed.
+\begin{itemize}
 
+\item If \plc{variable-category} is scalar, all scalar variables of
+  non-pointer type that have an implicitly determined data-mapping or
+  data-sharing attribute will have a data-mapping or data-sharing attribute
+  specified by \plc{implicit-behavior}.
 
+\item  If \plc{variable-category} is aggregate or allocatable, all aggregate or
+  allocatable variables that have an implicitly determined data-mapping or
+  data-sharing attribute will have a data-mapping or data-sharing attribute
+  specified by \plc{implicit-behavior}.
 
+\item If \plc{variable-category}  is pointer, all variables of pointer type
+  that have an implicitly determined data-mapping or data-sharing attribute will
+  have a data-mapping or data-sharing attribute specified by
+  \plc{implicit-behavior}.  This is equivalent to explicitly naming the pointer
+  in the appropriate data-sharing or mapping clause, and will not include a
+  zero-length array section and attachment for any \plc{implicit-behavior} other
+  than \code{default}.
 
-
-
-
+\end{itemize}
+ 
+If no variable-category is specified in the clause then implicit-behavior
+specifies the implicitly determined data-mapping or data-sharing attribute for
+all variables referenced in the construct.
+If implicit-behavior is none, each variable referenced in the construct that
+does not have a predetermined data-sharing attribute must be listed in a
+data-mapping attribute clause, a data-sharing attribute clause, or an
+\code{is_device_ptr} clause.
 
