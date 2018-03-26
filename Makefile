@@ -29,6 +29,7 @@ TEXFILES=openmp.tex \
          directives/directives_simd.tex \
          directives/directives_synchronization.tex \
          directives/directives_tasking.tex \
+         directives/directives_teams.tex \
          directives/directives_udr.tex \
          directives/directives_worksharing.tex \
          directives/worksharing-schedule-loop.tex \
