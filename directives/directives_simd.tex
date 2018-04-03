@@ -67,6 +67,7 @@ The syntax of the \code{simd} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
+if(\plc{[}simd :\plc{] scalar-expression})
 safelen(\plc{length})
 simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
@@ -93,6 +94,7 @@ Specifically, all associated \plc{for-loops} must have \plc{canonical loop form}
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
+if(\plc{[}simd :\plc{] scalar-logical-expression})
 safelen(\plc{length})
 simdlen(\plc{length})
 linear(\plc{list[ }:\plc{ linear-step]})
@@ -138,7 +140,10 @@ then the number of times that any intervening code between any two
 associated loops will be executed is unspecified but will be at least
 once per iteration of the loop enclosing the intervening code and at
 most once per iteration of the innermost loop associated with the
-construct.
+construct.  If the iteration count of any loop that is associated with the \code{simd}
+construct and does not enclose the intervening code is zero then the behavior
+is unspecified.
+
 
 The iteration count for each associated loop is computed before entry to the outermost
 loop. If execution of any associated loop changes any of the values used to compute any
@@ -153,7 +158,7 @@ sequence in which the iterations would be executed if the associated
 loop(s) were executed with no SIMD instructions.  At the beginning of
 each logical iteration, the loop iteration variable of each associated
 loop has the value that it would have if the set of the associated
-loop(s) were executed sequentially.  The number of iterations that are
+loop(s) were executed sequentially. The number of iterations that are
 executed concurrently at any given time is implementation defined.
 Each concurrent iteration will be executed by a different SIMD lane.
 Each set of concurrent iterations is a SIMD chunk.  Lexical forward
@@ -162,7 +167,7 @@ within each SIMD chunk.
 
 The \code{safelen} clause specifies that no two concurrent iterations within a SIMD chunk can have a distance in the logical iteration space that is greater than or equal to the value given in the clause.
 The parameter of the \code{safelen} clause must be a constant positive integer expression.
-The \code{simdlen} clause specifies the preferred number of iterations to be executed concurrently.
+The \code{simdlen} clause specifies the preferred number of iterations to be executed concurrently unless an \code{if} clause is present and evaluates to \plc{false}, in which case the preferred number of iterations to be executed concurrently is one.
 The parameter of the \code{simdlen} clause must be a constant positive integer expression.
 
 %\begin{note}
@@ -217,7 +222,8 @@ no intervening code between any two loops.
 
 \item A \plc{modifier} may not be specified on a \code{linear} clause.
 
-\item An \code{atomic} construct or an \code{ordered} construct with the \code{simd} clause is the only OpenMP
+\item An \code{atomic} construct, a \code{concurrent} construct, a \code{simd} construct or an \code{ordered} construct with the \code{simd} clause is the only OpenMP
+
 construct that can be encountered during execution of a \code{simd}
 region.
 
