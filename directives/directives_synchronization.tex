@@ -1448,18 +1448,12 @@ The following restrictions apply to the \code{flush} construct:
 Flush operations implied when executing an \code{atomic} region are described in
 Section \ref{subsec:atomic Construct}.
 
-A \code{flush} region that corresponds to a \code{flush} directive without a list and
-without \plc{memory-order-clause} present is implied at the following locations:
-\begin{itemize}
-\item During a barrier region.
-\item At entry to and exit from \code{parallel} regions.
-\item During a \code{cancel} or \code{cancellation}~\code{point} region, if the \plc{cancel-var} ICV is \plc{true} and cancellation has been activated.
-\end{itemize}
-
 A \code{flush} region that corresponds to a \code{flush} directive with the
 \code{release} clause present is implied at the following locations:
 
 \begin{itemize}
+\item During a barrier region.
+\item At entry to \code{parallel} regions.
 \item At exit from \code{critical} regions.
 \item During \code{omp_unset_lock} and \code{omp_unset_nest_lock}
     regions.
@@ -1467,13 +1461,15 @@ A \code{flush} region that corresponds to a \code{flush} directive with the
 \item At exit from an \code{ordered} region, if a
     \code{threads} clause or a \code{depend} clause with a
     \code{source} dependence type is present, or if no clauses are present.
-
+\item During a \code{cancel} region, if the \plc{cancel-var} ICV is
+    \plc{true}.
 \end{itemize}
 
 A \code{flush} region that corresponds to a \code{flush} directive with the
 \code{acquire} clause present is implied at the following locations:
 
 \begin{itemize}
+\item During a barrier region.
 \item At entry to \code{critical} regions.
 \item During \code{omp_set_lock}, \code{omp_test_lock},
     \code{omp_set_nest_lock}, and \code{omp_test_nest_lock} regions, if
@@ -1483,6 +1479,8 @@ A \code{flush} region that corresponds to a \code{flush} directive with the
 \item At entry to an \code{ordered} region, if a
     \code{threads} clause or a \code{depend} clause with a
     \code{sink} dependence type is present, or if no clauses are present.
+\item Immediately before a cancellation point, if the \plc{cancel-var} ICV is
+    \plc{true} and cancellation has been activated.
 \end{itemize}
 
 \begin{note}
@@ -1557,6 +1555,14 @@ The synchronization behavior of implicit flushes is as follows:
         different thread, the behavior is as if each release flush performed
         on completion of the sibling task synchronizes with the acquire flush
         performed by the thread that begins to execute the task.
+
+    \item When a thread executes a \code{cancel} region, the \plc{cancel-var}
+        ICV is \plc{true}, and cancellation is not already activated for the
+        specified region, the behavior is as if the release flush performed
+        during the \code{cancel} region synchronizes with the acquire flush
+        performed by a different thread immediately before a cancellation
+        point in which that thread observes cancellation was activated for the
+        region.
 
     \item When a thread executes an \code{omp_unset_lock} region that causes the
 	specified lock to be unset, the behavior is as if a release flush is
