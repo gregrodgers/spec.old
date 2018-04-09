@@ -284,13 +284,6 @@ the program.
 \end{fortranspecific}
 
 
-
-
-
-
-
-
-
 \section{Conditional Compilation}
 \label{sec:Conditional Compilation}
 \index{conditional compilation}
@@ -1446,6 +1439,7 @@ the iterator identifier in the expression with the iterator value. If the set of
 \item Iterators cannot appear in the \plc{range-specification}.
 \end{itemize}
 
+
 \section{Variant Directives}
 \label{sec:Variant Directives}
 \index{variant directives}
@@ -1651,3 +1645,136 @@ Otherwise, the result is unspecified.
 \item Context Selectors, see \specref{subsec:Context Selectors}.
 \end{itemize}
 
+\subsection{Directive-Variants Meta-Directive}
+\label{sec:directive variants}
+\summary
+The directive-variants meta-directive can specify multiple directive variants
+of which one may be conditionally selected to replace the meta-directive based
+on the enclosing context.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the directive-variants meta-directive takes one of the
+following forms:
+\begin{ompcPragma}
+#pragma omp directive variants \plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{ompcPragma}
+or
+\begin{ompcPragma}
+#pragma omp begin directive variants \plc{[clause[ [},\plc{] clause] ... ] new-line}
+    \plc{stmts}
+#pragma omp end directive variants
+\end{ompcPragma}
+
+
+\begin{samepage}
+where \plc{clause} is:
+\begin{indentedcodelist}
+    when(\plc{context-selector}: \plc{directive-variant})
+    default(\plc{directive-variant})
+\end{indentedcodelist}
+\end{samepage}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the directive-variants meta-directive takes one of the following
+forms:
+
+\begin{ompfPragma}
+!$omp directive variants \plc{[clause[ [},\plc{] clause] ... ]}
+\end{ompfPragma}
+
+or 
+
+\begin{ompfPragma}
+!$omp begin directive variants \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{stmts}
+!$omp end directive variants
+\end{ompfPragma}
+
+\begin{samepage}
+where \plc{clause} is:
+
+\begin{indentedcodelist}
+    when(\plc{context-selector-specification}: \plc{directive-variant})
+    default(\plc{directive-variant})
+\end{indentedcodelist}
+\end{samepage}
+
+\end{fortranspecific}
+
+In the \code{when} clause, \plc{context-selector-specification} specifies a context
+selector (see \ref{subsec:Context Selectors}).
+
+In the \code{when} and \code{default} clauses, \plc{directive-variant}
+specifies a directive variant that is either an empty string or has the form:
+
+\begin{indentedcodelist}
+\plc{ directive-name [clause[ [},\plc{] clause] ... ]}
+\end{indentedcodelist}
+
+\descr
+
+The directive-variants directive is a meta-directive that
+behaves as if it is either ignored or replaced by the directive variant
+specified in one of the \code{when} or \code{default} clauses that appears on
+the directive.
+
+The OpenMP context for a given meta-directive is defined according to Section
+\ref{subsec:OpenMP Context}.  For each \code{when} clause that appears on the
+meta-directive,  the specified directive variant is a candidate to replace the
+meta-directive if the corresponding context selector is compatible with the
+OpenMP context.  If only one compatible context selector specified by a
+\code{when} clause has the highest computed score, the directive variant
+specified in the same clause will replace the meta-directive. If more than one
+compatible context selector specified in a \code{when} has the highest
+computed score, the directive variant specified by the first of those \code{when}
+clauses will replace the meta-directive.
+
+If no context selector from any \code{when} clause is compatible with the
+OpenMP context and a \code{default} clause is not present, the meta-directive
+has no effect on the execution of program. Otherwise, the directive variant
+specified in the \code{default} clause will replace the meta-directive.
+
+If the directive variant selected to replace the meta-directive is an empty
+string, the behavior is as if the meta-directive has no effect on the
+execution of the program. Otherwise, the behavior is as if an OpenMP directive
+with the directive name and clauses given by the directive variant replaces
+the meta-directive in the program.
+
+The \code{begin}~\code{directive}~\code{variants} directive behaves
+identically to the \code{directive}~\code{variants} directive, except that the
+directive syntax for the specified directive variants must accept a paired
+\code{end}~\plc{directive}.  For any directive variant that is selected to
+replace the \code{begin}~\code{directive}~\code{variants} meta-directive, the
+\code{end}~\code{directive}~\code{variants} directive will be implicitly
+replaced by its paired \code{end}~\plc{directive} to demarcate the statements
+that are affected by or are associated with the directive variant. If no
+directive variant is selected to replace the meta-directive, or if the
+selected directive variant is an empty string, its paired
+\code{end}~\code{directive}~\code{variants} directive is ignored.
+
+\restrictions
+Restrictions for the directive-variants directive are as follows:
+
+\begin{itemize}
+    \item The directive variant appearing in a \code{when} or \code{default}
+        clause must not specify a \code{directive}~\code{variants},
+        \code{begin}~\code{directive}~\code{variants}, or
+        \code{end}~\code{directive}~\code{variants} directive.
+
+    \item The context selector that appears in a \code{when} clause must not
+        specify any properties for the \code{simd} selector.
+
+    \item Any replacement that occurs for a directive-variants meta-directive must
+        not result in a non-conforming OpenMP program.
+
+    \item Any directive variant that appears in a \code{when} or \code{default}
+        clause on a \code{begin}~\code{directive}~\code{variants}
+        meta-directive must specify an OpenMP directive that has a paired \code{end}~\plc{directive}, and
+        the \code{begin}~\code{directive}~\code{variants} directive must have a paired
+        \code{end}~\code{directive}~\code{variants} directive.
+
+    \item The \code{default} clause may appear at most once on the directive.
+\end{itemize}
