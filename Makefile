@@ -23,6 +23,7 @@ TEXFILES=openmp.tex \
          directives/directives_data_environment.tex \
          directives/directives_device.tex \
          directives/directives_if.tex \
+         directives/directives_loops.tex \
          directives/directives_mm.tex \
          directives/directives_nesting.tex \
          directives/directives_parallel.tex \

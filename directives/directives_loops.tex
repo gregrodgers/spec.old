@@ -1,0 +1,480 @@
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+\section{Loop Constructs}
+\label{sec:LoopConstructs}
+
+\subsection{\hcode{distribute} Loop Constructs}
+\label{sec:distribute Loop Constructs}
+
+\subsubsection{\hcode{distribute} Construct}
+\index{distribute@{\code{distribute}}}
+\index{constructs!distribute@{\code{distribute}}}
+\index{device constructs!distribute@{\code{distribute}}}
+\label{subsec:distribute Construct}
+\summary
+The \code{distribute} construct specifies that the iterations of one or more loops will be
+executed by the initial teams in the context of their implicit tasks. The iterations are
+distributed across the initial threads of all initial teams that execute the \code{teams} region to
+which the \code{distribute} region binds.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{distribute} construct is as follows:
+
+\begin{ompcPragma}
+#pragma omp distribute \plc{[clause[ [},\plc{] clause] ... ] new-line}
+   \plc{for-loops}
+\end{ompcPragma}
+
+Where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+private(\plc{list})
+firstprivate(\plc{list})
+lastprivate(\plc{list})
+collapse(\plc{n})
+dist_schedule(\plc{kind[},\plc{ chunk_size]})
+allocate(\plc{[allocator: ]}\plc{list})
+\end{indentedcodelist}
+
+All associated \plc{for-loops} must have the canonical form described in
+\specref{sec:Canonical Loop Form}.
+\end{ccppspecific}
+\bigskip
+
+\begin{fortranspecific}
+The syntax of the \code{distribute} construct is as follows:
+
+\begin{ompfPragma}
+!$omp distribute \plc{[clause[ [},\plc{] clause] ... ]}
+   \plc{do-loops}
+\plc{[}!$omp end distribute\plc{]}
+\end{ompfPragma}
+
+Where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+private(\plc{list})
+firstprivate(\plc{list})
+lastprivate(\plc{list})
+collapse(\plc{n})
+dist_schedule(\plc{kind[},\plc{ chunk_size]})
+allocate(\plc{[allocator: ]}\plc{list})
+\end{indentedcodelist}
+
+If an \code{end}~\code{distribute} directive is not specified, an \code{end}~\code{distribute} directive
+is assumed at the end of the \plc{do-loops}.
+
+Any associated \plc{do-loop} must be a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If an
+\code{end}~\code{distribute} directive follows a \plc{do-construct} in which several loop statements share a \code{DO}
+termination statement, then the directive can only be specified for the outermost of these
+\code{DO} statements.
+\end{fortranspecific}
+
+\begin{samepage}
+
+\binding
+The binding thread set for a \code{distribute} region is the set of initial
+threads executing an enclosing \code{teams} region. A \code{distribute} region
+binds to this \code{teams} region.
+%Only the threads executing the binding \code{teams} region participate in the execution of the loop iterations.
+
+\descr
+The \code{distribute} construct is associated with a loop nest consisting of one or more
+loops that follow the directive.
+
+There is no implicit barrier at the end of a \code{distribute} construct.
+To avoid data races the original
+list items modified due to \code{lastprivate} or \code{linear} clauses
+should not be accessed between the end of the \code{distribute} construct and the end
+of the \code{teams} region to which the \code{distribute} binds.
+
+\end{samepage}
+
+The \code{collapse} clause may be used to specify how many loops are
+associated with the \code{distribute} construct.  The parameter of the
+\code{collapse} clause must be a constant positive integer expression.
+If no \code{collapse} clause is present or its paraemter is 1, the
+only loop that is associated with the \code{distribute} construct is
+the one that immediately follows the \code{distribute} construct.  If
+a \code{collapse} clause is specified with a parameter value greater
+than 1 and more than one loop is associated with the \code{distribute}
+construct, then the iteration of all associated loops are collapsed
+into one larger iteration space.  The sequential execution of the
+iterations in all associated loops determines the order of the
+iterations in the collapsed iteration space.
+
+A distribute loop has logical iterations numbered 0,1,...,N-1 where N
+is the number of loop iterations, and the logical numbering denotes
+the sequence in which the iterations would be executed if the set of
+associated loop(s) were executed sequentially.  At the beginning of
+each logical iteration, the loop iteration variable of each associated
+loop has the value that it would have if the set of the associated
+loop(s) were executed sequentially.
+
+If more than one loop is associated with the \code{distribute}
+construct then the number of times that any intervening code between
+any two associated loops will be executed is unspecified but will be
+at least once per iteration of the loop enclosing the intervening code
+and at most once per iteration of the innermost loop associated with
+the construct.  If the iteration count of any loop that is associated with the
+\code{distribute} construct and does not enclose the intervening code is zero
+then the behavior is unspecified.
+
+
+The iteration count for each associated loop is computed before entry to the outermost loop. If execution of any associated loop changes any of the values used to compute any of the iteration counts, then the behavior is unspecified.
+
+The integer type (or kind, for Fortran) used to compute the iteration count for the collapsed loop is implementation defined.
+
+If \code{dist_schedule} is specified, \plc{kind} must be \code{static}. If specified, iterations are
+divided into chunks of size \plc{chunk_size}, chunks are assigned to the
+initial teams of the league in
+a round-robin fashion in the order of the initial team number. When no \plc{chunk_size} is specified,
+the iteration space is divided into chunks that are approximately equal in size, and at
+most one chunk is distributed to each initial team of the league. The size of the
+chunks is unspecified in this case.
+
+When no \code{dist_schedule} clause is specified, the schedule is implementation defined.
+
+%\tools
+\omptWorksharing{distribute}{ompt_work_distribute}
+
+\restrictions
+Restrictions to the \code{distribute} construct are as follows:
+
+\begin{itemize}
+\item The \code{distribute} construct inherits the restrictions of the loop construct.
+
+\item Each \code{distribute} region must be encountered by the initial
+threads of all initial teams in a league or by none at all.
+
+\item The sequence of the \code{distribute} regions encountered must
+be the same for every initial thread of every initial team in a league.
+
+\item The region corresponding to the \code{distribute} construct must be
+strictly nested inside a \code{teams} region.
+
+\item A list item may appear in a \code{firstprivate} or \code{lastprivate} clause but not both.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item loop construct, see
+\specref{subsec:Loop Construct}.
+
+\item \code{teams} construct, see
+\specref{subsec:teams Construct}
+
+\item \code{ompt_work_distribute}, see \specref{sec:ompt_work_t}.
+\item \code{ompt_callback_work_t}, see
+\specref{sec:ompt_callback_work_t}.
+\end{itemize}
+
+
+
+
+
+\subsubsection{\hcode{distribute}~\hcode{simd} Construct}
+\index{distribute simd@{\code{distribute}~\code{simd}}}
+\index{constructs!distribute simd@{\code{distribute}~\code{simd}}}
+\index{device constructs!distribute simd@{\code{distribute}~\code{simd}}}
+\label{subsec:distribute simd Construct}
+\summary
+The \code{distribute}~\code{simd} construct specifies a loop that will be distributed across the
+master threads of the \code{teams} region and executed concurrently using SIMD instructions. The \code{distribute}~\code{simd} construct is a composite construct.
+
+\syntax
+The syntax of the \code{distribute}~\code{simd} construct is as follows:
+
+\begin{ccppspecific}
+\begin{ompcPragma}
+#pragma omp distribute simd \plc{[clause[ [},\plc{] clause] ... ] newline}
+   \plc{for-loops}
+\end{ompcPragma}
+
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or \code{simd}
+directives with identical meanings and restrictions.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfPragma}
+!$omp distribute simd \plc{[clause[ [},\plc{] clause] ... ]}
+   \plc{do-loops}
+\plc{[}!$omp end distribute simd\plc{]}
+\end{ompfPragma}
+
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or \code{simd}
+directives with identical meanings and restrictions.
+
+If an \code{end}~\code{distribute}~\code{simd} directive is not specified, an \code{end}~\code{distribute}~\code{simd}
+directive is assumed at the end of the \plc{do-loops}.
+\end{fortranspecific}
+
+\descr
+The \code{distribute}~\code{simd} construct will first distribute the iterations of the associated
+loop(s) according to the semantics of the \code{distribute} construct and any clauses that
+apply to the distribute construct. The resulting chunks of iterations will then be
+converted to a SIMD loop in a manner consistent with any clauses that apply to the
+\code{simd} construct. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
+
+\events
+
+This composite construct generates the same events as the \code{distribute} construct.
+
+\tools
+
+This composite construct dispatches the same callbacks as the \code{distribute} construct.
+
+\restrictions
+\begin{itemize}
+\item The restrictions for the \code{distribute} and \code{simd} constructs apply.
+
+\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+
+\item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{simd} construct, see
+\specref{subsec:simd Construct}.
+
+\item \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Data attribute clauses, see
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Events and tool callbacks for the \code{distribute} construct, see
+\specref{subsec:simd Construct}.
+
+\end{itemize}
+
+
+
+
+
+
+
+
+
+\subsubsection{Distribute Parallel Loop Construct}
+\index{distribute parallel loop construct}
+\index{constructs!distribute parallel loop}
+\index{device constructs!distribute parallel loop}
+\index{constructs!distribute parallel for@{\code{distribute}~\code{parallel}~\code{for}}}
+\index{constructs!distribute parallel do@{\code{distribute}~\code{parallel}~\code{do}}}
+\label{subsec:Distribute Parallel Loop Construct}
+\summary
+The distribute parallel loop construct specifies a loop that can be executed in parallel by
+multiple threads that are members of multiple teams. The distribute parallel loop construct is a composite construct.
+
+\syntax
+The syntax of the distribute parallel loop construct is as follows:
+
+\begin{ccppspecific}
+\begin{ompcPragma}
+#pragma omp distribute parallel for \plc{[clause[ [},\plc{] clause] ... ] newline}
+    \plc{for-loops}
+\end{ompcPragma}
+
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
+directives with identical meanings and restrictions.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfPragma}
+!$omp distribute parallel do \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{do-loops}
+\plc{[}!$omp end distribute parallel do\plc{]}
+\end{ompfPragma}
+
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
+directives with identical meanings and restrictions.
+
+If an \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is not specified, an
+\code{end}~\code{distribute}~\code{parallel}~\code{do} directive is assumed at the end of the \plc{do-loops}.
+\end{fortranspecific}
+
+\descr
+The distribute parallel loop construct will first distribute the iterations of the associated loop(s) into chunks according to the semantics of the \code{distribute} construct and any clauses that apply to the \code{distribute} construct. Each of these chunks will form a loop. Each resulting loop will then be distributed across the threads within the teams region to which the \code{distribute} construct binds in a manner consistent with any clauses that apply to the parallel loop construct.
+The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
+
+\events
+
+This composite construct generates the same events as the \code{distribute} and parallel loop constructs.
+
+\tools
+
+This composite construct dispatches the same callbacks as the \code{distribute} and parallel loop constructs.
+
+%% BRONIS: Ugly trick to avoid page starting with end c/C++ sentinel
+\vspace{-6pt}
+
+\restrictions
+\begin{itemize}
+\item The restrictions for the \code{distribute} and parallel loop constructs apply.
+\item No \code{ordered} clause can be specified.
+\item No \code{linear} clause can be specified.
+\item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
+\end{itemize}
+
+%% BRONIS: Another ugly trick to avoid page starting with end c/C++ sentinel
+\vspace{-6pt}
+
+\crossreferences
+\begin{itemize}
+\item \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Parallel loop construct, see
+\specref{subsec:Parallel Loop Construct}.
+
+\item Data attribute clauses, see
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Events and tool callbacks for \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Events and tool callbacks for parallel loop construct, see
+\specref{subsec:Parallel Loop Construct}.
+
+\end{itemize}
+
+
+
+
+
+
+\subsubsection{Distribute Parallel Loop SIMD Construct}
+\label{subsec:Distribute Parallel Loop SIMD Construct}
+\index{distribute parallel loop SIMD construct}
+\index{constructs!distribute parallel loop SIMD}
+\index{constructs!distribute parallel for simd@{\code{distribute}~\code{parallel}~\code{for}~\code{simd}}}
+\index{constructs!distribute parallel do simd@{\code{distribute}~\code{parallel}~\code{do}~\code{simd}}}
+\index{device constructs!distribute parallel loop SIMD}
+\summary
+The distribute parallel loop SIMD construct specifies a loop that can be executed
+concurrently using SIMD instructions in parallel by multiple threads that are members
+of multiple teams. The distribute parallel loop SIMD construct is a composite construct.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the distribute parallel loop SIMD construct is as follows:
+
+\begin{ompcPragma}
+#pragma omp distribute parallel for simd \plc{\}
+            \plc{[clause[ [},\plc{] clause] ... ] newline}
+    \plc{for-loops}
+\end{ompcPragma}
+
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
+SIMD directives with identical meanings and restrictions
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the distribute parallel loop SIMD construct is as follows:
+
+\begin{ompfPragma}
+!$omp distribute parallel do simd \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{do-loops}
+\plc{[}!$omp end distribute parallel do simd\plc{]}
+\end{ompfPragma}
+
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
+SIMD directives with identical meanings and restrictions.
+
+If an \code{end}~\code{distribute}~\code{parallel}~\code{do}~\code{simd} directive is not specified, an
+\code{end}~\code{distribute}~\code{parallel}~\code{do}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
+\end{fortranspecific}
+
+\descr
+The distribute parallel loop SIMD construct will first distribute the iterations of the
+associated loop(s) according to the semantics of the \code{distribute} construct and any
+clauses that apply to the \code{distribute} construct. The resulting loops will then be
+distributed across the threads contained within the \code{teams} region to which the
+\code{distribute} construct binds in a manner consistent with any clauses that apply to the
+parallel loop construct. The resulting chunks of iterations will then be converted to a
+SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct.
+The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
+
+\events
+
+This composite construct generates the same events as the \code{distribute} and parallel loop constructs.
+
+\tools
+
+This composite construct dispatches the same callbacks as the \code{distribute} and parallel loop constructs.
+
+\restrictions
+\begin{itemize}
+\item The restrictions for the \code{distribute} and parallel loop SIMD constructs apply.
+\item No \code{ordered} clause can be specified.
+\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+\item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Parallel loop SIMD construct, see
+\specref{subsec:Parallel Loop SIMD Construct}.
+
+\item Data attribute clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item Events and tool callbacks for \code{distribute} construct, see
+\specref{subsec:distribute Construct}.
+
+\item Events and tool callbacks for parallel loop construct, see
+\specref{subsec:Parallel Loop Construct}.
+
+\end{itemize}
+
+
+\subsection{concurrent Construct}
+THE SECTION ``CONCURRENT CONSTRUCT'' SHOULD GO HERE.
