@@ -1239,6 +1239,55 @@ first element of the \plc{bind-var} ICV; otherwise, the \code{proc_bind} clause 
 
 
 
+%% \filbreak
+\begin{ccppspecific}
+\section{Array Shaping}
+\label{sec:Array Shaping}
+\index{array shaping}
+If a variable is an array with an unspecified dimension or a pointer, 
+then a shape-operator can be used to specify the size of the pointed 
+to array. The shape of an array is represented as 
+(\plc{s}_\plc{0},\plc{s}_\pcl{1},...,\plc{s}_{\plc{n-1}}), where \plc{n} 
+is the number of dimensions and \plc{s}_\plc{i} (0 \leq \plc{i} < \plc{n}) 
+is the number of elements in the \plc{i}\textsuperscript{\plc{th}}} dimension.
+Formally, the syntax of the shape-operator is as follows:
+
+\begin{indentedcodelist}
+[\plc{ shaped-pointer-variable } := ([\plc{s}_\plc{0}][\plc{s}_\plc{1}]...[\plc{s}_\plc{n-1}}])\plc{pointer-variable}
+\end{indentedcodelist}
+
+Each \plc{s}_\plc{i} is an integral type expression that must 
+evaluate to a non-negative integer.
+
+% TODO: consider removing this in future ticket
+The shape-operator may be used as part of the designation of an array section.
+
+The shape-operator does not allocate storage. The behavior when the 
+shape-operator designates unallocated storage is unspecified.
+
+\restrictions
+Restrictions on the shape-operator are as follows:
+
+\begin{itemize}
+\item The shape-operator can appear only in clauses where it is 
+      explicitly allowed.
+
+\item The type of the base expression appearing in an array section must be
+      an array or pointer type.
+
+\item If the type of the base expression of the array section is a pointer 
+      type, the base expression must be an lvalue expression.
+
+\begin{cppspecific}
+\item If the type of the base expression of a shape-operator is a reference 
+      to a type \plc{T} then the type will be considered to be \plc{T} for 
+      all purposes of the designated array.
+
+\item A shape-operator cannot be used in a C++ user-defined \code{[]}-operator.
+\end{cppspecific}
+
+\end{itemize}
+\end{ccppspecific}
 
 
 
@@ -1254,11 +1303,27 @@ An array section designates a subset of the elements in an array.
 To specify an array section in an OpenMP construct, array subscript expressions are
 extended with the following syntax:
 \begin{indentedcodelist}
+[\plc{ lower-bound }:\plc{ length }:\plc{ stride}] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ length }:\plc{ }] \textnormal{or}
+
 [\plc{ lower-bound }:\plc{ length }] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ }:\plc{ stride}] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ }:\plc{ }] \textnormal{or}
 
 [\plc{ lower-bound }:\plc{ }] \textnormal{or}
 
+[ :\plc{ length }:\plc{ stride}] \textnormal{or}
+
+[ :\plc{ length }:\plc{ }] \textnormal{or}
+
 [ :\plc{ length }] \textnormal{or}
+
+[\plc{ }:\plc{ }:\plc{ stride}]
+
+[\plc{ }:\plc{ }:\plc{ }]
 
 [\plc{ }:\plc{ }]
 \end{indentedcodelist}
@@ -1274,12 +1339,12 @@ Array sections are allowed on multidimensional arrays. Base language array subsc
 expressions can be used to specify length-one dimensions of multidimensional array
 sections.
 
-The \plc{lower-bound} and \plc{length} are integral type expressions. When evaluated they
-represent a set of integer values as follows:
+The \plc{lower-bound}, \plc{length} and \plc{stride} are integral type 
+expressions. When evaluated they represent a set of integer values as follows:
 
-\{ \plc{lower-bound}, \plc{lower-bound} + 1, \plc{lower-bound} + 2,... , \plc{lower-bound} + \plc{length} - 1 \}
+\{ \plc{lower-bound}, \plc{lower-bound} + \plc{stride}, \plc{lower-bound} + 2 * \plc{stride},... , \plc{lower-bound} + ((\plc{length} - 1) * \plc{stride}) \}
 
-The \plc{length} must evaluate to a non-negative integer.
+The \plc{length} and \plc{stride} must evaluate to non-negative integers.
 
 When the size of the array dimension is not known, the \plc{length} must be specified
 explicitly.
@@ -1288,6 +1353,8 @@ When the \plc{length} is absent, it defaults to the size of the array dimension 
 \plc{lower-bound}.
 
 When the \plc{lower-bound} is absent it defaults to 0.
+
+When the \plc{stride} is absent it defaults to 1.
 
 % TODO: consider adding this in future ticket
 %Each array element specified by an array section is determined according to
@@ -1328,6 +1395,9 @@ Restrictions to array sections are as follows:
 
 \begin{itemize}
 \item An array section can appear only in clauses where it is explicitly allowed.
+
+\item A \plc{stride} expression may not be specified unless otherwise stated.
+
 \begin{ccppspecific}
 %\item An array section can only be specified for a base expression.
 \item An element of an array section with a non-zero size must have a complete type.
@@ -1347,8 +1417,6 @@ Restrictions to array sections are as follows:
 
 \begin{fortranspecific}
 
-\item A stride expression may not be specified unless otherwise stated.
-
 \item The upper bound for the last dimension of an assumed-size dummy
   array must be specified.
 
@@ -1360,6 +1428,9 @@ Restrictions to array sections are as follows:
 
 
 \end{itemize}
+
+
+
 
 \section{Iterators}
 \index{iterators}
