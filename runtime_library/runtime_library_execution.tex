@@ -2166,33 +2166,29 @@ ICV, which determines the maximum value that can be specified in the \code{prior
 \label{subsec:omp_pause_resource}
 \summary
 
-The \code{omp_pause_resource} routine enables the runtime to 
+The \code{omp_pause_resource} routine allows the runtime to 
 relinquish resources used by OpenMP on the specified device.
 
 \begin{samepage}
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-int omp_pause_resource(int device, omp_pause_resource_t kind);
+int omp_pause_resource(omp_pause_resource_t kind, int device_num);
 \end{ompcFunction}
 \end{ccppspecific}
 \end{samepage}
 
 \begin{fortranspecific}
 \begin{ompfFunction}
-integer function omp_get_max_task_priority(device, kind)
-integer device
+integer function omp_pause_resource(kind, device_num)
 integer (kind=omp_pause_resource_kind) kind
+integer device_num
 \end{ompfFunction}
 \end{fortranspecific}
 
 \constraints
 
-The first argument passed to this routine indicates which device is paused. The device parameter
-must be greater than or equal to zero and less than the result of \code{omp_get_num_devices()}
-or equal to the result of a call to \code{omp_get_initial_device()}.
-
-The second argument passed to this routine can be one of the valid OpenMP pause kind, 
+The first argument passed to this routine can be one of the valid OpenMP pause kind, 
 or any implementation specific pause kind. The C/C++ header file
 (\code{omp.h}) and the Fortran include file (\code{omp_lib.h}) and/or Fortran~90 module file
 (\code{omp_lib}) define the valid constants. 
@@ -2204,8 +2200,8 @@ specific values:
 \begin{ccppspecific}
 \begin{ompcFunction}
 typedef enum omp_pause_resource_t {
-  omp_pause_soft = 0,
-  omp_pause_hard = 1
+  omp_pause_soft = 1,
+  omp_pause_hard = 2
 } omp_pause_resource_t;
 \end{ompcFunction}
 \end{ccppspecific}
@@ -2213,11 +2209,16 @@ typedef enum omp_pause_resource_t {
 
 \begin{fortranspecific}
 \begin{ompfFunction}
-integer (kind=omp_pause_resource_kind, parameter :: omp_pause_soft = 0
-integer (kind=omp_pause_resource_kind), parameter :: omp_pause_hard = 1
+integer (kind=omp_pause_resource_kind), parameter :: &
+  omp_pause_soft = 1
+integer (kind=omp_pause_resource_kind), parameter :: &
+  omp_pause_hard = 2
 \end{ompfFunction}
 \end{fortranspecific}
 
+The second argument passed to this routine indicates which device is paused. The \code{device_num} parameter
+must be greater than or equal to zero and less than the result of \code{omp_get_num_devices()}
+or equal to the result of a call to \code{omp_get_initial_device()}.
 
 \binding
 
@@ -2225,35 +2226,39 @@ The binding task set for an \code{omp_pause_resource} region is the whole progra
 
 \effect
 
-The \code{omp_pause_resource} routine enables the runtime to relinquish resources 
+The \code{omp_pause_resource} routine allows the runtime to relinquish resources 
 used by OpenMP on the specified device.
 
-The \code{omp_pause_hard} value indicates that OpenMP state is not guaranteed to 
+If successful, the \code{omp_pause_hard} value results in a hard pause for which the OpenMP state is not guaranteed to 
 persist across the \code{omp_pause_resource} call. Hard pause may relinquish any 
 data allocated by OpenMP on a given device, including data allocated by memory routines 
-for that device as well as data present on the device as a result of a declare target construct.
- Hard pause may also relinquish any data associated with a \code{threadprivate} directive.
+for that device as well as data present on the device as a result of a \code{declare target} or \code{target data} construct.
+Hard pause may also relinquish any data associated with a \code{threadprivate} directive.
+When relinquished and when applicable, base language appropriate deallocation/finalization is performed. 
+When relinquished and when applicable, mapped data on a device will not be copied back from the device to the host.
 
-The \code{omp_pause_soft} value indicates that OpenMP state is guaranteed to persist across 
-the call, with the exception of any data associated with a \code{threadprivate} directive 
-which may be relinquished across the call.
+If successful, the \code{omp_pause_soft} value results in a soft pause for which the OpenMP state 
+is guaranteed to persist across the call, with the exception of any data associated with a
+ \code{threadprivate} directive which may be relinquished across the call. 
+When relinquished and when applicable, base language appropriate deallocation/finalization is performed. 
 
- \begin{note}
- Hard pause may relinquish more resources but may resume processing OpenMP regions more slowly. 
- Soft pause enables to resume processing OpenMP  regions more quickly 
- but may relinquish fewer resources. 
-An OpenMP implementation can reclaim resources during a subsequent OpenMP region.
+\begin{note}
+Hard pause may relinquish more resources, but may resume processing OpenMP regions more slowly. 
+Soft pause allows OpenMP regions to restart more quickly, but may relinquish fewer resources. 
+An OpenMP implementation will reclaim resources as needed for OpenMP regions encountered after the pause region. 
+Since  a hard pause may unmap data on the specified device, appropriate data mapping is required before 
+using data on the specified device after the pause region.
  \end{note}
  
 The routine returns zero in case of success, and nonzero otherwise.
 
 \tools
 
-If the tool is not allowed to interact with the specified device, then the runtime must call
+If the tool is not allowed to interact with the specified device after encountering this call, then the runtime must call
 the tool finalizer for that device.
 
 \restrictions
-OpenMP pause routine has the following restriction:
+The \code{omp_pause_resource} routine has the following restriction:
 
 \begin{itemize}
 \item The routine may only be called in the sequential part and when there are no pending 
@@ -2278,7 +2283,7 @@ task waiting for execution. Calling in any other circumstances may result in uns
 \label{subsec:omp_pause_resource_all}
 \summary
 
-The \code{omp_pause_resource_all} routine enables the runtime to 
+The \code{omp_pause_resource_all} routine allows the runtime to 
 relinquish resources used by OpenMP on all devices.
 
 \begin{samepage}
@@ -2292,7 +2297,7 @@ int omp_pause_resource_all(omp_pause_resource_t kind);
 
 \begin{fortranspecific}
 \begin{ompfFunction}
-integer function omp_get_max_task_priority(kind)
+integer function omp_pause_resource_all(kind)
 integer (kind=omp_pause_resource_kind) kind
 \end{ompfFunction}
 \end{fortranspecific}
@@ -2303,7 +2308,7 @@ The binding task set for an \code{omp_pause_resource_all} region is the whole pr
 
 \effect
 
-The \code{omp_pause_resource_all} routine enables the runtime to relinquish resources 
+The \code{omp_pause_resource_all} routine allows the runtime to relinquish resources 
 used by OpenMP on all devices. It is equivalent to repetitively 
 calling the \code{omp_pause_resource} for all of the available devices, including the host device.
 
@@ -2312,11 +2317,11 @@ as defined in \specref{subsec:omp_pause_resource}, or any implementation specifi
 
 \tools
 
-If the tool is not allowed to interact with a given device, then the runtime must call
+If the tool is not allowed to interact with a given device after encountering this call, then the runtime must call
 the tool finalizer for that device.
 
 \restrictions
-OpenMP pause routine has the following restriction:
+The \code{omp_pause_resource_all}  routine has the following restriction:
 
 \begin{itemize}
 \item The routine may only be called in the sequential part and there are no pending task waiting for execution. Calling in any other circumstances may result in unspecified behavior.
