@@ -42,94 +42,110 @@
 %             This is a \plc{var-name}.
 %
 
-\section{\hcode{concurrent} Construct}
-\index{concurrent@{\code{concurrent}}}
-\index{constructs!concurrent@{\code{concurrent}}}
-\label{sec:concurrent Construct}
+\section{\hcode{loop} Construct}
+\index{loop@{\code{loop}}}
+\index{constructs!loop@{\code{loop}}}
+\label{sec:loop Construct}
 \summary
-  A \code{concurrent} construct asserts to the compiler that all iterations of
-  the associated loops are free of data dependencies and can be safely run
-  concurrently in any order.
+  A \code{loop} construct specifies whether the iterations of the associated
+  loops may execute concurrently and permits the encountering thread(s) to
+  execute the loop accordingly.
 
 \syntax
 \begin{ccppspecific}
-The syntax of the \code{concurrent} construct is as follows:
+The syntax of the \code{loop} construct is as follows:
 \begin{ompcPragma}
-#pragma omp concurrent \plc{[clause[ [},\plc{] clause] ... ] new-line}
+#pragma omp loop \plc{[clause[ [},\plc{] clause] ... ] new-line}
     \plc{for-loops}
 \end{ompcPragma}
 
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
+nodep
+seq
 private(\plc{list})
 firstprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
-levels(\plc{n})
-
+collapse(\plc{n})
+bind(\plc{binding-region})
 \end{indentedcodelist}
-The \code{concurrent} directive places restrictions on the structure of all associated \plc{for-loops}.
+The \code{loop} directive places restrictions on the structure of all associated \plc{for-loops}.
 Specifically, all associated \plc{for-loops} must have \emph{canonical loop form} (see
 \specref{sec:Canonical Loop Form}).
 \end{ccppspecific}
 
 \begin{fortranspecific}
-The syntax of the \code{concurrent} construct is as follows:
+The syntax of the \code{loop} construct is as follows:
 
 \begin{ompfPragma}
-!$omp concurrent \plc{[clause[ [},\plc{] clause] ... ]}
+!$omp loop \plc{[clause[ [},\plc{] clause] ... ]}
    \plc{do-loops}
-[!$omp end concurrent]
+[!$omp end loop]
 \end{ompfPragma}
 
 \begin{samepage}
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
+nodep
+seq
 private(\plc{list})
 firstprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
-levels(\plc{n})
+collapse(\plc{n})
+bind(\plc{binding-region})
 \end{indentedcodelist}
 \end{samepage}
 
-If an \code{end}~\code{concurrent} directive is not specified, an
-  \code{end}~\code{concurrent} directive is assumed at the end of the
+If an \code{end}~\code{loop} directive is not specified, an
+  \code{end}~\code{loop} directive is assumed at the end of the
 \plc{do-loops}.
 
 Any associated \plc{do-loop} must be a \plc{do-construct} or an
 \plc{inner-shared-do-construct} as defined by the Fortran standard. If
-an \code{end}~\code{concurrent} directive follows a \plc{do-construct} in
+an \code{end}~\code{loop} directive follows a \plc{do-construct} in
 which several loop statements share a \code{DO} termination statement,
 then the directive can only be specified for the outermost of these
 \code{DO} statements.
 
 If any of the loop iteration variables would otherwise be shared, they are implicitly
-  made private on the \code{concurrent} construct.
+  made private on the \code{loop} construct.
 \end{fortranspecific}
 
 % Loop induction variables for the associated loop(s) are private by default.
 
-If a \code{private} or \code{firstprivate} clause appears on the
-\code{concurrent} construct and the iterations of the associated loops are
-executed concurrently, then a private copy of the listed variables must be
-created for each thread team, thread, or SIMD lane that executes the
-iterations.
-
-If a \code{reduction} clause appears on the \code{concurrent} construct and an
-implementation executes the iterations of the associated loops concurrently,
-then it must perform a parallel reduction with respect to the parallel
-execution units (teams, threads, or SIMD lanes) used to execute the loop
-iterations. The result of the reduction operation must be available immediately
-following the end of the associated loops.
+%If a \code{private} or \code{firstprivate} clause appears on the
+%\code{concurrent} construct and the iterations of the associated loops are
+%executed concurrently, then a private copy of the listed variables must be
+%created for each thread team, thread, or SIMD lane that executes the
+%iterations.
+%
+%If a \code{reduction} clause appears on the \code{concurrent} construct and an
+%implementation executes the iterations of the associated loops concurrently,
+%then it must perform a parallel reduction with respect to the parallel
+%execution units (teams, threads, or SIMD lanes) used to execute the loop
+%iterations. The result of the reduction operation must be available immediately
+%following the end of the associated loops.
 
 \binding
-If the iterations of the loops associated with the \code{concurrent} construct
-are distributed to multiple thread teams, then the binding thread set for the
-\code{concurrent} region is the set of master threads executing an enclosing
-\code{teams} region and the \code{concurrent} region binds to this \code{teams}
-region. Otherwise the \code{concurrent} region binds to the current task region
-and the binding thread set is the current team.
+
+If the \code{binds} clause is present on the construct, the binding region is
+determined by \plc{binding-region}. If the \code{loop} construct is closely
+nested inside a \code{teams} or \code{parallel} construct, the binding region
+is the corresponding \code{teams} or \code{parallel} region. If the
+\code{loop} construct with the \code{nodep} clause present is closely nested
+inside another \code{loop} construct with the \code{nodep} clause present, the
+binding region is \code{loop} region corresponding to that construct.
+Otherwise, the binding region is undefined.
+
+If the binding region is a \code{teams} region, then the binding thread set is
+the set of master threads executing that region. If the binding region is a
+\code{parallel} region, then the binding thread set is the team of threads
+executing that region. If the binding region is a \code{loop} region, then the
+binding thread set is the binding thread set for that region. If the binding
+region is undefined, then the binding thread set is the encountering thread.
+
 
 % If the \code{concurrent} construct is closely nested inside a \code{teams} construct,
 % the binding thread set of the region is the set of master threads that executes
@@ -141,15 +157,78 @@ and the binding thread set is the current team.
 % current task region.
 
 \descr
-The \code{concurrent} construct is associated with a loop nest consisting of
-one or more loops that follow the directive. The construct asserts that all
-iterations of the associated loop nest are independent with respect to each
-other, given that privatization and reduction clauses are honored, and may be
-executed concurrently in any order.
 
-If more than one thread encounters an \code{concurrent} construct, the
-implementation must ensure that each logical iteration of the corresponding
-loops is executed exactly once.
+The \code{loop} construct is associated with a loop nest consisting of
+one or more loops that follow the directive. 
+
+The \code{collapse} clause may be used to specify how many loops are
+associated with the \code{loop} construct. The parameter of the \code{collapse}
+clause must be a constant positive integer expression. If a \code{collapse}
+clause is specified with a parameter value greater than 1, then the
+iterations of the associated loops to which the clause applies are collapsed
+into one larger iteration space. If no \code{collapse} clause is present or its
+parameter is 1, the only loop that is associated with the \code{loop} construct
+is the one that immediately follows the \code{loop} directive.
+
+If more than one loop is associated with the \code{loop} construct then the
+number of times that any intervening code between any two associated
+loops will be executed is unspecified but will be at least once per
+iteration of the loop enclosing the intervening code and at most once
+per iteration of the innermost loop associated with the construct. If the
+iteration count of any loop that is associated with the \code{loop} construct and does not
+enclose the intervening code is zero then the behavior is unspecified.
+
+The iteration space of the associated loops correspond to logical
+iterations numbered 0,1,...,N-1 where N is the number of loop iterations, and
+the logical numbering denotes the sequence in which the iterations would be
+executed if a set of associated loop(s) were executed sequentially.  At the
+beginning of each logical iteration, the loop iteration variable of each
+associated loop has the value that it would have if the set of the associated
+loop(s) were executed sequentially. 
+
+
+%The \code{levels} clause may be used to specify how many loops are associated
+%with the \code{concurrent} construct. The parameter of the \code{levels}
+%clause must be a constant positive integer expression. If a \code{levels}
+%clause is present then for the next N nested loops all iterations of the loops
+%may be executed concurrently with any other iteration in the combined
+%iteration space of the associated loops in any order. If no \code{levels}
+%clause appears on the construct, the \code{concurrent} directive applies to
+%only the loop that immediately follows the directive.
+
+If the \code{binds} clause is present then \plc{binding-region} may be one of
+the following: \code{teams}, \code{parallel}, or \code{none}. If
+\plc{binding-region} is \code{teams}, then the innermost enclosing
+\code{teams} region is the binding region.  If \plc{binding-region} is
+\code{parallel}, then the innermost enclosing \code{parallel} region is the
+binding region. If \plc{binding-region} is \code{none}, then the binding
+region is undefined.
+
+If the binding region is a \code{teams} or \code{parallel} region, each
+logical iteration is executed once per instance of the \code{loop} region that
+is encountered by the binding thread set. Otherwise, each logical iteration is
+executed once per instance of the \code{loop} region that is encountered by a
+thread. The binding thread set defines the set of threads that may
+execute iterations of the \code{loop} region.
+
+If neither the \code{nodep} clause or the \code{seq} clause is present, the
+behavior is as if the \code{nodep} clause appeared on the construct.  If the
+\code{nodep} clause appears on the \code{loop} construct, this instructs the
+implementation that the logical iterations may execute in any order, including
+concurrently. If the \code{seq} clause is present, the iterations must execute
+as if in their logical iteration order.
+
+\begin{note}
+If the \code{nodep} clause appears on the \code{loop} construct, the threads
+that actually execute the iterations of the loop are not observable to the
+program since any OpenMP constructs or calls to OpenMP API routines that may
+expose this are not permitted in the region. An implementation is therefore
+free to use threads outside of the binding thread set or use SIMD instructions
+to facilitate concurrent execution of the associated loops. Additional
+iteration reordering optimizations may also be employed by the implementation
+to take advantage of the assertion of independence provided by the directive.
+\end{note}
+
 
 % An implementation may choose to treat an \code{concurrent} construct as a
 % \code{distribute}, Loop, and/or SIMD construct if it would be conforming for a
@@ -160,14 +239,6 @@ loops is executed exactly once.
 % implementation may also choose to execute the iterations of the associated loop
 % concurrently in ways not represented by these constructs.
 
-The \code{levels} clause may be used to specify how many loops are associated
-with the \code{concurrent} construct. The parameter of the \code{levels}
-clause must be a constant positive integer expression. If a \code{levels}
-clause is present then for the next N nested loops all iterations of the loops
-may be executed concurrently with any other iteration in the combined
-iteration space of the associated loops in any order. If no \code{levels}
-clause appears on the construct, the \code{concurrent} directive applies to
-only the loop that immediately follows the directive.
 
 % A \code{concurrent} construct may be nested within other OpenMP regions, but does
 % not increase the nesting level, as defined in [add crossref]. \feedback{[Should we
@@ -175,13 +246,27 @@ only the loop that immediately follows the directive.
 % implementation?]}
 
 \restrictions
-Restrictions to the \code{concurrent} construct are as follows:
+Restrictions to the \code{loop} construct are as follows:
 
 \begin{itemize}
   \item An implementation may not generate a new league of thread teams
-    as the result of a \code{concurrent} construct.
+    as the result of a \code{loop} construct.
 
-  \item Only one \code{levels} clause can appear on a \code{concurrent} directive.
+  \item The \code{seq} and \code{nodep} clauses may not both appear on the
+      construct.
+
+  \item Only one \code{collapse} clause can appear on a \code{loop} directive.
+
+  \item If a \code{loop} construct is not nested inside another OpenMP
+      construct and it appears in a procedure called from the program, the
+      \code{binds} clause must be present.
+
+  \item If a \code{loop} region binds to a \code{teams} or \code{parallel}
+      region, it must be encountered by all threads in the binding thread set
+      or by none of them.
+
+  \item The only construct that may be nested inside a \code{loop} construct
+      with the \code{nodep} clause present is the \code{loop} construct.
 
 %JLARKIN Moved to directives_nesting.tex
 %    \item Only the following directives may be nested within an
@@ -191,7 +276,7 @@ Restrictions to the \code{concurrent} construct are as follows:
 %    %JLARKIN we'd like to add back atomic eventually. Is there really a reason
 %    %to restrict MASTER?
 
-  \item A \code{concurrent} region may not contain calls to functions containing
+  \item A \code{loop} region may not contain calls to procedures that contain
     OpenMP directives. %JLARKIN Would like to relax this later.
 
 %JLARKIN Moved to directives_nesting.tex
@@ -201,7 +286,7 @@ Restrictions to the \code{concurrent} construct are as follows:
 %    % function call because it would be hard for a compiler to know how
 %    % it can parallelize the loop.
 
-  \item A \code{concurrent} region may not contain calls to the OpenMP Runtime
+  \item A \code{loop} region may not contain calls to the OpenMP Runtime
     API.
 
 \end{itemize}
@@ -211,7 +296,7 @@ Restrictions to the \code{concurrent} construct are as follows:
 
   \item The associated for-loops must be structured blocks.
 
-  \item No statement can branch to any associated \code{concurrent} statement.
+  \item No statement can branch to any associated \code{for} statement.
 
 \end{itemize}
 
@@ -231,7 +316,7 @@ Restrictions to the \code{concurrent} construct are as follows:
 
 \crossreferences
 \begin{itemize}
-  \item The Loop construct, see \specref{subsec:Loop Construct}.
+  \item The Worksharing-Loop construct, see \specref{subsec:Worksharing-Loop Construct}.
 
   \item \code{distribute} constrict, see \specref{subsec:distribute Construct}.
 
