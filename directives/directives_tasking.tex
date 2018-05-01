@@ -66,7 +66,8 @@ The syntax of the \code{task} construct is as follows:
 \end{samepage}
 
 \begin{samepage}
-where \plc{clause} is one of the following:
+% CT: {} to fix a bug in the diffing
+where \plc{clause} is one of the following{}:
 
 \begin{indentedcodelist}
 if(\plc{[} task :\plc{] scalar-expression})
@@ -81,6 +82,7 @@ in_reduction(\plc{reduction-identifier }:\plc{ list})
 depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
+affinity(\plc{list}[:\plc{iterators-definition}])
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -94,7 +96,8 @@ The syntax of the \code{task} construct is as follows:
 !$omp end task
 \end{ompfPragma}
 
-where \plc{clause} is one of the following:
+% CT: {} to fix a bug in the diffing
+where \plc{clause} is one of the following{}:
 
 \begin{indentedcodelist}
 if(\plc{[} task :\plc{] scalar-logical-expression})
@@ -109,6 +112,7 @@ in_reduction(\plc{reduction-identifier }:\plc{ list})
 depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
+affinity(\plc{list}[:\plc{iterators-definition}])
 \end{indentedcodelist}
 \end{fortranspecific}
 
@@ -170,6 +174,17 @@ tasks ready to be executed, higher priority tasks (those with a higher numerical
 specified in the \code{priority} clause that is higher than the \plc{max-task-priority-var} ICV then the
 implementation will use the value of that ICV. A program that relies on task execution order
 being determined by this \plc{priority-value} may have unspecified behavior.
+
+The \code{affinity} clause is a hint to indicate data affinity of the generated
+task. The task is recommended to execute closely to the location of the \plc{list} items. 
+A program that relies on the task execution location
+being determined by this \plc{list} may have unspecified behavior.
+
+The list items that appear in the \code{affinity} clause may reference iterators
+defined by an \plc{iterators-definition} appearing on the same clause.
+The list items that appear in the \code{affinity} clause may include array sections.
+
+If a list item appears in an \code{affinity} clause then data affinity refers to the original list item.
 
 \begin{note}
 When storage is shared by an explicit \code{task} region, the
@@ -368,7 +383,10 @@ then the number of times that any intervening code between any two
 associated loops will be executed is unspecified but will be at least
 once per iteration of the loop enclosing the intervening code and at
 most once per iteration of the innermost loop associated with the
-construct.
+construct.  If the iteration count of any loop that is associated with the
+\code{taskloop} construct and does not enclose the intervening code is zero
+then the behavior is unspecified.
+
 
 A taskloop loop has logical iterations numbered 0,1,...,N-1 where N is
 the number of loop iterations, and the logical numbering denotes the
@@ -408,18 +426,18 @@ When storage is shared by a \code{taskloop} region, the programmer must ensure, 
 {
 \events
 
-The \plc{#1{-begin}} event occurs after a task encounters a
+The \plc{#1-begin} event occurs after a task encounters a
 \code{#1} construct but before the task starts the execution of the structured
 block of the \code{#1} region.
 
-The \plc{#1{-end}} event occurs after a \code{#1} region finishes execution
+The \plc{#1-end} event occurs after a \code{#1} region finishes execution
 but before resuming execution of the encountering task.
 
 \tools
 
 A thread dispatches a registered \code{ompt_callback_work}
-callback for each occurrence of a \plc{#1{-begin}} and
-\plc{#1{-end}} event in that thread. The callback occurs in the
+callback for each occurrence of a \plc{#1-begin} and
+\plc{#1-end} event in that thread. The callback occurs in the
 context of the encountering task.  The callback has type signature
 \code{ompt_callback_work_t}. The callback receives
 \code{ompt_scope_begin} or \code{ompt_scope_end}
@@ -488,7 +506,7 @@ no intervening code between any two loops.
 \item \code{if} Clause, see \specref{sec:if Clause}.
 \item \code{ompt_scope_begin} and \code{ompt_scope_end}, see
   \specref{sec:ompt_scope_endpoint_t}.
-\item \code{ompt_work_taskloop}, see \specref{sec:ompt_work_type_t}.
+\item \code{ompt_work_taskloop}, see \specref{sec:ompt_work_t}.
 \item \code{ompt_callback_work_t}, see
 \specref{sec:ompt_callback_work_t}.
 
@@ -660,7 +678,7 @@ callback.
 \begin{itemize}
 
 \item \code{ompt_task_initial}, see
-\specref{sec:ompt_task_type_t}.
+\specref{sec:ompt_task_t}.
 
 \item \code{ompt_callback_thread_begin_t}, see
   \specref{sec:ompt_callback_thread_begin_t}.

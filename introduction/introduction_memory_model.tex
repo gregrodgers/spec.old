@@ -45,7 +45,6 @@
 \section{Memory Model}
 \label{sec:Memory Model}
 \index{memory model}
-\index{modification order}
 \subsection{Structure of the OpenMP Memory Model}
 \label{subsec:Structure of the OpenMP Memory Model}
 The OpenMP API provides a relaxed-consistency, shared-memory model. All OpenMP
@@ -95,10 +94,6 @@ without synchronization to that same memory unit, including cases due to atomici
 considerations as described above, then a data race occurs. If a data race occurs then the
 result of the program is unspecified.
 
-Every variable has an associated \emph{modification order}, defined as a
-sequential ordering of all operations that store a value into the variable
-without causing a data race to occur.
-
 A private variable in a task region that eventually generates an inner nested \code{parallel}
 region is permitted to be made shared by implicit tasks in the inner \code{parallel} region.
 A private variable in a task region can be shared by an explicit task region generated
@@ -137,145 +132,192 @@ more device data environments may share storage. Without intervening synchroniza
 data races can occur.
 
 \subsection{Memory Management}
+The host device, and target devices that an implementation may support, have attached storage resources where program variables are stored. These resources can be of different kinds and have different traits. A memory space in an OpenMP program represents a set of these storage resources. Memory spaces are defined according to a set of traits and a single resource may be exposed as multiple memory spaces with different traits or may be part of multiple memory spaces. In any device at least one memory space is guaranteed to exist.
 
-The host device, and target devices that an implementation may support, have attached storage resources where program variables are stored. These resources can be of different kinds.
-
-An OpenMP program can use a memory allocator to allocate storage for its variables. Memory allocators are associated with certain storage resources and use that storage to allocate variables. Memory allocators are also used to deallocate variables and free the storage in the resources. When an OpenMP memory allocator is not used variables can be allocated in any storage resource.
+An OpenMP program can use a memory allocator to allocate \emph{memory} to which store and from which retrieve its variables. This \emph{memory} will be allocated from the storage resources of the \emph{memory space} associated with the allocator. Memory allocators are also used to deallocate previously allocated \emph{memory}. When an OpenMP memory allocator is not used variables may be allocated in any storage resource.
 %The behavior of a memory management construct, clause or API is unspecified if the variable that is applied to was not allocated with an OpenMP memory allocator.
 
 
 \subsection{The Flush Operation}
 \label{subsec:The Flush Operation}
 \index{flush operation}
+\index{strong flush}
 \index{flush-set}
-\index{sync-set}
+
 
 The memory model has relaxed-consistency because a thread's temporary view of
-memory is not required to be consistent with memory at all times. A value written to a
-variable can remain in the thread's temporary view until it is forced to memory at a later
-time. Likewise, a read from a variable may retrieve the value from the thread's
-temporary view, unless it is forced to read from memory. The OpenMP flush operation
-enforces consistency between the temporary view and memory.
+memory is not required to be consistent with memory at all times. A value
+written to a variable can remain in the thread's temporary view until it is
+forced to memory at a later time. Likewise, a read from a variable may
+retrieve the value from the thread's temporary view, unless it is forced to
+read from memory. The OpenMP flush operation enforces consistency between
+multiple threads' view of memory.
 
-The flush operation is applied to a set of variables called the
-\emph{flush-set}. It also has an associated \emph{sync-set}
-containing a set of synchronization variables that may be used to force
-synchronization between the flush operation and another flush operation.  A flush operation
-must be a write flush, a read flush, or both a write flush and a
-read flush; accordingly, it restricts reordering of memory operations
-performed by the same thread that an implementation might otherwise do as
-follows:
-
-\begin{itemize}
-\item With respect to a write flush, an implementation must not reorder any
-    prior memory operation in the thread's program order that reads or writes
-    to a variable in its flush-set or any subsequent memory operation in the
-    thread's program order that writes to a variable in its sync-set.
-
-\item With respect to a read flush, an implementation must not reorder any
-    subsequent memory operation in the thread's program order that reads or
-    writes to a variable in its flush-set or any prior memory operation in the
-    thread's program order that reads from a variable in its sync-set.
-
-\item With respect to a read flush, an implementation must not reorder any
-    subsequent write flush in the thread's program order that is applied to
-    the same variable.
-\end{itemize}
-
-A strong flush imposes stronger ordering requirements across threads
-compared to a weak flush, as described in
-\specref{subsec:OpenMP Memory Consistency}.
+If a flush operation is a strong flush, it enforces consistency between a
+thread's temporary view and memory.  A strong flush operation is applied to a
+set of variables called the \emph{flush-set}. A strong flush restricts
+reordering of memory operations that an implementation might otherwise do.
+Implementations must not reorder the code for a memory operation for a given
+variable, or the code for a flush operation for the variable, with respect to
+a strong flush operation that refers to the same variable.
 
 If a thread has performed a write to its temporary view of a shared variable
-since its last write flush of that variable, then when it executes another
-write flush of the variable, the flush does not complete until the value of
-the variable has been written to the variable in memory.  If a thread performs
-multiple writes to the same variable between two write flushes of that
-variable, the write flush ensures that it is the value of the last write is
-written to the variable in memory. The completion of a write flush of a set of
+since its last strong flush of that variable, then when it executes another
+strong flush of the variable, the strong flush does not complete until the
+value of the variable has been written to the variable in memory. If a thread
+performs multiple writes to the same variable between two strong flushes of
+that variable, the strong flush ensures that the value of the last write is
+written to the variable in memory. A strong flush of a variable executed by a
+thread also causes its temporary view of the variable to be discarded, so that
+if its next memory operation for that variable is a read, then the thread will
+read from memory when it may again capture the value in the temporary view.
+When a thread executes a strong flush, no later memory operation by that
+thread for a variable involved in that strong flush is allowed to start until
+the strong flush completes.  The completion of a strong flush of a set of
 variables executed by a thread is defined as the point at which all writes to
-those variables performed by the thread before the flush are visible in
-memory.
+those variables performed by the thread before the strong flush are visible in
+memory to all other threads and that thread’s temporary view of all variables
+involved is discarded.
 
-If a thread has not performed a write to its temporary view of a shared
-variable since its last write flush of that variable, a read flush of the
-variable executed by a thread causes its temporary view of the variable to be
-discarded. If its next memory operation following the read flush for that
-variable is a read, then the thread will read from memory when it may again
-capture the value in the temporary view. When a thread executes a read flush,
-no later memory operation by that thread for a variable involved in that flush
-is allowed to start until the flush completes. The completion of a read flush
-of a set of variables executed by a thread is defined as the point at which
-the thread's temporary view of all variables involved is discarded.
-
-Flush operations enable a program to provide a guarantee of consistency
-between a thread's temporary view and memory. Therefore, the flush operation can
-be used to guarantee that a value written to a variable by one thread may be
-read by a second thread. To accomplish this, it is sufficient for the
-programmer to ensure that the second thread has not written to the variable
-since its last flush of the variable, and that the following sequence of
-events are completed in the specified order according to the completion order
-guarantees defined in \specref{subsec:OpenMP Memory Consistency}:
+A strong flush operation provides a guarantee of consistency between a thread’s
+temporary view and memory. Therefore, a strong flush can be used to
+guarantee that a value written to a variable by one thread may be read by a
+second thread. To accomplish this, the programmer must ensure that the second
+thread has not written to the variable since its last strong flush of the
+variable, and that the following sequence of events are completed in the specified
+order:
 
 \begin{enumerate}
-\item The value is written to the variable by the first thread.
+    \item The value is written to the variable by the first thread.
+    \item The variable is flushed, with a strong flush, by the first thread.
+    \item The variable is flushed, with a strong flush, by the second thread.
+    \item The value is read from the variable by the second thread.
+\end{enumerate}
 
-\item The variable is flushed, with a write flush, by the first thread.
+If a flush operation is a release flush or acquire flush, it can enforce
+consistency between two synchronizing threads' view of memory.  A release
+flush guarantees that any prior operation that writes or reads a shared
+variable will appear to be completed before any operation that writes or reads
+the same shared variable that follows an acquire flush with which it
+synchronizes (see Section \specref{subsec:happens-before} for more details on
+flush synchronization).  A release flush will propagate the values of all
+shared variables in its temporary view to memory prior to the thread
+performing any subsequent atomic operation that may establish a
+synchronization. An acquire flush will discard any value of a shared variable
+in its temporary view to which the thread has not written since last performing
+a release flush, so that it may subsequently read a value propagated by a
+release flush that synchronizes with it.   Therefore, release and acquire
+flushes may also be used to guarantee that a value written to a variable by
+one thread may be read by a second thread. To accomplish this, the programmer
+must ensure that the second thread has not written to the variable since its
+last acquire flush, and that the following sequence of events happen in the
+specified order:
 
-\item The variable is flushed, with a read flush, by the second thread.
-
-\item The value is read from the variable by the second thread.
+\begin{enumerate}
+    \item The value is written to the variable by the first thread.
+    \item The first thread performs a release flush.
+    \item The second thread performs an acquire flush.
+    \item The value is read from the variable by the second thread.
 \end{enumerate}
 
 \begin{note}
-OpenMP synchronization operations, described in
-\specref{sec:Master and Synchronization Constructs and Clauses} and in \specref{sec:Lock Routines},
-are recommended for enforcing this order. Synchronization
-through variables, described in \specref{subsec:happens-before}, is possible
-but is not recommended because the proper timing of flushes is difficult.
+OpenMP synchronization operations, described in 
+\specref{sec:Synchronization Constructs and Clauses} and in \specref{sec:Lock Routines}, 
+are recommended for enforcing this order. Synchronization 
+through variables is possible but is not recommended because the proper timing
+of flushes is difficult.
 \end{note}
-
 
 
 \subsection{Flush Synchronization and Happens Before}
 \label{subsec:happens-before}
 \index{flush synchronization}
+\index{release flush}
+\index{acquire flush}
 \index{happens before}
 
-A release flush is a write flush that is synchronizable, and likewise an
-acquire flush is a read flush that is synchronizable.  A release flush may
-synchronize with an acquire flush using a variable that is in the sync-sets of
-both flushes.
+OpenMP supports thread synchronization with the use of release flushes and
+acquire flushes. For any such synchronization, a release flush is the source
+of the synchronization and an acquire flush is the sink of the
+synchronization, such that the release flush \emph{synchronizes with} the
+acquire flush.
 
-For every variable in the sync-set of a release flush, there exists a
-\emph{release flush sequence} that is a sequence of consecutive modifications
-to the variable taken from its modification order. It is defined to be the
-maximal such sequence that is headed by a modification that follows the
-release flush in its thread's program order and contains only subsequent
-modifications performed on the same thread or read-modify-write atomic
-modifications performed by a different thread.  A release flush synchronizes
-with an acquire flush on a different thread if there exists a variable in the
-sync-sets of both flushes and the value written to it by some modification in
-a release flush sequence associated with the release flush is read by an
-access to the variable preceding the acquire flush in its thread's
-program order.
+%For every variable in the sync-set of a release flush, there exists a
+%\emph{release flush sequence} that is a sequence of consecutive modifications
+%to the variable taken from its modification order. It is defined to be the
+%maximal such sequence that is headed by a modification that follows the
+%release flush in its thread's program order and contains only subsequent
+%modifications performed on the same thread or read-modify-write atomic
+%modifications performed by a different thread.  A release flush synchronizes
+%with an acquire flush on a different thread if there exists a variable in the
+%sync-sets of both flushes and the value written to it by some modification in
+%a release flush sequence associated with the release flush is read by an
+%access to the variable preceding the acquire flush in its thread's
+%program order.
+
+A release flush has one or more associated \emph{release sequences} that
+define the set of a modifications that may be used to establish a
+synchronization. Any such release sequence starts with an atomic operation
+that follows the release flush and modifies a shared variable and additionally
+includes any read-modify-write atomic operations that read a value taken from
+some modification in the release sequence. The atomic operations that start an
+associated release sequence are determined as follows:
+
+\begin{itemize}
+\item If a release flush is performed on entry to an atomic operation, that
+    atomic operation starts its release sequence.
+\item If a release flush is performed by an implicit \code{flush} region, some
+    atomic operation performed by the implementation on an internal
+    synchronization variable starts its release sequence.
+\item If a release flush is performed by an explicit \code{flush} region, any
+    atomic operation that modifies a shared variable and follows the
+    \code{flush} region in its thread's program order starts an associated
+    release sequence.
+\end{itemize}
+
+An acquire flush is associated with one or more prior atomic operations that
+read a shared variable and that may be used to establish a synchronization.
+The associated atomic operations that may establish a synchronization are
+determined as follows:
+
+\begin{itemize}
+\item If an acquire flush is performed on exit from an atomic operation, that
+    atomic operation is its associated atomic operation.
+\item If an acquire flush is performed by an implicit \code{flush} region, some
+    atomic operation performed by the implementation that reads an internal
+    synchronization variable is its associated atomic operation.
+\item If an acquire flush is performed by an explicit \code{flush} region, any
+    atomic operation that reads a shared variable and precedes the
+    \code{flush} region in its thread's program order is an associated atomic
+    operation.
+\end{itemize}
+
+A release flush synchronizes with an acquire flush if an atomic operation
+associated with the acquire flush reads a value written by a modification from
+a release sequence associated with the release flush.
 
 %\newpage %% HACK
-\begin{note}
-The conditions under which a release flush synchronizes with an acquire flush
-are intended to match the conditions under which release operations
-synchronize with acquire operations in C++11 and C11. A read-modify-write atomic
-modification includes any atomic operation specified with an \code{atomic}
-construct on which neither the \code{read} or \code{write} clause appears.
-\end{note}
+%\begin{note}
+%%The conditions under which a release flush synchronizes with an acquire flush
+%%are intended to match the conditions under which release operations
+%%synchronize with acquire operations in C++ and C. 
+%A read-modify-write atomic modification includes any atomic operation
+%specified with an \code{atomic} construct on which neither the \code{read} or
+%\code{write} clause appears.
+%\end{note}
+
+An operation \plc{X} \emph{simply~happens~before} an operation \plc{Y} if any of the following conditions are satisfied:
+\begin{enumerate}
+\item \plc{X} and \plc{Y} are performed by the same thread, and \plc{X} precedes \plc{Y} in the thread's program order.
+\item \plc{X} synchronizes with \plc{Y} according to the flush synchronization conditions explained above or according
+    to the base language's definition of \emph{synchronizes~with}, if such a definition exists.
+\item There exists another operation \plc{Z}, such that \plc{X} simply happens before \plc{Z} and \plc{Z} simply happens before \plc{Y}.
+\end{enumerate}
 
 An operation \plc{X} \emph{happens~before} an operation \plc{Y} if any of the following conditions are satisfied:
 \begin{enumerate}
-\item \plc{X} happens before \plc{Y} according to the base language's definition of happens before, if such a definition exists.
-\item \plc{X} and \plc{Y} are performed by the same thread, and \plc{X} precedes \plc{Y} in the thread's program order.
-\item \plc{X} is a release flush, \plc{Y} is an acquire flush, and \plc{X} synchronizes with \plc{Y} according to the flush synchronization
-conditions explained above.
-\item There exists another operation \plc{Z}, such that \plc{X} happens before \plc{Z} and \plc{Z} happens before \plc{Y}.
+\item \plc{X} happens before \plc{Y} according to the base language's definition of \emph{happens~before}, if such a definition exists.
+\item \plc{X} simply happens before \plc{Y}.
 \end{enumerate}
 
 A variable with an initial value is treated as if the value is stored to the
@@ -284,10 +326,13 @@ modify the variable in the program.
 
 \subsection{OpenMP Memory Consistency}
 \label{subsec:OpenMP Memory Consistency}
-Given the conditions in \specref{subsec:happens-before} for flush
-synchronization and happens before, OpenMP guarantees the following in
-accordance with the restrictions in \specref{subsec:The Flush Operation} on
-reordering with respect to flush operations:
+
+%Given the conditions in \specref{subsec:happens-before} for flush
+%synchronization and happens before, OpenMP guarantees the following in
+%accordance with the restrictions in \specref{subsec:The Flush Operation} on
+%reordering with respect to flush operations:
+The observable completion order of memory operations, as seen by all threads, is
+guaranteed according to the following rules:
 
 \begin{itemize}
 \item If the intersection of the flush-sets of two strong flushes
@@ -298,15 +343,18 @@ reordering with respect to flush operations:
     a strong flush, flush the same variable, then they must be
     completed as if in that thread's program order, as seen by all threads.
 
-\item If two operations access, modify, or flush the same variable and one
-    happens before the other, then they must be completed in that happens
-    before order, as seen by the thread or threads that perform the
-    operations.
+\item If two operations are performed by different threads and one happens
+    before the other, then they must be completed as if in that happens before
+    order, as seen by all threads, if:
+    \begin{itemize}
+        \item both operations access or modify the same variable, or
+        \item both operations are strong flushes that flush the same variable.
+    \end{itemize}
 
 \item Any two atomic memory operations from different \code{atomic} regions
     must be completed as if in the same order as the strong flushes
     implied in their respective regions, as seen by all threads.
-    \end{itemize}
+\end{itemize}
 
 The flush operation can be specified using the \code{flush} directive, and is also implied at
 various locations in an OpenMP program: see \specref{subsec:flush Construct} for details.
@@ -336,4 +384,3 @@ such programs are redundant.
 Implementations are allowed to relax the ordering imposed by implicit flush operations
 when the result is only visible to programs using non-sequentially consistent atomic
 directives.
-
