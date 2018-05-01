@@ -512,11 +512,17 @@ in_reduction(\plc{reduction-identifier }:\plc{ list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 is_device_ptr(\plc{list})
-defaultmap(tofrom:scalar \textnormal{|} none)
+defaultmap(\plc{implicit-behavior[:variable-category]})
 nowait
 depend(\plc{dependence-type} : \plc{locator-list}[:\plc{iterators-definition}])
-allocate(\plc{allocator:}\plc{list})
+allocate([\plc{[allocator }:\plc{] list})
+uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
+	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
 \end{indentedcodelist}
+
+where \plc{allocator} is an identifier of \code{const omp_allocator_t *} type.
+
+where \plc{allocator-traits-array} is an identifier of \code{const omp_alloctrait_t *} type.
 \end{ccppspecific}
 
 \begin{samepage}
@@ -541,14 +547,21 @@ in_reduction(\plc{reduction-identifier }:\plc{ list})
 reduction(\plc{reduction-identifier }:\plc{ list})
 map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
 is_device_ptr(\plc{list})
-defaultmap(tofrom:scalar)
+defaultmap(\plc{implicit-behavior[:variable-category]})
 nowait
 depend(\plc{dependence-type} : \plc{locator-list}[:\plc{iterators-definition}])
 allocate(\plc{allocator:}\plc{list})
+uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
+	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
 \end{indentedcodelist}
+
+where \plc{allocator} is an integer expression of \code{omp_allocator_kind} \plc{kind}.
+
+where \plc{allocator-traits-array} is an array of \code{type(omp_alloctrait)} type.
 
 The \code{end}~\code{target} directive denotes the end of the \code{target} construct
 \end{fortranspecific}
+
 \end{samepage}
 
 \binding
@@ -570,17 +583,11 @@ All clauses are evaluated when the \code{target} construct is encountered.
 The data environment of the \plc{target task} is created according to the
 data-sharing attribute clauses on the \code{target} construct, per-data
 environment ICVs, and any default data-sharing attribute rules that apply to
-the \code{target} construct.  If a variable or part of a variable appears as a
-list item in a \code{reduction} clause on the \code{target} construct and does
-not appear as a list item in an \code{in_reduction} clause on the construct,
-the variable has a default data-sharing attribute of shared in the data
-environment of the \plc{target task}. Likewise, if a variable or part of a
-variable is mapped by the \code{target} construct, the variable has a default
-data-sharing attribute of shared in the data environment of the \plc{target task}.
-
-If an \code{in_reduction} clause is present on the \code{target} construct,
-the behavior is as if a \code{reduction} clause with the same reduction
-operator and list items is present on the construct.
+the \code{target} construct.  If a variable or part of a variable is mapped by
+the \code{target} construct and does not appear as a list item in an
+\code{in_reduction} clause on the construct, the variable has a default
+data-sharing attribute of shared in the data environment of the \plc{target
+task}.
 
 Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
@@ -600,6 +607,8 @@ If a function (C, C++, Fortran) or subroutine (Fortran) is referenced in a
 \code{target} construct then that function or subroutine is treated as if its
 name had appeared in a \code{to} clause on a \code{declare}~\code{target}
 directive.
+
+Each memory \plc{allocator} specified in the \code{uses_allocators} clause will be made available in the \code{target} region. For each non-predefined allocator that is specified, a new allocator handle will be associated with an allocator that is created with the specified \plc{traits} as if by a call to \code{omp_init_allocator} at the beginning of the \code{target} region. Each non-predefined allocator will be destroyed as if by a call to \code{omp_destroy_allocator} at the end of the \code{target} region.
 
 \begin{ccppspecific}
 
@@ -662,7 +671,7 @@ must also appear as a list item in a \code{map} clause.
 \item A variable referenced in a \code{target} region but not the \code{target} construct that is not
 declared in the \code{target} region must appear in a \code{declare}~\code{target} directive.
 
-\item At most one \code{defaultmap} clause can appear on the directive.
+\item At most one \code{defaultmap} clause for each category can appear on the directive.
 
 \item At most one \code{nowait} clause can appear on the directive.
 
@@ -674,6 +683,16 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
   directive.  The \code{device} expression must evaluate to a
   non-negative integer value less than the value of
   \code{omp_get_num_devices()}.
+
+\item Memory allocators that do not appear in a \code{uses_allocators} clause cannot appear as an allocator in an \code{allocate} clause or be used in the \code{target} region unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit.
+
+\item Memory allocators that appear in a \code{uses_allocators} clause cannot appear in other data-sharing attribute clauses or data-mapping attribute clauses in the same construct.
+
+\item Predefined allocators appearing in a \code{uses_allocators} clause cannot have \plc{traits} specified.
+
+\item Non-predefined allocators appearing in a \code{uses_allocators} clause must have \plc{traits} specified.
+
+\item Arrays containing allocators traits that appear in a \code{uses_allocators} clause must be constant arrays, have constant values and be defined in the same scope as the construct in which the clause appears. 
 
 \begin{ccppspecific}
 \item An attached pointer may not be modified in a \code{target} region.
@@ -730,7 +749,15 @@ same \code{target} region, and the same thread that threw the exception must cat
 \item Data-mapping Attribute Rules and Clauses, see
 \specref{subsec:Data-mapping Attribute Rules and Clauses}.
 
+\item Memory allocators, see \specref{subsec:Memory Allocators}
+
 \item \code{omp_get_num_devices} routine, see \specref{subsec:omp_get_num_devices}
+
+\item \code{omp_set_default_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+
+\item \code{omp_get_default_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+\item \code{omp_alloctrait_t} and \code{omp_alloctrait} types, see \specref{subsec:Memory Management Types}.
 
 \item \code{ompt_callback_target_t}, see
 \specref{sec:ompt_callback_target_t}.
@@ -861,7 +888,8 @@ For each list item in a \code{from} or a \code{to} clause: \begin{itemize}
 
 \end{itemize}
 
-The list items that appear in the \code{to} or \code{from} clauses may include array sections.
+The list items that appear in the \code{to} or \code{from} clauses may
+include array sections with stride expressions.
 
 The \code{target}~\code{update} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target}~\code{update} region.
 
@@ -886,8 +914,6 @@ clause expression evaluates to \plc{false} then no assignments occur.
 \code{target}~\code{update} directive, or on any side effects of the evaluations of the clauses.
 
 \item At least one \plc{motion-clause} must be specified.
-
-\item If a list item is an array section it must specify contiguous storage.
 
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
 
@@ -1190,6 +1216,7 @@ if they appear in a \code{to} clause.
       declaration section of a scoping unit in which the common block
       or variable is declared. Although variables in common blocks can
       be accessed by use association or host association, common block
+      names cannot. This means that a common block name specified in a
       \code{declare}~\code{target} directive must be declared to be a
       common block in the same scoping unit in which the
       \code{declare}~\code{target} directive appears.
@@ -1580,8 +1607,8 @@ construct then the number of times that any intervening code between
 any two associated loops will be executed is unspecified but will be
 at least once per iteration of the loop enclosing the intervening code
 and at most once per iteration of the innermost loop associated with
-the construct.  If the iteration count of any loop associated with the
-\code{distribute} construct that does not enclose the intervening code is zero
+the construct.  If the iteration count of any loop that is associated with the
+\code{distribute} construct and does not enclose the intervening code is zero
 then the behavior is unspecified.
 
 
