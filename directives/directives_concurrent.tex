@@ -130,21 +130,22 @@ If any of the loop iteration variables would otherwise be shared, they are impli
 
 \binding
 
-If the \code{binds} clause is present on the construct, the binding region is
+If the \code{bind} clause is present on the construct, the binding region is
 determined by \plc{binding-region}. If the \code{loop} construct is closely
 nested inside a \code{teams} or \code{parallel} construct, the binding region
 is the corresponding \code{teams} or \code{parallel} region. If the
 \code{loop} construct with the \code{nodep} clause present is closely nested
 inside another \code{loop} construct with the \code{nodep} clause present, the
-binding region is \code{loop} region corresponding to that construct.
-Otherwise, the binding region is undefined.
+binding region is the \code{loop} region corresponding to that construct.
+Otherwise, the \code{loop} region does not have a binding region.
 
 If the binding region is a \code{teams} region, then the binding thread set is
 the set of master threads executing that region. If the binding region is a
 \code{parallel} region, then the binding thread set is the team of threads
 executing that region. If the binding region is a \code{loop} region, then the
-binding thread set is the binding thread set for that region. If the binding
-region is undefined, then the binding thread set is the encountering thread.
+binding thread set is the same as the binding thread set for that region. If
+the \code{loop} region does not have a binding region, then the binding thread
+set is the encountering thread.
 
 
 % If the \code{concurrent} construct is closely nested inside a \code{teams} construct,
@@ -196,38 +197,54 @@ loop(s) were executed sequentially.
 %clause appears on the construct, the \code{concurrent} directive applies to
 %only the loop that immediately follows the directive.
 
-If the \code{binds} clause is present then \plc{binding-region} may be one of
+If the \code{bind} clause is present then \plc{binding-region} may be one of
 the following: \code{teams}, \code{parallel}, or \code{none}. If
 \plc{binding-region} is \code{teams}, then the innermost enclosing
 \code{teams} region is the binding region.  If \plc{binding-region} is
 \code{parallel}, then the innermost enclosing \code{parallel} region is the
 binding region. If \plc{binding-region} is \code{none}, then the binding
-region is undefined.
+region is not defined for the \code{loop} region.
 
 If the binding region is a \code{teams} or \code{parallel} region, each
 logical iteration is executed once per instance of the \code{loop} region that
 is encountered by the binding thread set. Otherwise, each logical iteration is
 executed once per instance of the \code{loop} region that is encountered by a
-thread. The binding thread set defines the set of threads that may
-execute iterations of the \code{loop} region.
+thread.
 
 If neither the \code{nodep} clause or the \code{seq} clause is present, the
 behavior is as if the \code{nodep} clause appeared on the construct.  If the
-\code{nodep} clause appears on the \code{loop} construct, this instructs the
-implementation that the logical iterations may execute in any order, including
-concurrently. If the \code{seq} clause is present, the iterations must execute
-as if in their logical iteration order.
+\code{nodep} clause appears on the \code{loop} construct, the implementation 
+may assume that dependences do not exist between logical iterations, so that
+the iterations may execute in any order, including concurrently. If the
+\code{seq} clause is present, the iterations must execute as if in their
+logical iteration order.
+
+The set of threads that may execute the iterations of the \code{loop} region
+is its \emph{executing thread set}. The executing thread set includes all
+threads in the binding thread set. Additionally, if the \code{nodep} clause
+appears on the corresponding construct, any thread in the executing
+thread set may create a thread team, as if from a \code{parallel} construct,
+where each thread in the team is included in the executing thread set.
 
 \begin{note}
-If the \code{nodep} clause appears on the \code{loop} construct, the threads
-that actually execute the iterations of the loop are not observable to the
-program since any OpenMP constructs or calls to OpenMP API routines that may
-expose this are not permitted in the region. An implementation is therefore
-free to use threads outside of the binding thread set or use SIMD instructions
-to facilitate concurrent execution of the associated loops. Additional
-iteration reordering optimizations may also be employed by the implementation
-to take advantage of the assertion of independence provided by the directive.
+If the \code{nodep} clause appears on the \code{loop} construct, the number of
+threads or levels of parallelism that are used to execute iterations in the
+loop is unspecified. Additionally, the directive guarantees that it is safe
+for an implementation use SIMD instructions to facilitate concurrent execution
+of the associated loops. Additional iteration reordering optimizations may
+also be employed by the implementation to take advantage of the assertion of
+independence provided by the directive.  
 \end{note}
+
+If the \code{loop} region binds to a \code{teams} region, the threads in the
+binding thread set may continue execution after the \code{loop} region without
+waiting for all iterations of the associated loop(s) to complete. The
+iterations are guaranteed to complete before the end of the \code{teams}
+region. 
+
+If the \code{loop} region does not bind to a \code{teams} region, all
+iterations of the associated loop(s) must complete before the encountering
+thread(s) continue execution after the \code{loop} region.
 
 
 % An implementation may choose to treat an \code{concurrent} construct as a
@@ -249,8 +266,8 @@ to take advantage of the assertion of independence provided by the directive.
 Restrictions to the \code{loop} construct are as follows:
 
 \begin{itemize}
-  \item An implementation may not generate a new league of thread teams
-    as the result of a \code{loop} construct.
+%  \item An implementation may not generate a new league of thread teams
+%    as the result of a \code{loop} construct.
 
   \item The \code{seq} and \code{nodep} clauses may not both appear on the
       construct.
@@ -259,7 +276,7 @@ Restrictions to the \code{loop} construct are as follows:
 
   \item If a \code{loop} construct is not nested inside another OpenMP
       construct and it appears in a procedure called from the program, the
-      \code{binds} clause must be present.
+      \code{bind} clause must be present.
 
   \item If a \code{loop} region binds to a \code{teams} or \code{parallel}
       region, it must be encountered by all threads in the binding thread set
@@ -276,7 +293,8 @@ Restrictions to the \code{loop} construct are as follows:
 %    %JLARKIN we'd like to add back atomic eventually. Is there really a reason
 %    %to restrict MASTER?
 
-  \item A \code{loop} region may not contain calls to procedures that contain
+  \item A \code{loop} region corresponding to a \code{loop} construct with the
+      \code{nodep} clause present may not contain calls to procedures that contain
     OpenMP directives. %JLARKIN Would like to relax this later.
 
 %JLARKIN Moved to directives_nesting.tex
@@ -286,7 +304,8 @@ Restrictions to the \code{loop} construct are as follows:
 %    % function call because it would be hard for a compiler to know how
 %    % it can parallelize the loop.
 
-  \item A \code{loop} region may not contain calls to the OpenMP Runtime
+\item A \code{loop} region corresponding to a \code{loop} construct with the
+    \code{nodep} clause present may not contain calls to the OpenMP Runtime
     API.
 
 \end{itemize}
