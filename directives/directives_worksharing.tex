@@ -50,7 +50,8 @@
 A range-based for loop with random access iterator has a \emph{canonical loop form}.
 \end{cppspecific}
 \begin{ccppspecific}
-A loop has \emph{canonical loop form} if it conforms to the following:
+The loops associated with a loop directive have \emph{canonical loop form} if
+they conform to the following:
 
 \medskip
 \nolinenumbers
@@ -107,9 +108,30 @@ A loop has \emph{canonical loop form} if it conforms to the following:
     & {\scode{>=}}\\
     & {\scode{!=}}\\
     & \\
-    {\splc{lb}} and {\splc{b}} & Loop invariant expressions of a type compatible with the type of {\splc{var}}.\\
+    {\splc{lb}} and {\splc{b}} & Expressions of a type compatible with the
+    type of {\splc{var}} that are either loop invariant with respect to the
+    outermost associated loop or are one of the
+    following (where {\splc{var-outer}} is {\splc{var}} from an outer
+    associated loop, and {\splc{a1}} and {\splc{a2}} are integer literal
+    constants):\\
+    & {\splc{var-outer}} \\
+    & {\splc{var-outer}} + {\splc{a2}} \\
+    & {\splc{a2}} + {\splc{var-outer}} \\
+    & {\splc{var-outer}} - {\splc{a2}} \\
+    & {\splc{a2}} - {\splc{var-outer}} \\
+    & {\splc{a1}} {*} {\splc{var-outer}} \\
+    & {\splc{a1}} {*} {\splc{var-outer}} + {\splc{a2}} \\
+    & {\splc{a2}} + {\splc{a1}} {*} {\splc{var-outer}} \\
+    & {\splc{a1}} {*} {\splc{var-outer}} - {\splc{a2}} \\
+    & {\splc{a2}} - {\splc{a1}} {*} {\splc{var-outer}} \\
+    & {\splc{var-outer}} {*} {\splc{a1}} \\
+    & {\splc{var-outer}} {*} {\splc{a1}} + {\splc{a2}} \\
+    & {\splc{a2}} + {\splc{var-outer}} {*} {\splc{a1}} \\
+    & {\splc{var-outer}} {*} {\splc{a1}} - {\splc{a2}} \\
+    & {\splc{a2}} - {\splc{var-outer}} {*} {\splc{a1}} \\
     & \\
-    {\splc{incr}} & A loop invariant integer expression.\\
+    {\splc{incr}} & An integer expression that is loop invariant with respect
+    to the outermost loop in the loop nest.\\
 \end{supertabular}
 \medskip
 
@@ -170,8 +192,11 @@ The following restrictions also apply:
     \item For C++, in the \code{simd} construct the only random access iterator types that are
     allowed for \plc{var} are pointer types.
 
-    \item The \plc{b}, \plc{lb} and \plc{incr} expressions may not reference
-    \plc{var} of any of the associated loops.
+    %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
+
+    \item If the associated loops form a non-rectangular loop nest, the
+        \plc{incr} expression for any associated loop must be an integer
+        literal constant.
 
     \item If \plc{relational-op} is != and \plc{incr-expr} is of the
     form that has \plc{incr} then \plc{incr} must be a constant expression and
@@ -581,6 +606,12 @@ no intervening code between any two loops.
 construct must be the same for all threads in the team.
 
 \item Only one \code{schedule} clause can appear on a loop directive.
+
+\item The \code{schedule} clause must not appear on the loop directive if the
+    associated loop(s) form a non-rectangular loop nest.
+
+\item The \code{ordered} clause must not appear on the loop directive if the
+    associated loop(s) form a non-rectangular loop nest.
 
 \item Only one \code{collapse} clause can appear on a loop directive.
 
