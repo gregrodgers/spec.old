@@ -133,19 +133,14 @@ If any of the loop iteration variables would otherwise be shared, they are impli
 If the \code{bind} clause is present on the construct, the binding region is
 determined by \plc{binding-region}. If the \code{loop} construct is closely
 nested inside a \code{teams} or \code{parallel} construct, the binding region
-is the corresponding \code{teams} or \code{parallel} region. If the
-\code{loop} construct with the \code{nodep} clause present is closely nested
-inside another \code{loop} construct with the \code{nodep} clause present, the
-binding region is the \code{loop} region corresponding to that construct.
-Otherwise, the \code{loop} region does not have a binding region.
+is the corresponding \code{teams} or \code{parallel} region. Otherwise, the
+\code{loop} region does not have a binding region.
 
 If the binding region is a \code{teams} region, then the binding thread set is
 the set of master threads executing that region. If the binding region is a
 \code{parallel} region, then the binding thread set is the team of threads
-executing that region. If the binding region is a \code{loop} region, then the
-binding thread set is the encountering thread and any other threads from the
-binding thread set for that region. If the \code{loop} region does not have a
-binding region, then the binding thread set is the encountering thread.
+executing that region. If the \code{loop} region does not have a binding
+region, then the binding thread set is the encountering thread.
 
 
 % If the \code{concurrent} construct is closely nested inside a \code{teams} construct,
@@ -161,6 +156,15 @@ binding region, then the binding thread set is the encountering thread.
 
 The \code{loop} construct is associated with a loop nest consisting of
 one or more loops that follow the directive. 
+
+If the \code{bind} clause is present then \plc{binding-region} may be one of
+the following: \code{teams}, \code{parallel}, or \code{none}. If
+\plc{binding-region} is \code{teams}, then the innermost enclosing
+\code{teams} region is the binding region.  If \plc{binding-region} is
+\code{parallel}, then the innermost enclosing \code{parallel} region is the
+binding region. If \plc{binding-region} is \code{none}, then the binding
+region is not defined for the \code{loop} region.
+
 
 The \code{collapse} clause may be used to specify how many loops are
 associated with the \code{loop} construct. The parameter of the \code{collapse}
@@ -187,7 +191,6 @@ beginning of each logical iteration, the loop iteration variable of each
 associated loop has the value that it would have if the set of the associated
 loop(s) were executed sequentially. 
 
-
 %The \code{levels} clause may be used to specify how many loops are associated
 %with the \code{concurrent} construct. The parameter of the \code{levels}
 %clause must be a constant positive integer expression. If a \code{levels}
@@ -197,19 +200,8 @@ loop(s) were executed sequentially.
 %clause appears on the construct, the \code{concurrent} directive applies to
 %only the loop that immediately follows the directive.
 
-If the \code{bind} clause is present then \plc{binding-region} may be one of
-the following: \code{teams}, \code{parallel}, or \code{none}. If
-\plc{binding-region} is \code{teams}, then the innermost enclosing
-\code{teams} region is the binding region.  If \plc{binding-region} is
-\code{parallel}, then the innermost enclosing \code{parallel} region is the
-binding region. If \plc{binding-region} is \code{none}, then the binding
-region is not defined for the \code{loop} region.
-
-If the binding region is a \code{teams} or \code{parallel} region, each
-logical iteration is executed once per instance of the \code{loop} region that
-is encountered by the binding thread set. Otherwise, each logical iteration is
-executed once per instance of the \code{loop} region that is encountered by a
-thread.
+Each logical iteration is executed once per instance of the \code{loop}
+region that is encountered by the binding thread set.
 
 If neither the \code{nodep} clause or the \code{seq} clause is present, the
 behavior is as if the \code{nodep} clause appeared on the construct.  If the
@@ -229,11 +221,11 @@ and each thread in the team is included in the executing thread set.
 \begin{note}
 If the \code{nodep} clause appears on the \code{loop} construct, the number of
 threads or levels of parallelism that are used to execute iterations in the
-loop is unspecified. Additionally, the directive guarantees that it is safe
-for an implementation use SIMD instructions to facilitate concurrent execution
-of the associated loops. Additional iteration reordering optimizations may
-also be employed by the implementation to take advantage of the assertion of
-independence provided by the directive.  
+loop is unspecified. Additionally, the directive permits an implementation to
+use SIMD instructions to facilitate concurrent execution of the associated
+loop(s). Iteration reordering transformations may also be performed by
+the implementation to take advantage of the assertion of independence provided
+by the directive.
 \end{note}
 
 If the \code{loop} region binds to a \code{teams} region, the threads in the
