@@ -494,8 +494,10 @@ must provide in order for the code to compile and to execute correctly.
 \syntax
 \begin{ccppspecific}
   The syntax of the \code{requires} directive is as follows:
+
 \begin{ompcPragma}
-  #pragma omp requires \plc{[clause[ [},\plc{] clause] ... ] new-line}
+  #pragma omp requires \plc{clause[ [ [},\plc{] clause] ... ] new-line}
+
 \end{ompcPragma}
 
 \end{ccppspecific}
@@ -504,7 +506,8 @@ must provide in order for the code to compile and to execute correctly.
   The syntax of the \code{requires} directive is as follows:
 
 \begin{ompfPragma}
-!$omp requires \plc{[clause[ [},\plc{] clause] ... ]}
+!$omp requires \plc{clause[ [ [},\plc{] clause] ... ]}
+
 \end{ompfPragma}
 
 \end{fortranspecific}
@@ -516,14 +519,25 @@ implementation defined requirement clause.
 \begin{indentedcodelist}
 unified_address
 unified_shared_memory
+atomic_default_mem_order(seq_cst \textnormal{|} acq_rel \textnormal{|} relaxed)
+dynamic_allocators
 \end{indentedcodelist}
 
 \descr
 
-The \code{requires} directive specifies features an implementation must support
-for correct execution of the current translation unit, or in Fortran the main
-program, subprogram or module.  The behavior specified by a requirement clause
+The \code{requires} directive specifies features an implementation must
+support for correct execution. The behavior specified by a requirement clause
 may override the normal behavior specified elsewhere in this document.
+
+\begin{ccppspecific}
+The \code{requires} directive specifies requirements for the execution of all
+code in the current translation unit.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The \code{requires} directive specifies requirements for the execution of all
+code in the current program unit.
+\end{fortranspecific}
 
 \begin{note}
 Use of this directive makes your code less portable. Users should be aware that not all
@@ -564,6 +578,35 @@ directive on static lifetime variables accessed as part of
 memory by one device may not be visible to other devices until those two
 devices synchronize with each other or both synchronize with the host.
 
+The \code{atomic_default_mem_order} clause specifies the default memory ordering
+behavior for \code{atomic} constructs that must be provided by an
+implementation. If the default memory ordering is specified as \code{seq_cst}, all
+\code{atomic} constructs on which \plc{memory-order-clause} is not specified
+behave as if the \code{seq_cst} clause appears. If the default memory
+ordering is specified as \code{relaxed}, all \code{atomic} constructs on which
+\plc{memory-order-clause} is not specified behave as if the \code{relaxed}
+clause appears.
+
+If the default memory ordering is specified as \code{acq_rel}, \code{atomic}
+constructs on which \plc{memory-order-clause} is not specified behave in the
+following manner:
+
+\begin{itemize}
+    \item as if the \code{release} clause is present if the construct
+        specifies an atomic write or atomic update operation;
+    \item as if the \code{acquire} clause is present if the construct
+        specifies an atomic read operation;
+    \item as if the \code{acq_rel} clause is present if the construct
+        specifies an atomic captured update operation.
+\end{itemize}
+
+The \code{dynamic_allocators} clause has the following effects:
+\begin{itemize}
+ \item makes the \code{uses_allocators} clause optional on \code{target} constructs for the purpose of using allocators in the corresponding \code{target} regions,
+ \item allows the \code{omp_init_allocator} and \code{omp_destroy_allocator} API routines in \code{target} regions,
+ \item allows default allocators to be used by \code{allocate} directives, \code{allocate} clauses and \code{omp_alloc} API routines in \code{target} regions.
+\end{itemize}
+
 Implementers are allowed to include additional implementation defined
 requirement clauses.  Requirement names that do not start with \code{ext_} are
 reserved. All implementation-defined requirements should begin with
@@ -575,9 +618,19 @@ The restrictions for the \code{requires} directive are as follows:
 
 \begin{itemize}
 
-  \item In an application composed of multiple translation units or in
-  Fortran more than one main program, subprogram or module all must have the
-  same requirements.
+\begin{ccppspecific}
+\item A \code{requires} directive with the \code{unified_address} clause must appear
+       in all translation units of a program or none of them.
+\item A \code{requires} directive with the \code{unified_shared_memory} clause must appear
+       in all translation units of a program or none of them.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\item A \code{requires} directive with the \code{unified_address} clause must appear
+       in every program unit of a Fortran program, or in none of them.
+\item A \code{requires} directive with the \code{unified_shared_memory} clause must appear
+       in every program unit of a Fortran program, or in none of them.
+\end{fortranspecific}
 
 \end{itemize}
 
@@ -701,7 +754,7 @@ OMPD tool interface.
 
 \begin{itemize}
 \item
-  \plc{ompd-tool-var} - determines whether an OpenMP implementation will collect
+  \plc{debug-var} - determines whether an OpenMP implementation will collect
   information that an OMPD-plugin can access to satisfy requests from
   a tool.
   There is one copy of this ICV for the whole program.
@@ -765,7 +818,7 @@ environment variables, and initial values.
 {\splc{max-task-priority-var}} & {\scode{OMP_MAX_TASK_PRIORITY}} & {\splc{zero}}\\
 {\splc{tool-var}} & {\scode{OMP_TOOL}} & {\splc{enabled}}\\
 {\splc{tool-libraries-var}} & {\scode{OMP_TOOL_LIBRARIES}} & {\splc{empty string}}\\
-{\splc{ompd-tool-var}} & {\scode{OMPD_ENABLED}} & {\splc{not set}} \\
+{\splc{debug-var}} & {\scode{OMP_DEBUG}} & {\splc{disabled}} \\
 {\splc{def-allocator-var}} & {\scode{OMP_ALLOCATOR}} & Implementation defined\\
 \end{supertabular}
 
@@ -831,7 +884,7 @@ device's ICVs is implementation defined.
 
 \item \code{OMP_TOOL_LIBRARIES} environment variable, see \specref{sec:OMP_TOOL_LIBRARIES}.
 
-\item \code{OMPD_ENABLED} environment variable, see \specref{sec:OMPD_ENABLED}.
+\item \code{OMP_DEBUG} environment variable, see \specref{sec:OMP_DEBUG}.
 
 \item \code{OMP_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
 \end{itemize}
@@ -910,7 +963,7 @@ through OpenMP API routines.
 {\splc{max-task-priority-var}} & (none) & {\scode{omp_get_max_task_priority()}}\\
 {\splc{tool-var}} & (none) & (none)\\
 {\splc{tool-libraries-var}} & (none) & (none)\\
-{\splc{ompd-tool-var}} & (none) & (none) \\
+{\splc{debug-var}} & (none) & (none) \\
 
 {\splc{def-allocator-var}} & {\scode{omp_set_default_allocator()}} & {\scode{omp_get_default_allocator()}}\\
 
@@ -1042,7 +1095,7 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 {\splc{max-task-priority-var}} & global\\
 {\splc{tool-var}} & global\\
 {\splc{tool-libraries-var}} & global\\
-{\splc{ompd-tool-var}} & global \\
+{\splc{debug-var}} & global \\
 {\splc{third-party-tool-var}} & global \\
 {\splc{def-allocator-var}} & implicit task\\
 \end{supertabular}
@@ -1149,7 +1202,7 @@ among construct clauses and ICVs.
 {\splc{max-task-priority-var}} & (none)\\
 {\splc{tool-var}} & (none)\\
 {\splc{tool-libraries-var}} & (none)\\
-{\splc{ompd-tool-var}} & (none) \\
+{\splc{debug-var}} & (none) \\
 {\splc{def-allocator-var}} & {\scode{allocator}}\\
 \end{supertabular}
 
@@ -1277,6 +1330,7 @@ Restrictions to array sections are as follows:
 
 \begin{ccppspecific}
 %\item An array section can only be specified for a base expression.
+\item An element of an array section with a non-zero size must have a complete type.
 
 \item The type of the base expression appearing in an array section must be
     an array or pointer type.
@@ -1293,7 +1347,7 @@ Restrictions to array sections are as follows:
 
 \begin{fortranspecific}
 
-\item A stride expression may not be specified.
+\item A stride expression may not be specified unless otherwise stated.
 
 \item The upper bound for the last dimension of an assumed-size dummy
   array must be specified.
@@ -1393,139 +1447,4 @@ the iterator identifier in the expression with the iterator value.
 \item If the \plc{step} expression of a \plc{range-specification} equals zero the behavior is unspecified.
 \item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
 \item Iterators cannot appear in the \plc{range-specification}.
-\end{itemize}
-
-\section{Memory Spaces}
-\label{sec:Memory Spaces}
-\index{memory spaces}
-
-OpenMP memory spaces represent storage where variables are defined. Table~\ref{tab:Predefined Memory Spaces} shows the list of predefined memory spaces. The selection of a given memory space expresses an intent to use storage with certain traits for the allocations. The actual storage resources that each memory space represents are implementation defined.
-
-\nolinenumbers
-\renewcommand{\arraystretch}{1.5}
-\tablefirsthead{%
-\hline
-\textsf{\textbf{Memory space name}} & \textsf{\textbf{Storage selection intent}}\\
-\hline\\[-3ex]
-}
-\tablehead{%
-\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
-\hline
-\textsf{\textbf{Memory space name}} & \textsf{\textbf{Storage selection intent}}\\
-\hline\\[-3ex]
-}
-\tabletail{%
-\hline\\[-4ex]
-\multicolumn{2}{l}{\small\slshape table continued on next page}\\
-}
-\tablelasttail{\hline}
-\tablecaption{Predefined Memory Spaces\label{tab:Predefined Memory Spaces}}
-\begin{supertabular}{p{2.1in}p{3in}}
-{\scode{omp_default_mem_space}} & Represents the system default storage.\\
-{\scode{omp_large_cap_mem_space}} & Represents storage with large capacity.\\
-{\scode{omp_const_mem_space}} & Represents storage optimized for read-only variables. The result of writing to this storage is unspecified.\\
-{\scode{omp_high_bw_mem_space}} & Represents storage with high bandwidth.\\
-{\scode{omp_low_lat_mem_space}} & Represents storage with low latency.\\
-\end{supertabular}
-
-\linenumbers
-
-\crossreferences
-\begin{itemize}
-\item \code{omp_init_allocator} routine, see \specref{subsec:omp_init_allocator}.
-\end{itemize}
-
-\section{Memory Allocators}
-\label{sec:Memory Allocators}
-\index{memory allocators}
-
-OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive memory in the resources of its associated memory space of at least the size being requested. This allocation will not overlap with any other existing allocation from an OpenMP memory allocator. 
-
-The behavior of the allocation process can be affected by the allocator traits the user specifies. Table~\ref{tab:Allocator traits} shows the allowed allocators traits, their possible values and the default value of each trait. %Trait names and their values are not case sensitive.
-
-\nolinenumbers
-\renewcommand{\arraystretch}{1.5}
-\tablefirsthead{%
-\hline
-\textsf{\textbf{Allocator trait}} & \textsf{\textbf{Allowed values}} & \textsf{\textbf{Default value}}\\
-\hline\\[-3ex]
-}
-\tablehead{%
-\multicolumn{3}{l}{\small\slshape table continued from previous page}\\
-\hline
-\textsf{\textbf{Allocator trait}} & \textsf{\textbf{Allowed values}} & \textsf{\textbf{Default value}}\\
-\hline\\[-3ex]
-}
-\tabletail{%
-\hline\\[-4ex]
-\multicolumn{3}{l}{\small\slshape table continued on next page}\\
-}
-\tablelasttail{\hline}
-\tablecaption{Allocators traits\label{tab:Allocator traits}}
-\begin{supertabular}{p{1.2in}p{2.4in}p{1.2in}}
-{\scode{threadmodel}} & {\scode{shared},\scode{exclusive}} & {\scode{shared}}\\
-{\scode{alignment}} & An integer value which is a power of 2& 1\\
-{\scode{access}} & {\scode{all}, \scode{cgroup}, \scode{pteam}, \scode{thread}} & {\scode{all}}\\
-{\scode{fallback}} & {\scode{default_fb}, \scode{null_fb}, \scode{abort_fb}, \scode{allocator_fb}} & {\scode{default_fb}}\\
-{\scode{fb_data}} & an allocator handle & (none)\\
-\end{supertabular}
-\linenumbers
-
-When an allocator {\scode{threadmodel}} trait is defined to be {\scode{exclusive}} the implementation can assume that no operation will be performed on the allocator by more than one thread at a time.
-
-Memory allocated will be byte aligned to at least the value specified for the {\scode{alignment}} trait of the allocator.
-
-Memory allocated by allocators with the \scode{access} trait defined to be \scode{all} must be accessible by all threads in the device where the allocation was requested. Memory allocated by allocators with the \scode{access} trait defined to be \scode{cgroup} will be memory close to all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{cgroup} from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocators with the \scode{access} trait defined to be \scode{pteam} will be memory close to all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by  an allocator with the \scode{access} trait defined to be \scode{pteam} from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocator with the \scode{access} trait defined to be \scode{thread} will be memory close to the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{thread} from a thread other than the one that allocated the memory result in unspecified behavior.
-
-The \scode{fallback} trait specifies how the allocator behaves when it cannot fulfil an allocation request. If the \scode{fallback} trait is set to \scode{null_fb} the allocator returns the value zero if it fails to allocate the memory. If the \scode{fallback} trait is set to \scode{abort_fb} the program execution will be terminated if the allocation fails. If the \scode{fallback} trait is set to \scode{allocator_fb} then when an allocation fails the request will be delegated to the allocator specified in the \scode{fb_data} trait. If the \scode{fallback} trait is set to \scode{default_fb} then when an allocation fails another allocation will be tried in the \scode{omp_default_mem_space} memory space assuming all allocator traits to be set
-to their default values except for \scode{fallback} trait which will be set to \scode{null_fb}.
-
-Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
-
-\nolinenumbers
-\renewcommand{\arraystretch}{1.5}
-\tablefirsthead{%
-\hline
-\textsf{\textbf{Allocator name}} & \textsf{\textbf{Associated memory space}} & \textsf{\textbf{Non-default trait values}}\\
-\hline\\[-3ex]
-}
-\tablehead{%
-\multicolumn{3}{l}{\small\slshape table continued from previous page}\\
-\hline
-\textsf{\textbf{Allocator name}} & \textsf{\textbf{Associated memory space}} & \textsf{\textbf{Non-default trait values}} \\
-\hline\\[-3ex]
-}
-\tabletail{%
-\hline\\[-4ex]
-\multicolumn{3}{l}{\small\slshape table continued on next page}\\
-}
-\tablelasttail{\hline}
-\tablecaption{Predefined Allocators\label{tab:Predefined Allocators}}
-\begin{supertabular}{p{1.8in}p{2in}p{1.2in}}
-{\scode{omp_default_mem_alloc}} & {\scode{omp_default_mem_space}} & (none)\\
-{\scode{omp_large_cap_mem_alloc}} & {\scode{omp_large_cap_mem_space}} & (none)\\
-{\scode{omp_const_mem_alloc}} & {\scode{omp_const_mem_space}}& (none)\\
-{\scode{omp_high_bw_mem_alloc}} & {\scode{omp_high_bw_mem_space}} & (none)\\
-{\scode{omp_low_lat_mem_alloc}} & {\scode{omp_low_lat_mem_space}} & (none)\\
-{\scode{omp_cgroup_mem_alloc}} & Implementation defined & {\scode{access}}:{\scode{cgroup}}\\
-{\scode{omp_pteam_mem_alloc}} & Implementation defined & {\scode{access}}:{\scode{pteam}}\\
-{\scode{omp_thread_mem_alloc}} & Implementation defined & {\scode{access}}:{\scode{thread}}\\
-\end{supertabular}
-\linenumbers
-
-\begin{fortranspecific}
-If any operation of the base language causes a reallocation of an array that is allocated with a memory allocator then that memory allocator will be used to release the current memory and to allocate the new memory.
-\end{fortranspecific}
-
-\crossreferences
-\begin{itemize}
-\item \code{omp_init_allocator} routine, see \specref{subsec:omp_init_allocator}.
-
-\item \code{omp_destroy_allocator} routine, see \specref{subsec:omp_destroy_allocator}.
-
-\item \code{omp_set_default_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
-
-\item \code{omp_get_default_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
-
-\item \code{OMP_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
 \end{itemize}

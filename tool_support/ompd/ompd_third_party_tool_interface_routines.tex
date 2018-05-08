@@ -6,9 +6,13 @@
 
 The OMPD library must be initialized exactly once after it is loaded, and finalized exactly once
 before it is unloaded. Per OpenMP process or core file initialization and finalization are also required.
-A tool starts the initialization by calling \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_initialize}).
-Once loaded, the tool can determine the version of the OMPD API supported by the plugin by
-calling \code{ompd_get_version} (see~\specref{subsubsubsec:ompd_get_version}).
+
+Once loaded, the tool can determine the version of the OMPD API supported by the
+plugin by calling \code{ompd_get_api_version} (see~\specref{subsubsubsec:ompd_get_api_version}). If the tool supports the version returned by \code{ompd_get_api_version},
+the tool starts the initialization by calling \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_initialize}) using the version
+of the OMPD API supported by the plugin.  If the tool does not support the version returned by \code{ompd_get_api_version}, it may attempt to call \code{ompd_initialize} with
+a different version.
+
 
 \subsubsubsection{\hcode{ompd_initialize}}
 \label{subsubsubsec:ompd_initialize}
@@ -20,7 +24,10 @@ The \code{ompd_initialize} function initializes the OMPD library.
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_initialize(const ompd_callbacks_t *\plc{callbacks});
+ompd_rc_t ompd_initialize(
+  ompd_word_t \plc{api_version},
+  const ompd_callbacks_t *\plc{callbacks}
+);
 \end{ompSyntax}
 \end{cspecific}
 
@@ -30,7 +37,11 @@ There may be more than one library present in a thid-party tool, such as a debug
 may be controlling a number of devices that may be using different runtime systems which require
 different OMPD libraries. This initialization must be performed exactly once before the tool
 can begin operating on a OpenMP process or core file.
+
 \argdesc
+The \plc{api_version} input argument is the OMPD API version that the tool is requesting to use.
+The tool may call \code{ompd_get_api_version} to obtain the latest version supported by the OMPD library.
+
 The tool provides the OMPD plugin with a set of callback functions in the \plc{callbacks} input argument
 which enables the OMPD plugin to allocate and deallocate memory in the tool's address space, to lookup the
 sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and
@@ -40,28 +51,28 @@ write memory in the device.
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
 	\item \code{ompd_callbacks_t} type, see \specref{subsubsec:ompd_callbacks_t}
+	\item \code{ompd_get_api_version} call, see \specref{subsubsubsec:ompd_get_api_version}
 \end{itemize}
 
-\subsubsubsection{\hcode{ompd_get_version}}
-\label{subsubsubsec:ompd_get_version}
+\subsubsubsection{\hcode{ompd_get_api_version}}
+\label{subsubsubsec:ompd_get_api_version}
 
 \summary
-The \code{ompd_get_version} function returns the OMPD API version.
+The \code{ompd_get_api_version} function returns the OMPD API version.
 
 \format
 
 \begin{cspecific}
 \begin{ompSyntax}
-ompd_rc_t ompd_get_version(int *\plc{version});
+ompd_rc_t ompd_get_api_version(ompd_word_t *\plc{version});
 \end{ompSyntax}
 \end{cspecific}
 
-
 \descr
-The tool may call this function to obtain the version number of the OMPD plugin.
+The tool may call this function to obtain the latest OMPD API version number of the OMPD plugin.
 
 \argdesc
-The version number is returned in to the location pointed to by the \plc{version} output argument
+The latest version number is returned in to the location pointed to by the \plc{version} output argument
 
 \crossreferences
 \begin{itemize}
@@ -96,7 +107,7 @@ may be called before \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_init
 Accordingly, the OMPD library must not use heap or
 stack memory for the string it returns to the tool.
 
-The signatures of \code{ompd_get_version} (see~\specref{subsubsubsec:ompd_get_version})
+The signatures of \code{ompd_get_api_version} (see~\specref{subsubsubsec:ompd_get_api_version})
 and \code{ompd_get_version_string} are
 guaranteed not to change in future versions of the API. In contrast, the type definitions and
 prototypes in the rest of the API do not carry the same guarantee. Therefore an OMPD using tool
@@ -198,7 +209,7 @@ at least one active target region by calling
 ompd_rc_t ompd_device_initialize(
   ompd_address_space_handle_t *\plc{process_handle},
   ompd_address_space_context_t *\plc{device_context},
-  omp_device_kind_t \plc{kind},
+  omp_device_t \plc{kind},
   ompd_size_t \plc{sizeof_id},
   void *\plc{id},
   ompd_address_space_handle_t **\plc{device_handle}
@@ -225,10 +236,12 @@ tool for this address space.
 \begin{itemize}
 	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
 	\item \code{ompd_address_space_context_t} type, see \specref{subsubsec:ompd_address_space_context_t}.
-	\item \code{omp_device_kind_t} type, see \specref{ompd:omp_device_kind_t}.
+	\item \code{omp_device_t} type, see \specref{ompd:omp_device_t}.
 	\item \code{ompd_size_t} type, see \specref{subsubsubsec:ompd_size_t}.
 	\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
 \end{itemize}
+
+
 
 
 \subsubsubsection{\hcode{ompd_release_address_space_handle}}
@@ -272,7 +285,76 @@ implementation must not install signal handlers or otherwise interfere with the 
 configuration.
 
 
-\subsubsection{Available Processors and Threads}
+\subsubsection{Address Space Information}
+
+\subsubsubsection{\hcode{ompd_get_omp_version}}
+\label{subsubsubsec:ompd_get_omp_version}
+
+\summary
+This function may be called by the tool to obtain the version of the OpenMP
+API associated with an address space.
+
+\format
+
+\begin{cspecific}
+\begin{ompSyntax}
+ompd_rc_t ompd_get_omp_version(
+  ompd_address_space_handle_t *\plc{address_space},
+  ompd_word_t *\plc{omp_version}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+The tool may call this function to obtain the version of the OpenMP API associated with the address space.
+
+\argdesc
+The input argument \plc{address_space} is an opaque handle provided by the tool
+to reference the address space of the OpenMP process or device.
+
+Upon return, the output argument \plc{omp_version} will contain the version of the OpenMP runtime in the \plc{_OPENMP} version macro format.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
+	\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
+\end{itemize}
+
+\subsubsubsection{\hcode{ompd_get_omp_version_string}}
+\label{subsubsubsec:ompd_get_omp_version_string}
+
+\summary
+The \code{ompd_get_omp_version_string} function returns a descriptive string for the OpenMP
+API version associated with an address space.
+
+\format
+
+\begin{cspecific}
+\begin{ompSyntax}
+ompd_rc_t ompd_get_omp_version_string(
+  ompd_address_space_handle_t *\plc{address_space},
+  const char **\plc{string}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+After initialization, the tool may call this function to obtain the version of the OpenMP
+API associated with an address space.
+
+\argdesc
+The input argument \plc{address_space} is an opaque handle provided by the tool
+to reference the address space of the OpenMP process or device.
+A pointer to a descriptive version string will be placed into the *\plc{string} output argument.
+The string returned by the
+OMPD library is `owned' by the library, and it must not be modified or released by the tool.
+It is guaranteed to remain valid until the \plc{address_space} handle is released.
+
+\crossreferences
+\begin{itemize}
+	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
+	\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
+\end{itemize}
 
 \subsubsubsection{\hcode{ompd_get_num_procs}}
 \label{subsubsubsec:ompd_get_num_procs}
@@ -451,7 +533,7 @@ Mapping a native thread to an OMPD thread handle.
 \begin{ompSyntax}
 ompd_rc_t ompd_get_thread_handle(
   ompd_address_space_handle_t *\plc{handle},
-  ompd_thread_id_kind_t \plc{kind},
+  ompd_thread_id_t \plc{kind},
   ompd_size_t \plc{sizeof_thread_id},
   const void *\plc{thread_id},
   ompd_thread_handle_t **\plc{thread_handle}
@@ -494,7 +576,7 @@ OMPD library needs to retain the thread identifier it must copy it.
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
 	\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
-	\item \code{ompd_thread_id_kind_t} type, see \specref{ompd:ompd_thread_id_kind_t}.
+	\item \code{ompd_thread_id_t} type, see \specref{ompd:ompd_thread_id_t}.
 	\item \code{ompd_size_t} type, see \specref{subsubsubsec:ompd_size_t}.
 	\item \code{ompd_thread_handle_t} type, see \specref{subsubsec:ompd_thread_handle_t}.
 \end{itemize}
@@ -641,7 +723,7 @@ Mapping an OMPD thread handle to a native thread.
 \begin{ompSyntax}
 ompd_rc_t ompd_get_thread_id(
   ompd_thread_handle_t *\plc{thread_handle},
-  ompd_thread_id_kind_t \plc{kind},
+  ompd_thread_id_t \plc{kind},
   ompd_size_t \plc{sizeof_thread_id},
   void *\plc{thread_id}
 );
@@ -677,7 +759,7 @@ thread identifier. The output argument \plc{thread_id} is a buffer that represen
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
 	\item \code{ompd_thread_handle_t} type, see \specref{subsubsec:ompd_thread_handle_t}.
-	\item \code{ompd_thread_id_kind_t} type, see \specref{ompd:ompd_thread_id_kind_t}.
+	\item \code{ompd_thread_id_t} type, see \specref{ompd:ompd_thread_id_t}.
 	\item \code{ompd_size_t} type, see \specref{subsubsubsec:ompd_size_t}.
 \end{itemize}
 
@@ -1655,7 +1737,7 @@ The \code{ompd_get_schedule} function returns information about the schedule whe
 \begin{ompSyntax}
 ompd_rc_t ompd_get_schedule (
   ompd_task_handle_t *\plc{task_handle},
-  ompd_sched_t *\plc{kind},
+  ompd_word_t *\plc{kind},
   ompd_word_t *\plc{modifier}
 );
 \end{ompSyntax}
@@ -1680,7 +1762,6 @@ executed in this task; the output argument \plc{modifier} is set to the \plc{chu
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
 	\item \code{ompd_task_handle_t} type, see \specref{subsubsec:ompd_task_handle_t}.
-	\item \code{ompd_sched_t} type, see \specref{subsubsec:ompd_sched_t}.
 	\item \code{ompd_word_t} type, see \specref{subsubsubsec:ompd_word_t}.
 	\item \plc{run-sched-var} ICV, see \specref{sec:Internal Control Variables}.
 	\item \code{omp_get_schedule} call, see \specref{subsec:omp_get_schedule}.
@@ -1699,7 +1780,7 @@ The \code{ompd_get_proc_bind} function returns the value of the task's \plc{bind
 \begin{ompSyntax}
 ompd_rc_t ompd_get_proc_bind (
   ompd_task_handle_t *\plc{task_handle},
-  ompd_proc_bind_t *\plc{bind}
+  ompd_word_t *\plc{bind}
 );
 \end{ompSyntax}
 \end{cspecific}
@@ -1709,11 +1790,6 @@ ompd_rc_t ompd_get_proc_bind (
 \emph{bind-var} ICV (\specref{sec:Internal Control Variables}), which ``controls the
 binding of the OpenMP threads to places,'' or ``default thread
 affinity policies.''
-%
-The OMPD API defines
-\code{ompd_proc_bind_t}, which
-contains the corresponding OpenMP enumeration values.
-%
 
 \argdesc
 The input argument \plc{task_handle} is an opaque handle for a task and selects the task to operate on.
@@ -1725,7 +1801,6 @@ executed in this task.
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
 	\item \code{ompd_task_handle_t} type, see \specref{subsubsec:ompd_task_handle_t}.
-	\item \code{ompd_proc_bind_t} type, see \specref{subsubsec:ompd_proc_bind_t}.
 	\item \plc{bind-var} ICV, see \specref{sec:Internal Control Variables}.
 	\item \code{omp_get_proc_bind} call, see \specref{subsec:omp_get_proc_bind}.
 \end{itemize}
@@ -1783,8 +1858,6 @@ ompd_rc_t ompd_get_task_frame (
 \end{ompSyntax}
 \end{cspecific}
 
-
-
 \descr
 An OpenMP implementation  maintains an \code{omp_frame_t} object for every implicit or explicit task.
 For the task identified by \plc{task_handle}, \code{ompd_get_task_frame} extracts
@@ -1811,6 +1884,83 @@ field of the \code{omp_frame_t} object associated with the specified task.
 \end{itemize}
 
 
+\subsubsubsection{\hcode{ompd_enumerate_states}}
+\label{subsubsubsec:ompd_enumerate_states}
+
+\summary
+Enumerate thread states supported by an OpenMP implementation.
+
+\format
+\begin{cspecific}
+\begin{ompSyntax}
+ompd_rc_t ompd_enumerate_states (
+  ompd_address_space_handle_t *\plc{address_space_handle},
+  ompd_word_t \plc{current_state},
+  ompd_word_t *\plc{next_state},
+  const char **\plc{next_state_name},
+  ompd_word_t *\plc{more_enums}
+);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+An OpenMP implementation may support only a subset of the states defined by
+the \code{omp_states_t} enumeration type. In addition, an
+OpenMP implementation may support implementation-specific states.
+The \code{ompd_enumerate_states} call enables a tool to
+enumerate the thread states supported by an OpenMP implementation.
+
+When the \plc{current_state} input argument is set to a 
+thread state supported by an OpenMP implementation,
+the call will assign the value and string name of the next thread state in the enumeration
+to the locations pointed to by the 
+\plc{next_state} and \plc{next_state_name} output arguments respectively.
+
+Whenever one or more states are left in the enumeration,
+the call will set the location pointed to by the \plc{more_enums} 
+output argument to $1$.
+When the last state in the enumeration is passed in \plc{current_state}, 
+the call will set the location pointed to by the \plc{more_enums} output
+argument to $0$
+
+
+\argdesc
+
+The address space is identified by the input argument \plc{address_space_handle}.
+
+The input argument \plc{current_state} must be a thread state
+supported by the OpenMP implementation.  To begin enumerating the
+states that an OpenMP implementation supports, a tool should pass
+\code{omp_state_undefined} as the value of the input argument \plc{current_state}.  Subsequent
+calls to \code{ompd_enumerate_states} by the tool should pass the
+value returned by the call in the \plc{next_state} output argument.
+
+The output argument \plc{next_state} is a pointer to an integer where
+the call will return the value of the next state in the
+enumeration.
+
+The output argument \plc{next_state_name} is a pointer to a
+character string pointer, where the call will return a string
+describing the next state.
+
+The output argument \plc{more_enums} is a pointer to an integer where
+the call will return a value of $1$ when there are more states left to enumerate
+or a value of $0$ when there are not.
+
+\constraints
+Any string returned through the argument
+\plc{next_state_name} must be immutable and defined
+for the lifetime of a program execution.
+
+\vspace{2ex}
+
+\crossreferences
+\begin{itemize}
+\item \code{ompd_address_space_handle_t} type, see \specref{subsubsec:ompd_address_space_handle_t}.
+\item \code{omp_state_t} type, see \specref{sec:thread-states}.
+\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
+\end{itemize}
+
 \subsubsubsection{\hcode{ompd_get_state}}
 \label{subsubsubsec:ompd_get_state}
 \summary
@@ -1821,49 +1971,33 @@ This function allows a third party tool to interrogate the OMPD plugin about the
 \begin{ompSyntax}
 ompd_rc_t ompd_get_state (
   ompd_thread_handle_t *\plc{thread_handle},
-  omp_state_t *\plc{state},
+  ompd_word_t *\plc{state},
   omp_wait_id_t *\plc{wait_id}
 );
 \end{ompSyntax}
 \end{cspecific}
 
 \descr
-The function \code{ompd_get_state} is the  OMPD version of
-\code{ompt_get_state}.
-The only difference between the OMPD and OMPT counterparts
-is that the OMPD version must supply a thread handle to provide
-a context for this inquiry.
+This function returns the state of an OpenMP thread.
 
 \argdesc
 
-%ompd_thread_handle_t *\plc{thread_handle}, %/* IN */
-%ompd_state_t *\plc{state}, %/* OUT */
-%ompd_wait_id_t    *\plc{wait_id} % /* OUT */
-
 The input argument \plc{thread_handle} is a thread handle. The output argument
 \plc{state} represents the state of the thread that is represented by the thread handle.
-The thread states are represented by values of the enumeration type
-\code{omp_state_t}.
+The thread states are represented by values returned by \code{ompd_enumerate_states}.
 
 The output argument \plc{wait_id} is a pointer to an opaque handle available to receive the value
 of the thread's wait identifier. If the \plc{wait_id} pointer is not \code{NULL}, it will contain
 the value of the thread's wait identifier \plc{*wait_id}. If the thread state is not one of the
 specified wait states, the value of \plc{*wait_id} is undefined.
 
-%The symbolic names of the members of \code{ompd_state_t} should
-%match those of the OMPT enumeration type \code{omp_state_e}.
-%However, there is no guarantee that the numeric values of the corresponding
-%symbolic constants are identical.
-
 \crossreferences
 \begin{itemize}
   \item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}.
 	\item \code{ompd_thread_handle_t} type, see \specref{subsubsec:ompd_thread_handle_t}.
-	\item \code{omp_state_t} type, see \specref{sec:thread-states}.
 	\item \code{ompd_wait_id_t} type, see \specref{subsubsubsec:ompd_wait_id_t}.
-	\item \code{ompt_get_state} call, see \specref{sec:ompt_get_state}.
+	\item \code{ompd_enumerate_states} call, see \specref{subsubsubsec:ompd_enumerate_states}.
 \end{itemize}
-
 
 
 \subsubsection{Display Control variables}
