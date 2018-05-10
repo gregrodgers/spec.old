@@ -739,8 +739,9 @@ threads that may result in indeterminate values.
 
 \syntax
 In the following syntax, \plc{atomic-clause} is a clause that indicates
-the semantics for which atomicity is enforced and \plc{memory-order-clause} is
-a clause that indicates the memory ordering behavior of the construct.
+the semantics for which atomicity is enforced, \plc{memory-order-clause} is
+a clause that indicates the memory ordering behavior of the construct and
+\plc{clause} is a clause other than \plc{atomic-clause}.
 Specifically, \plc{atomic-clause} is one of the following:
 
 \begin{indentedcodelist}
@@ -750,7 +751,7 @@ update
 capture
 \end{indentedcodelist}
 
-and \plc{memory-order-clause} is one of the following:
+\plc{memory-order-clause} is one of the following:
 
 \begin{indentedcodelist}
 seq_cst
@@ -760,13 +761,18 @@ acquire
 relaxed
 \end{indentedcodelist}
 
+and \plc{clause} is either \plc{memory-order-clause} or one of the following:
+
+\begin{indentedcodelist}
+hint(\plc{hint-expression})
+\end{indentedcodelist}
+
 \begin{ccppspecific}
 The syntax of the \code{atomic} construct takes one of the following forms:
 
 \begin{ompcPragma}
-#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} \plc{atomic-clause}
-                   \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-                   \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
+#pragma omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} \plc{atomic-clause}
+                   \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]} \plc{new-line}
     \plc{expression-stmt}
 \end{ompcPragma}
 
@@ -782,16 +788,15 @@ The syntax of the \code{atomic} construct takes one of the following forms:
 or
 
 \begin{ompcPragma}
-#pragma omp atomic \plc{[memory-order-clause]} \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} \plc{new-line}
+#pragma omp atomic \plc{[clause[[},\plc{] clause] ... ]} \plc{new-line}
     \plc{expression-stmt}
 \end{ompcPragma}
 
 or
 
 \begin{ompcPragma}
-#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} capture
-                   \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-                   \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
+#pragma omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture
+                   \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]} \plc{new-line}
     \plc{structured-block}
 \end{ompcPragma}
 
@@ -893,27 +898,24 @@ evaluated is unspecified.
 The syntax of the \code{atomic} construct takes any of the following forms:
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} read \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{capture-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} read \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{capture-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
 
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} write \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{write-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} write \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{write-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
 
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} update \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{update-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} update \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{update-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
 
@@ -921,8 +923,7 @@ or
 
 %\newpage %% HACK
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause]} \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
+!$omp atomic \plc{[clause[[},\plc{] clause] ... ]}
     \plc{update-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
@@ -930,9 +931,8 @@ or
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{update-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{update-statement}
     \plc{capture-statement}
 !$omp end atomic
 \end{ompfPragma}
@@ -940,8 +940,7 @@ or
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
     \plc{capture-statement}
     \plc{update-statement}
 !$omp end atomic
@@ -950,8 +949,7 @@ or
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
     \plc{capture-statement}
     \plc{write-statement}
 !$omp end atomic
@@ -1175,6 +1173,8 @@ The following restrictions apply to the \code{atomic} construct:
 
 \begin{itemize}
 \item At most one \plc{memory-order-clause} may appear on the construct.
+
+\item At most one \code{hint} clause may appear on the construct.
 
 \item If \plc{atomic-clause} is \code{read} then \plc{memory-order-clause}
     must not be \code{acq_rel} or \code{release}.
