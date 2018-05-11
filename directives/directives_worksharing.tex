@@ -109,11 +109,11 @@ they conform to the following:
     & {\scode{!=}}\\
     & \\
     {\splc{lb}} and {\splc{b}} & Expressions of a type compatible with the
-    type of {\splc{var}} that are either loop invariant with respect to the
+    type of {\splc{var}} that are loop invariant with respect to the
     outermost associated loop or are one of the
     following (where {\splc{var-outer}} is {\splc{var}} from an outer
-    associated loop, and {\splc{a1}} and {\splc{a2}} are integer literal
-    constants):\\
+    associated loop, and {\splc{a1}} and {\splc{a2}} are integer literals or
+    variables that are loop invariant with respect to the outermost loop): \\
     & {\splc{var-outer}} \\
     & {\splc{var-outer}} + {\splc{a2}} \\
     & {\splc{a2}} + {\splc{var-outer}} \\
@@ -131,9 +131,69 @@ they conform to the following:
     & {\splc{a2}} - {\splc{var-outer}} {*} {\splc{a1}} \\
     & \\
     {\splc{incr}} & An integer expression that is loop invariant with respect
-    to the outermost loop in the loop nest.\\
+    to the outermost associated loop.\\
 \end{supertabular}
 \medskip
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+
+The loops associated with a loop directive have \emph{canonical loop form} if
+each of them is a \plc{do-loop} that is a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard.If an
+\code{end}~\code{do} directive follows a \plc{do-construct} in which several
+loop statements share a \code{DO} termination statement, then the directive
+can only be specified for the outermost of these \code{DO} statements.
+
+The \plc{do-stmt} for any \plc{do-loop} must conform to the following:
+
+\medskip
+\nolinenumbers
+\renewcommand{\arraystretch}{1.0}
+\tablefirsthead{%
+    \hline\\[-2ex]
+    \multicolumn{2}{l}{\hspace*{-5pt}%
+    {\scode{DO} \splc{[} \splc{label} \splc{]} \splc{var}  \scode{=} \splc{lb} \scode{,} \splc{b} \splc{ [ ,} \splc{incr} \splc{]}}}\\[2pt] \hline\\[-2ex]
+}
+\tablelasttail{\hline}
+\begin{supertabular}{ p{0.8in} p{4.5in}}
+    {\splc{var}} & A variable of integer type. If this variable would
+    otherwise be shared, it is implicitly made private in the loop construct.
+    Unless the variable is specified {\scode{lastprivate}} or {\scode{linear}}
+    on the loop construct, its value after the loop is unspecified.\\
+    & \\
+
+    {\splc{lb}} and {\splc{b}} & Expressions of a type compatible with the
+    type of {\splc{var}} that are loop invariant with respect to the
+    outermost associated loop or are one of the
+    following (where {\splc{var-outer}} is {\splc{var}} from an outer
+    associated loop, and {\splc{a1}} and {\splc{a2}} are integer literals or
+    variables that are loop invariant with respect to the outermost loop): \\
+    & {\splc{var-outer}} \\
+    & {\splc{var-outer}} + {\splc{a2}} \\
+    & {\splc{a2}} + {\splc{var-outer}} \\
+    & {\splc{var-outer}} - {\splc{a2}} \\
+    & {\splc{a2}} - {\splc{var-outer}} \\
+    & {\splc{a1}} {*} {\splc{var-outer}} \\
+    & {\splc{a1}} {*} {\splc{var-outer}} + {\splc{a2}} \\
+    & {\splc{a2}} + {\splc{a1}} {*} {\splc{var-outer}} \\
+    & {\splc{a1}} {*} {\splc{var-outer}} - {\splc{a2}} \\
+    & {\splc{a2}} - {\splc{a1}} {*} {\splc{var-outer}} \\
+    & {\splc{var-outer}} {*} {\splc{a1}} \\
+    & {\splc{var-outer}} {*} {\splc{a1}} + {\splc{a2}} \\
+    & {\splc{a2}} + {\splc{var-outer}} {*} {\splc{a1}} \\
+    & {\splc{var-outer}} {*} {\splc{a1}} - {\splc{a2}} \\
+    & {\splc{a2}} - {\splc{var-outer}} {*} {\splc{a1}} \\
+    & \\
+
+    {\splc{incr}} & An integer expression that is loop invariant with respect
+    to the outermost associated loop. If it is not explicitly specified, its value is
+    assumed to be 1. \\
+\end{supertabular}
+\medskip
+\end{fortranspecific}
+
 
 \linenumbers
 
@@ -143,12 +203,15 @@ integer type. This type is derived from the type of \plc{var} as follows:
 
 \begin{itemize}
     \item If \plc{var} is of an integer type, then the type is the type of \plc{var}.
-
+\end{itemize}        
+\begin{ccppspecific}
+\begin{itemize}
     \item For C++, if \plc{var} is of a random access iterator type, then the type is the type that
     would be used by \plc{std::distance} applied to variables of the type of \plc{var}.
 
     \item For C, if \plc{var} is of a pointer type, then the type is \code{ptrdiff_t}.
 \end{itemize}
+\end{ccppspecific}
 
 The behavior is unspecified if any intermediate result required to compute the iteration
 count cannot be represented in the type determined above.
@@ -171,6 +234,7 @@ those cases.
 \restrictions
 The following restrictions also apply:
 
+\begin{ccppspecific}
 \begin{itemize}
     \item If \plc{test-expr} is of the form \plc{var} \plc{relational-op}
     \plc{b} and \plc{relational-op} is < or <= then \plc{incr-expr} must cause \plc{var} to increase on each
@@ -192,18 +256,23 @@ The following restrictions also apply:
     \item For C++, in the \code{simd} construct the only random access iterator types that are
     allowed for \plc{var} are pointer types.
 
-    %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
-
-    \item If the associated loops form a non-rectangular loop nest, the
-        \plc{incr} expression for any associated loop must be an integer
-        literal constant.
-
     \item If \plc{relational-op} is != and \plc{incr-expr} is of the
     form that has \plc{incr} then \plc{incr} must be a constant expression and
     evaluate to -1 or 1.
 \end{itemize}
 \end{ccppspecific}
 
+\begin{itemize}
+    \item For any associated loop where \plc{b} or \plc{lb} is not loop invariant with
+        respect to the outermost loop, let \plc{c} be the coefficient on
+        \plc{var} in the expression resulting from subtracting \plc{lb} from
+        \plc{b}, and let
+        \plc{incr-outer} be the \plc{incr} expression of the
+        outer loop referred to by \plc{var-outer}. The result of \plc{c}
+        multiplied by \plc{incr-outer} must be evenly divisible by \plc{incr}.
+
+    %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
+\end{itemize}
 
 
 
@@ -331,15 +400,10 @@ allocate(\plc{[allocator: ]}\plc{list})
 If an \code{end}~\code{do} directive is not specified, an \code{end}~\code{do} directive is assumed at the end of the
 \plc{do-loops}.
 
-Any associated \plc{do-loop} must be a \plc{do-construct} or an
-\plc{inner-shared-do-construct} as defined by the Fortran standard. If
-an \code{end}~\code{do} directive follows a \plc{do-construct} in
-which several loop statements share a \code{DO} termination statement,
-then the directive can only be specified for the outermost of these
-\code{DO} statements.
+The \code{do} directive places restrictions on the structure of all
+associated \plc{do-loops}.  Specifically, all associated \plc{do-loops} must
+have \emph{canonical loop form} (see \specref{sec:Canonical Loop Form}).
 
-If any of the loop iteration variables would otherwise be shared, they are implicitly
-made private on the loop construct.
 \end{fortranspecific}
 
 
