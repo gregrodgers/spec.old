@@ -376,23 +376,16 @@ The \plc{#1-end} event occurs in each thread encountering the
 \code{#1} region.
 }
 
-\def\reductionflag{
-If a reduction is being performed along with the region synchronization,
-\plc{region_flags} will also include \code{ompt_sync_region_reduction}.
-}
-
-\def\omptSyncRegionTools#1#2{
+\def\omptSyncRegionTools#1{
 A thread dispatches a registered \code{ompt_callback_sync_region}
 callback for each occurrence of a \plc{#1-begin} and \plc{#1-end} event
 in that thread.  The callback occurs in the task encountering
 the #1 construct.  This callback has the type signature
 \code{ompt_callback_sync_region_t}.
-The callback receives 
-\code{ompt_sync_region_#1}
-in its \plc{kind} argument.
-#2
-The value \code{ompt_scope_begin} or \code{ompt_scope_end}
-will be provided in its \plc{endpoint} argument, as appropriate.
+The callback receives
+\code{ompt_sync_region_#1} as its \plc{kind} argument and
+\code{ompt_scope_begin} or \code{ompt_scope_end}
+as its \plc{endpoint} argument, as appropriate.
 
 A thread dispatches a registered
 \code{ompt_callback_sync_region_wait} callback
@@ -405,21 +398,21 @@ This callback executes in the context of the task that encountered the
 as its \plc{endpoint} argument, as appropriate.
 }
 
-\def\omptSyncRegion#1#2{
+\def\omptSyncRegion#1{
 \events
 \omptSyncRegionEvents{#1}
 \tools
-\omptSyncRegionTools{#1}{#2}
+\omptSyncRegionTools{#1}
 }
 
 \events
-\omptSyncRegionEvents{barrier}{}
+\omptSyncRegionEvents{barrier}
 
 A \plc{cancellation} event occurs if cancellation is activated at an implicit cancellation point in an barrier region.
 
 \tools
 
-\omptSyncRegionTools{barrier}{}
+\omptSyncRegionTools{barrier}
 
 A thread dispatches a registered \code{ompt_callback_cancel}
 callback for each occurrence of a \plc{cancellation} event in that thread.
@@ -503,21 +496,18 @@ callback for each occurrence of a \plc{implicit-barrier-begin} and
 \plc{implicit-barrier-end} event in that thread.  The callback occurs
 in the implicit task executing in a parallel region.
 This callback has the type signature
-\code{ompt_callback_sync_region_t}.  
-The callback receives \code{ompt_sync_region_barrier}
-in its \plc{region_kind} argument.
+\code{ompt_callback_sync_region_t}.  The callback receives
+\code{ompt_sync_region_barrier} as its \plc{kind} argument and
+\code{ompt_scope_begin} or \code{ompt_scope_end} as its
+\plc{endpoint} argument, as appropriate.
 
-If the barrier performs one or more reductions,
-a thread will dispatch an \code{ompt_callback_sync_region_t} callback for 
-each occurrence of an \plc{implicit-barrier-reduction-begin} and \plc{implicit-barrier-reduction-end} 
-event in that thread.
-The callback occurs in the implicit task executing in a parallel region.
+A thread dispatches a registered \code{ompt_callback_reduction}
+for each occurrence of an \plc{implicit-barrier-reduction-begin} and \plc{implicit-barrier-reduction-end} 
+event in that thread.  The callback occurs in the implicit task executing in a parallel region.
 This callback has the type signature \code{ompt_callback_sync_region_t}.  
-The callback receives \code{ompt_sync_region_reduction} in its \plc{region_kind} argument.
-
-The value \code{ompt_scope_begin} or \code{ompt_scope_end}
-will be provided in the \plc{endpoint} argument, as appropriate, of each
-\code{ompt_callback_sync_region_t} callback dispatched.
+The callback receives \code{ompt_sync_region_reduction} in its \plc{kind} argument and
+\code{ompt_scope_begin} or \code{ompt_scope_end} as its
+\plc{endpoint} argument, as appropriate.
 
 A thread dispatches a registered \code{ompt_callback_cancel}
 callback for each occurrence of a \plc{cancellation} event in that thread.
@@ -629,7 +619,7 @@ a \code{task} construct with an empty associated structured block that
 generates a \emph{mergeable} and \emph{included task}. Thus, the current task region is
 suspended until the \emph{predecessor tasks} of this task complete execution.
 
-\omptSyncRegion{taskwait}{\reductionflag}
+\omptSyncRegion{taskwait}
 
 \restrictions
 
@@ -720,7 +710,26 @@ There is an implicit task scheduling point at the end of the \code{taskgroup}
 region. The current task is suspended at the task scheduling point until all
 tasks in the \plc{taskgroup set} complete execution.
 
-\omptSyncRegion{taskgroup}{\reductionflag}
+\events
+\omptSyncRegionEvents{taskgroup}
+
+The \plc{taskgroup-reduction-begin} event occurs before a task 
+begins to contribute to a \code{task_reduction} and 
+a \plc{taskgroup-reduction-end} event occurs after the task 
+finishes combining to a \code{task_reduction}.
+The interval defined by these events may not contain a task scheduling point.
+
+\tools
+
+\omptSyncRegionTools{taskgroup}
+
+A thread dispatches a registered \code{ompt_callback_reduction}
+for each occurrence of an \plc{taskgroup-reduction-begin} and \plc{taskgroup-reduction-end} 
+event in that thread.  The callback occurs in the implicit task executing in a parallel region.
+This callback has the type signature \code{ompt_callback_sync_region_t}.  
+The callback receives \code{ompt_sync_region_reduction} in its \plc{kind} argument and
+\code{ompt_scope_begin} or \code{ompt_scope_end} as its
+\plc{endpoint} argument, as appropriate.
 
 \crossreferences
 \begin{itemize}
