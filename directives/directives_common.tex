@@ -494,8 +494,10 @@ must provide in order for the code to compile and to execute correctly.
 \syntax
 \begin{ccppspecific}
   The syntax of the \code{requires} directive is as follows:
+
 \begin{ompcPragma}
-  #pragma omp requires \plc{[clause[ [},\plc{] clause] ... ] new-line}
+  #pragma omp requires \plc{clause[ [ [},\plc{] clause] ... ] new-line}
+
 \end{ompcPragma}
 
 \end{ccppspecific}
@@ -504,7 +506,8 @@ must provide in order for the code to compile and to execute correctly.
   The syntax of the \code{requires} directive is as follows:
 
 \begin{ompfPragma}
-!$omp requires \plc{[clause[ [},\plc{] clause] ... ]}
+!$omp requires \plc{clause[ [ [},\plc{] clause] ... ]}
+
 \end{ompfPragma}
 
 \end{fortranspecific}
@@ -516,6 +519,7 @@ implementation defined requirement clause.
 \begin{indentedcodelist}
 unified_address
 unified_shared_memory
+atomic_default_mem_order(seq_cst \textnormal{|} acq_rel \textnormal{|} relaxed)
 \end{indentedcodelist}
 
 \descr
@@ -564,6 +568,28 @@ directive on static lifetime variables accessed as part of
 memory by one device may not be visible to other devices until those two
 devices synchronize with each other or both synchronize with the host.
 
+The \code{atomic_default_mem_order} clause specifies the default memory ordering
+behavior for \code{atomic} constructs that must be provided by an
+implementation. If the default memory ordering is specified as \code{seq_cst}, all
+\code{atomic} constructs on which \plc{memory-order-clause} is not specified
+behave as if the \code{seq_cst} clause appears. If the default memory
+ordering is specified as \code{relaxed}, all \code{atomic} constructs on which
+\plc{memory-order-clause} is not specified behave as if the \code{relaxed}
+clause appears.
+
+If the default memory ordering is specified as \code{acq_rel}, \code{atomic}
+constructs on which \plc{memory-order-clause} is not specified behave in the
+following manner:
+
+\begin{itemize}
+    \item as if the \code{release} clause is present if the construct
+        specifies an atomic write or atomic update operation;
+    \item as if the \code{acquire} clause is present if the construct
+        specifies an atomic read operation;
+    \item as if the \code{acq_rel} clause is present if the construct
+        specifies an atomic captured update operation.
+\end{itemize}
+
 Implementers are allowed to include additional implementation defined
 requirement clauses.  Requirement names that do not start with \code{ext_} are
 reserved. All implementation-defined requirements should begin with
@@ -575,9 +601,19 @@ The restrictions for the \code{requires} directive are as follows:
 
 \begin{itemize}
 
-  \item In an application composed of multiple translation units or in
-  Fortran more than one main program, subprogram or module all must have the
-  same requirements.
+\begin{ccppspecific}
+\item A \code{requires} directive with the \code{unified_address} clause must appear
+       in all translation units of a program or none of them.
+\item A \code{requires} directive with the \code{unified_shared_memory} clause must appear
+       in all translation units of a program or none of them.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\item A \code{requires} directive with the \code{unified_address} clause must appear
+       in every program unit of a Fortran program, or in none of them.
+\item A \code{requires} directive with the \code{unified_shared_memory} clause must appear
+       in every program unit of a Fortran program, or in none of them.
+\end{fortranspecific}
 
 \end{itemize}
 
@@ -701,7 +737,7 @@ OMPD tool interface.
 
 \begin{itemize}
 \item
-  \plc{ompd-tool-var} - determines whether an OpenMP implementation will collect
+  \plc{debug-var} - determines whether an OpenMP implementation will collect
   information that an OMPD-plugin can access to satisfy requests from
   a tool.
   There is one copy of this ICV for the whole program.
@@ -765,7 +801,7 @@ environment variables, and initial values.
 {\splc{max-task-priority-var}} & {\scode{OMP_MAX_TASK_PRIORITY}} & {\splc{zero}}\\
 {\splc{tool-var}} & {\scode{OMP_TOOL}} & {\splc{enabled}}\\
 {\splc{tool-libraries-var}} & {\scode{OMP_TOOL_LIBRARIES}} & {\splc{empty string}}\\
-{\splc{ompd-tool-var}} & {\scode{OMPD_ENABLED}} & {\splc{not set}} \\
+{\splc{debug-var}} & {\scode{OMP_DEBUG}} & {\splc{disabled}} \\
 {\splc{def-allocator-var}} & {\scode{OMP_ALLOCATOR}} & Implementation defined\\
 \end{supertabular}
 
@@ -831,7 +867,7 @@ device's ICVs is implementation defined.
 
 \item \code{OMP_TOOL_LIBRARIES} environment variable, see \specref{sec:OMP_TOOL_LIBRARIES}.
 
-\item \code{OMPD_ENABLED} environment variable, see \specref{sec:OMPD_ENABLED}.
+\item \code{OMP_DEBUG} environment variable, see \specref{sec:OMP_DEBUG}.
 
 \item \code{OMP_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
 \end{itemize}
@@ -1275,6 +1311,8 @@ Restrictions to array sections are as follows:
 \begin{itemize}
 \item An array section can appear only in clauses where it is explicitly allowed.
 
+\item An element of an array section with a non-zero size must have a complete type.
+
 \begin{ccppspecific}
 %\item An array section can only be specified for a base expression.
 
@@ -1293,7 +1331,7 @@ Restrictions to array sections are as follows:
 
 \begin{fortranspecific}
 
-\item A stride expression may not be specified.
+\item A stride expression may not be specified unless otherwise stated.
 
 \item The upper bound for the last dimension of an assumed-size dummy
   array must be specified.
