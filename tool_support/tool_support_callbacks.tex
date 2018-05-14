@@ -239,8 +239,8 @@ typedef void (*ompt_callback_parallel_begin_t) (
   ompt_data_t *\plc{encountering_task_data},
   const omp_frame_t *\plc{encountering_task_frame},
   ompt_data_t *\plc{parallel_data},
-  unsigned int \plc{requested_team_size},
-  ompt_invoker_t \plc{invoker},
+  unsigned int \plc{requested_parallelism},
+  int \plc{flag},
   const void *\plc{codeptr_ra}
 );
 \end{omptCallback}
@@ -254,8 +254,8 @@ typedef void (*ompt_callback_parallel_begin_t) (
 typedef struct ompt_record_parallel_begin_t {
   ompt_id_t \plc{encountering_task_id};
   ompt_id_t \plc{parallel_id};
-  unsigned int \plc{requested_team_size};
-  ompt_invoker_t \plc{invoker};
+  unsigned int \plc{requested_parallelism};
+  int \plc{flag};
   const void *\plc{codeptr_ra};
 } ompt_record_parallel_begin_t;
 \end{omptRecord}
@@ -270,15 +270,15 @@ encountering task.
 The argument \plc{encountering_task_frame} points to the frame object
 associated with the encountering task.
 
-The binding of argument \plc{parallel_data} is the parallel
+The binding of argument \plc{parallel_data} is the parallel or teams
 region that is beginning.
 
-The argument \plc{requested_team_size}
-indicates the number of threads requested by the user.
+The argument \plc{requested_parallelism}
+indicates the number of threads or teams requested by the user.
 
-The argument \plc{invoker} indicates whether the code for the
+The argument \plc{flag} indicates whether the code for the
 parallel region is inlined into the application or invoked by the
-runtime.
+runtime and also whether the region is a parallel or teams region.
 
 \codeptrdesc
 
@@ -286,7 +286,7 @@ runtime.
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
 \item \code{omp_frame_t} type, see \specref{sec:omp_frame_t}.
-\item \code{ompt_invoker_t} type, see \specref{sec:ompt_invoker_t}.
+\item \code{ompt_parallel_flag_t} type, see \specref{sec:ompt_parallel_flag_t}.
 \end{itemize}
 
 
@@ -301,7 +301,7 @@ runtime.
 typedef void (*ompt_callback_parallel_end_t) (
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{encountering_task_data},
-  ompt_invoker_t \plc{invoker},
+  int \plc{flag},
   const void *\plc{codeptr_ra}
 );
 \end{omptCallback}
@@ -315,7 +315,7 @@ typedef void (*ompt_callback_parallel_end_t) (
 typedef struct ompt_record_parallel_end_t {
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{encountering_task_id};
-  ompt_invoker_t \plc{invoker};
+  int \plc{flag};
   const void *\plc{codeptr_ra};
 } ompt_record_parallel_end_t;
 \end{omptRecord}
@@ -324,15 +324,15 @@ typedef struct ompt_record_parallel_end_t {
 
 \argdesc
 
-The binding of argument \plc{parallel_data} is the parallel
+The binding of argument \plc{parallel_data} is the parallel or teams
 region that is ending.
 
 The binding of argument \plc{encountering_task_data} is the encountering
 task.
 
-The argument \plc{invoker} explains whether the execution of the
-parallel region code is inlined into the application code or started
-by the runtime.
+The argument \plc{flag} indicates whether the execution of the
+parallel region is inlined into the application or invoked by the
+runtime and also whether the region is a parallel or teams region.
 
 \codeptrdesc
 
@@ -340,8 +340,8 @@ by the runtime.
 \begin{itemize}
 \item \code{ompt_data_t} type signature, see
 \specref{sec:ompt_data_t}.
-\item \code{ompt_invoker_t} type signature, see
-\specref{sec:ompt_invoker_t}.
+\item \code{ompt_parallel_flag_t} type signature, see
+\specref{sec:ompt_parallel_flag_t}.
 \end{itemize}
 
 \subsubsubsection{\hcode{ompt_callback_master_t}}
@@ -625,8 +625,8 @@ typedef void (*ompt_callback_implicit_task_t) (
   ompt_scope_endpoint_t \plc{endpoint},
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{task_data},
-  unsigned int \plc{team_size},
-  unsigned int \plc{thread_num}
+  unsigned int \plc{actual_parallelism},
+  unsigned int \plc{index}
 );
 \end{omptCallback}
 \end{ccppspecific}
@@ -640,8 +640,8 @@ typedef struct ompt_record_implicit_t {
   ompt_scope_endpoint_t \plc{endpoint};
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{task_id};
-  unsigned int \plc{team_size},
-  unsigned int \plc{thread_num};
+  unsigned int \plc{actual_parallelism},
+  unsigned int \plc{index};
 } ompt_record_implicit_t;
 \end{omptRecord}
 \end{ccppspecific}
@@ -658,12 +658,13 @@ For the \plc{implicit-task-end} event, this argument is \code{NULL}.
 The binding of argument \plc{task_data} is the implicit task
 executing the parallel region's structured block.
 
-The argument \plc{team_size} indicates the number of
-threads in the team.
+The argument \plc{actual_parallelism} indicates the number of
+threads in the \code{parallel} region, respectively the number of 
+teams in the \code{teams} region.
 
-The argument \plc{thread_num} indicates
-the thread number of the calling thread, within the team executing the parallel
-region to which the implicit region binds.
+The argument \plc{index} indicates the thread number or team number 
+of the calling thread, within the team or league executing the 
+parallel or teams region to which the implicit region binds.
 
 \crossreferences
 \begin{itemize}
