@@ -109,11 +109,12 @@ they conform to the following:
     & {\scode{!=}}\\
     & \\
     {\splc{lb}} and {\splc{b}} & Expressions of a type compatible with the
-    type of {\splc{var}} that are loop invariant with respect to the
-    outermost associated loop or are one of the
-    following (where {\splc{var-outer}} is {\splc{var}} from an outer
-    associated loop, and {\splc{a1}} and {\splc{a2}} are integer literals or
-    variables that are loop invariant with respect to the outermost loop): \\
+    type of {\splc{var}} that are loop invariant with respect to the outermost
+    associated loop or are one of the following (where {\splc{var-outer}},
+    {\splc{a1}}, and {\splc{a2}} have a type compatible with the type of
+    {\splc{var}}, {\splc{var-outer}} is {\splc{var}} from an outer associated
+    loop, and {\splc{a1}} and {\splc{a2}} are loop invariant integer
+    expressions with respect to the outermost loop): \\
     & {\splc{var-outer}} \\
     & {\splc{var-outer}} + {\splc{a2}} \\
     & {\splc{a2}} + {\splc{var-outer}} \\
@@ -165,11 +166,12 @@ The \plc{do-stmt} for any \plc{do-loop} must conform to the following:
     & \\
 
     {\splc{lb}} and {\splc{b}} & Expressions of a type compatible with the
-    type of {\splc{var}} that are loop invariant with respect to the
-    outermost associated loop or are one of the
-    following (where {\splc{var-outer}} is {\splc{var}} from an outer
-    associated loop, and {\splc{a1}} and {\splc{a2}} are integer literals or
-    variables that are loop invariant with respect to the outermost loop): \\
+    type of {\splc{var}} that are loop invariant with respect to the outermost
+    associated loop or are one of the following (where {\splc{var-outer}},
+    {\splc{a1}}, and {\splc{a2}} have a type compatible with the type of
+    {\splc{var}}, {\splc{var-outer}} is {\splc{var}} from an outer associated
+    loop, and {\splc{a1}} and {\splc{a2}} are loop invariant integer
+    expressions with respect to the outermost loop): \\
     & {\splc{var-outer}} \\
     & {\splc{var-outer}} + {\splc{a2}} \\
     & {\splc{a2}} + {\splc{var-outer}} \\
@@ -204,14 +206,17 @@ integer type. This type is derived from the type of \plc{var} as follows:
 \begin{itemize}
     \item If \plc{var} is of an integer type, then the type is the type of \plc{var}.
 \end{itemize}        
-\begin{ccppspecific}
+\begin{cppspecific}
 \begin{itemize}
-    \item For C++, if \plc{var} is of a random access iterator type, then the type is the type that
+    \item If \plc{var} is of a random access iterator type, then the type is the type that
     would be used by \plc{std::distance} applied to variables of the type of \plc{var}.
-
-    \item For C, if \plc{var} is of a pointer type, then the type is \code{ptrdiff_t}.
 \end{itemize}
-\end{ccppspecific}
+\end{cppspecific}
+\begin{cspecific}
+\begin{itemize}
+    \item If \plc{var} is of a pointer type, then the type is \code{ptrdiff_t}.
+\end{itemize}
+\end{cspecific}
 
 The behavior is unspecified if any intermediate result required to compute the iteration
 count cannot be represented in the type determined above.
@@ -253,23 +258,40 @@ The following restrictions also apply:
     either to increase on each iteration of the loop or to decrease on
     each iteration of the loop.
 
-    \item For C++, in the \code{simd} construct the only random access iterator types that are
-    allowed for \plc{var} are pointer types.
-
     \item If \plc{relational-op} is != and \plc{incr-expr} is of the
     form that has \plc{incr} then \plc{incr} must be a constant expression and
     evaluate to -1 or 1.
 \end{itemize}
 \end{ccppspecific}
 
+\begin{cppspecific}
 \begin{itemize}
+    \item In the \code{simd} construct the only random access iterator types that are
+    allowed for \plc{var} are pointer types.
+\end{itemize}
+\end{cppspecific}
+
+\begin{itemize}
+%    \item For any associated loop where \plc{b} or \plc{lb} is not loop invariant with
+%        respect to the outermost loop, the expression \plc{b}-\plc{lb} will
+%        have the form \plc{c}*\plc{var-outer} + {d}, where \plc{c} and \plc{d}
+%        are loop invariant integer expressions. Let \plc{incr-outer} be the
+%        \plc{incr} expression of the outer loop referred to by
+%        \plc{var-outer}.  The value of \plc{c}*\plc{incr-outer} \plc{mod}
+%        \plc{incr} must be 0.
+    \item The \plc{b}, \plc{lb}, and \plc{incr} expressions may not reference
+        \plc{var} of any enclosed associated loop.
+
+    \item For any associated loop where the \plc{b} or \plc{lb} expression is not loop
+        invariant with respect to the outermost loop, the \plc{var-outer} that
+        appears in the expression may not have a random access iterator type.
+
     \item For any associated loop where \plc{b} or \plc{lb} is not loop invariant with
-        respect to the outermost loop, let \plc{c} be the coefficient on
-        \plc{var} in the expression resulting from subtracting \plc{lb} from
-        \plc{b}, and let
-        \plc{incr-outer} be the \plc{incr} expression of the
-        outer loop referred to by \plc{var-outer}. The result of \plc{c}
-        multiplied by \plc{incr-outer} must be evenly divisible by \plc{incr}.
+        respect to the outermost loop, the expression $\plc{b}-\plc{lb}$ will
+        have the form $\plc{c}*\plc{var-outer}+\plc{d}$, where \plc{c} and \plc{d}
+        are loop invariant integer expressions. Let \plc{incr-outer} be the
+        \plc{incr} expression of the outer loop referred to by
+        \plc{var-outer}.  The value of $\plc{c}*\plc{incr-outer} \mod \plc{incr}$ must be 0.
 
     %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
 \end{itemize}
