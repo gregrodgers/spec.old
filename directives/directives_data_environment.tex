@@ -1772,13 +1772,14 @@ with the \plc{reduction-identifier}.
 
 \syntax
 \begin{ompSyntax}
-    reduction(\plc{[reduction-modifier}\plc{,]reduction-identifier }:\plc{ list})
+reduction(\plc{[reduction-modifier},\plc{] }\plc{reduction-identifier }:\plc{ list})
 \end{ompSyntax}
 
 Where \plc{reduction-identifier} is defined in Section
 \ref{subsubsec:Properties Common To All Reduction Clauses} and
 \plc{reduction-modifier} is:
 \begin{indentedcodelist}
+inscan
 task
 default
 \end{indentedcodelist}
@@ -1787,6 +1788,12 @@ default
 The \code{reduction} clause is a reduction scoping clause and a reduction
 participating clause, as described in Sections \ref{subsubsec:Reduction Scoping
 Clauses} and \ref{subsubsec:Reduction Participating Clauses}. 
+
+When the \code{notinscan} modifier appears on the clause, the reduction clause
+behaves as if there were no \plc{reduction-modifer} specified. When the \code{inscan} 
+modifier appears on the clause, each list item in the clause will participate in the 
+\plc{scan} (see Section \ref{sec:scan Directive}) computation of each logical iteration.
+   
 
 For \code{parallel} and worksharing constructs, a private copy of each list item is created,
 one for each implicit task, as if the \code{private} clause had been used. For the \code{simd}
@@ -1807,6 +1814,22 @@ copies is unspecified. Any copies associated with the reduction are
 initialized before they are accessed by the tasks participating in the
 reduction. After the end of the region, the original list item contains the
 result of the reduction.
+
+Each task, thread or SIMD lane that performs an \plc{inscan} reduction for a
+given list item receives two new list items: a private copy (as if the private
+clause was used), and additionally a \plc{scan} copy. The scan copy for the
+task, thread or SIMD lane that executes logically first iteration is
+initialized with the value of the original list item. If the task or SIMD lane
+doesn’t execute logically first iteration, the \plc{scan} copy is initialized
+with initializer value of the reduction operator. The private copy of the list
+item is assigned the initial value according to the reduction indentifier
+after entering the loop region with scan computation. The list item in the
+loop region is not replaced with the private copy but instead is with the scan
+copy. The scan copy is then combined with the scan value over all other
+private copies communicated from the scan computation of each preceding
+iteration, using  the combiner from reduction-identifier.  At the end of the
+loop region, the original value is assigned the scan copy from the last
+logical iteration. 
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the
 construct; however, if the reduction clause is used on a construct to which \code{nowait} is
