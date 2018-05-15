@@ -985,7 +985,7 @@ typedef uint64_t ompt_buffer_cursor_t;
 \begin{omptOther}
 typedef struct ompt_task_dependence_t {
   void *\plc{variable_addr};
-  unsigned int \plc{dependence_flags};
+  ompt_task_dependence_type_t \plc{dependence_type};
 } ompt_task_dependence_t;
 \end{omptOther}
 \end{ccppspecific}
@@ -994,15 +994,13 @@ typedef struct ompt_task_dependence_t {
 \descr
 \code{ompt_task_dependence_t} is a structure to hold information
 about a depend clause.
-The element \plc{variable_addr} points to the storage location the dependency.
-The element \plc{dependence_flags} indicates the kind of dependency described.
-If the dependency is an out dependency, \code{(dependence_flags & ompt_task_dependence_type_out)} evaluates to \plc{true}.
-If the dependency is an in dependency, \code{(dependence_flags & ompt_task_dependence_type_in)} evaluates to \plc{true}.
+The element \plc{variable_addr} points to the storage location of the dependence.
+The element \plc{dependence_type} indicates the type of dependence described.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_task_dependence_flag_t}, see
-\specref{sec:ompt_task_dependence_flag_t}.
+\item \code{ompt_task_dependence_type_t}, see
+\specref{sec:ompt_task_dependence_type_t}.
 \end{itemize}
 
 
@@ -1129,12 +1127,11 @@ typedef enum ompt_work_t {
 \begin{ccppspecific}
 \begin{omptEnum}
 typedef enum ompt_mutex_t {
-  ompt_mutex                          = 0x10,
-  ompt_mutex_lock                     = 0x11,
-  ompt_mutex_nest_lock                = 0x12,
-  ompt_mutex_critical                 = 0x13,
-  ompt_mutex_atomic                   = 0x14,
-  ompt_mutex_ordered                  = 0x20
+  ompt_mutex_lock                     = 1,
+  ompt_mutex_nest_lock                = 2,
+  ompt_mutex_critical                 = 3,
+  ompt_mutex_atomic                   = 4,
+  ompt_mutex_ordered                  = 5
 } ompt_mutex_t;
 \end{omptEnum}
 \end{ccppspecific}
@@ -1142,52 +1139,52 @@ typedef enum ompt_mutex_t {
 
 
 
-% ompt_native_mon_flags_t
+% ompt_native_mon_flag_t
 
-\subsubsubsection{\hcode{ompt_native_mon_flags_t}}
-\label{sec:ompt_native_mon_flags_t}
-\code{ompt_native_mon_flags_t} is an enumeration that defines the valid native monitoring flag values.
+\subsubsubsection{\hcode{ompt_native_mon_flag_t}}
+\label{sec:ompt_native_mon_flag_t}
+\code{ompt_native_mon_flag_t} is an enumeration that defines the valid native monitoring flag values.
 
 
 \begin{ccppspecific}
 \begin{omptEnum}
-typedef enum ompt_native_mon_flags_t {
-  ompt_native_data_motion_explicit    = 1,
-  ompt_native_data_motion_implicit    = 2,
-  ompt_native_kernel_invocation       = 4,
-  ompt_native_kernel_execution        = 8,
-  ompt_native_driver                  = 16,
-  ompt_native_runtime                 = 32,
-  ompt_native_overhead                = 64,
-  ompt_native_idleness                = 128
-} ompt_native_mon_flags_t;
+typedef enum ompt_native_mon_flag_t {
+  ompt_native_data_motion_explicit    = 0x01,
+  ompt_native_data_motion_implicit    = 0x02,
+  ompt_native_kernel_invocation       = 0x04,
+  ompt_native_kernel_execution        = 0x08,
+  ompt_native_driver                  = 0x10,
+  ompt_native_runtime                 = 0x20,
+  ompt_native_overhead                = 0x40,
+  ompt_native_idleness                = 0x80
+} ompt_native_mon_flag_t;
 \end{omptEnum}
 \end{ccppspecific}
 
 
 
 
-% ompt_task_t
+% ompt_task_flag_t
 
-\subsubsubsection{\hcode{ompt_task_t}}
-\label{sec:ompt_task_t}
-\code{ompt_task_t} is an enumeration that defines the valid task type values.
+\subsubsubsection{\hcode{ompt_task_flag_t}}
+\label{sec:ompt_task_flag_t}
+\code{ompt_task_flag_t} is an enumeration that defines the valid task type values.
 The least significant byte provides information about the general classification of the task.
 The other bits represent properties of the task.
 
 \begin{ccppspecific}
 \begin{omptEnum}
-typedef enum ompt_task_t {
-  ompt_task_initial                   = 0x1,
-  ompt_task_implicit                  = 0x2,
-  ompt_task_explicit                  = 0x4,
-  ompt_task_target                    = 0x8,
-  ompt_task_undeferred                = 0x8000000,
+typedef enum ompt_task_flag_t {
+  ompt_task_initial                   = 0x00000001,
+  ompt_task_implicit                  = 0x00000002,
+  ompt_task_explicit                  = 0x00000004,
+  ompt_task_target                    = 0x00000008,
+  ompt_task_undeferred                = 0x08000000,
   ompt_task_untied                    = 0x10000000,
   ompt_task_final                     = 0x20000000,
   ompt_task_mergeable                 = 0x40000000,
   ompt_task_merged                    = 0x80000000
-} ompt_task_t;
+} ompt_task_flag_t;
 \end{omptEnum}
 \end{ccppspecific}
 
@@ -1272,12 +1269,12 @@ typedef enum ompt_invoker_t {
 \begin{ccppspecific}
 \begin{omptEnum}
 typedef enum ompt_target_map_flag_t {
-  ompt_target_map_flag_to             = 1,
-  ompt_target_map_flag_from           = 2,
-  ompt_target_map_flag_alloc          = 4,
-  ompt_target_map_flag_release        = 8,
-  ompt_target_map_flag_delete         = 16,
-  ompt_target_map_flag_implicit       = 32
+  ompt_target_map_flag_to             = 0x01,
+  ompt_target_map_flag_from           = 0x02,
+  ompt_target_map_flag_alloc          = 0x04,
+  ompt_target_map_flag_release        = 0x08,
+  ompt_target_map_flag_delete         = 0x10,
+  ompt_target_map_flag_implicit       = 0x20
 } ompt_target_map_flag_t;
 \end{omptEnum}
 \end{ccppspecific}
@@ -1285,21 +1282,21 @@ typedef enum ompt_target_map_flag_t {
 
 
 
-% ompt_task_dependence_flag_t
+% ompt_task_dependence_type_t
 
-\subsubsubsection{\hcode{ompt_task_dependence_flag_t}}
-\label{sec:ompt_task_dependence_flag_t}
-\code{ompt_task_dependence_flag_t} is an enumeration that defines the valid task dependence flag values.
+\subsubsubsection{\hcode{ompt_task_dependence_type_t}}
+\label{sec:ompt_task_dependence_type_t}
+\code{ompt_task_dependence_type_t} is an enumeration that defines the valid task dependence type values.
 
 
 \begin{ccppspecific}
 \begin{omptEnum}
-typedef enum ompt_task_dependence_flag_t {
-  ompt_task_dependence_type_out             = 1,
-  ompt_task_dependence_type_in              = 2,
+typedef enum ompt_task_dependence_type_t {
+  ompt_task_dependence_type_in              = 1,
+  ompt_task_dependence_type_out             = 2,
   ompt_task_dependence_type_inout           = 3,
   ompt_task_dependence_type_mutexinoutset   = 4
-} ompt_task_dependence_flag_t;
+} ompt_task_dependence_type_t;
 \end{omptEnum}
 \end{ccppspecific}
 
@@ -1317,10 +1314,10 @@ typedef enum ompt_task_dependence_flag_t {
 \begin{ccppspecific}
 \begin{omptEnum}
 typedef enum ompt_cancel_flag_t {
-  ompt_cancel_parallel       = 0x1,
-  ompt_cancel_sections       = 0x2,
-  ompt_cancel_loop           = 0x4,
-  ompt_cancel_taskgroup      = 0x8,
+  ompt_cancel_parallel       = 0x01,
+  ompt_cancel_sections       = 0x02,
+  ompt_cancel_loop           = 0x04,
+  ompt_cancel_taskgroup      = 0x08,
   ompt_cancel_activated      = 0x10,
   ompt_cancel_detected       = 0x20,
   ompt_cancel_discarded_task = 0x40
