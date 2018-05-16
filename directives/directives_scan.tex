@@ -48,10 +48,8 @@
 \label{sec:scan Directive}
 
 \summary
-The \code{scan} directive specifies list items that participate in the \plc{scan} 
-computation while retaining the cross-iteration data dependencies imposed by the \plc{scan} list items among 
-logical iterations of the enclosing loop (or parallel loop) construct, \code{simd} or loop SIMD construct. 
-
+The \code{scan} directive specifies that a scan computation is to be performed over the
+values used on each iteration to update a list item.
 
 %%%\begin{samepage}
 \syntax
@@ -59,7 +57,13 @@ logical iterations of the enclosing loop (or parallel loop) construct, \code{sim
 The syntax of the \code{scan} directive is as follows:
 
 \begin{ompcPragma}
-#pragma omp scan \plc{clause[ [},\plc{] clause]} \plc{new-line}
+\plc{loop-directive}
+\plc{for-loop-headers(s)}
+{
+   \plc{structured-block}
+   #pragma omp scan \plc{clause} \plc{new-line}
+   \plc{structured-block}
+}
 \end{ompcPragma}
 
 where \plc{clause} is one of the following:
@@ -68,13 +72,22 @@ inclusive(\plc{list})
 exclusive(\plc{list})
 \end{indentedcodelist}
 
+and where \plc{loop-directive} is a \code{for}, \code{for}~\code{simd}, or
+\code{simd} directive.
+
 \end{ccppspecific}
 
 \begin{fortranspecific}
 The syntax of the \code{scan} directive is as follows:
 
 \begin{ompfPragma}
-!$omp scan \plc{clause[ [},\plc{] clause]} \plc{new-line}
+\plc{loop-directive}
+\plc{do-loop-header(s)}
+   \plc{structured-block}
+   !$omp scan \plc{clause}
+   \plc{structured-block}
+\plc{do-termination-stmts(s)}
+\textsl{[}\plc{end-loop-directive}\textsl{]}
 \end{ompfPragma}
 
 where \plc{clause} is one of the following:
@@ -83,105 +96,85 @@ inclusive(\plc{list})
 exclusive(\plc{list})
 \end{indentedcodelist}
 
+and where \plc{loop-directive} (\plc{end-loop-directive}) is a \code{do}
+(\code{end}~\code{do}), \code{do}~\code{simd}
+(\code{end}~\code{do}~\code{simd}), or
+\code{simd} (\code{end}~\code{simd}) directive.
+
 \end{fortranspecific}
 %%%\end{samepage}
 
-\binding
-The binding thread set for a \code{scan} directive is the current team. A 
-\code{scan} directive binds to the innermost enclosing loop (or parallel loop) 
-region, \code{simd} or loop SIMD region. 
-
 \descr
-When a list item appears in the \code{scan} directive specified with \code{inclusive} 
-or \code{exclusive} clause, it participates in the \plc{scan} 
-computation specified by the \plc{reduction-identifier}, 
-and this computation produces the result of each iteration for the enclosing loop (or parallel 
-loop) construct, \code{simd} or loop SIMD construct specified with \code{reduction} 
-clause and \code{inscan} modifier (see \ref{subsubsec:reduction clause}), while 
-retaining the cross-iteration data dependencies imposed by the \plc{scan} list items among all logical iterations.
+The \code{scan} directive may appear in the body of a loop or loop nest
+associated with an enclosing loop, loop SIMD, or \code{simd} construct, to
+specify that one or more scan computations is to be performed by the loop.
+The directive specifies that either an inclusive scan computation is to be performed
+for each list item that appears in an \code{inclusive} clause on the
+directive, or an an exclusive scan computation is to be performed for each list item that
+appears in an \code{exclusive} clause on the directive.  For each list item
+for which a scan computation is specified, statements that lexically precede
+or follow the directive constitute one of two phases for a given logical
+iteration of the loop -- an \textit{input phase} or a \textit{scan phase}. 
 
-Formally, assignments through each logical iteration \plc{k} in the iteration space [\plc{0}, \plc{N-1}]  
-to produce the result of the \plc{scan} for the list item 
-\plc{X}\textsubscript{i}, for every \plc{i} in [\plc{0}, \plc{k-1}] over \plc{binary_op}, 
+If the list item appears in an \code{inclusive} clause, all statements in the
+structured block that lexically precede the directive constitute the input
+phase and all statements in the structured block that lexically follow the
+directive constitute the scan phase. If the list item appears in an
+\code{exclusive} clause and the iteration is not the last iteration, all
+statements in the structured block that lexically precede the directive
+constitute the scan phase and all statements in the structured block that
+lexically follow the directive constitute the input phase. If the list item
+appears in an \code{exclusive} clause and the iteration is the last iteration,
+there is no input phase for the iteration and all statements that lexically
+precede or follow the directive constitute the scan phase for the iteration.
+The input phase contains all computations that update the list item in the
+iteration, and the scan phase ensures that any statement that reads the list
+item will see the result of the scan computation for that iteration.
 
-where \plc{N} is the total number of logical iterations, \plc{binary_op} denotes the \plc{reduction-identifier},  
-\plc{scan}(\plc{binary_op}, \plc{X}\textsubscript{0}, \ldots, \plc{X}\textsubscript{N-1}) 
-is defined as follows: 
+The result of a scan computation for a given iteration is calculated according
+to the last \textit{generalized prefix sum}
+(\texttt{PRESUM\textsubscript{last}}) applied over the sequence of values
+given by the original value of the list item prior to the loop and all
+preceding updates to the list
+item in the logical iteration space of the loop. The operation
+\texttt{PRESUM\textsubscript{last}}(
+\plc{op}, \plc{a}\textsubscript{1}, \ldots, \plc{a}\textsubscript{N} ) is
+defined for a given binary operator \plc{op} and a sequence of \plc{N} values
+\mbox{\plc{a}\textsubscript{1}, \ldots, \plc{a}\textsubscript{N}} as follows:
 
 \begin{itemize}
-\item if \plc{N} = 1, \plc{X}\textsubscript{0}
-\item if \plc{N} > 1, \plc{binary_op}(\plc{scan}(\plc{binary_op}, \plc{X}\textsubscript{0}, \ldots, \plc{X}\textsubscript{k-1}),
-      \plc{scan}(\plc{binary_op}, \plc{X}\textsubscript{k}, \ldots, \plc{X}\textsubscript{N-1}), for any \plc{k} where 0 < \plc{k} <= \plc{N - 1}
+
+\item if $\plc{N} = 1$, \plc{a}\textsubscript{1}
+
+\item if $\plc{N} > 1$, \plc{op}(
+    \texttt{PRESUM\textsubscript{last}}(\plc{op}, \plc{a}\textsubscript{1},
+    \ldots, \plc{a}\textsubscript{K}), \texttt{PRESUM\textsubscript{last}}(\plc{op}, \plc{a}\textsubscript{L}, \ldots, \plc{a}\textsubscript{N}) ), where $1 \leq \plc{K}+1 = \plc{L} \leq \plc{N}$.
 \end{itemize}
 
-\plc{X}\textsubscript{k} denotes the value of list item of the \plc{k}-th loop logical iteration associated
-with the loop directive. In other words, the \plc{scan} operations may be performed in arbitrary order,
-and the behavior is nondeterministic if \plc{binary_op} is not associative.
+If the operator \plc{op} is not a mathematically associative operation, the result of
+the \texttt{PRESUM\textsubscript{last}} operation is nondeterministic.
 
-All iterations of an enclosing loop (or parallel loop) construct, \code{simd} or loop SIMD 
-construct are permitted to execute in an unordered fashion in unspecified threads, and 
-indeterminately sequenced within each thread when dependencies imposed by 
-the \code{scan} directive are retained. 
+At the beginning of the input phase of each iteration, the list item is
+initialized with the initializer value of the \plc{reduction-identifier}
+specified by the \code{reduction} clause on the innermost enclosing construct.
+The \textit{update value} of a list item is, for a given iteration, the value
+of the list item on completion of its input phase. 
 
-%%%The \code{scan} directive with an \code{inclusive} clause specifies a 
-%%%boundary between lexically last \plc{scan} writes 
-%%%and other reads of one or more list items that needs to preserve 
-%%%the dependencies. 
-
-The \plc{inclusive} means that the \plc{k}-th iteration 
-input data is included in the \plc{k}-th \plc{scan}.
-%%%, which defines, when the thread 
-%%%(or SIMD lane) executing the \plc{k}-th iteration of the loop 
-%%%encounters a \code{scan} directive, for each list item, its computation  
-%%%waits until its dependences on all valid iterations imposed by the \code{scan} 
-%%%construct are satisfied before it completes execution of the \plc{k}-th 
-%%%iteration, thus, the specific dependence inhereent by \plc{scan} 
-%%%is satisfied when a thread (or SIMD lane) executing the corresponding iteration 
-%encounters a \code{scan} directive.
-If a \code{scan} directive with the \code{inclusive} clause appears in the loop
-body, any references to the list item that follow the directive
-are replaced with the scan copy instead of the private copy.  The
-private copy is initialized at the beginning of each iteration
-with the initializer value of the reduction-identifier specified
-on the reduction clause for the construct. The iteration value of
-a list item is, for a given iteration, the value of its private
-copy after the completion of all writes to the private copy that
-precede the scan directive. Prior to any read of the scan copy of
-a list item that follows the scan directive, the scan copy is
-assigned the result of the scan operation over the iteration
-values of the corresponding private copies for the set of
-iterations comprised of all prior iterations and the current
-iteration.
- 
-%%The \code{scan} directive with an \code{exclusive} clause specifies a boundary that  
-%%does not permit dependencies between statements that precede this \code{scan} 
-%%construct and statements that appears after this \code{scan} directive, except dependencies write to and 
-%%read from list items specified in the \code{exclusive} clause, and all writes to list items must 
-%%appear after this \code{scan} directive. 
-
-The \plc{exclusive} means that the \plc{k}-th iteration input data is 
-excluded in the \plc{k}-th \plc{scan}.
-%%%, which defines, when the thread (or SIMD lane) executing 
-%%%the \plc{k}-th iteration of the loop encounters a \code{scan} directive, for each list 
-%%%item, the read of its value shall happen before the \plc{scan} computation that appears 
-%%%after this \code{scan} directive, completes and writes its produced result to this list 
-%%%item in the \plc{k}-th iteration, thus, the specific dependence inhereent by \plc{scan}
-%%%is satisfied when a thread (or SIMD lane) executing the corresponding iteration
-%%%encounters a \code{scan} directive.
-If a \plc{scan} directive with the \code{exclusive} clause appears in the loop
-body, any references to the list item that precede the directive
-are replaced with the scan copy instead of the private copy. The
-private copy is initialized immediately after the scan directive
-on each iteration with the initializer value of the
-reduction-identifier specified on the reduction clause for the
-construct. The iteration value of a list item is, for a given
-iteration, the value of its private copy after the completion of
-all writes to the private copy that follow the scan directive.
-Prior to any read of the scan copy of a list item that precedes
-the scan directive, the scan copy is assigned the result of the
-scan operation over the iteration values of the corresponding
-private copies for the set of iterations comprised of all prior
-iterations.
+Let \plc{orig-val} be the value of the original list item on entry to
+enclosing loop, loop SIMD, or \code{simd} construct. Let \plc{combiner} be the
+combiner for the \plc{reduction-identifier} specified by the \code{reduction}
+clause on the construct. And let \plc{u}\textsubscript{I} be the update value
+of a list item for iteration \plc{I}.  For list items appearing in an
+\code{inclusive} clause on the \code{scan} directive, at the beginning of the
+scan phase for iteration \plc{I} the list item is assigned the result of the
+operation \texttt{PRESUM\textsubscript{last}}( \plc{combiner}, \plc{orig-val},
+\plc{u}\textsubscript{0}, \ldots, \plc{u}\textsubscript{I}).  For list items
+appearing in an \code{exclusive} clause on the \code{scan} directive, at the
+beginning of the scan phase for iteration $\plc{I} = 0$  the list item is
+assigned the value \plc{orig-val}, and at the beginning of the scan phase for
+iteration $\plc{I} > 0$  the list item is assigned the result of the operation
+\texttt{PRESUM\textsubscript{last}}( \plc{combiner}, \plc{orig-val},
+\plc{u}\textsubscript{0}, \ldots, \plc{u}\textsubscript{I-1}).
 
 
 \restrictions
@@ -189,24 +182,34 @@ Restrictions to the \code{scan} directive are as follows:
 
 \begin{itemize}
 
-\item A \code{scan} directive must be closely nested inside a loop
-(or parallel loop) construct, \code{simd}, or loop SIMD construct.
+\item Exactly one \code{scan} directive must appear in the loop body of an
+    enclosing loop, loop SIMD, or \code{simd} construct on which a
+    \code{reduction} clause with the \code{inscan} modifier is present.
 
-\item A list item that appears in the \code{inclusive} or \code{exclusive} clause must
-appear in \code{reduction} clause with \code{inscan} modifier of the enclosing loop
-(or parallel loop) construct, \code{simd} or loop SIMD construct.
+\item A list item that appears in the \code{inclusive} or \code{exclusive}
+    clause must appear in a \code{reduction} clause with the \code{inscan}
+    modifier on the enclosing loop, loop SIMD, or \code{simd} construct.
 
-\item A list item that appears in the \code{reduction} clause with \code{inscan} modifier 
-of the enclosing loop (or parallel loop) construct, \code{simd} or loop SIMD construct, it must appear in an \code{inclusive} 
-or \code{exclusive} clause on the enclosed \code{scan} directive.  
+\item Cross-iteration dependences across different logical iterations must not
+    exist, except for dependences for the list items specified in an
+    \code{inclusive} or \code{exclusive} clause.
 
-\item A list item must not appear in more than one \code{inclusive} or \code{exclusive} clause of \code{scan} directives 
-inside the enclosing loop (or parallel loop) construct, \code{simd} or loop SIMD construct.
+\item Intra-iteration dependences from a statement in the structured block
+    preceding a \code{scan} directive to a statement in the structured block
+    following a \code{scan} directive must not exist, except for dependences
+    for the list items specified in an \code{inclusive} or \code{exclusive}
+    clause.
 
-\item At most one \code{scan} directive specified with \code{exclusive} is permitted within 
-the enclosing loop (or parallel loop) construct, \code{simd} or loop SIMD construct.
+%\item A list item must not appear in more than one \code{inclusive} or
+%    \code{exclusive} clause of \code{scan} directives inside the enclosing
+%    loop, loop SIMD, or \code{simd} construct.
 
-\item A \code{inclusive} clause must not appear on the \code{scan} directive specified with \code{exclusive} clause. 
+%\item At most one \code{scan} directive specified with the \code{exclusive}
+%    clause is permitted within the enclosing loop, loop SIMD, or \code{simd}
+%    construct.
+
+%\item An \code{inclusive} clause must not appear on a \code{scan} directive
+%    specified with the \code{exclusive} clause. 
 
 \end{itemize}
 
@@ -215,14 +218,13 @@ the enclosing loop (or parallel loop) construct, \code{simd} or loop SIMD constr
 \item loop construct, see
 \specref{subsec:Loop Construct}.
 
-%%%\item \code{taskloop} constrict, see 
-%%%\specref{subsec:taskloop Construct}.
-
 \item \code{simd} construct, see
 \specref{subsec:simd Construct}.
 
-\item parallel loop construct, see
-\specref{subsec:Parallel Loop Construct}.
+\item loop SIMD construct, see
+\specref{subsec:Loop SIMD Construct}.
+
+\item \code{reduction} clause, see \specref{subsubsec:reduction clause}.
 \end{itemize}
 
 \pagebreak
