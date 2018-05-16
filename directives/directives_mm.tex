@@ -81,7 +81,7 @@ The behavior of the allocation process can be affected by the allocator traits t
 {\scode{alignment}} & A positive integer value which is a power of 2& 1 byte\\
 {\scode{access}} & {\scode{all}, \scode{cgroup}, \scode{pteam}, \scode{thread}} & {\scode{all}}\\
 {\scode{pool_size}} & Positive integer value & Implementation defined\\
-{\scode{distribute}} & {\scode{nearest}, \scode{blocked}, \scode{interleaved}} & Implementation defined\\
+{\scode{partition}} & {\scode{whatever}, \scode{nearest}, \scode{blocked}, \scode{interleaved}} & {\scode{default}}\\
 \end{supertabular}
 \linenumbers
 
@@ -99,14 +99,18 @@ Memory allocated by allocators with the \scode{access} trait defined to be \scod
 
 The total amount of storage in bytes that an allocator can use is limited by the {\scode{pool_size}} trait. For allocators with the \scode{access} trait defined to be \scode{all} this limit refers to allocations from all threads accessing the allocator. For allocators with the \scode{access} trait defined to be \scode{cgroup} this limit refers to allocations from threads accessing the allocator from the same contention group. For allocators with the \scode{access} trait defined to be \scode{pteam} this limit refers to allocations from threads accessing the allocator from the same parallel team. For allocators with the \scode{access} trait defined to be \scode{thread} this limit refers to allocations from each thread accessing the allocator. Requests that would result in using more storage than {\scode{pool_size}} will not be fulfilled by the allocator. 
 
-The {\scode{distribute}} trait describes the intended distribution of allocated
-memory over memory domains within the memory space associated with the
-allocator and available to the program. The values and their description are:
+The {\scode{partition}} trait describes the partitioning of allocated
+memory over the storage resources represented by the memory space associated
+with the allocator. The partitioning will be done in parts with a minimum size
+that is implementation defined. The values are:
 \begin{itemize}
- \item \scode{nearest}: allocated memory will be placed in the memory domain that is closest to the thread performing the allocation.
- \item \scode{blocked}: allocated memory will be distributed in contiguous parts of the same size over the memory domains with one part per domain.
- \item \scode{interleaved}: allocated memory will be distributed in a round-robin fashion over the memory domains and the size of each part is implementation defined.
+ \item \scode{whatever}: the placement of allocated memory is determined by the execution environment.
+ \item \scode{nearest}: allocated memory is placed in the storage resource that is nearest to the thread that requests the allocation.
+ \item \scode{blocked}: allocated memory is partitioned into parts of approximately the same size with at most one part per storage resource.
+ \item \scode{interleaved}: allocated memory parts are distributed in a round-robin fashion across the storage resources.
 \end{itemize}
+
+%TODO: add reference to appendix because of implementation defined behavior
 
 Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
 
