@@ -47,7 +47,7 @@
 \index{constructs!loop@{\code{loop}}}
 \label{sec:loop Construct}
 \summary
-  A \code{loop} construct specifies whether the iterations of the associated
+  A \code{loop} construct specifies that the iterations of the associated
   loops may execute concurrently and permits the encountering thread(s) to
   execute the loop accordingly.
 
@@ -62,8 +62,6 @@ The syntax of the \code{loop} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-nodep
-seq
 private(\plc{list})
 firstprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
@@ -88,8 +86,6 @@ The syntax of the \code{loop} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-nodep
-seq
 private(\plc{list})
 firstprivate(\plc{list})
 reduction(\plc{reduction-identifier }:\plc{ list})
@@ -154,26 +150,30 @@ region, then the binding thread set is the encountering thread.
 
 \descr
 
-The \code{loop} construct is associated with a loop nest consisting of
-one or more loops that follow the directive. 
+The \code{loop} construct is associated with a loop nest consisting of one or
+more loops that follow the directive. The directive asserts that the
+implementation may assume that dependences do not exist between logical
+iterations, so that the iterations may execute in any order, including
+concurrently.
 
 If the \code{bind} clause is present then \plc{binding-region} may be one of
 the following: \code{teams}, \code{parallel}, or \code{none}. If
 \plc{binding-region} is \code{teams}, then the innermost enclosing
 \code{teams} region is the binding region.  If \plc{binding-region} is
 \code{parallel}, then the innermost enclosing \code{parallel} region is the
-binding region. If \plc{binding-region} is \code{none}, then the binding
-region is not defined for the \code{loop} region.
+binding region. If \plc{binding-region} is \code{thread}, then the binding
+region is the encountering thread or task.
 
 
-The \code{collapse} clause may be used to specify how many loops are
-associated with the \code{loop} construct. The parameter of the \code{collapse}
-clause must be a constant positive integer expression. If a \code{collapse}
-clause is specified with a parameter value greater than 1, then the
-iterations of the associated loops to which the clause applies are collapsed
-into one larger iteration space. If no \code{collapse} clause is present or its
-parameter is 1, the only loop that is associated with the \code{loop} construct
-is the one that immediately follows the \code{loop} directive.
+The \code{collapse} clause may be used to specify how many loops are associated
+with the \code{loop} construct. The parameter of the \code{collapse} clause
+must be a constant positive integer expression. If a \code{collapse} clause is
+specified with a parameter value greater than 1, then the iterations of the
+associated loops to which the clause applies are collapsed into one larger
+iteration space with unspecified ordering. If no \code{collapse} clause is
+present or its parameter is 1, the only loop that is associated with the
+\code{loop} construct is the one that immediately follows the \code{loop}
+directive.
 
 If more than one loop is associated with the \code{loop} construct then the
 number of times that any intervening code between any two associated
@@ -203,27 +203,17 @@ loop(s) were executed sequentially.
 Each logical iteration is executed once per instance of the \code{loop}
 region that is encountered by the binding thread set.
 
-If neither the \code{nodep} clause or the \code{seq} clause is present, the
-behavior is as if the \code{nodep} clause appeared on the construct.  If the
-\code{nodep} clause appears on the \code{loop} construct, the implementation 
-may assume that dependences do not exist between logical iterations, so that
-the iterations may execute in any order, including concurrently. If the
-\code{seq} clause is present, the iterations must execute as if in their
-logical iteration order.
+%If neither the \code{nodep} clause or the \code{seq} clause is present, the
+%behavior is as if the \code{nodep} clause appeared on the construct.  If the
+%\code{nodep} clause appears on the \code{loop} construct, the implementation 
+%may assume that dependences do not exist between logical iterations, so that
+%the iterations may execute in any order, including concurrently. If the
+%\code{seq} clause is present, the iterations must execute as if in their
+%logical iteration order.
 
 The set of threads that may execute the iterations of the \code{loop} region
 is the binding thread set. Each iteration is executed by one thread from this
 set.
-
-\begin{note}
-If the \code{nodep} clause appears on the \code{loop} construct,  the
-directive permits an implementation to use additional threads or SIMD
-instructions to facilitate concurrent execution of the associated loop(s) when
-this would not be observable given the restrictions defined for this
-construct. Iteration reordering transformations may also be performed by the
-implementation to take advantage of the assertion of independence provided by
-the directive.
-\end{note}
 
 If the \code{loop} region binds to a \code{teams} region, the threads in the
 binding thread set may continue execution after the \code{loop} region without
@@ -255,6 +245,9 @@ thread(s) continue execution after the \code{loop} region.
 Restrictions to the \code{loop} construct are as follows:
 
 \begin{itemize}
+  \item If the \code{collapse} clause exists there may be no intervening OpenMP
+    directives between the associated loops.
+
 %  \item An implementation may not generate a new league of thread teams
 %    as the result of a \code{loop} construct.
 
