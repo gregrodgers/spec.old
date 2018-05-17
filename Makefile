@@ -117,8 +117,10 @@ DIFF_FROM:=master
 DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole  \
-                  --append-textcmd=plc,code,glossaryterm \
-                  --exclude-textcmd=chapter,section,subsection,subsubsection,vcode
+                  --append-safecmd=plc,code,hcode,scode,pcode,splc,glossaryterm \
+                  --append-textcmd=subsubsubsection
+                  #,binding,comments,constraints,crossreferences,descr,argdesc,effect,format,restrictions,summary,syntax,events,tools,record
+#                  --exclude-textcmd=chapter,section,subsection,subsubsection,vcode
 #COMMON_DIFF_OPTS:=--math-markup=whole \
 #                  --append-safecmd=ld-safe.txt \
 #                  --append-textcmd=plc,code,glossaryterm \
@@ -139,18 +141,18 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 	cp -f appendices/ompd_diagram.pdf "$@/appendices"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
-	latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH=$(PWD)/util/latexdiff:$(PATH) latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
-	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH=$(PWD)/util/latexdiff:$(PATH) latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast --debug -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 # Slow but portable diffs
 openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir
-	latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH=$(PWD)/util/latexdiff:$(PATH) latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
