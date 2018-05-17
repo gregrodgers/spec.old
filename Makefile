@@ -146,7 +146,7 @@ openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
-	env PATH="$(PWD)/util/latexdiff:$(PATH)" latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast --debug -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH="$(PWD)/util/latexdiff:$(PATH)" latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
