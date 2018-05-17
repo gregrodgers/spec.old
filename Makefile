@@ -90,6 +90,7 @@ clean:
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
 	rm -f openmp.synctex.gz
 	rm -rf *.tmpdir
+	rm -f openmp-ticket_*.pdf
 	rm -f openmp-diff-abridged-ticket_*.pdf
 	rm -f openmp-diff-full-ticket_*.pdf
 	rm -f openmp-diff-minimal-ticket_*.pdf
