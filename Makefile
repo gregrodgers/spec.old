@@ -21,17 +21,16 @@ TEXFILES=openmp.tex \
          directives/directives_common.tex \
          directives/directives_concurrent.tex \
          directives/directives_data_environment.tex \
+         directives/directives_declare.tex \
          directives/directives_device.tex \
          directives/directives_if.tex \
          directives/directives_loops.tex \
          directives/directives_mm.tex \
          directives/directives_nesting.tex \
          directives/directives_parallel.tex \
-         directives/directives_simd.tex \
          directives/directives_synchronization.tex \
          directives/directives_tasking.tex \
          directives/directives_teams.tex \
-         directives/directives_udr.tex \
          directives/directives_worksharing.tex \
          directives/worksharing-schedule-loop.tex \
          environment_variables.tex \
