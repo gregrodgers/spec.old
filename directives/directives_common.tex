@@ -1463,7 +1463,7 @@ The \plc{construct} set is composed of the directive names, each being a trait, 
 \begin{itemize}
  \item for functions with a \code{declare simd} directive the \plc{simd} trait will be the first one of the set for the generated SIMD versions.  
  \item for functions within a \code{declare target} block the \plc{target} trait will be the first one of the set.
- \item for functions with a \code{declare variant} directive the selectors of the \code{construct} set will be added in the same order at the beginning of the set.
+ \item for functions with a \code{declare variant} directive the selectors of the \code{construct} selector set will be added in the same order at the beginning of the set.
 \end{itemize}
 
 The following properties can be defined in an OpenMP context for the \plc{simd} trait:
@@ -1479,30 +1479,28 @@ The following properties can be defined in an OpenMP context for the \plc{simd} 
 
 The \plc{device} set includes traits that define the characteristics of the compiler target device at that point in the program. At least the following traits must be defined:
 \begin{itemize}
- \item The \plc{kind(kind-name-list)} trait specifies the general kind of the device. OpenMP defined values for \plc{kind-name} are defined in the ``OpenMP Context Definitions'' which is available on http://www.openmp.org/. 
+ \item The \plc{kind(kind-name-list)} trait specifies the general kind of the device. OpenMP defined values for \plc{kind-name} are defined in the ``OpenMP Context Definitions'' document which is available on http://www.openmp.org/. 
  \item The \plc{isa(isa-name-list)} trait specifies the Instruction Set Architectures supported by the device. The accepted \plc{isa-name} values are implementation defined.
  \item The \plc{uarch(uarch-name-list)} trait specifies the microarchitectures supported by the device. The accepted \plc{uarch-name} values are implementation defined.
 \end{itemize}
 
-The \plc{offload} set includes traits that define the characteristics of the compiler offload target device at that point in the program. The traits that can be defined in the \plc{offload} set are the same as in the \plc{device} set.
+The \plc{offload} set includes traits that define the characteristics of the compiler offload target device at that point in the program if one exists. Otherwise it will be an empty set. The traits that can be defined in the \plc{offload} set are the same as in the \plc{device} set.
 
 The \plc{implementation} set includes traits that define the implementation support at that point in the program. At least the following traits can be defined:
-\begin{description}
- \item[vendor(\plc{name})]
- \item[unified\_address]
- \item[unified\_shared\_memory]
- \item[dynamic\_allocators]
- \item[extension(\plc{extension-list})]
+\begin{itemize}
+ \item The \plc{vendor(vendor-name)} trait specifies the name of the vendor of the implementation. OpenMP defined values for \plc{vendor-name} are defined in the ``OpenMP Context Definitions'' document which is available on http://www.openmp.org/. 
+ \item The \plc{extension(extension-name-list)} trait specifies vendor specific extensions to the OpenMP specification. The accepted \plc{extension-name} values are implementation defined.
+ \item A trait with the same name corresponding to each clause in the \code{requires} directive.
 \end{description}
 
-Implementations can define further traits in the \plc{device},\plc{offload} and \plc{implementation} sets.
+Implementations can define further traits in the \plc{device}, \plc{offload} and \plc{implementation} sets.
 
 \subsection{Context Selectors}
 \label{subsec:Context Selectors} 
 
 Context selectors allow to define the properties of an OpenMP context that a directive or clause wants to match. OpenMP defines different sets of selectors, each containing different selectors.
 
-The syntax to define context selectors is the following:
+The syntax to define a \plc{context-selector-specification} is the following:
 
 \begin{ompSyntax}
 \plc{context-selector-set}[,\plc{context-selector-set}[,...]]
@@ -1518,9 +1516,9 @@ The \code{construct} selector set defines which \plc{construct} traits should be
 
 TODO: SIMD property equivalences and restrictions
 
-The \code{device},\code{offload} and \code{implementation} selector sets define which traits should be active in the corresponding trait set of the OpenMP context. The same traits defined in the corresponding traits sets can be used as selectors with the same properties.
+The \code{device}, \code{offload} and \code{implementation} selector sets define which traits should be active in the corresponding trait set of the OpenMP context. The same traits defined in the corresponding traits sets can be used as selectors with the same properties.
 
-The \code{user} selector set defines selectors that provide additional user-defined. The \code{condition(\plc{boolean-expr}} selector defines a compile-time condition that must be evaluate to true for the selector to be true. 
+The \code{user} selector set defines selectors that provide additional user-defined. The \code{condition}(\plc{boolean-expr}) selector defines a compile-time condition that must be evaluate to true for the selector to be true. 
 
 Implementations can allow further selectors to be specified. Implementations can ignore user specified selectors that are not those described in this section.
 
@@ -1553,7 +1551,7 @@ Among compatible context selectors a score will be computed using the following 
  \item Additional implementation allowed selector values are implementation defined.
  \item Other selectors have a value of zero.
  \item Context selectors which are a strict subset of another context selector have a score of zero.
- \item Other context selectors score result of the addition of the values of all the selectors specified. If any of the \code{kind},\code{uarch} or \code{isa} selectors are specified both in the \code{device} set and the \code{offload} set it will be only be considered once.
+ \item Other context selectors score result of the addition of the values of all the selectors specified. If a \code{construct} selector appears multiple times in the context only the highest value is used. If any of the \code{kind},\code{uarch} or \code{isa} selectors are specified both in the \code{device} set and the \code{offload} set it will be only be considered once.
 \end{enumerate}
 
 \subsection{\hcode{declare variant} Directive}
@@ -1578,7 +1576,7 @@ The syntax of the \code{declare variant} directive is as follows:
 where \plc{clause} is one of the following{}:
 
 \begin{indentedcodelist}
-match(\plc{context-specification})
+match(\plc{context-selector-specification})
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -1593,7 +1591,7 @@ The syntax of the \code{declare variant} directive is as follows:
 where \plc{clause} is one of the following{}:
 
 \begin{indentedcodelist}
-match(\plc{context-specification})
+match(\plc{context-selector-specification})
 \end{indentedcodelist}
 \end{fortranspecific}
 
@@ -1603,7 +1601,7 @@ The use of a \code{declare}~\code{variant} directives immediately prior to a fun
 
 At any point, after the declaration of variant for a given basic function, where there is a call to that basic function the compiler will check if there is any variant that is compatible with OpenMP Context at that point. Among the compatible variants, the variant with the highest score according to the algorithm described in Section \ref{subsec:Matching and Scoring Context Selectors} will be selected. If multiple variants have the highest score is unspecified which one will be selected. The original call to the basic function will be replaced with a call to the selected, if any, variant function. 
 
-The prototype of the variant function shall, in general, match that of the base function. It is implementation defined if for some specific Specialization Contexts the prototype of the variant should differ, and how, from that of the base function.
+The prototype of the variant function shall, in general, match that of the base function. It is implementation defined if for some specific OpenMP context the prototype of the variant should differ, and how, from that of the base function.
 
 \restrictions
 Restrictions to the \code{declare variant} directive are as follows:
@@ -1628,7 +1626,8 @@ Otherwise, the result is unspecified.
 
 \crossreferences
 \begin{itemize}
-\item Context specification, see \specref{subsec:Context Selectors}.
+\item OpenMP Context Specification, see \specref{subsec:OpenMP Context}.
+\item Context Selectors, see \specref{subsec:Context Selectors}.
 \end{itemize}
 
 
