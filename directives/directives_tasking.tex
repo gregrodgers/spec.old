@@ -83,7 +83,12 @@ depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
 affinity(\plc{list}[:\plc{iterators-definition}])
+detach(\plc{event-handler})
+
 \end{indentedcodelist}
+
+where \plc{event-handler} is expression of the \code{const omp_event_t *} type.
+
 \end{samepage}
 \end{ccppspecific}
 
@@ -113,7 +118,11 @@ depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
 affinity(\plc{list}[:\plc{iterators-definition}])
+detach(\plc{event-handler})
 \end{indentedcodelist}
+
+where \plc{event-handler} is an integer expression of the \code{omp_event_kind} \plc{kind}
+
 \end{fortranspecific}
 
 \binding
@@ -126,7 +135,8 @@ The \code{task} construct is a \emph{task generating construct}. When a thread
 encounters a \code{task} construct, an explicit task is generated from the code
 for the associated structured block. The data environment of the task is
 created according to the data-sharing attribute clauses on the \code{task}
-construct, per-data environment ICVs, and any defaults that apply.
+construct, per-data environment ICVs, and any defaults that apply. The data environment of the task is destroyed 
+when the execution code of the associated structured block is completed.
 
 The encountering thread may immediately execute the task, or defer its execution. In the
 latter case, any thread in the team may be assigned the task. Completion of the task can
@@ -162,7 +172,11 @@ task is an included task.
 
 The \code{task} construct includes a task scheduling point in the task region of its generating
 task, immediately following the generation of the explicit task. Each explicit \code{task}
-region includes a task scheduling point at its point of completion.
+region includes a task scheduling point at the end of its associated structured block.
+
+If a \code{detach} clause is present on a \code{task} construct a new event, \plc{detach-event}, is created. The \plc{detach-event} is connected to the completion of the associated \code{task} region. The original \plc{event-handler} will be updated to point to the \plc{detach-event} event before the task data environment is created. The \plc{event-handler} will be considered as if it was specified on a \code{firstprivate} clause. 
+
+If no \code{detach} clause is present on a \code{task} construct the generated \code{task} is completed when the execution of its associated structured block is completed. If a \code{detach} clause is present on a \code{task} construct the task is completed when the execution of its associated structured block is completed and the \plc{detach-event} is fulfilled. In any case, the task data environment is destroyed at the end of the associated structured block.
 
 When the \code{mergeable} clause is present on a \code{task} construct, the generated task is a \plc{mergeable task}.
 
@@ -227,6 +241,10 @@ Restrictions to the \code{task} construct are as follows:
 \item At most one \code{final} clause can appear on the directive.
 
 \item At most one \code{priority} clause can appear on the directive.
+
+\item At most one \code{detach} clause can appear on the directive.
+
+\item If a \code{detach} clause appears on the directive, then neither a \code{final} clause nor a \code{mergeable} clause can appear on the same directive.
 
 \begin{ccppspecific}
 \item A throw executed inside a \code{task} region must cause execution to resume within the
