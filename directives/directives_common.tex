@@ -1459,12 +1459,12 @@ the iterator identifier in the expression with the iterator value.
 
 At any point a program an OpenMP context exists that defines traits about the active OpenMP constructs, the execution devices, and the implementation support. The traits are grouped in sets. The following sets exist: \plc{construct}, \plc{device}, \plc{offload} and \plc{implementation}.
 
-The \plc{construct} set is composed of the directive names, each being a trait, of all enclosing executable directives at that point in the program up to a \code{target} directive. The set is ordered by their nesting level. In addition,
-\begin{itemize}
- \item for functions with a \code{declare simd} directive the \plc{simd} trait will be the first one of the set for the generated SIMD versions.  
- \item for functions within a \code{declare target} block the \plc{target} trait will be the first one of the set.
+The \plc{construct} set is composed of the directive names, each being a trait, of all enclosing executable directives at that point in the program up to a \code{target} directive. The set is ordered by their nesting level. In addition, if the point in the program is not enclosed by a \code{target} directive, the following rules will be applied in order:
+\begin{enumerate} 
+ \item for functions with a \code{declare simd} directive the \plc{simd} trait will be added at the beginning of the set for the generated SIMD versions.  
  \item for functions with a \code{declare variant} directive the selectors of the \code{construct} selector set will be added in the same order at the beginning of the set.
-\end{itemize}
+ \item for functions within a \code{declare target} block the \plc{target} trait will be added at the beginning of the set.
+\end{enumerate}
 
 The following properties can be defined in an OpenMP context for the \plc{simd} trait:
 \begin{itemize}
@@ -1477,23 +1477,26 @@ The following properties can be defined in an OpenMP context for the \plc{simd} 
  \item The \plc{aligned(var-list:alignment)} property lists all variables that are known to be aligned to \plc{alignment}.
 \end{itemize}
 
-The \plc{device} set includes traits that define the characteristics of the compiler target device at that point in the program. At least the following traits must be defined:
+The \plc{device} set includes traits that define the characteristics of the device being targeted by the compiler at that point in the program. At least the following traits must be defined:
 \begin{itemize}
- \item The \plc{kind(kind-name-list)} trait specifies the general kind of the device. OpenMP defined values for \plc{kind-name} are defined in the ``OpenMP Context Definitions'' document which is available on http://www.openmp.org/. 
+ \item The \plc{kind(kind-name-list)} trait specifies the general kind of the device. The following \plc{kind-name} are defined:
+ \begin{itemize}
+  \item The \plc{host} trait specifies that the device is the host device.
+  \item The \plc{nohost} trait specifies that the devices is not the host device.
+ \end{itemize}
+ Additional OpenMP defined values for \plc{kind-name} are defined in the ``OpenMP Context Definitions'' document which is available on \url{http://www.openmp.org/}. 
  \item The \plc{isa(isa-name-list)} trait specifies the Instruction Set Architectures supported by the device. The accepted \plc{isa-name} values are implementation defined.
- \item The \plc{uarch(uarch-name-list)} trait specifies the microarchitectures supported by the device. The accepted \plc{uarch-name} values are implementation defined.
+ \item The \plc{arch(arch-name-list)} trait specifies the architectures supported by the device. The accepted \plc{arch-name} values are implementation defined.
 \end{itemize}
-
-The \plc{offload} set includes traits that define the characteristics of the compiler offload target device at that point in the program if one exists. Otherwise it will be an empty set. The traits that can be defined in the \plc{offload} set are the same as in the \plc{device} set.
 
 The \plc{implementation} set includes traits that define the implementation support at that point in the program. At least the following traits can be defined:
 \begin{itemize}
- \item The \plc{vendor(vendor-name)} trait specifies the name of the vendor of the implementation. OpenMP defined values for \plc{vendor-name} are defined in the ``OpenMP Context Definitions'' document which is available on http://www.openmp.org/. 
+ \item The \plc{vendor(vendor-name)} trait specifies the name of the vendor of the implementation. OpenMP defined values for \plc{vendor-name} are defined in the ``OpenMP Context Definitions'' document which is available on \url{http://www.openmp.org/}. 
  \item The \plc{extension(extension-name-list)} trait specifies vendor specific extensions to the OpenMP specification. The accepted \plc{extension-name} values are implementation defined.
  \item A trait with the same name corresponding to each clause in the \code{requires} directive.
 \end{description}
 
-Implementations can define further traits in the \plc{device}, \plc{offload} and \plc{implementation} sets.
+Implementations can define further traits in the \plc{device} and \plc{implementation} sets. All implementation defined traits and properties must follow the syntax of base language identifiers.
 
 \subsection{Context Selectors}
 \label{subsec:Context Selectors} 
@@ -1512,15 +1515,15 @@ where \plc{context-selector-set} is:
 \plc{context-selector-set-name}={\plc{context-selector-name}[(\plc{selector-property}[,[\plc{selector-property}[...]])][,[\plc{context-selector-name}[,...]]}
 \end{ompSyntax}
 
-The \code{construct} selector set defines which \plc{construct} traits should be active in the OpenMP context. The following selectors can be defined in the \code{construct} set: \code{target}, \code{teams}, \code{parallel}, \code{simd}. The properties of each selector are the same defined for the corresponding trait. The \code{construct} selector is an ordered list.
+The \code{construct} selector set defines which \plc{construct} traits should be active in the OpenMP context. The following selectors can be defined in the \code{construct} set: \code{target}, \code{teams}, \code{parallel}, \code{for} (in C/C++), \code{do} (in Fortran), and \code{simd}. The properties of each selector are the same defined for the corresponding trait. The \code{construct} selector is an ordered list.
 
 TODO: SIMD property equivalences and restrictions
 
-The \code{device}, \code{offload} and \code{implementation} selector sets define which traits should be active in the corresponding trait set of the OpenMP context. The same traits defined in the corresponding traits sets can be used as selectors with the same properties.
+The \code{device} and \code{implementation} selector sets define which traits should be active in the corresponding trait set of the OpenMP context. The same traits defined in the corresponding traits sets can be used as selectors with the same properties. The \code{kind} selector of the \code{device} selector set can also be set to the value \code{any} which is as if no \code{kind} selector was specified. 
 
-The \code{user} selector set defines selectors that provide additional user-defined. The \code{condition}(\plc{boolean-expr}) selector defines a compile-time condition that must be evaluate to true for the selector to be true. 
+The \code{user} selector set defines selectors that provide additional user-defined. The \code{condition}(\plc{boolean-expr}) selector defines a compile-time condition that must  evaluate to true for the selector to be true. 
 
-Implementations can allow further selectors to be specified. Implementations can ignore user specified selectors that are not those described in this section.
+Implementations can allow further selectors to be specified. Implementations can ignore specified selectors that are not those described in this section.
 
 \restrictions
 \begin{itemize}
@@ -1539,10 +1542,7 @@ A given context selector is compatible with a given OpenMP context if
  \item The properties of the \code{isa} selector of the \code{device} set are a subset of the properties of the \plc{isa} trait of the \plc{device} trait set.
  \item The properties of the \code{uarch} selector of the \code{device} set are a subset of the properties of the \plc{uarch} trait of the \plc{device} trait set.
  \item The properties of the \code{kind} selector of the \code{device} set are the same as the properties of the \plc{kind} trait on the \plc{device} trait set.
- \item The properties of the \code{isa} selector of the \code{offload} set are a subset of the properties of the \plc{isa} trait of the \plc{offload} trait set.
- \item The properties of the \code{uarch} selector of the \code{offload} set are a subset of the properties of the \plc{uarch} trait of the \plc{offload} trait set.
- \item The properties of the \code{kind} selector of the \code{offload} set are the same as the properties of the \plc{kind} trait on the \plc{offload} trait set.
-\end{itemize}
+ end{itemize}
 
 Among compatible context selectors a score will be computed using the following algorithm:
 \begin{enumerate}
@@ -1551,7 +1551,7 @@ Among compatible context selectors a score will be computed using the following 
  \item Additional implementation allowed selector values are implementation defined.
  \item Other selectors have a value of zero.
  \item Context selectors which are a strict subset of another context selector have a score of zero.
- \item Other context selectors score result of the addition of the values of all the selectors specified. If a \code{construct} selector appears multiple times in the context only the highest value is used. If any of the \code{kind},\code{uarch} or \code{isa} selectors are specified both in the \code{device} set and the \code{offload} set it will be only be considered once.
+ \item Other context selectors score result of the addition of the values of all the specified selectors plus $1$. If a \code{construct} selector appears multiple times in the context only the highest value is used.
 \end{enumerate}
 
 \subsection{\hcode{declare variant} Directive}
