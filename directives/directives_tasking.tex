@@ -146,6 +146,11 @@ task, the generated \code{task} region corresponding to this construct is not a
 part of the outer task region unless the generated task is
 an included task.
 
+If a \code{detach} clause is present on a \code{task} construct a new event, \plc{detach-event}, is created. The \plc{detach-event} is connected to the completion of the associated \code{task} region. The original \plc{event-handler} will be updated to point to the \plc{detach-event} event before the task data environment is created. The \plc{event-handler} will be considered as if it was specified on a \code{firstprivate} clause. Note that the use of a variable in a \code{detach} clause expression of a \code{task} construct causes an
+implicit reference to the variable in all enclosing constructs
+
+If no \code{detach} clause is present on a \code{task} construct the generated \code{task} is completed when the execution of its associated structured block is completed. If a \code{detach} clause is present on a \code{task} construct the task is completed when the execution of its associated structured block is completed and the \plc{detach-event} is fulfilled. In any case, the task data environment is destroyed at the end of the associated structured block. 
+
 When an \code{if} clause is present on a \code{task} construct, and the \code{if} clause expression
 evaluates to \plc{false}, an undeferred task is generated, and the encountering thread must
 suspend the current task region, for which execution cannot be resumed until the
@@ -157,7 +162,8 @@ When a \code{final} clause is present on a \code{task} construct and the \code{f
 evaluates to \plc{true}, the generated task will be a final task. All \code{task} constructs
 encountered during execution of a final task will generate final and included tasks. Note
 that the use of a variable in a \code{final} clause expression of a \code{task} construct causes an
-implicit reference to the variable in all enclosing constructs.
+implicit reference to the variable in all enclosing constructs. Encountering a \code{task} construct with the \code{detach} clause
+during the execution of a final task results in unspecified behavior.
 
 The \code{if} clause expression and the \code{final} clause expression are evaluated in the context
 outside of the \code{task} construct, and no ordering of those evaluations is specified.
@@ -173,10 +179,6 @@ task is an included task.
 The \code{task} construct includes a task scheduling point in the task region of its generating
 task, immediately following the generation of the explicit task. Each explicit \code{task}
 region includes a task scheduling point at the end of its associated structured block.
-
-If a \code{detach} clause is present on a \code{task} construct a new event, \plc{detach-event}, is created. The \plc{detach-event} is connected to the completion of the associated \code{task} region. The original \plc{event-handler} will be updated to point to the \plc{detach-event} event before the task data environment is created. The \plc{event-handler} will be considered as if it was specified on a \code{firstprivate} clause. 
-
-If no \code{detach} clause is present on a \code{task} construct the generated \code{task} is completed when the execution of its associated structured block is completed. If a \code{detach} clause is present on a \code{task} construct the task is completed when the execution of its associated structured block is completed and the \plc{detach-event} is fulfilled. In any case, the task data environment is destroyed at the end of the associated structured block.
 
 When the \code{mergeable} clause is present on a \code{task} construct, the generated task is a \plc{mergeable task}.
 
@@ -244,7 +246,7 @@ Restrictions to the \code{task} construct are as follows:
 
 \item At most one \code{detach} clause can appear on the directive.
 
-\item If a \code{detach} clause appears on the directive, then neither a \code{final} clause nor a \code{mergeable} clause can appear on the same directive.
+\item If a \code{detach} clause appears on the directive, then a \code{mergeable} clause cannot appear on the same directive.
 
 \begin{ccppspecific}
 \item A throw executed inside a \code{task} region must cause execution to resume within the
