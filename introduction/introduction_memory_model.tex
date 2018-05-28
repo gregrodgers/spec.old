@@ -242,19 +242,6 @@ of the synchronization and an acquire flush is the sink of the
 synchronization, such that the release flush \emph{synchronizes with} the
 acquire flush.
 
-%For every variable in the sync-set of a release flush, there exists a
-%\emph{release flush sequence} that is a sequence of consecutive modifications
-%to the variable taken from its modification order. It is defined to be the
-%maximal such sequence that is headed by a modification that follows the
-%release flush in its thread's program order and contains only subsequent
-%modifications performed on the same thread or read-modify-write atomic
-%modifications performed by a different thread.  A release flush synchronizes
-%with an acquire flush on a different thread if there exists a variable in the
-%sync-sets of both flushes and the value written to it by some modification in
-%a release flush sequence associated with the release flush is read by an
-%access to the variable preceding the acquire flush in its thread's
-%program order.
-
 A release flush has one or more associated \emph{release sequences} that
 define the set of a modifications that may be used to establish a
 synchronization. Any such release sequence starts with an atomic operation
@@ -296,16 +283,6 @@ A release flush synchronizes with an acquire flush if an atomic operation
 associated with the acquire flush reads a value written by a modification from
 a release sequence associated with the release flush.
 
-%\newpage %% HACK
-%\begin{note}
-%%The conditions under which a release flush synchronizes with an acquire flush
-%%are intended to match the conditions under which release operations
-%%synchronize with acquire operations in C++ and C. 
-%A read-modify-write atomic modification includes any atomic operation
-%specified with an \code{atomic} construct on which neither the \code{read} or
-%\code{write} clause appears.
-%\end{note}
-
 An operation \plc{X} \emph{simply~happens~before} an operation \plc{Y} if any of the following conditions are satisfied:
 \begin{enumerate}
 \item \plc{X} and \plc{Y} are performed by the same thread, and \plc{X} precedes \plc{Y} in the thread's program order.
@@ -327,28 +304,27 @@ modify the variable in the program.
 \subsection{OpenMP Memory Consistency}
 \label{subsec:OpenMP Memory Consistency}
 
-%Given the conditions in \specref{subsec:happens-before} for flush
-%synchronization and happens before, OpenMP guarantees the following in
-%accordance with the restrictions in \specref{subsec:The Flush Operation} on
-%reordering with respect to flush operations:
 The observable completion order of memory operations, as seen by all threads, is
 guaranteed according to the following rules:
 
 \begin{itemize}
-\item If the intersection of the flush-sets of two strong flushes
-    performed by two different threads is non-empty, then the two flushes must
-    be completed as if in some sequential order, seen by all threads.
+\item If two operations performed by different threads are sequentially
+    consistent atomic operations or they are strong flushes that flush the
+    same variable, then they must be completed as if in some sequential order,
+    seen by all threads.
 
-\item If two operations performed by the same thread access, modify, or, with
-    a strong flush, flush the same variable, then they must be
-    completed as if in that thread's program order, as seen by all threads.
+\item If two operations performed by the same thread are sequentially
+    consistent atomic operations or they access, modify, or, with a strong
+    flush, flush the same variable, then they must be completed as if in that
+    thread's program order, as seen by all threads.
 
 \item If two operations are performed by different threads and one happens
     before the other, then they must be completed as if in that happens before
     order, as seen by all threads, if:
     \begin{itemize}
-        \item both operations access or modify the same variable, or
-        \item both operations are strong flushes that flush the same variable.
+        \item both operations access or modify the same variable,
+        \item both operations are strong flushes that flush the same variable, or
+        \item both operations are sequentially consistent atomic operations.
     \end{itemize}
 
 \item Any two atomic memory operations from different \code{atomic} regions
@@ -380,7 +356,3 @@ behave as though operations on shared variables were simply interleaved in an or
 consistent with the order in which they are performed by each thread. The relaxed
 consistency model is invisible for such programs, and any explicit flush operations in
 such programs are redundant.
-
-Implementations are allowed to relax the ordering imposed by implicit flush operations
-when the result is only visible to programs using non-sequentially consistent atomic
-directives.
