@@ -888,8 +888,14 @@ For each list item in a \code{from} or a \code{to} clause: \begin{itemize}
 
 \end{itemize}
 
+
+\begin{ccppspecific}
 The list items that appear in the \code{to} or \code{from} clauses may
-include array sections with stride expressions.
+use shape-operators.
+\end{ccppspecific}
+
+The list items that appear in the \code{to} or \code{from} clauses may
+include array sections with \plc{stride} expressions.
 
 The \code{target}~\code{update} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target}~\code{update} region.
 
@@ -913,6 +919,13 @@ clause expression evaluates to \plc{false} then no assignments occur.
 \item A program must not depend on any ordering of the evaluations of the clauses of the
 \code{target}~\code{update} directive, or on any side effects of the evaluations of the clauses.
 
+\begin{ccppspecific}
+
+\item If a list item is an array section or it uses a shape-operator and the type of its base expression
+is a pointer type, the base expression must be an lvalue expression.
+
+\end{ccppspecific}
+
 \item At least one \plc{motion-clause} must be specified.
 
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
@@ -932,6 +945,9 @@ clause expression evaluates to \plc{false} then no assignments occur.
 \begin{itemize}
 \item \plc{default-device-var}, see
 \specref{sec:Internal Control Variables}.
+
+\item Array shaping,
+\specref{sec:Array Shaping}
 
 \item Array sections,
 \specref{sec:Array Sections}
@@ -1554,11 +1570,9 @@ allocate(\plc{[allocator: ]}\plc{list})
 If an \code{end}~\code{distribute} directive is not specified, an \code{end}~\code{distribute} directive
 is assumed at the end of the \plc{do-loops}.
 
-Any associated \plc{do-loop} must be a \plc{do-construct} or an
-\plc{inner-shared-do-construct} as defined by the Fortran standard. If an
-\code{end}~\code{distribute} directive follows a \plc{do-construct} in which several loop statements share a \code{DO}
-termination statement, then the directive can only be specified for the outermost of these
-\code{DO} statements.
+The \code{distribute} directive places restrictions on the structure of all
+associated \plc{do-loops}.  Specifically, all associated \plc{do-loops} must
+have \emph{canonical loop form} (see \specref{sec:Canonical Loop Form}).
 \end{fortranspecific}
 
 \begin{samepage}
@@ -1645,6 +1659,9 @@ be the same for every initial thread of every initial team in a league.
 strictly nested inside a \code{teams} region.
 
 \item A list item may appear in a \code{firstprivate} or \code{lastprivate} clause but not both.
+
+\item The \code{dist_schedule} clause must not appear on the \code{distribute}
+    directive if the associated loop(s) form a non-rectangular loop nest.
 \end{itemize}
 
 \crossreferences
@@ -1710,7 +1727,7 @@ The \code{distribute}~\code{simd} construct will first distribute the iterations
 loop(s) according to the semantics of the \code{distribute} construct and any clauses that
 apply to the distribute construct. The resulting chunks of iterations will then be
 converted to a SIMD loop in a manner consistent with any clauses that apply to the
-\code{simd} construct. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
+\code{simd} construct.
 
 \events
 
@@ -1793,7 +1810,6 @@ If an \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is not sp
 
 \descr
 The distribute parallel loop construct will first distribute the iterations of the associated loop(s) into chunks according to the semantics of the \code{distribute} construct and any clauses that apply to the \code{distribute} construct. Each of these chunks will form a loop. Each resulting loop will then be distributed across the threads within the teams region to which the \code{distribute} construct binds in a manner consistent with any clauses that apply to the parallel loop construct.
-The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
 
 \events
 
@@ -1891,7 +1907,6 @@ distributed across the threads contained within the \code{teams} region to which
 \code{distribute} construct binds in a manner consistent with any clauses that apply to the
 parallel loop construct. The resulting chunks of iterations will then be converted to a
 SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct.
-The effect of any clause that applies to both constructs is as if it were applied to both constructs separately except the \code{collapse} clause, which is applied once.
 
 \events
 
