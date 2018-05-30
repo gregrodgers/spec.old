@@ -81,6 +81,9 @@ The behavior of the allocation process can be affected by the allocator traits t
 {\scode{alignment}} & A positive integer value which is a power of 2& 1 byte\\
 {\scode{access}} & {\scode{all}, \scode{cgroup}, \scode{pteam}, \scode{thread}} & {\scode{all}}\\
 {\scode{pool_size}} & Positive integer value & Implementation defined\\
+{\scode{fallback}} & {\scode{default_mem_fb}, \scode{null_fb}, \scode{abort_fb}, \scode{allocator_fb}} & {\scode{default_mem_fb}}\\
+{\scode{fb_data}} & an allocator handle & (none)\\
+{\scode{pinned}} & \scode{true}, \scode{false} & \scode{false}\\
 \end{supertabular}
 \linenumbers
 
@@ -96,7 +99,11 @@ Memory allocated will be byte aligned to at least the value specified for the {\
 
 Memory allocated by allocators with the \scode{access} trait defined to be \scode{all} must be accessible by all threads in the device where the allocation was requested. Memory allocated by allocators with the \scode{access} trait defined to be \scode{cgroup} will be memory accessible by all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{cgroup} from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocators with the \scode{access} trait defined to be \scode{pteam} will be memory accessible by all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by  an allocator with the \scode{access} trait defined to be \scode{pteam} from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocator with the \scode{access} trait defined to be \scode{thread} will be memory accessible by the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{thread} from a thread other than the one that allocated the memory result in unspecified behavior.
 
-The total amount of storage in bytes that an allocator can use is limited by the {\scode{pool_size}} trait. For allocators with the \scode{access} trait defined to be \scode{all} this limit refers to allocations from all threads accessing the allocator. For allocators with the \scode{access} trait defined to be \scode{cgroup} this limit refers to allocations from threads accessing the allocator from the same contention group. For allocators with the \scode{access} trait defined to be \scode{pteam} this limit refers to allocations from threads accessing the allocator from the same parallel team. For allocators with the \scode{access} trait defined to be \scode{thread} this limit refers to allocations from each thread accessing the allocator. Requests that would result in using more storage than {\scode{pool_size}} will not be fulfilled by the allocator. 
+The total amount of storage in bytes that an allocator can use is limited by the {\scode{pool_size}} trait. For allocators with the \scode{access} trait defined to be \scode{all} this limit refers to allocations from all threads accessing the allocator. For allocators with the \scode{access} trait defined to be \scode{cgroup} this limit refers to allocations from threads accessing the allocator from the same contention group. For allocators with the \scode{access} trait defined to be \scode{pteam} this limit refers to allocations from threads accessing the allocator from the same parallel team. For allocators with the \scode{access} trait defined to be \scode{thread} this limit refers to allocations from each thread accessing the allocator. Requests that would result in using more storage than {\scode{pool_size}} will not be fulfilled by the allocator.
+
+The \scode{fallback} trait specifies how the allocator behaves when it cannot fulfil an allocation request. If the \scode{fallback} trait is set to \scode{null_fb} the allocator returns the value zero if it fails to allocate the memory. If the \scode{fallback} trait is set to \scode{abort_fb} the program execution will be terminated if the allocation fails. If the \scode{fallback} trait is set to \scode{allocator_fb} then when an allocation fails the request will be delegated to the allocator specified in the \scode{fb_data} trait. If the \scode{fallback} trait is set to \scode{default_mem_fb} then when an allocation fails another allocation will be tried in the \scode{omp_default_mem_space} memory space assuming all allocator traits to be set to their default values except for \scode{fallback} trait which will be set to \scode{null_fb}.
+
+Allocators with the \scode{pinned} trait defined to be \scode{true} ensure that their allocations remain in the same storage resource at the same location for their entire lifetime.
 
 Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
 
@@ -212,6 +219,8 @@ If the directive is associated with an \code{allocate} statement, the same list 
 If no list items are specified then all variables listed in the \code{allocate} statement are allocated with the memory allocator of the directive.
 \end{fortranspecific}
 
+For allocations that arise from this directive the \scode{null_fb} value of the fallback allocator trait will behave as if the \scode{abort_fb} had been specified.
+
 \restrictions
 \begin{itemize}
 \item A variable that is part of another variable (as an array or structure element) cannot appear in an \code{allocate} directive.
@@ -262,6 +271,8 @@ where \plc{allocator} is an integer expression of the \code{omp_allocator_kind} 
 \descr
 
 The storage for new list items that arise from list items that appear in the directive will be provided through a memory allocator. If an \plc{allocator} is specified in the clause this will be the memory allocator used for allocations. For all directives except for the \code{target} directive, if no \plc{allocator} is specified in the clause then the memory allocator specified by the \plc{def-allocator-var} ICV will be used for the list items specified in the \code{allocate} clause. If a memory allocator is unable to fulfill the allocation request for any list item, the behavior is implementation defined.
+
+For allocations that arise from this clause the \scode{null_fb} value of the fallback allocator trait will behave as if the \scode{abort_fb} had been specified.
 
 \restrictions
 \begin{itemize}
