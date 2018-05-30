@@ -94,6 +94,9 @@ clean:
 	rm -f openmp-diff-full-ticket_*.pdf
 	rm -f openmp-diff-minimal-ticket_*.pdf
 
+realclean: clean
+	find . -name \*.bak -or -name \*~ -exec rm -v '{}' \;
+
 #NOTE: set these either as environment variables or on the command line,
 #      DO NOT change these default values and check them in
 #      Either of these work:
@@ -142,18 +145,18 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 	cp -f appendices/ompd_diagram.pdf "$@/appendices"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
-	env PATH="$(PWD)/util/latexdiff:$(PATH)" latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 openmp-diff-abridged.pdf: diff-fast-minimal.tmpdir openmp.pdf
-	env PATH="$(PWD)/util/latexdiff:$(PATH)" latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} --fast -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 # Slow but portable diffs
 openmp-diff-minimal.pdf: diffs-slow-minimal.tmpdir
-	env PATH="$(PWD)/util/latexdiff:$(PATH)" latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
+	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc ${VC_DIFF_MINIMAL_OPTS} -d $< ${VC_DIFF_OPTS} openmp.tex
 	cp $</openmp.pdf $@
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 

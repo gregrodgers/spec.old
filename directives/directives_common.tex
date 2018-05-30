@@ -223,84 +223,8 @@ initiates a comment. The comment extends to the end of the source line and is ig
 If the first non-blank character after the directive sentinel is an exclamation point, the
 line is ignored.
 
-One or more blanks or horizontal tabs must be used to separate adjacent keywords in
-directives in free source form, except in the following cases, where white space is
-optional between the given set of keywords:
-
-\begin{indentedcodelist}
-concurrent
-declare reduction
-declare simd
-declare target
-distribute parallel do
-distribute parallel do simd
-distribute simd
-do simd
-end atomic
-end concurrent
-end critical
-end distribute
-end distribute parallel do
-end distribute parallel do simd
-end distribute simd
-end do
-end do simd
-end master
-end ordered
-end parallel
-end parallel do
-end parallel do simd
-end parallel sections
-end parallel workshare
-end sections
-end simd
-end single
-end target
-end target data
-end target parallel
-end target parallel do
-end target parallel do simd
-end target simd
-end target teams
-end target teams distribute
-end target teams distribute parallel do
-end target teams distribute parallel do simd
-end target teams distribute simd
-end task
-end taskgroup
-end taskloop
-end taskloop simd
-end teams
-end teams distribute
-end teams distribute parallel do
-end teams distribute parallel do simd
-end teams distribute simd
-end workshare
-parallel do
-parallel do simd
-parallel sections
-parallel workshare
-target data
-target enter data
-target exit data
-target parallel
-target parallel do
-target parallel do simd
-target simd
-target teams
-target teams distribute
-target teams distribute parallel do
-target teams distribute parallel do simd
-target teams distribute simd
-target update
-taskloop simd
-teams distribute
-teams distribute parallel do
-teams distribute parallel do simd
-teams distribute simd
-concurrent
-end concurrent
-\end{indentedcodelist}
+One or more blanks or horizontal tabs are optional to separate adjacent
+keywords in \plc{directive-names} unless otherwise specified.
 
 \begin{note}
 in the following example the three formats for specifying the directive are
@@ -1239,6 +1163,49 @@ first element of the \plc{bind-var} ICV; otherwise, the \code{proc_bind} clause 
 
 
 
+%% \filbreak
+\begin{ccppspecific}
+\section{Array Shaping}
+\label{sec:Array Shaping}
+\index{array shaping}
+
+
+If an expression has a pointer to \plc{T} type, then a shape-operator can be
+used to specify the extent of that pointer. In other words, the
+shape-operator is used to reinterpret, as an n-dimensional array, the region of
+memory pointed by that expression.
+
+Formally, the syntax of the shape-operator is as follows:
+\begin{indentedcodelist}
+\plc{ shaped-expression } := ([\plc{s}@\textsubscript{\plc{1}}@\plc{}][\plc{s}@\textsubscript{\plc{2}}@]...[\plc{s}@\textsubscript{\plc{n}}@])\plc{expression}
+\end{indentedcodelist}
+
+The result of applying the shape-operator to an expression is an lvalue
+expression with an n-dimensional array type with dimensions
+\plc{s}\textsubscript{\plc{1}} $\times$ \plc{s}\textsubscript{\plc{2}} ...
+$\times$ \plc{s}\textsubscript{\plc{n}} and element type \plc{T}.
+
+The precedence of the shape operator is the same as a type cast.
+
+Each $\plc{s}_\plc{i}$ is an integral type expression that must evaluate to a positive integer.
+
+\restrictions
+Restrictions on the shape-operator are as follows:
+
+\begin{itemize}
+\item The \plc{T} type must be a complete type.
+
+\item The shape-operator can appear only in clauses where it is explicitly allowed.
+
+\item The type of the expression upon which a shape-operator is applied must be a pointer type.
+
+\begin{cppspecific}
+\item If the \plc{T} type is a reference to a type \plc{T'} then the type will be considered to be \plc{T'}
+for all purposes of the designated array.
+\end{cppspecific}
+
+\end{itemize}
+\end{ccppspecific}
 
 
 
@@ -1254,11 +1221,27 @@ An array section designates a subset of the elements in an array.
 To specify an array section in an OpenMP construct, array subscript expressions are
 extended with the following syntax:
 \begin{indentedcodelist}
+[\plc{ lower-bound }:\plc{ length }:\plc{ stride}] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ length }:\plc{ }] \textnormal{or}
+
 [\plc{ lower-bound }:\plc{ length }] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ }:\plc{ stride}] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ }:\plc{ }] \textnormal{or}
 
 [\plc{ lower-bound }:\plc{ }] \textnormal{or}
 
+[ :\plc{ length }:\plc{ stride}] \textnormal{or}
+
+[ :\plc{ length }:\plc{ }] \textnormal{or}
+
 [ :\plc{ length }] \textnormal{or}
+
+[\plc{ }:\plc{ }:\plc{ stride}]
+
+[\plc{ }:\plc{ }:\plc{ }]
 
 [\plc{ }:\plc{ }]
 \end{indentedcodelist}
@@ -1274,20 +1257,27 @@ Array sections are allowed on multidimensional arrays. Base language array subsc
 expressions can be used to specify length-one dimensions of multidimensional array
 sections.
 
-The \plc{lower-bound} and \plc{length} are integral type expressions. When evaluated they
-represent a set of integer values as follows:
+The \plc{lower-bound}, \plc{length} and \plc{stride} are integral type 
+expressions. When evaluated they represent a set of integer values as follows:
 
-\{ \plc{lower-bound}, \plc{lower-bound} + 1, \plc{lower-bound} + 2,... , \plc{lower-bound} + \plc{length} - 1 \}
+\{ \plc{lower-bound}, \plc{lower-bound} + \plc{stride}, \plc{lower-bound} + 2 * \plc{stride},... , \plc{lower-bound} + ((\plc{length} - 1) * \plc{stride}) \}
 
 The \plc{length} must evaluate to a non-negative integer.
 
-When the size of the array dimension is not known, the \plc{length} must be specified
-explicitly.
+The \plc{stride} must to a positive integer.
 
-When the \plc{length} is absent, it defaults to the size of the array dimension minus the
-\plc{lower-bound}.
+When the size of the array dimension is not known, the \plc{length} must 
+be specified explicitly.
+
+When the \plc{stride} is absent it defaults to 1.
+
+When the \plc{length} is absent, it defaults to 
+$(\plc{size} - \plc{lower-bound})/\plc{stride}$ where \plc{size} is
+the size of the array dimension 
 
 When the \plc{lower-bound} is absent it defaults to 0.
+
+The precedence of an array section is the same as the subscript operator.
 
 % TODO: consider adding this in future ticket
 %Each array element specified by an array section is determined according to
@@ -1318,23 +1308,27 @@ expressions.
 \medskip
 \end{ccppspecific}
 
+\begin{fortranspecific}
 Fortran has built-in support for array sections although some
 restrictions apply to their use, as enumerated in the following section.
+\end{fortranspecific}
 
 \restrictions
 Restrictions to array sections are as follows:
 
 \begin{itemize}
 \item An array section can appear only in clauses where it is explicitly allowed.
+
+\item A \plc{stride} expression may not be specified unless otherwise stated.
+
 \begin{ccppspecific}
+
 %\item An array section can only be specified for a base expression.
 \item An element of an array section with a non-zero size must have a complete type.
 
 \item The type of the base expression appearing in an array section must be
     an array or pointer type.
 
-\item If the type of the base expression of the array section is a pointer type, the
-    base expression must be an lvalue expression.
 \end{ccppspecific}
 
 \begin{cppspecific}
@@ -1345,7 +1339,7 @@ Restrictions to array sections are as follows:
 
 \begin{fortranspecific}
 
-\item A stride expression may not be specified unless otherwise stated.
+\item If a stride expression is specified, it must be positive.
 
 \item The upper bound for the last dimension of an assumed-size dummy
   array must be specified.
@@ -1354,10 +1348,14 @@ Restrictions to array sections are as follows:
   first array element must be the lowest in the array element order of
   the array section.
 
+
 \end{fortranspecific}
 
 
 \end{itemize}
+
+
+
 
 \section{Iterators}
 \index{iterators}
@@ -1367,9 +1365,8 @@ Iterators are identifiers that expand to multiple values in the clause on which 
 
 The syntax to define an iterator is the following:
 \begin{ompSyntax}
-\plc{iterators-definition}
+\plc{iterator-specifier} [, \plc{iterators-definition}]
 \end{ompSyntax}
-where \plc{iterators-definition} is either an \plc{iterator-specifier} or an \plc{iterator-specifier-list}.
 
 The syntax of an \plc{iterator-specifier} is one of the following:
 \begin{indentedcodelist}
@@ -1386,15 +1383,8 @@ where:
 \item \plc{iterator-type} is a type specifier.
 \end{fortranspecific}
 
-\item \plc{range-specification} is of the form \plc{begin, end[, step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
+\item \plc{range-specification} is of the form \plc{begin : end[: step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
 \end{itemize}
-
-The syntax of an \plc{iterator-specifier-list} is as follows:
-\begin{indentedcodelist}
-( \plc{iterator-specifier} )[, \plc{iterator-specifier-list}]
-\end{indentedcodelist}
-
-%Each \plc{iterator-specifier} specifies an explicit iterator.
 
 \begin{ccppspecific}
 \begin{itemize}
@@ -1421,22 +1411,23 @@ The use of a variable in an expression that appears in the \plc{range-specificat
 \begin{ccppspecific}
 The values of the iterator are the set of values $i_{0}$...$i_{N-1}$ where $i_{0}=begin$,  $i_{j}=i_{j-1} + step$ and
 \begin{itemize}
-\item $i_{N-1} < end$ and $i_{N-1} + step >= end$ if $step > 0$.
-\item $i_{N-1} > end$ and $i_{N-1} + step <= end$ if $step < 0$.
+\item $i_{0} < end$ and $i_{N-1} < end$ and $i_{N-1} + step >= end$ if $step > 0$.
+\item $i_{0} > end$ and $i_{N-1} > end$ and $i_{N-1} + step <= end$ if $step < 0$.
 \end{itemize}
 \end{ccppspecific}
 \begin{fortranspecific}
 The values of the iterator are the set of values $i_{1}$...$i_{N}$ where $i_{1}=begin$,  $i_{j}=i_{j-1} + step$ and
 \begin{itemize}
-\item $i_{N} <= end$ and $i_{N} + step > end$ if $step > 0$.
-\item $i_{N} >= end$ and $i_{N} + step < end$ if $step < 0$.
+\item $i_{1} <= end$ and $i_{N} <= end$ and $i_{N} + step > end$ if $step > 0$.
+\item $i_{1} >= end$ and $i_{N} >= end$ and $i_{N} + step < end$ if $step < 0$.
 \end{itemize}
 \end{fortranspecific}
+The set of of values will be empty if no possible value complies with the conditions above.
 
  For those clauses that contain expressions containing iterator identifiers, the
 effect is as if the list item is instantiated within the clause for each
 value of the iterator in the set defined above, substituting each occurrence of
-the iterator identifier in the expression with the iterator value.
+the iterator identifier in the expression with the iterator value. If the set of values of the iterator is empty then the effect is as if the clause was not specified.
 
 \restrictions
 
@@ -1446,4 +1437,3 @@ the iterator identifier in the expression with the iterator value.
 \item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
 \item Iterators cannot appear in the \plc{range-specification}.
 \end{itemize}
-

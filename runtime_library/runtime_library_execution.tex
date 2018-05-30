@@ -1580,9 +1580,9 @@ from within any explicit parallel region, the binding thread set (and binding re
 required) for the \code{omp_set_affinity_format} region is implementation defined.
 
 \effect
-The effect of \code{omp_set_affinity_format} routine is to set the value of
-the \plc{affinity-format-var} ICV on the current device to the \plc{format} specified
-in the argument.
+The effect of \code{omp_set_affinity_format} routine is to copy the
+character string specified by the \plc{format} argument into the
+\plc{affinity-format-var} ICV on the current device.
 
 This routine has the described effect only when called from a sequential part of the
 program. When called from within an explicit \code{parallel} region, the effect of this
@@ -1630,11 +1630,24 @@ from within any explicit \code{parallel} region, the binding thread set (and bin
 required) for the \code{omp_get_affinity_format} region is implementation defined.
 
 \effect
+\begin{ccppspecific}
+The \code{omp_get_affinity_format} routine returns the number of characters
+in the \plc{affinity-format-var} ICV on the current device excluding the terminating
+null byte (\code{'\0'}) and if \plc{size} is non-zero, writes the value of the
+\plc{affinity-format-var} ICV on the current device to \plc{buffer} followed
+by a null byte.  If the return value is larger or equal to \plc{size},
+the affinity format specification is truncated, with the terminating
+null byte stored to {\pcode{\plc{buffer}[\plc{size}-1]}}.  If \plc{size} is
+zero, nothing is stored and \plc{buffer} may be \code{NULL}.
+\end{ccppspecific}
+
+\begin{fortranspecific}
 The \code{omp_get_affinity_format} routine returns the number of characters required
-to hold the entire affinity format specification and writes the value of the
+to hold the \plc{affinity-format-var} ICV on the current device and writes the value of the
 \plc{affinity-format-var} ICV on the current device to \plc{buffer}.
-If the return value is larger than \plc{size} (for C/C++) or {\pcode{len(\plc{buffer})}}
-(for Fortran), the affinity format specification is truncated.
+If the return value is larger than {\pcode{len(\plc{buffer})}}, the affinity
+format specification is truncated.
+\end{fortranspecific}
 
 \crossreferences
 \begin{itemize}
@@ -1677,7 +1690,8 @@ The binding thread set for an \code{omp_display_affinity} region is the encounte
 
 \effect
 The \code{omp_display_affinity} routine prints the thread affinity information of the current thread in the format
-specified by the \plc{format} argument. If the \plc{format} is NULL (for C/C++) or a zero-length string
+specified by the \plc{format} argument, followed by a \plc{new-line}.
+If the \plc{format} is \code{NULL} (for C/C++) or a zero-length string
 (for Fortran and C/C++), the value of the \plc{affinity-format-var} ICV is used.
 
 \crossreferences
@@ -1726,16 +1740,31 @@ character(len=*),intent(in)::\plc{format}
 The binding thread set for an \code{omp_capture_affinity} region is the encountering thread.
 
 \effect
-The \code{omp_capture_affinity} routine returns the number of characters required to hold
-the entire affinity format specification and prints the thread affinity information of the current thread
+\begin{ccppspecific}
+The \code{omp_capture_affinity} routine returns the number of characters
+in the entire thread affinity information string excluding the terminating
+null byte (\code{'\0'}) and if \plc{size} is non-zero, writes the thread
+affinity information of the current thread  in the format specified by the \plc{format} argument
+into the character string \code{buffer} followed by null byte.  If the return value is larger
+or equal to \plc{size}, the thread affinity information string is truncated, with the terminating
+null byte stored to {\pcode{\plc{buffer}[\plc{size}-1]}}.  If \plc{size} is
+zero, nothing is stored and \plc{buffer} may be \code{NULL}.
+If the \plc{format} is \code{NULL} or a zero-length string, the value of the
+\plc{affinity-format-var} ICV is used.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The \code{omp_capture_affinity} routine returns the number of characters
+required to hold the entire thread affinity information string
+and prints the thread affinity information of the current thread
 into the character string \code{buffer} with the size of
-\plc{size} (for C/C++) or {\pcode{len(\plc{buffer})}} (for Fortran)
-in the format specified by the \plc{format} argument.
+{\pcode{len(\plc{buffer})}} in the format specified by the \plc{format} argument.
 If the \plc{format} is NULL (for C/C++)
 or a zero-length string (for Fortran and C/C++), the value of the \plc{affinity-format-var} ICV is used.
-The \plc{buffer} must be allocated prior to calling the routine.
-If the return value is larger than \plc{size} (for C/C++) or {\pcode{len(\plc{buffer})}} (for Fortran), the
-affinity format specification is truncated.
+If the return value is larger than {\pcode{len(\plc{buffer})}}, the thread affinity
+information string is truncated.
+If the \plc{format} is a zero-length string, the value of the \plc{affinity-format-var} ICV is used.
+\end{fortranspecific}
 
 \crossreferences
 \begin{itemize}
