@@ -1446,13 +1446,13 @@ the iterator identifier in the expression with the iterator value. If the set of
 \subsection{OpenMP Context}
 \label{subsec:OpenMP Context}
 
-At any point in a program, an OpenMP context exists that defines traits describing the active OpenMP constructs, the execution devices, and functionallity supported by the implementation. The traits are grouped in trait sets. The following trait sets exist: \plc{construct}, \plc{device}and \plc{implementation}.
+At any point in a program, an OpenMP context exists that defines traits describing the active OpenMP constructs, the execution devices, and functionallity supported by the implementation. The traits are grouped in trait sets. The following trait sets exist: \plc{construct}, \plc{device} and \plc{implementation}.
 
 The \plc{construct} set is composed of the directive names, each being a trait, of all enclosing executable directives at that point in the program up to a \code{target} directive. Combined and composite constructs will be added to the set as independent constructs in the same nesting order specified by the original construct. The set is ordered by their nesting level in increasing order. In addition, if the point in the program is not enclosed by a \code{target} directive, the following rules will be applied in order:
 \begin{enumerate} 
  \item for functions with a \code{declare simd} directive, the \plc{simd} trait will be added at the beginning of the set for the generated SIMD versions.  
  \item for functions with a \code{declare variant} directive, the selectors of the \code{construct} selector set will be added in the same order at the beginning of the set.
- \item for functions within a \code{declare target} block, the \plc{target} trait will be added at the beginning of the set for the versions of the functiong being generated for \code{target} regions.
+ \item for functions within a \code{declare target} block, the \plc{target} trait will be added at the beginning of the set for the versions of the function being generated for \code{target} regions.
 \end{enumerate}
 
 The \plc{simd} trait can be further defined with properties that match the clauses accepted by the \code{declare}~\code{simd} directive with the same name and semantics. The \plc{simd} trait will define at least the \plc{simdlen} property and one of  the \plc{inbrach} or \plc{notinbranch} properties.
@@ -1476,7 +1476,22 @@ The \plc{implementation} set includes traits that describe the functionallity su
  \item A trait with the same name corresponding to each clause that can be supplied to the \code{requires} directive.
 \end{itemize}
 
-Implementations can define further traits in the \plc{device} and \plc{implementation} sets. All implementation defined traits and properties must follow the syntax of base language identifiers.
+Implementations can define further traits in the \plc{device} and \plc{implementation} sets. All implementation defined traits must follow the following syntax:
+\begin{ompSyntax}
+\plc{identifier}[(\plc{context-element}[, \plc{context-element}[, ...]])]
+
+context-element:
+  \plc{identifier}[(\plc{context-element}[, \plc{context-element}[, ...]])]
+  or
+  \plc{context-value}
+
+context-value:
+  \plc{string}
+  or
+  \plc{integer expression}
+\end{ompSyntax}
+
+where \plc{identifier} is a base language identifier.
 
 \subsection{Context Selectors}
 \label{subsec:Context Selectors} 
@@ -1485,14 +1500,15 @@ Context selectors allow to define the properties of an OpenMP context that a dir
 
 The syntax to define a \plc{context-selector-specification} is the following:
 
-\begin{ompSyntax}
-\plc{context-selector-set}[,\plc{context-selector-set}[,...]]
-\end{ompSyntax}
-
-where \plc{context-selector-set} is:
 
 \begin{ompSyntax}
-\plc{context-selector-set-name}={\plc{context-selector-name}[(\plc{selector-property}[,[\plc{selector-property}[...]])][,[\plc{context-selector-name}[,...]]}
+\plc{trait-set-selector}[,\plc{trait-set-selector}[,...]]
+
+trait-set-selector:
+   \plc{trait-set-selector-name}={\plc{trait-selector}[, \plc{trait-selector}[, ...]]}
+
+trait-selector:
+   \plc{trait-set-selector-name}[(\plc{trait-property}[, \plc{trait-property}[, ...]])]
 \end{ompSyntax}
 
 The \code{construct} selector set defines which \plc{construct} traits should be active in the OpenMP context. The following selectors can be defined in the \code{construct} set: \code{target}, \code{teams}, \code{parallel}, \code{for} (in C/C++), \code{do} (in Fortran), and \code{simd}. The properties of each selector are the same defined for the corresponding trait. The \code{construct} selector is an ordered list.
@@ -1538,7 +1554,7 @@ Among compatible context selectors a score will be computed using the following 
  \item The \code{kind}, \code{arch} and \code{isa} selectors will have the value $2^{l+1}$, $2^{l+2}$ and $2^{l+3}$ respectively where $l$ is the number of traits in the \plc{construct} set.
  \item Additional implementation allowed selector values are implementation defined.
  \item Other selectors have a value of zero.
- \item Context selectors which are a strict subset of another context selector have a score of zero. For other context selectors, the final score is the addition of the values of all the specified selectors plus $1$. If a \code{construct} selector appears multiple times in the context only the highest value is used.
+ \item Context selectors which are a strict subset of another context selector have a score of zero. For other context selectors, the final score is the addition of the values of all the specified selectors plus $1$. If the traits corrpesding to the \code{construct} selectors appear multiple times in the OpenMP context, the highest valued subset of traits that contains all the selectors in the same order will be used.
 \end{enumerate}
 
 \subsection{\hcode{declare variant} Directive}
@@ -1572,7 +1588,7 @@ match(\plc{context-selector-specification})
 The syntax of the \code{declare variant} directive is as follows:
 
 \begin{ompfPragma}
-!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) [clause[ [},\plc{] clause] ... ]}
+!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) \plc{[clause[ [},\plc{] clause] ... ]}
 \end{ompfPragma}
 
 where \plc{clause} is one of the following{}:
@@ -1584,9 +1600,9 @@ match(\plc{context-selector-specification})
 
 \descr
 
-The use of a \code{declare}~\code{variant} directives immediately prior to a function declaration or definition declares that function to be a function variant of the \plc{base-func-name} function. If no \code{match} clause is specified then the context selector for the variant is empty. If a \code{match} clauses is specified then the context selector in the clause will be associated to the variant.
+The use of a \code{declare}~\code{variant} directive declares the function to be a function variant of the \plc{base-func-name} or \plc{base-proc-name} function. If no \code{match} clause is specified then the context selector for the variant is empty. If a \code{match} clause is specified then the context selector in the clause will be associated to the variant.
 
-At any point, after the declaration of variant for a given base function, where there is a direct call to that base function the compiler will check if there is any variant that is compatible with OpenMP context at that point. Among the compatible variants, the variant with the highest score according to the algorithm described in Section \ref{subsec:Matching and Scoring Context Selectors} will be selected. If multiple variants have the highest score is unspecified which one will be selected. If a compatible variant exists, the original call to the base function will be replaced with a call to the selected variant function. 
+At any point, after the declaration of variant for a given base function, where there is a direct call to that base function the compiler will check if there is any variant that is compatible with OpenMP context at that point. Among the compatible variants, the variant with the highest score according to the algorithm described in Section \ref{subsec:Matching and Scoring Context Selectors} will be selected. If multiple variants have the highest score, it is unspecified which one will be selected. If a compatible variant exists, the original call to the base function will be replaced with a call to the selected variant function. 
 
 The prototype of the variant function shall, in general, match that of the base function. It is implementation defined if for some specific OpenMP context the prototype of the variant should differ, and how, from that of the base function.
 
@@ -1595,9 +1611,9 @@ Restrictions to the \code{declare variant} directive are as follows:
 
 \begin{itemize}
 \item At most one \code{match} clause can appear in a \code{declare variant} directive.
+\item If the function definition has a \code{declare}~\code{variant} directive or if a declaration of the function in the same compilation unit has a \code{declare}~\code{variant}, then, calling the variant function directly in an OpenMP context that is different than the one specified by the \code{construct} set of the context selector is non-conforming.
 
 \begin{ccppspecific}
-\item If the function definition has a \code{declare}~\code{variant} directive or if a declaration of the function in the same compilation unit has a \code{declare}~\code{variant}, then, calling the variant function directly in an OpenMP context that is different than the one specified by the \code{construct} set of the context selector is non-conforming.
 \item If the function has any declarations, then the \code{declare}~\code{variant} directive for any
 declaration that has one must be equivalent. If the function definition has a \code{declare}~\code{variant} it must also be equivalent.
 Otherwise, the result is unspecified.
@@ -1610,7 +1626,7 @@ Otherwise, the result is unspecified.
 \end{cppspecific}
 
 \begin{fortranspecific}
-\item \plc{proc-name} most not be a generic name, procedure pointer or entry name
+\item \plc{proc-name} must not be a generic name, procedure pointer or entry name
 \item If \plc{proc-name} is omitted, the \code{declare variant} directive must appear in the specification part of a subroutine subprogram or a function subprogram.
 \item Any \code{declare variant} directive must appear in the specification part of a subroutine, subprogram, function subprogram or interface body to which it applies.
 \item If a \code{declare variant} directive is specified in an interface block for a procedure, it must match a \code{declare variant} directive in the definition of the procedure.
