@@ -64,6 +64,7 @@ use Pod::Usage qw/pod2usage/ ;
 use File::Temp qw/tempdir/ ;
 use File::Basename qw/dirname/;
 use File::Copy;
+use File::Path;
 
 use strict ;
 use warnings ;
@@ -537,7 +538,7 @@ foreach $diff ( @difffiles ) {
         my $pdftk = `which pdftk`;
         $pdftk =~ s/^\s+|\s+$//g;
         my $command;
-        if (-x $gs) {
+        if (-x $gs && `$gs --version` >= 9.20) {
           $command="gs -sDEVICE=pdfwrite -dNOPAUSE -dBATCH -dSAFER -sPageList=" . join(",", @pages) . " -sOutputFile=\"$diffbase-changedpage.pdf\" \"$diffbase.pdf\"";
         } elsif (-x $pdftk) {
           $command="pdftk \"$diffbase.pdf\" cat " . join(" ",@pages) . " output \"$diffbase-changedpage.pdf\"";
@@ -591,7 +592,7 @@ sub findchangedpages {
 sub checkout_dir {
   my ($rev,$dirname)=@_;
 
-  unless (-e $dirname) { mkdir $dirname or die "Cannot mkdir $dirname ." ;}
+  unless (-e $dirname) { mkpath([ $dirname ]) or die "Cannot mkdir $dirname ." ;}
   if ( $vc eq "SVN" ) {
     system("svn checkout -r $rev $rootdir $dirname")==0 or die "Something went wrong in executing:  svn checkout -r $rev $rootdir $dirname";
   } elsif ( $vc eq "GIT" ) {
