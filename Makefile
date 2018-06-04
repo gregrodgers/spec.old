@@ -93,6 +93,9 @@ clean:
 	rm -f openmp-diff-full-ticket_*.pdf
 	rm -f openmp-diff-minimal-ticket_*.pdf
 
+realclean: clean
+	find . -name \*.bak -or -name \*~ -exec rm -v '{}' \;
+
 #NOTE: set these either as environment variables or on the command line,
 #      DO NOT change these default values and check them in
 #      Either of these work:
