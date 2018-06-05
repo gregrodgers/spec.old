@@ -141,7 +141,7 @@ region, or task must explicitly specify
 a \emph{handle} for the operation.
 OMPD employs handles for address spaces (for a host or target device), threads, parallel regions,
 and tasks. A handle for an entity is constant while the entity itself is alive. Handles are defined by
-the OMPD plugin, and are opaque to the tool. The following defines the OMPD
+the OMPD library, and are opaque to the tool. The following defines the OMPD
 handle types:
 
 \format
@@ -160,6 +160,76 @@ Defining externally visible type names in this way introduces type safety to the
 to catch instances where incorrect handles are passed by the tool to the OMPD
 library. The \code{struct}s do not need to be defined at all. The OMPD library
 must cast incoming (pointers to) handles to the appropriate internal, private types.
+
+\subsubsection{OMPD Scope Types}
+\label{subsubsec:ompd_scope_t}
+
+\summary
+
+The \code{ompd_scope_t} type describes OMPD scope types for OMPD tool interface routines.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum ompd_scope_t {
+  ompd_scope_global = 1,
+  ompd_scope_address_space = 2,
+  ompd_scope_thread = 3,
+  ompd_scope_parallel = 4,
+  ompd_scope_implicit_task = 5,
+  ompd_scope_task = 6
+} ompd_scope_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+\descr
+
+%A valid handle to pass along with \code{ompd_scope_global} is only the address space 
+%handle for the host device.
+%A valid handle to pass along with \code{ompd_scope_address_space} is any address space 
+%handle.
+%A valid handle to pass along with \code{ompd_scope_thread} is any task handle.
+%A valid handle to pass along with \code{ompd_scope_parallel} is any parallel handle.
+%A valid handle to pass along with \code{ompd_scope_implicit_task} is only a task handle 
+%for an implicit task.
+When used in an interface function call, the scope type and the ompd handle must match 
+according to Table~\ref{table:scope-types}.
+
+\begin{table}[h!]
+\caption{Mapping of scope type and OMPD handles\label{table:scope-types}}
+\begin{tabular}{p{1.7in} p{3.0in}}
+\hline
+\textsf{\textbf{Scope types}} & \textsf{\textbf{Handles}}\\
+\hline
+{\splc{ompd_scope_global}} & address space handle for the host device \\
+{\splc{ompd_scope_address_space}} & any address space handle \\
+{\splc{ompd_scope_thread}} & any thread handle \\
+{\splc{ompd_scope_parallel}} & any parallel handle \\
+{\splc{ompd_scope_implicit_task}} & task handle for an implicit task \\
+{\splc{ompd_scope_task}} & any task handle \\
+\hline
+\end{tabular}%
+\end{table}%
+\subsubsection{ICV ID Type}
+\label{subsubsec:ompd_icv_id_t}
+
+\summary
+
+This type identifies what a thread is waiting for.
+
+\format
+
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef uint64_t ompd_icv_id_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+\code{ompd_icv_undefined} is defined as an instance of type \code{ompd_icv_id_t} with 
+the value 0.
+
+
 
 \subsubsection{Tool Context Types}
 \label{subsubsec:ompd_address_space_context_t}
@@ -275,7 +345,7 @@ typedef struct {
 \descr
 The fields of \code{ompd_device_type_sizes_t} give the sizes of
 the eponymous basic types used by the OpenMP runtime.
-As the tool and the OMPD plugin, by definition, have the same
+As the tool and the OMPD library, by definition, have the same
 architecture and programming model, the size of the fields can be given
 as \code{int}.
 
