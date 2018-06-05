@@ -149,7 +149,7 @@ pointers are associated.
 \item Assumed-size arrays are shared.
 \nopagebreak
 \item An associate name preserves the association with the selector established at the
-\code{ASSOCIATE} statement.
+\code{ASSOCIATE} or \code{SELECT TYPE} statement.
 \end{itemize}
 \end{fortranspecific}
 %
@@ -164,12 +164,13 @@ variable's predetermined data-sharing attributes.
 \code{parallel}~\code{for}, \code{taskloop}, or \code{distribute} construct may be listed in a \code{private} or \code{lastprivate} clause.
 
 \item The loop iteration variable in the associated \plc{for-loop} of a \code{simd} construct with just
-one associated \plc{for-loop} may be listed in a \code{linear} clause with a
+one associated \plc{for-loop} may be listed in a \code{private},
+\code{lastprivate}, or \code{linear} clause with a
 \plc{linear-step}
 that is the increment of the associated \plc{for-loop}.
 
 \item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with
-multiple associated \plc{for-loops} may be listed in a \code{lastprivate} clause.
+multiple associated \plc{for-loops} may be listed in a \code{private} or \code{lastprivate} clause.
 
 \item Variables with \code{const}-qualified type having no mutable member may be listed in a
 \code{firstprivate} clause, even if they are static data members.
@@ -183,11 +184,12 @@ multiple associated \plc{for-loops} may be listed in a \code{lastprivate} clause
 construct may be listed in a \code{private} or \code{lastprivate} clause.
 
 \item The loop iteration variable in the associated \plc{d}o-loop of a \code{simd} construct with just
-one associated \plc{do-loop} may be listed in a \code{linear} clause with a \plc{linear-step}
+one associated \plc{do-loop} may be listed in a \code{private},
+\code{lastprivate}, or \code{linear} clause with a \plc{linear-step}
 that is the increment of the associated loop.
 
 \item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with
-multiple associated \plc{do-loops} may be listed in a \code{lastprivate} clause.
+multiple associated \plc{do-loops} may be listed in a \code{private} or \code{lastprivate} clause.
 
 \item Variables used as loop iteration variables in sequential loops in a \code{parallel}
 or task generating construct may be listed in data-sharing attribute clauses on the construct itself, and on
@@ -386,6 +388,9 @@ regions only if all of the following conditions hold:
 
 \item The value of the \plc{dyn-var} internal control variable in the enclosing task region is \plc{false}
 at entry to both \code{parallel} regions.
+
+\item Neither the \code{omp_pause_resource} nor \code{omp_pause_resource_all} routine is called.
+
 \end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^^^^
 
 If these conditions all hold, and if a threadprivate variable is referenced in both regions,
@@ -880,7 +885,8 @@ allocation, and association status of \plc{B} to become undefined.
 allocation, and association status of \plc{A} to become undefined.
 \end{itemize}
 
-A list item that appears in a \code{private} clause may be a selector of an \code{ASSOCIATE}
+A list item that appears in a \code{private} clause may be a selector
+of an \code{ASSOCIATE} or \code{SELECT TYPE}
 construct. If the construct association is established prior to a \code{parallel} region, the
 association between the associate name and the original list item will be retained in the
 region.
@@ -1009,10 +1015,12 @@ If copy constructors are called, the order in which copy constructors for differ
 \end{cppspecific}
 %
 \begin{fortranspecific}
-If the original list item does not have the \code{POINTER} attribute, initialization of the new
-list items occurs as if by intrinsic assignment, unless the original list item has the
-allocation status of unallocated, in which case the new list items will have the
-same status.
+If the original list item does not have the \code{POINTER} attribute,
+initialization of the new list items occurs as if by intrinsic
+assignment unless the list item has a type bound procedure as a
+defined assignment.  If the original list item that does not have the
+\code{POINTER} attribute has the allocation status of unallocated, the
+new list items will have the same status.
 
 If the original list item has the \code{POINTER} attribute, the new list items receive the same
 association status of the original list item as if by pointer assignment.
@@ -1127,8 +1135,9 @@ corresponding element of the original array.
 %\bigskip
 %
 \begin{fortranspecific}
-If the original list item does not have the \code{POINTER} attribute, its update occurs as if by
-intrinsic assignment.
+If the original list item does not have the \code{POINTER} attribute,
+its update occurs as if by intrinsic assignment unless it has a type
+bound procedure as a defined assignment.
 
 If the original list item has the \code{POINTER} attribute, its update occurs as if by pointer
 assignment.
@@ -1657,13 +1666,26 @@ interface where the same explicit interface is accessible as at the
 \end{fortranspecific}
 \end{itemize}
 
+\events
+
+The \plc{reduction-begin} event occurs before a task 
+begins to perform loads and stores that belong to the implementation of a reduction
+and the \plc{reduction-end} event occurs after the task 
+has completed loads and stores associated with the reduction.
+If a task participates in multiple reductions, each reduction may be bracketed by its own pair of 
+\plc{reduction-begin}/\plc{reduction-end} events or multiple reductions may be bracketed by a single pair of events.
+The interval defined by a pair of \plc{reduction-begin}/\plc{reduction-end} events may not contain a task scheduling point.
 
 
+\tools
 
-
-
-
-
+A thread dispatches a registered \code{ompt_callback_reduction}
+for each occurrence of a \plc{reduction-begin} or \plc{reduction-end} 
+event in that thread.  The callback occurs in the context of the task performing the reduction.
+This callback has the type signature \code{ompt_callback_sync_region_t}.  
+The callback receives \code{ompt_sync_region_reduction} in its \plc{kind} argument and
+\code{ompt_scope_begin} or \code{ompt_scope_end} as its
+\plc{endpoint} argument, as appropriate.
 
 
 \subsubsection{Reduction Scoping Clauses}
@@ -1882,9 +1904,18 @@ Where \plc{reduction-identifier} is defined in Section \ref{subsubsec:Properties
 
 \descr
 The \code{in_reduction} clause is a reduction participating clause, as
-described in Section \ref{subsubsec:Reduction Participating Clauses}, that
-defines a task to be a participant in the task reduction defined by an
-enclosing \code{taskgroup} region for the list item. 
+described in Section \ref{subsubsec:Reduction Participating Clauses}. For a
+given list item, the \code{in_reduction} clause defines a task to be a
+participant in a task reduction that is defined by an enclosing region for a
+matching list item that appears in a \code{task_reduction} clause where either:
+
+\begin{itemize}
+\item the matching list item has the same storage location as the list item in
+the \code{in_reduction} clause; or
+\item a private copy, derived from the matching list item, that is used to
+perform the task reduction has the same storage location as the list item in
+the \code{in_reduction} clause.
+\end{itemize}
 
 For the \code{task} construct, the generated task becomes the participating
 task. For each list item, a private copy may be created as if the \code{private}
@@ -1908,13 +1939,13 @@ The restrictions to the \code{in_reduction} clause are as follows:
 Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
 this clause.
 
+\item For each list item, there must exist a matching list item that appears in
+a \code{task_reduction} clause that is specified on a construct corresponding
+to a region in which the region of the participating task is closely nested.
+The construct corresponding to the innermost enclosing region that meets this
+condition must specify the same \plc{reduction-identifier} for the matching
+list item as the \code{in_reduction} clause.
 
-\item A list item that appears in an \code{in_reduction} clause of a
-task-generating construct must appear in a \code{task_reduction} clause of a construct
-corresponding to a taskgroup region that includes the participating task in its
-\plc{taskgroup set}. The construct corresponding to the innermost region that meets
-this condition must specify the same \plc{reduction-identifier} as the
-\code{in_reduction} clause.
 \end{itemize}
 
 
@@ -1995,10 +2026,14 @@ definition status of the master thread's copy, according to the following rules:
 \item If the original list item has the \code{POINTER} attribute, each copy receives the same
 association status of the master thread's copy as if by pointer assignment.
 
-\item If the original list item does not have the \code{POINTER} attribute, each copy becomes
-defined with the value of the master thread's copy as if by intrinsic assignment,
-unless it has the allocation status of unallocated, in which case each copy
-will have the same status.
+\item If the original list item does not have the \code{POINTER}
+attribute, each copy becomes defined with the value of the master
+thread's copy as if by intrinsic assignment unless the list item has
+a type bound procedure as a defined assignment.  If the original
+list item that does not have the \code{POINTER} attribute has the
+allocation status of unallocated, each copy will have the same
+status.
+
 \end{itemize}
 \end{fortranspecific}
 
@@ -2080,7 +2115,9 @@ assignment operators for different variables of class type are called is unspeci
 If a list item does not have the \code{POINTER} attribute, then in all other implicit tasks
 belonging to the \code{parallel} region, the list item becomes defined as if by intrinsic
 assignment with the value of the corresponding list item in the implicit task associated
-with the thread that executed the structured block.
+with the thread that executed the structured block.  If the list item
+has a type bound procedure as a defined assignment, the assignment is
+performed by the defined assignment.
 
 If the list item has the \code{POINTER} attribute, then, in all other implicit tasks belonging to
 the \code{parallel} region, the list item receives, as if by pointer assignment, the same
@@ -2242,6 +2279,8 @@ mapper(\plc{mapper-identifier})
 
 \descr
 The list items that appear in a \code{map} clause may include array sections and structure elements.
+
+
 
 The \plc{map-type} and \plc{map-type-modifier} specify the effect of the \code{map} clause, as described below.
 
@@ -2508,6 +2547,14 @@ references the list item in any statement.
 \begin{fortranspecific}
 If a new list item is created then a new list item of the same type, type parameter, and
 rank is allocated.
+
+If the allocation status of the original list item with the
+\code{ALLOCATABLE} attribute is changed in the host device data
+environment and the corresponding list item is already present in the
+device data environment, the allocation status of the corresponding
+list item is unspecified until a mapping operation is performed with a
+\code{map} clause on entry to a \code{target}, \code{target data}, or
+\code{target enter data} region.
 \end{fortranspecific}
 
 The \plc{map-type} determines how the new list item is initialized.
@@ -2540,10 +2587,17 @@ The callback occurs in the context of the target task.  The callback has type si
     attribute clause on the same construct, unless the data-sharing attribute
     clause is a \code{reduction} clause or the construct is a combined construct.
 
+\begin{ccppspecific}
+
+\item If a list item is an array section and the type of its base expression is
+a pointer type, the base expression must be an lvalue expression.
+
+\end{ccppspecific}
+
 \item If a list item is an array section, it must specify contiguous storage.
 
 \item If more than one list item of the \code{map} clauses on the same construct
-are array items that have the same named array, they must indicate
+are, or are part of, array items that have the same named array, they must indicate
 identical original storage.
 
 \item List items of the \code{map} clauses on the same construct must not share
@@ -2600,19 +2654,17 @@ behavior is unspecified.
 \item The value of the new list item becomes that of the original list item in the map
 initialization and assignment.
 
-\item A list item must not contain any components that have the
-  \code{ALLOCATABLE} attribute.
-
-\item If the allocation status of a list item with the
-  \code{ALLOCATABLE} attribute is unallocated upon entry to a
-  \code{target} region, the list item must be unallocated
-  upon exit from the region.
-
-\item If the allocation status of a list item with the
-  \code{ALLOCATABLE} attribute is allocated upon entry to a
-  \code{target} region, the allocation status of the corresponding
-  list item must not be changed and must not be reshaped in the
+\item If the allocation status of a list item or any subobject of the
+  list item with the \code{ALLOCATABLE} attribute is unallocated upon
+  entry to a \code{target} region, the list item or any subobject of
+  the corresponding list item must be unallocated upon exit from the
   region.
+
+\item If the allocation status of a list item or any subobject of the
+  list item with the \code{ALLOCATABLE} attribute is allocated upon
+  entry to a \code{target} region, the allocation status of the
+  corresponding list item or any subobject of the corresponding list
+  item must not be changed and must not be reshaped in the region.
 
 \item If an array section is mapped and the size of the section is
   smaller than that of the whole array, the behavior of referencing
@@ -2639,11 +2691,6 @@ initialization and assignment.
   region, then the pointer association status must become
   disassociated before the end of the region; otherwise the behavior
   is unspecified.
-
-\item If the allocation status of the original list item with the
-  \code{ALLOCATABLE} attribute is changed on the host device data
-  environment and the corresponding list item is already present on
-  the device data environment, the behavior is unspecified.
 
 \end{itemize}
 \end{fortranspecific}
