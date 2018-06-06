@@ -567,7 +567,7 @@ The syntax of the \code{taskwait} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
+depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -581,7 +581,7 @@ The syntax of the \code{taskwait} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
+depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
 \end{indentedcodelist}
 
 \end{fortranspecific}
@@ -695,7 +695,13 @@ There is an implicit task scheduling point at the end of the \code{taskgroup}
 region. The current task is suspended at the task scheduling point until all
 tasks in the \plc{taskgroup set} complete execution.
 
-\omptSyncRegion{taskgroup}
+\events
+\omptSyncRegionEvents{taskgroup}
+
+\tools
+
+\omptSyncRegionTools{taskgroup}
+
 
 \crossreferences
 \begin{itemize}
@@ -739,8 +745,9 @@ threads that may result in indeterminate values.
 
 \syntax
 In the following syntax, \plc{atomic-clause} is a clause that indicates
-the semantics for which atomicity is enforced and \plc{memory-order-clause} is
-a clause that indicates the memory ordering behavior of the construct.
+the semantics for which atomicity is enforced, \plc{memory-order-clause} is
+a clause that indicates the memory ordering behavior of the construct and
+\plc{clause} is a clause other than \plc{atomic-clause}.
 Specifically, \plc{atomic-clause} is one of the following:
 
 \begin{indentedcodelist}
@@ -750,7 +757,7 @@ update
 capture
 \end{indentedcodelist}
 
-and \plc{memory-order-clause} is one of the following:
+\plc{memory-order-clause} is one of the following:
 
 \begin{indentedcodelist}
 seq_cst
@@ -760,13 +767,18 @@ acquire
 relaxed
 \end{indentedcodelist}
 
+and \plc{clause} is either \plc{memory-order-clause} or one of the following:
+
+\begin{indentedcodelist}
+hint(\plc{hint-expression})
+\end{indentedcodelist}
+
 \begin{ccppspecific}
 The syntax of the \code{atomic} construct takes one of the following forms:
 
 \begin{ompcPragma}
-#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} \plc{atomic-clause}
-                   \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-                   \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
+#pragma omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} \plc{atomic-clause}
+                   \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]} \plc{new-line}
     \plc{expression-stmt}
 \end{ompcPragma}
 
@@ -782,16 +794,15 @@ The syntax of the \code{atomic} construct takes one of the following forms:
 or
 
 \begin{ompcPragma}
-#pragma omp atomic \plc{[memory-order-clause]} \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]} \plc{new-line}
+#pragma omp atomic \plc{[clause[[},\plc{] clause] ... ]} \plc{new-line}
     \plc{expression-stmt}
 \end{ompcPragma}
 
 or
 
 \begin{ompcPragma}
-#pragma omp atomic \plc{[memory-order-clause[},\plc{]]} capture
-                   \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-                   \plc{[[},\plc{]memory-order-clause]} \plc{new-line}
+#pragma omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture
+                   \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]} \plc{new-line}
     \plc{structured-block}
 \end{ompcPragma}
 
@@ -893,27 +904,24 @@ evaluated is unspecified.
 The syntax of the \code{atomic} construct takes any of the following forms:
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} read \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{capture-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} read \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{capture-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
 
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} write \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{write-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} write \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{write-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
 
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} update \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{update-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} update \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{update-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
 
@@ -921,8 +929,7 @@ or
 
 %\newpage %% HACK
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause]} \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
+!$omp atomic \plc{[clause[[},\plc{] clause] ... ]}
     \plc{update-statement}
 \plc{[}!$omp end atomic\plc{]}
 \end{ompfPragma}
@@ -930,9 +937,8 @@ or
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
-    \plc{update-statement }
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
+    \plc{update-statement}
     \plc{capture-statement}
 !$omp end atomic
 \end{ompfPragma}
@@ -940,8 +946,7 @@ or
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
     \plc{capture-statement}
     \plc{update-statement}
 !$omp end atomic
@@ -950,8 +955,7 @@ or
 or
 
 \begin{ompfPragma}
-!$omp atomic \plc{[memory-order-clause[},\plc{]]} capture \plc{[[},\plc{]}hint(\plc{hint-expression})\plc{]}
-             \plc{[[},\plc{]memory-order-clause]}
+!$omp atomic \plc{[clause[[[},\plc{] clause] ... ] [},\plc{]]} capture \plc{[[},\plc{] clause [[[},\plc{] clause] ... ]]}
     \plc{capture-statement}
     \plc{write-statement}
 !$omp end atomic
@@ -1175,6 +1179,8 @@ The following restrictions apply to the \code{atomic} construct:
 
 \begin{itemize}
 \item At most one \plc{memory-order-clause} may appear on the construct.
+
+\item At most one \code{hint} clause may appear on the construct.
 
 \item If \plc{atomic-clause} is \code{read} then \plc{memory-order-clause}
     must not be \code{acq_rel} or \code{release}.
@@ -1700,15 +1706,19 @@ Restrictions to the \code{ordered} construct are as follows:
 
 \item At most one \code{depend(source)} clause can appear on an \code{ordered} construct.
 
+\item The construct corresponding to the binding region of an \code{ordered}
+    region must not specify a \code{reduction} clause with the \code{inscan}
+    modifier.
+
 \item Either {\pcode{depend(sink:\plc{vec})}} clauses or \code{depend(source)}
 clauses may appear on an \code{ordered} construct, but not both.
 
 \item The loop or loop SIMD region to which an \code{ordered}
-region arising from an \code{ordered} construct without a \code{depend}
+region corresponding to an \code{ordered} construct without a \code{depend}
 clause binds must have an \code{ordered} clause without the parameter
 specified on the corresponding loop or loop SIMD directive.
 
-\item The loop region to which an \code{ordered} region arising from an
+\item The loop region to which an \code{ordered} region corresponding to an
 \code{ordered} construct with any \code{depend}
 clauses binds must have an \code{ordered} clause with the parameter specified
 on the corresponding loop directive.
@@ -1716,17 +1726,22 @@ on the corresponding loop directive.
 \item An \code{ordered} construct with the \code{depend} clause specified must
 be closely nested inside a loop (or parallel loop) construct.
 
-\item An \code{ordered} region arising from an \code{ordered} construct with
+\item An \code{ordered} region corresponding to an \code{ordered} construct
+without the \code{simd} clause specified must be closely nested inside a
+loop region.
+
+\item An \code{ordered} region corresponding to an \code{ordered} construct with
 the \code{simd} clause specified must be closely nested inside a
 \code{simd} or loop SIMD region.
 
-\item An \code{ordered} region arising from an \code{ordered} construct with
+\item An \code{ordered} region corresponding to an \code{ordered} construct with
   both the \code{simd} and \code{threads} clauses must be closely nested inside
-  a loop SIMD region.
+  a loop SIMD region or must be closely nested inside a loop and \code{simd}
+  region.
 
 \item During execution of an iteration of a loop or a loop nest within a loop, \code{simd}, or loop SIMD
-region, a thread must not execute more than one \code{ordered} region arising
-from an \code{ordered} construct without a \code{depend} clause.
+region, a thread must not execute more than one \code{ordered} region
+corresponding to an \code{ordered} construct without a \code{depend} clause.
 \end{itemize}
 \begin{cppspecific}
 \begin{itemize}
@@ -1776,7 +1791,7 @@ constraints establish dependences only between sibling tasks or between loop ite
 The syntax of the \code{depend} clause is as follows:
 
 \begin{ompSyntax}
-depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
+depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
 \end{ompSyntax}
 
 where \plc{dependence-type} is one of the following:
@@ -1785,6 +1800,11 @@ in
 out
 inout
 mutexinoutset
+\end{indentedcodelist}
+
+where \plc{depend-modifier} is one of the following:
+\begin{indentedcodelist}
+iterator(\plc{iterators-definition}) 
 \end{indentedcodelist}
 
 or
@@ -1847,7 +1867,7 @@ a list item appearing in a \code{depend} clause with a \code{mutexinoutset}
 generate sibling tasks, the sibling tasks will be mutually exclusive tasks.
 
 The list items that appear in the \code{depend} clause may reference iterators
-defined by an \plc{iterators-definition} appearing on the same clause.
+defined by an \plc{iterators-definition} appearing on an \code{iterator} modifier.
 
 \begin{fortranspecific}
 If a list item has the \code{ALLOCATABLE} attribute and its allocation
@@ -1857,6 +1877,10 @@ disassociated or undefined, the behavior is unspecified.
 \end{fortranspecific}
 
 The list items that appear in the \code{depend} clause may include array sections.
+
+\begin{ccppspecific}
+The list items that appear in the \code{depend} clause may use shape-operators.
+\end{ccppspecific}
 
 \begin{note}
 The enforced task dependence establishes a synchronization of memory
@@ -1882,8 +1906,8 @@ If the iteration vector \plc{vec} does not indicate a lexicographically earlier 
 \events
 
 The \plc{task-dependences} event occurs in a thread encountering a
-tasking construct with a \code{depend} clause immediately after the
-\plc{task-create} event for the new task.
+tasking construct or a taskwait construct with a \code{depend} clause immediately after 
+the \plc{task-create} event for the new task or the \plc{taskwait-begin} event.
 
 The \plc{task-dependence} event indicates an unfulfilled dependence for the generated task.
 This event occurs in a thread that observes the unfulfilled dependence before it is satisfied.
@@ -1998,15 +2022,15 @@ The valid constants must include the following, which can be extended with imple
 \begin{ccppspecific}
 \begin{ompcEnum}
 typedef enum omp_sync_hint_t {
-  omp_sync_hint_none = 0,
+  omp_sync_hint_none = 0x0,
   omp_lock_hint_none = omp_sync_hint_none,
-  omp_sync_hint_uncontended = 1,
+  omp_sync_hint_uncontended = 0x1,
   omp_lock_hint_uncontended = omp_sync_hint_uncontended,
-  omp_sync_hint_contended = 2,
+  omp_sync_hint_contended = 0x2,
   omp_lock_hint_contended = omp_sync_hint_contended,
-  omp_sync_hint_nonspeculative = 4,
+  omp_sync_hint_nonspeculative = 0x4,
   omp_lock_hint_nonspeculative = omp_sync_hint_nonspeculative,
-  omp_sync_hint_speculative = 8
+  omp_sync_hint_speculative = 0x8
   omp_lock_hint_speculative = omp_sync_hint_speculative
 } omp_sync_hint_t;
 
@@ -2019,26 +2043,26 @@ typedef omp_sync_hint_t omp_lock_hint_t;
 integer, parameter :: omp_lock_hint_kind = omp_sync_hint_kind
 
 integer (kind=omp_sync_hint_kind), &
-  parameter :: omp_sync_hint_none = 0
+  parameter :: omp_sync_hint_none = Z'0'
 integer (kind=omp_lock_hint_kind), &
   parameter :: omp_lock_hint_none = omp_sync_hint_none
 integer (kind=omp_sync_hint_kind), &
-  parameter :: omp_sync_hint_uncontended = 1
+  parameter :: omp_sync_hint_uncontended = Z'1'
 integer (kind=omp_lock_hint_kind), &
   parameter :: omp_lock_hint_uncontended = &
                     omp_sync_hint_uncontended
 integer (kind=omp_sync_hint_kind), &
-  parameter :: omp_sync_hint_contended = 2
+  parameter :: omp_sync_hint_contended = Z'2'
 integer (kind=omp_lock_hint_kind), &
   parameter :: omp_lock_hint_contended = &
                    omp_sync_hint_contended
 integer (kind=omp_sync_hint_kind), &
-  parameter :: omp_sync_hint_nonspeculative = 4
+  parameter :: omp_sync_hint_nonspeculative = Z'4'
 integer (kind=omp_lock_hint_kind), &
   parameter :: omp_lock_hint_nonspeculative = &
                    omp_sync_hint_nonspeculative
 integer (kind=omp_sync_hint_kind), &
-  parameter :: omp_sync_hint_speculative = 8
+  parameter :: omp_sync_hint_speculative = Z'8'
 integer (kind=omp_lock_hint_kind), &
   parameter :: omp_lock_hint_speculative = &
                    omp_sync_hint_speculative
