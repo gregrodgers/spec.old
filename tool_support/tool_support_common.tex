@@ -202,7 +202,7 @@ the OMPT interface. Once a tool has obtained a
 For each runtime entry point in the OMPT interface for the host device,
 Table~\ref{table:ompt-callback-interface-functions} provides the string
 name by which it is known and its associated type signature. Implementations
-can provide additional, implementation specific names and corresponding
+can provide additional, implementation-specific names and corresponding
 entry points as long as they don't use names that start with the prefix
 ``\code{ompt_}''. These are reserved for future extensions in the
 OpenMP specification.
@@ -236,10 +236,12 @@ part of the description of its type signature.
 \item \code{ompt_get_state_t}, see \specref{sec:ompt_get_state_t}.
 \item \code{ompt_get_parallel_info_t}, see \specref{sec:ompt_get_parallel_info_t}.
 \item \code{ompt_get_task_info_t}, see \specref{sec:ompt_get_task_info_t}.
+\item \code{ompt_get_task_memory_t}, see \specref{sec:ompt_get_task_memory_t}.
 \item \code{ompt_get_target_info_t}, see \specref{sec:ompt_get_target_info_t}.
 \item \code{ompt_get_num_devices_t}, see \specref{sec:ompt_get_num_devices_t}.
 \item \code{ompt_get_num_procs_t}, see \specref{sec:ompt_get_num_procs_t}.
 \item \code{ompt_get_unique_id_t}, see \specref{sec:ompt_get_unique_id_t}.
+\item \code{ompt_finalize_tool_t}, see \specref{sec:ompt_finalize_tool_t}.
 \item \code{ompt_function_lookup_t}, see \specref{sec:ompt_function_lookup_t}.
 \end{itemize}
 
@@ -260,11 +262,14 @@ part of the description of its type signature.
         ``{\scode{ompt_get_state}}'' & {\scode{ompt_get_state_t}}\\
         ``{\scode{ompt_get_parallel_info}}'' & {\scode{ompt_get_parallel_info_t}}\\
         ``{\scode{ompt_get_task_info}}'' & {\scode{ompt_get_task_info_t}}\\
+        ``{\scode{ompt_get_task_memory}}'' & {\scode{ompt_get_task_memory_t}}\\
         ``{\scode{ompt_get_num_devices}}'' & {\scode{ompt_get_num_devices_t}}\\
         ``{\scode{ompt_get_num_procs}}'' & {\scode{ompt_get_num_procs_t}}\\
         ``{\scode{ompt_get_target_info}}'' & {\scode{ompt_get_target_info_t}}\\
-        ``{\scode{ompt_get_unique_id}}'' & {\scode{ompt_get_unique_id_t}}\\\hline
-        % ``{\scode{ompt_callback_device_initialize}}'' & {\scode{ompt_callback_device_initialize_t}}\\\hline
+        ``{\scode{ompt_get_unique_id}}'' & {\scode{ompt_get_unique_id_t}}\\
+        ``{\scode{ompt_finalize_tool}}'' & {\scode{ompt_finalize_tool_t}}\\\hline
+        % ``{\scode{ompt_callback_device_initialize}}'' & 
+        %{\scode{ompt_callback_device_initialize_t}}\\\hline
     \end{tabular}
     \vspace*{1ex}
 \end{table}
@@ -350,6 +355,7 @@ Return code abbreviation                      & N &S/P& A \\\hline
 {\scode{ompt_callback_nest_lock}}             & * & * & * \\
 {\scode{ompt_callback_flush}}                  & * & * & * \\
 {\scode{ompt_callback_cancel}}                 & * & * & * \\
+{\scode{ompt_callback_dispatch}}              & * & * & * \\
 \bottomrule
 N = {\scode{ompt_set_never}}                   &   &   &   \\
 S = {\scode{ompt_set_sometimes}}               &   &   &   \\
@@ -420,7 +426,7 @@ A tool may also optionally register an \code{ompt_callback_device_finalize} call
   names of the runtime entry points that a target device may provide for use
   by a tool.
   Implementations
-can provide additional, implementation specific names and corresponding
+can provide additional, implementation-specific names and corresponding
 entry points as long as they don't use names that start with the prefix
 ``\code{ompt_}''. Theses are reserved for future extensions in the
 OpenMP specification.
@@ -663,7 +669,8 @@ typedef enum ompt_callbacks_t {
   ompt_callback_mutex_acquired           = 27,
   ompt_callback_nest_lock                = 28,
   ompt_callback_flush                    = 29,
-  ompt_callback_cancel                   = 30
+  ompt_callback_cancel                   = 30,
+  ompt_callback_dispatch                 = 31
 } ompt_callbacks_t;
 \end{omptEnum}
 \end{ccppspecific}
@@ -1055,6 +1062,23 @@ typedef enum ompt_scope_endpoint_t {
 
 
 
+% ompt_dispatch_t
+
+\subsubsubsection{\hcode{ompt_dispatch_t}}
+\label{sec:ompt_dispatch_t}
+\code{ompt_dispatch_t} is an enumeration that defines the valid dispatch kind values.
+
+
+\begin{ccppspecific}
+\begin{omptEnum}
+typedef enum ompt_dispatch_t {
+  ompt_dispatch_iteration             = 1,
+  ompt_dispatch_section               = 2
+} ompt_dispatch_t;
+\end{omptEnum}
+\end{ccppspecific}
+
+
 
 % ompt_sync_region_t
 
@@ -1066,10 +1090,12 @@ typedef enum ompt_scope_endpoint_t {
 \begin{ccppspecific}
 \begin{omptEnum}
 typedef enum ompt_sync_region_t {
-  ompt_sync_region_barrier            = 1,
-  ompt_sync_region_taskwait           = 2,
-  ompt_sync_region_taskgroup          = 3,
-  ompt_sync_region_reduction          = 4
+  ompt_sync_region_barrier                = 1,
+  ompt_sync_region_barrier_implicit       = 2,
+  ompt_sync_region_barrier_explicit       = 3,
+  ompt_sync_region_barrier_implementation = 4,
+  ompt_sync_region_taskwait               = 5,
+  ompt_sync_region_taskgroup              = 6
 } ompt_sync_region_kind_t;
 \end{omptEnum}
 \end{ccppspecific}
