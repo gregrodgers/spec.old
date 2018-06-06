@@ -387,7 +387,7 @@ in any order and the behavior of an application that depends on any execution or
 \linenumbers
 \medskip
 
-\def\omptWorksharing#1#2
+\def\omptWorksharingEvents#1
 {
 \events
 
@@ -397,7 +397,11 @@ block of the \code{#1} region.
 
 The \plc{#1-end} event occurs after a \code{#1} region finishes execution
 but before resuming execution of the encountering task.
+}
 
+
+\def\omptWorksharingTools#1#2
+{
 \tools
 
 A thread dispatches a registered \code{ompt_callback_work}
@@ -409,7 +413,25 @@ context of the implicit task.  The callback has type signature
 as its \plc{endpoint} argument, as appropriate, and
 \code{#2} as its \plc{wstype} argument.
 }
-\omptWorksharing{loop}{ompt_work_loop}
+
+\def\omptWorksharing#1#2
+{
+\omptWorksharingEvents{#1}
+\omptWorksharingTools{#1}{#2}
+}
+
+\omptWorksharingEvents{loop}
+
+The \plc{loop-iteration-begin} event occurs before an implicit task
+executes each iteration of a parallel loop.
+
+\omptWorksharingTools{loop}{work_loop}
+
+A thread dispatches a registered \code{ompt_callback_dispatch}
+callback for each occurrence of a \plc{loop-iteration-begin} 
+event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt_callback_dispatch_t}. 
 
 \restrictions
 Restrictions to the loop construct are as follows:
@@ -525,6 +547,9 @@ out of the loops.
 
 \item \code{ompt_callback_work_t}, see
 \specref{sec:ompt_callback_work_t}.
+
+\item \code{ompt_callback_dispatch_t}, see 
+\specref{sec:ompt_callback_dispatch_t}.
 
 \end{itemize}
 
@@ -663,7 +688,19 @@ There is an implicit barrier at the end of a \code{sections} construct unless a 
 clause is specified.
 
 %\tools
-\omptWorksharing{sections}{ompt_work_sections}
+
+\omptWorksharingEvents{sections}
+
+The \plc{section-begin} event occurs before an implicit task starts
+executing a structured block in the \code{sections} construct.
+
+\omptWorksharingTools{sections}{ompt_work_sections}
+
+A thread dispatches a registered \code{ompt_callback_dispatch}
+callback for each occurrence of a \plc{section-begin} 
+event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt_callback_dispatch_t}. 
 
 \restrictions
 Restrictions to the \code{sections} construct are as follows:
@@ -696,6 +733,10 @@ exception must catch it.
 
 \item \code{ompt_callback_work_t}, see
 \specref{sec:ompt_callback_work_t}.
+
+\item \code{ompt_callback_dispatch_t}, see 
+\specref{sec:ompt_callback_dispatch_t}.
+
 \end{itemize}
 
 

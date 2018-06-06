@@ -2232,49 +2232,18 @@ clause.
 
 %% Do we need something about
 %% ``explicit \code{declare}~\code{target} directives''?
-This section describes how the data-mapping attributes of any variable
-referenced in a \code{target} region are determined. When specified,
-explicit \code{map} clauses on \code{target}
-directives determine these attributes.  Otherwise, the following
-data-mapping rules apply for variables referenced in a \code{target}
-construct that are not declared in the construct and do not appear in
+This section describes how the data-mapping and data-sharing attributes of
+any variable referenced in a \code{target} region are determined. When specified,
+explicit data-sharing attributes, \code{map} or \code{is_device_ptr} clauses on
+\code{target} directives determine these attributes.  Otherwise, the first matching rule
+from the following implicit data-mapping rules applies for variables referenced
+in a \code{target} construct that are not declared in the construct and do not appear in
 data-sharing attribute, \code{map} or \code{is_device_ptr} clauses:
-
-Certain variables and objects have predetermined data-mapping attributes
-as follows:
 
 \begin{itemize}
 \item If a variable appears in a \code{to} or \code{link} clause on a
   \code{declare}~\code{target} directive then it is treated as if it had
   appeared in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
-
-\begin{ccppspecific}
-
-\item If a \code{defaultmap} clause that specifies an implicit behavior other
-  than \code{default} for pointer variables does not appear on the \code{target}
-  construct, a variable that is of type pointer is treated as if it is the named
-  pointer of a zero-length array section that appeared as a list item in a
-  \code{map} clause.  
-
-\end{ccppspecific}
-
-\begin{cppspecific}
-\item A variable that is of type reference to pointer is treated as if it had appeared in a \code{map} clause as a zero-length array section.
-\item A class member variable is treated as if the \plc{this[:1]} expression
-  had appeared in a \code{map} clause.
-\end{cppspecific}
-\end{itemize}
-
-For all variables and objects that do not have a predetermined data-mapping or
-data-sharing attribute, the following implicit data-mapping attribute rules
-apply:
-
-\begin{itemize}
-  \item If a \code{defaultmap} clause is present for the category of the
-    variable, the data-mapping attribute is determined by that clause.
-
-\item If a variable is not a scalar then it is treated as if it had appeared 
-in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
 
 \item If a list item appears in a \code{reduction}, \code{lastprivate} or
     \code{linear} clause on a combined target construct then it is treated as
@@ -2285,6 +2254,41 @@ in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
     \code{target} construct then it is treated as if it also appears in a
     \code{map} clause with a \plc{map-type} of \code{tofrom} and a
     \plc{map-type-modifier} of \code{always}.
+
+\item If a \code{defaultmap} clause is present for the category of the
+    variable and specifies an implicit behavior other than \code{default},
+    the data-mapping attribute is determined by that clause.
+
+\begin{cppspecific}
+
+\item If the \code{target} construct is within a class non-static member
+    function, and a variable is an accessible data member of the object for
+    which the non-static data member function is invoked, the variable is
+    treated as if the \code{this[:1]} expression had appeared in a \code{map}
+    clause with a \plc{map-type} of \code{tofrom}.  Additionally, if the
+    variable is of a type pointer or reference to pointer, it is also
+    treated as if it has appeared in a \code{map} clause as a zero-length
+    array section.
+
+\end{cppspecific}
+
+\begin{ccppspecific}
+
+\item A variable that is of type pointer is treated as if it is the named
+    pointer of a zero-length array section that appeared as a list item in a
+    \code{map} clause.  
+
+\end{ccppspecific}
+
+\begin{cppspecific}
+
+\item A variable that is of type reference to pointer is treated as if it
+    had appeared in a \code{map} clause as a zero-length array section.
+
+\end{cppspecific}
+
+\item If a variable is not a scalar then it is treated as if it had appeared 
+    in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
 
 \begin{fortranspecific}
 \item If a scalar variable has the \code{TARGET}, \code{ALLOCATABLE}
@@ -2658,7 +2662,7 @@ identical original storage.
 \item List items of the \code{map} clauses on the same construct must not share
 original storage unless they are the same variable or array section.
 
-\item If any part of the original storage of a list item with a predetermined or
+\item If any part of the original storage of a list item with an
 explicit data-mapping attribute has corresponding storage in the device data
 environment prior to a task encountering the construct associated with the map
 clause, all of the original storage must have corresponding storage
@@ -2842,8 +2846,11 @@ If no \plc{variable-category} is specified in the clause then
 \plc{implicit-behavior} specifies the implicitly determined data-mapping or
 data-sharing attribute for all variables referenced in the construct.  If
 \plc{implicit-behavior} is \code{none}, each variable referenced in the
-construct that does not have a predetermined data-sharing attribute must be
-listed in a data-mapping attribute clause, a data-sharing attribute clause, or
+construct that does not have a predetermined data-sharing attribute and does
+not appear in a \code{to} or \code{link} clause on a \code{declare}~\code{target}
+directive must be listed in a data-mapping attribute clause, a data-sharing
+attribute clause (including data-sharing attribute clause on a combined
+construct where \code{target} is one of the constituent constructs), or
 an \code{is_device_ptr} clause. If \plc{implicit-behavior} is \code{default},
 then the clause has no effect for the variables in the category specified by
 \plc{variable-category}.
