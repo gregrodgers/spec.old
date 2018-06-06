@@ -63,9 +63,8 @@ The tool can find the entry point of the user code that
 the new parallel region will execute by passing the parallel handle region
 to \code{ompd_get_parallel_function}.
 
-The actual number of threads, rather than the requested number of threads,
-in the team is returned by
-\code{ompd_get_num_threads}.
+The number of threads participating in the parallel region is provided by
+the internal variable \plc{ompd-team-size-var} from \code{ompd_get_icv_from_scope}.
 
 The task handle returned by
 \code{ompd_get_current_task_handle}
@@ -98,9 +97,9 @@ in the runtime code.
 \item
   \code{ompd_get_current_parallel_handle}, \specref{subsubsubsec:ompd_get_current_parallel_handle}
 \item
-  \code{ompd_get_parallel_function}, \specref{subsubsubsec:ompd_get_parallel_function}
-\item
-  \code{ompd_get_num_threads}, \specref{subsubsubsec:ompd_get_num_threads}
+  \code{ompd_get_task_function}, \specref{subsubsubsec:ompd_get_task_function}
+\item \code{ompd_get_icv_from_scope} call, see 
+  \specref{subsubsubsec:ompd_get_icv_from_scope}.
 \item
   \code{ompd_get_current_task_handle}, \specref{subsubsubsec:ompd_get_current_task_handle}
 \item
@@ -147,6 +146,9 @@ OpenMP runtime to start the parallel construct just terminating.
 The `exit runtime' address will refer to the stack frame where the
 thread left the OpenMP runtime to execute the user code that
 invoked the parallel construct just terminating.
+
+After passing \code{ompd_bp_parallel_end}, any \plc{parallel_handle} acquired for this
+parallel region is invalid and should be released.
 
 \restrictions
 
@@ -253,6 +255,9 @@ OpenMP thread handle.
 At this point \code{ompd_get_current_task_handle}
 returns the handle for the terminating task.
 
+After passing \code{ompd_bp_task_end}, any \plc{task_handle} acquired for this
+task region is invalid and should be released.
+
 \restrictions
 
 \code{ompd_bp_task_end} has external \code{C} linkage, and no
@@ -271,4 +276,150 @@ in the runtime code.
 \item
   \code{ompd_get_current_task_handle}, \specref{subsubsubsec:ompd_get_current_task_handle}
 \end{itemize}
+
+\subsubsection{Beginning OpenMP Thread}
+\label{subsubsec:ompd_bp_thread_begin}
+\index{ompd_bp_thread_begin@{\code{ompd_bp_thread_begin}}}
+
+\summary
+The OpenMP runtime must execute through
+\code{ompd_bp_thread_begin} at the \plc{thread-begin} and the \plc{implicit-thread-begin} event.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_thread_begin ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When starting an OpenMP thread, the runtime must allow execution
+to flow through \code{ompd_bp_thread_begin}.
+This should occur before the thread executes any OpenMP region's work.
+
+\restrictions
+
+\code{ompd_bp_thread_begin} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_thread_begin} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+\subsubsection{Ending OpenMP Thread}
+\label{subsubsec:ompd_bp_thread_begin}
+\index{ompd_bp_thread_end@{\code{ompd_bp_thread_end}}}
+
+\summary
+The OpenMP runtime must execute through
+\code{ompd_bp_thread_end} at the \plc{thread-end} and the \plc{implicit-thread-end} event.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_thread_end ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When terminating an OpenMP thread, the runtime must allow execution
+to flow through \code{ompd_bp_thread_end}.
+This should occur after the thread executes any OpenMP region's work.
+
+After passing \code{ompd_bp_thread_end}, any \plc{thread_handle} acquired for this thread 
+is invalid and should be released.
+
+\restrictions
+
+\code{ompd_bp_thread_end} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_thread_end} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+
+\crossreferences
+\begin{itemize}
+\item
+  \code{ompd_get_thread_handle}, \specref{subsubsubsec:ompd_get_thread_handle}
+\end{itemize}
+
+\subsubsection{Beginning OpenMP Device}
+\label{subsubsec:ompd_bp_device_begin}
+\index{ompd_bp_device_begin@{\code{ompd_bp_device_begin}}}
+
+\summary
+The OpenMP runtime must execute through
+\code{ompd_bp_device_begin} at the \plc{device-initialize} event.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_device_begin ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When initializing a device for executing a target region, the runtime must allow execution
+to flow through \code{ompd_bp_device_begin}.
+This should occur before any OpenMP region's work executes on the device.
+
+\restrictions
+
+\code{ompd_bp_device_begin} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_device_begin} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
+\subsubsection{Ending OpenMP Device}
+\label{subsubsec:ompd_bp_device_end}
+\index{ompd_bp_device_end@{\code{ompd_bp_device_end}}}
+
+\summary
+The OpenMP runtime must execute through
+\code{ompd_bp_device_end} at the \plc{device-finalize} event.
+
+
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_bp_device_end ( void );
+\end{ompSyntax}
+\end{cspecific}
+
+
+\descr
+
+When terminating an OpenMP thread, the runtime must allow execution
+to flow through \code{ompd_bp_device_end}.
+This should occur after the thread executes any OpenMP region's work.
+
+After passing \code{ompd_bp_device_end}, any \plc{address_space_handle} acquired for this
+device is invalid and should be released.
+
+\restrictions
+
+\code{ompd_bp_device_end} has external \code{C} linkage, and no
+demangling or other transformations are required by a tool
+to look up its address in the OpenMP program.
+
+Conceptually \code{ompd_bp_device_end} has the type signature
+given above.
+However, it does not need to be a function, but can be a labeled location
+in the runtime code.
+
 
