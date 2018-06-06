@@ -1325,6 +1325,11 @@ behavior.
 \item A \plc{list-item} that appears in a \code{linear} clause cannot appear in any other data-sharing
 attribute clause.
 
+\item Only a loop iteration variable of a loop that is associated with the
+    construct may appear as a \plc{list-item} in a \code{linear} clause if a
+    \code{reduction} clause with the \code{inscan} modifier also appears on
+    the construct.
+
 \begin{cspecific}
 \item A \plc{list-item} that appears in a \code{linear} clause must be of integral or pointer type.
 \end{cspecific}
@@ -1772,38 +1777,55 @@ with the \plc{reduction-identifier}.
 
 \syntax
 \begin{ompSyntax}
-reduction(\plc{reduction-identifier }:\plc{ list})
+reduction(\plc{[reduction-modifier},\plc{] }\plc{reduction-identifier }:\plc{ list})
 \end{ompSyntax}
+
 Where \plc{reduction-identifier} is defined in Section
-\ref{subsubsec:Properties Common To All Reduction Clauses}.
+\ref{subsubsec:Properties Common To All Reduction Clauses} and
+\plc{reduction-modifier} is:
+\begin{indentedcodelist}
+inscan
+task
+default
+\end{indentedcodelist}
 
 \descr
 The \code{reduction} clause is a reduction scoping clause and a reduction
 participating clause, as described in Sections \ref{subsubsec:Reduction Scoping
-Clauses} and \ref{subsubsec:Reduction Participating Clauses}.
+Clauses} and \ref{subsubsec:Reduction Participating Clauses}. 
 
-For \code{parallel} and worksharing constructs, a private copy of each list item is created,
-one for each implicit task, as if the \code{private} clause had been used. For the \code{simd}
-construct, a private copy of each list item is created, one for each SIMD lane as if the
+When the \code{inscan} modifier appears on the clause, a scan computation is
+performed over updates to the list item performed in each logical iteration of
+the loop associated with the loop, loop SIMD, or \code{simd} construct (see
+Section \ref{sec:scan Directive}).  An unspecified number of private copies of
+each list item is created that is at least one for each implicit task or SIMD
+lane and at most one per logical iteration of the associated loops. At the end
+of a region corresponding to an above construct, each original list item is
+assigned the value of the private copy from the last logical iteration of the
+loops associated with the construct.
+   
+When the \code{inscan} modifier does not appear on the clause, the behavior is
+as follows. For \code{parallel} and worksharing constructs, a private copy of
+each list item is created, one for each implicit task, as if the
+\code{private} clause had been used. For the \code{simd} construct, a private
+copy of each list item is created, one for each SIMD lane as if the
 \code{private} clause had been used.  For the \code{taskloop} construct,
 private copies are created according to the rules of the reduction scoping
 clauses.  For the \code{teams} construct, a private copy of each list item is
 created and initialized, one for each team in the league as if the
 \code{private} clause had been used. For the \code{concurrent} construct, the
 behavior will be as if a private copy of each list item is created for each
-loop iteration. At the end of a region corresponding to an above construct for
-which the \code{reduction} clause was specified, the original list item is
+loop iteration.  At the end of a region corresponding to an above construct
+for which the \code{reduction} clause was specified, the original list item is
 updated by combining its original value with the final value of each of the
-private copies, using the combiner of the specified \plc{reduction-identifier}.
+private copies, using the combiner of the specified
+\plc{reduction-identifier}. 
 
-For the \code{target} construct, each list item is implicitly mapped into the
-device data environment of the target device and a private copy of each list
-item is created and initialized for the initial task. At the end of a
-\code{target} region for which the \code{reduction} clause was specified, the
-corresponding list item present in the device data environment is updated by
-combining its original value with the final value of the created private copy,
-using the combiner of the specified \plc{reduction-identifier}.
-
+If the \code{task} modifier is present, then for each list item, the number of
+copies is unspecified. Any copies associated with the reduction are
+initialized before they are accessed by the tasks participating in the
+reduction. After the end of the region, the original list item contains the
+result of the reduction.
 
 If \code{nowait} is not used, the reduction computation will be complete at the end of the
 construct; however, if the reduction clause is used on a construct to which \code{nowait} is
@@ -1813,6 +1835,10 @@ executed all of their iterations or \code{section} constructs, and the reduction
 has completed and stored the computed value of that list item. This can most simply be
 ensured through a barrier synchronization.
 
+If the \code{task} modifier is present for a \code{parallel} or worksharing
+construct, all implicit tasks in the corresponding region and those explicit tasks in the
+region that specify an \code{in_reduction} clause for that list item
+participate in the reduction.
 
 \restrictions
 The restrictions to the \code{reduction} clause are as follows:
@@ -1826,17 +1852,46 @@ this clause.
 construct must be shared in the \code{parallel} region to which a corresponding
 worksharing region binds.
 
+\item A list item that appears in a \code{reduction} clause with
+the \code{inscan} modifier must appear as a list item in an \code{inclusive} or
+\code{exclusive} clause on a \code{scan} directive enclosed by the
+construct.
+
+\item If a \code{reduction} clause without the \code{inscan} modifier may not
+    appear on a construct on which a \code{reduction} clause with the
+    \code{inscan} modifier appears.
+
 \item A list item that appears in a \code{reduction} clause of the innermost
 enclosing worksharing or \code{parallel} construct may not be accessed in an
 explicit task generated by a construct for which an \code{in_reduction} clause
 over the same list item does not appear.
 
+\item The \code{task} modifier may not appear in a \code{reduction} clause if
+the \code{nowait} clause is specified on the same construct.
+
 \begin{ccppspecific}
 \item If a list item in a \code{reduction} clause on a worksharing
 construct has a reference type then it must bind to the same object for all threads of the team.
+
+\item A variable of class type (or array thereof) that appears in a
+\code{reduction} clause with the \code{inscan} modifier requires an
+accessible, umambiguous default constructor for the class type. The number of
+calls to the default constructor while performing the scan computation is
+unspecified.
+
+\item A variable of class type (or array thereof) that appears in a
+\code{reduction} clause with the \code{inscan} modifier requires an
+accessible, unambiguous copy assignment operator for the class type. The
+number of calls to the copy assignment operator while
+performing the scan computation is unspecified.
 \end{ccppspecific}
 \end{itemize}
 
+\crossreferences
+\begin{itemize}
+    \item \code{private} clause, see \specref{subsubsec:private clause}.
+    \item \code{scan} directive, see \specref{sec:scan Directive}.
+\end{itemize}
 
 
 
@@ -1903,19 +1958,22 @@ in_reduction(\plc{reduction-identifier }:\plc{ list})
 Where \plc{reduction-identifier} is defined in Section \ref{subsubsec:Properties Common To All Reduction Clauses}
 
 \descr
+
 The \code{in_reduction} clause is a reduction participating clause, as
 described in Section \ref{subsubsec:Reduction Participating Clauses}. For a
-given list item, the \code{in_reduction} clause defines a task to be a
+given a list item, the \code{in_reduction} clause defines a task to be a
 participant in a task reduction that is defined by an enclosing region for a
-matching list item that appears in a \code{task_reduction} clause where either:
+matching list item that appears in a \code{task_reduction} clause or a
+\code{reduction} clause with the \code{task} modifier, where either:
+\begin{enumerate}
 
-\begin{itemize}
-\item the matching list item has the same storage location as the list item in
-the \code{in_reduction} clause; or
+\item the matching list item has the same storage location as the list
+    item in the \code{in_reduction} clause; or
+
 \item a private copy, derived from the matching list item, that is used to
-perform the task reduction has the same storage location as the list item in
-the \code{in_reduction} clause.
-\end{itemize}
+    perform the task reduction has the same storage location as the list item
+    in the \code{in_reduction} clause.
+\end{enumerate}
 
 For the \code{task} construct, the generated task becomes the participating
 task. For each list item, a private copy may be created as if the \code{private}
@@ -1939,13 +1997,13 @@ The restrictions to the \code{in_reduction} clause are as follows:
 Section \ref{subsubsec:Properties Common To All Reduction Clauses}, apply to
 this clause.
 
-\item For each list item, there must exist a matching list item that appears in
-a \code{task_reduction} clause that is specified on a construct corresponding
-to a region in which the region of the participating task is closely nested.
-The construct corresponding to the innermost enclosing region that meets this
-condition must specify the same \plc{reduction-identifier} for the matching
-list item as the \code{in_reduction} clause.
-
+\item For each list item, there must exist a matching list item that appears
+    in a \code{task_reduction} clause or a \code{reduction} clause with the
+    \code{task} modifier that is specified on a construct corresponding to a
+    region in which the region of the participating task is closely nested.
+    The construct corresponding to the innermost enclosing region that meets
+    this condition must specify the same \plc{reduction-identifier} for the
+    matching list item as the \code{in_reduction} clause.
 \end{itemize}
 
 
@@ -2218,13 +2276,10 @@ apply:
 \item If a variable is not a scalar then it is treated as if it had appeared 
 in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
 
-\item If a list item appears in a \code{lastprivate} or \code{linear} clause on a
-    combined target construct then it is treated as if it also appears in a
-    \code{map} clause with a \plc{map-type} of \code{tofrom}.
-
-\item If a list item appears in a \code{reduction} clause on a
-    \code{target} construct then it is treated as if it also appears in a
-    \code{map} clause with a \plc{map-type} of \code{tofrom}.
+\item If a list item appears in a \code{reduction}, \code{lastprivate} or
+    \code{linear} clause on a combined target construct then it is treated as
+    if it also appears in a \code{map} clause with a \plc{map-type} of
+    \code{tofrom}.
 
 \item If a list item appears in an \code{in_reduction} clause on a
     \code{target} construct then it is treated as if it also appears in a
@@ -2255,7 +2310,7 @@ The \code{map} clause specifies how an original list item is mapped from the cur
 The syntax of the map clause is as follows:
 
 \begin{ompSyntax}
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
+map(\plc{[ [map-type-modifier[,] [map-type-modifier[,] ...] map-type} : \plc{] list})
 \end{ompSyntax}
 
 where \plc{map-type} is one of the following:
@@ -2273,6 +2328,7 @@ and \plc{map-type-modifier} is one of the following:
 
 \begin{indentedcodelist}
 always
+close
 mapper(\plc{mapper-identifier})
 \end{indentedcodelist}
 
@@ -2560,6 +2616,8 @@ The \plc{map-type} determines how the new list item is initialized.
 
 If a \plc{map-type} is not specified, the \plc{map-type} defaults to \code{tofrom}.
 
+The \plc{close} \plc{map-type-modifier} is a hint to the runtime to allocate memory close to the target device.
+
 \events
 The \plc{target-map} event occurs when a thread maps data to or from a target device.
 
@@ -2581,8 +2639,8 @@ The callback occurs in the context of the target task.  The callback has type si
 \begin{itemize}
 
 \item A list item cannot appear in both a \code{map} clause and a data-sharing
-    attribute clause on the same construct, unless the data-sharing attribute
-    clause is a \code{reduction} clause or the construct is a combined construct.
+    attribute clause on the same construct, unless the the construct is a
+    combined construct.
 
 \begin{ccppspecific}
 
