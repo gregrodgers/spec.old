@@ -609,7 +609,7 @@ The syntax of the \code{taskwait} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -623,7 +623,7 @@ The syntax of the \code{taskwait} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 \end{indentedcodelist}
 
 \end{fortranspecific}
@@ -1904,6 +1904,84 @@ the exception must catch it.
 
 \end{itemize}
 
+\subsection{Depend Objects}
+\index{Depend Object}
+\label{subsec:Depend Object}
+
+This section describes constructs that support OpenMP depend objects that can be used to supply user computed dependences to \code{depend} clauses. OpenMP depend objects must be accessed only through the \code{depobj} construct or through the \code{depend} clause; programs that otherwise access OpenMP depend objects are non-conforming.
+
+An OpenMP dependence object can be in one of the following states: \plc{uninitialized} or \plc{initialized}. Initially OpenMP depend objects are in the \plc{uninitialized} state.
+
+\subsubsection{\hcode{depobj} Construct}
+\index{depobj@{\code{depobj}}}
+\index{constructs!depobj@{\code{depobj}}}
+\label{subsubsec:depobj Construct}
+\summary
+The \code{depobj} construct allows to initalize, update and destroy depend objects that represent data dependences. The \code{depobj} construct is a stand-alone directive.
+
+\syntax
+
+\begin{ccppspecific}
+\begin{samepage}
+The syntax of the \code{depobj} construct is as follows:
+
+\begin{ompcPragma}
+#pragma omp depobj(\plc{depobj}) \plc{clause new-line}
+\end{ompcPragma}
+\end{samepage}
+where \plc{depobj} is an expression of type \code{omp_depend_t}.
+
+where \plc{clause} is one of the following{}:
+
+\begin{indentedcodelist}
+depend(\plc{dependence-type }:\plc{ locator})
+destroy
+update(\plc{dependence-type})
+\end{indentedcodelist}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{depobj} construct is as follows:
+
+\begin{ompfPragma}
+!$omp depobj(\plc{depobj) \plc{clause}
+\end{ompfPragma}
+where \plc{depobj} is an integer expression of the \code{omp_depobj_kind} \plc{kind}.
+
+where \plc{clause} is one of the following{}:
+
+\begin{indentedcodelist}
+depend(\plc{dependence-type }:\plc{ locator})
+destroy
+update(\plc{dependence-type})
+\end{indentedcodelist}
+\end{fortranspecific}
+
+\binding
+
+The binding thread set for \code{depobj} regions is the encountering thread.
+
+\descr
+
+A \code{depobj} construct with a \code{depend} clause present initializes the \plc{depobj} to represent the dependence specified by the \code{depend} clause.
+
+A \code{depobj} construct with a \code{destroy} clause present changes the state of the \plc{depobj} to uninitialize.
+
+A \code{depobj} construct with a \code{update} clause present changes the dependence type of the dependence represented by \plc{depobj} to the one specified by \plc{update} clause.
+
+\restrictions
+\begin{itemize}
+ \item A \code{depend} clause on a \code{depobj} construct must specify the \plc{dependence-type}.
+ \item A \code{depend} clause on a \code{depobj} construct can only specify one locator.
+ \item The \plc{depobj} of a \code{depobj} construct with the \code{depend} clause present must be in the uninitialized state.
+ \item The \plc{depobj} of a \code{depobj} construct with the \code{destroy} clause present must be in the initialized state.
+ \item The \plc{depobj} of a \code{depobj} construct with the \code{update} clause present must be in the initialized state. 
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+ \item \code{depend} clause, see \specref{subsec:depend Clause}.
+\end{itemize}
 
 \subsection{\hcode{depend} Clause}
 \index{depend@{\code{depend}}}
@@ -1917,7 +1995,7 @@ constraints establish dependences only between sibling tasks or between loop ite
 The syntax of the \code{depend} clause is as follows:
 
 \begin{ompSyntax}
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 \end{ompSyntax}
 
 where \plc{dependence-type} is one of the following:
@@ -1966,7 +2044,7 @@ constant non-negative integer.
 
 \descr
 Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list
-items when \plc{dependence-type} is \code{in}, \code{out}, \code{inout}, or \code{mutexinoutset}.
+items when \plc{dependence-type} is \code{in}, \code{out}, \code{inout}, or \code{mutexinoutset}. When the \code{depend} clause has no \plc{dependence-type} specified, the task dependences are derived from the \code{depend} clause specified in the \code{depobj} constructs that initalized the depend objects specified on the \code{depend} clause as if the \code{depend} clauses of the \code{depobj} constructs were specified in the current construct. 
 
 For the \code{in} \plc{dependence-type}, if the storage location of at least one
 of the list items is the same as the storage location of a list item appearing
@@ -2064,9 +2142,18 @@ Restrictions to the \code{depend} clause are as follows:
 identical storage locations or disjoint storage locations.
 
 \item List items used in \code{depend} clauses cannot be zero-length array sections.
+\item Array sections cannot be specified in \code{depend} clauses with no \plc{dependence-type} specified.
+\item List items used in \code{depend} clauses with no \plc{dependence-type} specified must be depend objects in the initialized state.
+
+\begin{ccppspecific}
+\item List items used in \code{depend} clauses with no \plc{dependence-type} specified must be expressions of the \code{omp_depend_t} type.
+\item List items used in \code{depend} clauses with the \code{in}, \code{out}, \code{inout} or \code{mutexinoutset} dependence types cannot be expressions of the \code{omp_depend_t} type.
+\end{ccppspecific}
 
 \begin{fortranspecific}
 \item A common block name cannot appear in a \code{depend} clause.
+\item List items used in \code{depend} clauses with no \plc{dependence-type} specified must be integer expressions of the \code{omp_depobj_kind} \plc{kind}.
+%\item List items used in \code{depend} clauses with the \code{in}, \code{out}, \code{inout} or \code{mutexinoutset} dependence types cannot be integer expressions of the \code{omp_depobj_kind} \plc{kind}.
 \end{fortranspecific}
 
 \item For a \plc{vec} element of \code{sink} \plc{dependence-type} of the form
