@@ -28,7 +28,6 @@ TEXFILES=openmp.tex \
          directives/directives_mm.tex \
          directives/directives_nesting.tex \
          directives/directives_parallel.tex \
-         directives/directives_scan.tex \
          directives/directives_synchronization.tex \
          directives/directives_tasking.tex \
          directives/directives_teams.tex \
