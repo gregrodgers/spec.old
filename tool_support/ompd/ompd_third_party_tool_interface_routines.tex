@@ -8,9 +8,9 @@ The OMPD library must be initialized exactly once after it is loaded, and finali
 before it is unloaded. Per OpenMP process or core file initialization and finalization are also required.
 
 Once loaded, the tool can determine the version of the OMPD API supported by the
-plugin by calling \code{ompd_get_api_version} (see~\specref{subsubsubsec:ompd_get_api_version}). If the tool supports the version returned by \code{ompd_get_api_version},
+library by calling \code{ompd_get_api_version} (see~\specref{subsubsubsec:ompd_get_api_version}). If the tool supports the version returned by \code{ompd_get_api_version},
 the tool starts the initialization by calling \code{ompd_initialize} (see~\specref{subsubsubsec:ompd_initialize}) using the version
-of the OMPD API supported by the plugin.  If the tool does not support the version returned by \code{ompd_get_api_version}, it may attempt to call \code{ompd_initialize} with
+of the OMPD API supported by the library.  If the tool does not support the version returned by \code{ompd_get_api_version}, it may attempt to call \code{ompd_initialize} with
 a different version.
 
 
@@ -42,8 +42,8 @@ can begin operating on a OpenMP process or core file.
 The \plc{api_version} input argument is the OMPD API version that the tool is requesting to use.
 The tool may call \code{ompd_get_api_version} to obtain the latest version supported by the OMPD library.
 
-The tool provides the OMPD plugin with a set of callback functions in the \plc{callbacks} input argument
-which enables the OMPD plugin to allocate and deallocate memory in the tool's address space, to lookup the
+The tool provides the OMPD library with a set of callback functions in the \plc{callbacks} input argument
+which enables the OMPD library to allocate and deallocate memory in the tool's address space, to lookup the
 sizes of basic primitive types in the device, to lookup symbols in the device, as well as to read and
 write memory in the device.
 
@@ -69,7 +69,7 @@ ompd_rc_t ompd_get_api_version(ompd_word_t *\plc{version});
 \end{cspecific}
 
 \descr
-The tool may call this function to obtain the latest OMPD API version number of the OMPD plugin.
+The tool may call this function to obtain the latest OMPD API version number of the OMPD library.
 
 \argdesc
 The latest version number is returned in to the location pointed to by the \plc{version} output argument
@@ -95,7 +95,7 @@ ompd_rc_t ompd_get_version_string(const char **\plc{string});
 
 
 \descr
-The tool may call this function to obtain a pointer to a descriptive version string of the OMPD plugin.
+The tool may call this function to obtain a pointer to a descriptive version string of the OMPD library.
 
 \argdesc
 A pointer to a descriptive version string will be placed into the *\plc{string} output argument.
@@ -271,6 +271,9 @@ any resources it may have related to the address space.
 The input argument \plc{handle} is an opaque handle for an address space
 to be released.
 
+\restrictions
+Using an address space context after releasing the corresponding address space handle results in undefined behavior.
+
 \crossreferences
 \begin{itemize}
 	\item \code{ompd_rc_t} type, see \specref{subsubsec:ompd_rc_t}
@@ -280,8 +283,8 @@ to be released.
 \subsubsection{Thread and Signal Safety}
 
 The OMPD library does not need to be reentrant. It is the responsibility
-of the tool to ensure that only one thread enters the OMPD library at a time. The OMPD
-implementation must not install signal handlers or otherwise interfere with the tool's signal
+of the tool to ensure that only one thread enters the OMPD library at a time.
+The OMPD library must not install signal handlers or otherwise interfere with the tool's signal
 configuration.
 
 
@@ -345,10 +348,13 @@ API associated with an address space.
 \argdesc
 The input argument \plc{address_space} is an opaque handle provided by the tool
 to reference the address space of the OpenMP process or device.
-A pointer to a descriptive version string will be placed into the *\plc{string} output argument.
-The string returned by the
-OMPD library is `owned' by the library, and it must not be modified or released by the tool.
-It is guaranteed to remain valid until the \plc{address_space} handle is released.
+A pointer to a descriptive version string will be placed into the *\plc{string} output 
+argument.
+
+After returning from the call, the string is `owned' by the third-party tool.
+The string storage must be allocated by the OMPD library using the memory allocation 
+callback provided by the tool.
+The third-party tool is responsible for releasing the memory.
 
 \crossreferences
 \begin{itemize}
@@ -1176,11 +1182,11 @@ the \plc{enter_frame} and \plc{exit_frame} fields of the task's \code{omp_frame_
 
 The argument \plc{task_handle} specifies an OpenMP task.
 
-The argument \plc{exit_frame} is a pointer to an \code{ompd_address_t} object that the OMPD plugin will
+The argument \plc{exit_frame} is a pointer to an \code{ompd_address_t} object that the OMPD library will
 modify to return the segment and address that represent the value of the \plc{exit_frame}
 field of the \code{omp_frame_t} object associated with the specified task.
 
-The argument \plc{enter_frame} is a pointer to an \code{ompd_address_t} object that the OMPD plugin will
+The argument \plc{enter_frame} is a pointer to an \code{ompd_address_t} object that the OMPD library will
 modify to return the segment and address that represent the value of the \plc{enter_frame}
 field of the \code{omp_frame_t} object associated with the specified task.
 
@@ -1224,6 +1230,12 @@ thread state supported by an OpenMP implementation,
 the call will assign the value and string name of the next thread state in the enumeration
 to the locations pointed to by the 
 \plc{next_state} and \plc{next_state_name} output arguments, respectively.
+
+After returning from the call, the string \plc{next_state_name} is `owned' by the 
+third-party tool.
+The string storage must be allocated by the OMPD library using the memory allocation 
+callback provided by the tool.
+The third-party tool is responsible for releasing the memory.
 
 Whenever one or more states are left in the enumeration,
 the call will set the location pointed to by the \plc{more_enums} 
@@ -1271,7 +1283,7 @@ for the lifetime of a program execution.
 \subsubsubsection{\hcode{ompd_get_state}}
 \label{subsubsubsec:ompd_get_state}
 \summary
-This function allows a third party tool to interrogate the OMPD plugin about the state of a thread.
+This function allows a third party tool to interrogate the OMPD library about the state of a thread.
 
 \format
 \begin{cspecific}
@@ -1349,11 +1361,11 @@ The vector is NULL terminated.
 
 After returning from the call, the vector and strings are `owned'
 by the third third-party tool.
-Providing the termination constraints are satisfied, the OMPD
-implementation is free to use static or dynamic memory for the
+Providing the termination constraints are satisfied, the OMPD library
+is free to use static or dynamic memory for the
 vector and/or the strings, and to arrange them in memory
 as it pleases.
-If dynamic memory is used, then the OMPD implementation must use
+If dynamic memory is used, then the OMPD library must use
 the allocate callback it received in the call to \code{ompd_initialize}.
 As the third-party tool cannot make any assumptions about the origin or
 layout of the memory used for the vector or strings, it cannot release
@@ -1391,7 +1403,7 @@ ompd_rc_t ompd_release_display_control_vars (
 
 \descr
 The vector and strings returned from \code{ompd_get_display_control_vars}
-are `owned' by the thrid-party, but allocated by the OMPD.
+are `owned' by the thrid-party tool, but allocated by the OMPD library.
 Because the third-party tool doesn't know how the memory for the vector
 and strings was alloacted, it cannot deallocate the memory itself.
 Instead, the third-party tool must call
@@ -1445,7 +1457,14 @@ When the \plc{current} input argument is set to a value supported by an OpenMP
 implementation,
 the call will assign the value, string name, and scope of the next ICV in the enumeration
 to the locations pointed to by the 
-\plc{next_id}, \plc{next_icv}, and \plc{next_scope} output arguments, respectively.
+\plc{next_id}, \plc{next_icv_name}, and \plc{next_scope} output arguments, respectively.
+
+After returning from the call, the string \plc{next_icv_name} is `owned' by the 
+third-party tool.
+The string storage must be allocated by the OMPD library using the memory allocation 
+callback provided by the tool.
+The third-party tool is responsible for releasing the memory.
+
 
 Whenever one or more ICV are left in the enumeration,
 the call will set the location pointed to by the \plc{more} 
@@ -1592,9 +1611,16 @@ control variables as defined in Table~\ref{tab:ICV Initial Values}.
 
 The argument \plc{handle} provides an OpenMP scope handle.
 The argument \plc{scope} specifies the kind of scope provided in \plc{handle}.
-The argument \plc{icv_name} specifies the name of the requested ICV.
+The argument \plc{icv_id} specifies the id of the requested ICV.
 On successful return, the output argument \plc{icv_string} points to a string 
 representation of the requested ICV.
+
+After returning from the call, the string \plc{icv_string} is `owned' by the third-party 
+tool.
+The string storage must be allocated by the OMPD library using the memory allocation 
+callback provided by the tool.
+The third-party tool is responsible for releasing the memory.
+
 
 \constraints
 Any string passed through the argument \plc{icv_string} must be allocated by the OMPD 
