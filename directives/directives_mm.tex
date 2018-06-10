@@ -4,6 +4,171 @@
 \index{directives!memory management directives}
 \index{memory management directives!memory management directives}
 
+\subsection{Memory Spaces}
+\label{subsec:Memory Spaces}
+\index{memory spaces}
+
+OpenMP memory spaces represent storage resources where variables can be stored and retrieved. Table~\ref{tab:Predefined Memory Spaces} shows the list of predefined memory spaces. The selection of a given memory space expresses an intent to use storage with certain traits for the allocations. The actual storage resources that each memory space represents are implementation defined.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Memory space name}} & \textsf{\textbf{Storage selection intent}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Memory space name}} & \textsf{\textbf{Storage selection intent}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Predefined Memory Spaces\label{tab:Predefined Memory Spaces}}
+\begin{supertabular}{p{2.1in}p{3in}}
+{\scode{omp_default_mem_space}} & Represents the system default storage.\\
+{\scode{omp_large_cap_mem_space}} & Represents storage with large capacity.\\
+{\scode{omp_const_mem_space}} & Represents storage optimized for variables with constant values. The result of writing to this storage is unspecified.\\
+{\scode{omp_high_bw_mem_space}} & Represents storage with high bandwidth.\\
+{\scode{omp_low_lat_mem_space}} & Represents storage with low latency.\\
+\end{supertabular}
+
+\linenumbers
+
+\begin{note}
+For variables allocated in the \scode{omp_const_mem_space} memory space OpenMP supports initializing constant memory either by means of the \code{firstprivate} clause or through initialization with compile time constants for static and constant variables. Implementation-defined mechanisms to provide the constant value of these variables may also be supported.
+ \end{note}
+
+
+\crossreferences
+\begin{itemize}
+\item \code{omp_init_allocator} routine, see \specref{subsec:omp_init_allocator}.
+\end{itemize}
+
+\subsection{Memory Allocators}
+\label{subsec:Memory Allocators}
+\index{memory allocators}
+
+OpenMP memory allocators can be used by a program to make allocation requests. When a memory allocator receives a request to allocate storage of a certain size, it will try to return an allocation of logically consecutive \emph{memory} in the resources of its associated memory space of at least the size being requested. This allocation will not overlap with any other existing allocation from an OpenMP memory allocator. 
+
+The behavior of the allocation process can be affected by the allocator traits the user specifies. Table~\ref{tab:Allocator traits} shows the allowed allocators traits, their possible values and the default value of each trait. %Trait names and their values are not case sensitive.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Allocator trait}} & \textsf{\textbf{Allowed values}} & \textsf{\textbf{Default value}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{3}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Allocator trait}} & \textsf{\textbf{Allowed values}} & \textsf{\textbf{Default value}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{3}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Allocator traits\label{tab:Allocator traits}}
+\begin{supertabular}{p{1.2in}p{2.4in}p{1.2in}}
+{\scode{sync_hint}} & {\scode{contended}, \scode{uncontended}, \scode{serialized}, \scode{private}} & {\scode{contended}}\\
+{\scode{alignment}} & A positive integer value which is a power of 2& 1 byte\\
+{\scode{access}} & {\scode{all}, \scode{cgroup}, \scode{pteam}, \scode{thread}} & {\scode{all}}\\
+{\scode{pool_size}} & Positive integer value & Implementation defined\\
+{\scode{fallback}} & {\scode{default_mem_fb}, \scode{null_fb}, \scode{abort_fb}, \scode{allocator_fb}} & {\scode{default_mem_fb}}\\
+{\scode{fb_data}} & an allocator handle & (none)\\
+{\scode{pinned}} & \scode{true}, \scode{false} & \scode{false}\\
+{\scode{partition}} & {\scode{environment}, \scode{nearest}, \scode{blocked}, \scode{interleaved}} & {\scode{environment}}\\
+\end{supertabular}
+\linenumbers
+
+The {\scode{sync_hint}} trait describes the expected manner in which multiple threads may use the allocator. The values and their description are:
+\begin{itemize}
+ \item \scode{contended}: high contention is expected on the allocator; that is, many threads are expected to request allocations simultaneously.
+ \item \scode{uncontended}: low contention is expected on the allocator; that is, few threads are expected to request allocations simultaneously.
+ \item \scode{serialized}: only one thread at a time will request allocations with the allocator. Requesting two allocations simultaneously when specifying \scode{serialized} results in unspecified behavior.
+ \item \scode{private}: the same thread will request allocations with the allocator every time. Requesting an allocation from different threads, simultaneously or not, when specifying \scode{private} results in unspecified behavior.
+\end{itemize}
+
+Memory allocated will be byte aligned to at least the value specified for the {\scode{alignment}} trait of the allocator.
+
+Memory allocated by allocators with the \scode{access} trait defined to be \scode{all} must be accessible by all threads in the device where the allocation was requested. Memory allocated by allocators with the \scode{access} trait defined to be \scode{cgroup} will be memory accessible by all threads in the same contention group of the thread requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{cgroup} from a thread that is not part of the same contention group as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocators with the \scode{access} trait defined to be \scode{pteam} will be memory accessible by all threads that bind to the same {\scode{parallel}} region of the thread requesting the allocation. Attempts to access the memory returned by  an allocator with the \scode{access} trait defined to be \scode{pteam} from a thread that does not bind to the same {\scode{parallel}} region as the thread that allocated the memory result in unspecified behavior. Memory allocated by allocator with the \scode{access} trait defined to be \scode{thread} will be memory accessible by the {\splc{thread}} requesting the allocation. Attempts to access the memory returned by an allocator with the \scode{access} trait defined to be \scode{thread} from a thread other than the one that allocated the memory result in unspecified behavior.
+
+The total amount of storage in bytes that an allocator can use is limited by the {\scode{pool_size}} trait. For allocators with the \scode{access} trait defined to be \scode{all} this limit refers to allocations from all threads accessing the allocator. For allocators with the \scode{access} trait defined to be \scode{cgroup} this limit refers to allocations from threads accessing the allocator from the same contention group. For allocators with the \scode{access} trait defined to be \scode{pteam} this limit refers to allocations from threads accessing the allocator from the same parallel team. For allocators with the \scode{access} trait defined to be \scode{thread} this limit refers to allocations from each thread accessing the allocator. Requests that would result in using more storage than {\scode{pool_size}} will not be fulfilled by the allocator.
+
+The \scode{fallback} trait specifies how the allocator behaves when it cannot fulfil an allocation request. If the \scode{fallback} trait is set to \scode{null_fb} the allocator returns the value zero if it fails to allocate the memory. If the \scode{fallback} trait is set to \scode{abort_fb} the program execution will be terminated if the allocation fails. If the \scode{fallback} trait is set to \scode{allocator_fb} then when an allocation fails the request will be delegated to the allocator specified in the \scode{fb_data} trait. If the \scode{fallback} trait is set to \scode{default_mem_fb} then when an allocation fails another allocation will be tried in the \scode{omp_default_mem_space} memory space assuming all allocator traits to be set to their default values except for \scode{fallback} trait which will be set to \scode{null_fb}.
+
+Allocators with the \scode{pinned} trait defined to be \scode{true} ensure that their allocations remain in the same storage resource at the same location for their entire lifetime.
+
+The {\scode{partition}} trait describes the partitioning of allocated
+memory over the storage resources represented by the memory space associated
+with the allocator. The partitioning will be done in parts with a minimum size
+that is implementation defined. The values are:
+\begin{itemize}
+ \item \scode{environment}: the placement of allocated memory is determined by the execution environment.
+ \item \scode{nearest}: allocated memory is placed in the storage resource that is nearest to the thread that requests the allocation.
+ \item \scode{blocked}: allocated memory is partitioned into parts of approximately the same size with at most one part per storage resource.
+ \item \scode{interleaved}: allocated memory parts are distributed in a round-robin fashion across the storage resources.
+\end{itemize}
+
+%TODO: add reference to appendix because of implementation defined behavior
+
+Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Allocator name}} & \textsf{\textbf{Associated memory space}} & \textsf{\textbf{Non-default trait values}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{3}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Allocator name}} & \textsf{\textbf{Associated memory space}} & \textsf{\textbf{Non-default trait values}} \\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{3}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{Predefined Allocators\label{tab:Predefined Allocators}}
+\begin{supertabular}{p{1.8in}p{2in}p{1.2in}}
+{\scode{omp_default_mem_alloc}} & {\scode{omp_default_mem_space}} & (none)\\
+{\scode{omp_large_cap_mem_alloc}} & {\scode{omp_large_cap_mem_space}} & (none)\\
+{\scode{omp_const_mem_alloc}} & {\scode{omp_const_mem_space}}& (none)\\
+{\scode{omp_high_bw_mem_alloc}} & {\scode{omp_high_bw_mem_space}} & (none)\\
+{\scode{omp_low_lat_mem_alloc}} & {\scode{omp_low_lat_mem_space}} & (none)\\
+{\scode{omp_cgroup_mem_alloc}} & Implementation defined & {\scode{access}}:{\scode{cgroup}}\\
+{\scode{omp_pteam_mem_alloc}} & Implementation defined & {\scode{access}}:{\scode{pteam}}\\
+{\scode{omp_thread_mem_alloc}} & Implementation defined & {\scode{access}}:{\scode{thread}}\\
+\end{supertabular}
+\linenumbers
+
+\begin{fortranspecific}
+If any operation of the base language causes a reallocation of an array that is allocated with a memory allocator then that memory allocator will be used to release the current memory and to allocate the new memory.
+\end{fortranspecific}
+
+\crossreferences
+\begin{itemize}
+\item \code{omp_init_allocator} routine, see \specref{subsec:omp_init_allocator}.
+
+\item \code{omp_destroy_allocator} routine, see \specref{subsec:omp_destroy_allocator}.
+
+\item \code{omp_set_default_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+
+\item \code{omp_get_default_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+\item \code{OMP_ALLOCATOR} environment variable, see \specref{sec:OMP_ALLOCATOR}.
+\end{itemize}
+
 
 \subsection{\hcode{allocate} Directive}
 \index{allocate@{\code{allocate}}}
@@ -59,7 +224,7 @@ where \plc{allocator} is an integer expression of \code{omp_allocator_kind} \plc
 
 \descr
 
-If the directive is not associated with a statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through a memory allocator. If no clause is specified then the memory allocator specified by the \plc{def-allocator-var} ICV will be used. If the \code{allocator} clause is specified, the memory allocator specified in the clause will be used. If a memory allocator is unable to fulfill the allocation request for any list item the result of the behavior is implementation defined.
+If the directive is not associated with a statement, the storage for each \plc{list item} that appears in the directive will be provided by an allocation through a memory allocator. If no clause is specified then the memory allocator specified by the \plc{def-allocator-var} ICV will be used. If the \code{allocator} clause is specified, the memory allocator specified in the clause will be used. If a memory allocator is unable to fulfill the allocation request for any list item, the behavior is implementation defined.
 
 The scope of this allocation is that of the list item in the base language. At the end of the scope for a given list item the memory allocator used to allocate that list item deallocates the storage.
 
@@ -68,26 +233,29 @@ If the directive is associated with an \code{allocate} statement, the same list 
 If no list items are specified then all variables listed in the \code{allocate} statement are allocated with the memory allocator of the directive.
 \end{fortranspecific}
 
+For allocations that arise from this directive the \scode{null_fb} value of the fallback allocator trait will behave as if the \scode{abort_fb} had been specified.
+
 \restrictions
 \begin{itemize}
 \item A variable that is part of another variable (as an array or structure element) cannot appear in an \code{allocate} directive.
 \item The directive must appear in the same scope of the \plc{list item} declaration and before its first use.
 \item At most one \code{allocator} clause can appear on the \code{allocate} directive.
+\item \code{allocate} directives appearing in a \code{target} region must specify an \code{allocator} clause unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit.
 \begin{ccppspecific}
 \item If a list item has a static storage type, only predefined memory allocator variables can be used in the \code{allocator} clause.
 \end{ccppspecific}
 \begin{fortranspecific}
 \item List items specified in the \code{allocate} directive must not have the \code{ALLOCATABLE} attribute unless the directive is associated with an \code{allocate} statement.
-\item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be \code{ALLOCATABLE} variables or \code{POINTER} variables allocated by the \code{allocate} statement.
+\item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be variables that are allocated by the \code{allocate} statement.
 \item Multiple directives can only be associated with an \code{allocate} statement if list items are specified on each \code{allocate} directive.
-\item If a list item has the \code{SAVE} attribute, or if the list item is a common block name, or if a list item is declared in the scope of a module, then only predefined memory allocator variables can be used in the \code{allocator} clause.
-\item \code{allocate} directives appearing in a \code{target} region must specify an \code{allocator} clause and the \plc{allocator} must be a constant expression.
+\item If a list item has the \code{SAVE} attribute, is a common block name, or is declared in the scope of a module, then only predefined memory allocator variables can be used in the \code{allocator} clause.
+\item A type parameter inquiry cannot appear in an \code{allocate} directive.
 \end{fortranspecific}
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item Memory allocators, see \specref{sec:Memory Allocators}.
+\item Memory allocators, see \specref{subsec:Memory Allocators}.
 \item \code{omp_allocator_t} and \code{omp_allocator_kind}, see \specref{subsec:Memory Management Types}.
 \item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \end{itemize}
@@ -117,18 +285,20 @@ where \plc{allocator} is an integer expression of the \code{omp_allocator_kind} 
 
 \descr
 
-The storage for new list items that arise from \plc{list items} that appear in the directive will be provided through a memory allocator. If an \plc{allocator} is specified in the clause this will be the memory allocator used for allocations. For all directives except for the \code{target} directive, if no \plc{allocator} is specified in the clause then the memory allocator specified by the \plc{def-allocator-var} ICV will be used for the \plc{list items} specified in the \code{allocate} clause. If a memory allocator is unable to fulfill the allocation request for any list item the result of the behavior is implementation defined.
+The storage for new list items that arise from list items that appear in the directive will be provided through a memory allocator. If an \plc{allocator} is specified in the clause this will be the memory allocator used for allocations. For all directives except for the \code{target} directive, if no \plc{allocator} is specified in the clause then the memory allocator specified by the \plc{def-allocator-var} ICV will be used for the list items specified in the \code{allocate} clause. If a memory allocator is unable to fulfill the allocation request for any list item, the behavior is implementation defined.
+
+For allocations that arise from this clause the \scode{null_fb} value of the fallback allocator trait will behave as if the \scode{abort_fb} had been specified.
 
 \restrictions
 \begin{itemize}
 \item For any list item that is specified in the \code{allocate} clause on a directive, a data-sharing attribute clause that may create a private copy of that list item must be specified on the same directive.
-\item For \code{task}, \code{taskloop} or \code{target} directives, allocation requests to the \code{omp_thread_mem_alloc} memory allocator result in unspecified behavior.
-\item \code{allocate} clauses appearing in a \code{target} construct or in a \code{target} region must specify an \plc{allocator} and it must be a constant expression.
+\item For \code{task}, \code{taskloop} or \code{target} directives, allocation requests to memory allocators with the trait \code{access} set to \code{thread} result in unspecified behavior.
+\item \code{allocate} clauses appearing in a \code{target} construct or in a \code{target} region must specify an \plc{allocator} expression unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit.
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item Memory allocators, see \specref{sec:Memory Allocators}.
+\item Memory allocators, see \specref{subsec:Memory Allocators}.
 \item \code{omp_allocator_t} and \code{omp_allocator_kind}, see \specref{subsec:Memory Management Types}.
 \item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \end{itemize}

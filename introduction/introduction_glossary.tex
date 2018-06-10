@@ -141,9 +141,14 @@ COMMENTS:
 For all \emph{base languages}:
 
 \begin{itemize}
-\item Access to the \emph{structured block} must not be the result of a branch; and
+\item Access to the \emph{structured block} must not be the result of a branch;
 
-\item The point of exit cannot be a branch out of the \emph{structured block}.
+\item The point of exit cannot be a branch out of the \emph{structured block};
+
+\item Infinite loops where the point of exit is never reached are
+allowed in a \emph{structured block}; and
+
+\item Halting caused by an IEEE exception is allowed in a \emph{structured block}.
 \end{itemize}
 
 For C/C++:
@@ -155,6 +160,10 @@ For C/C++:
 
 \item Calls to \code{exit()} are allowed in a \emph{structured block}; and
 
+\item A \emph{structured block} may contain calls to \code{exit()},
+\code{_Exit()}, \code{quick_exit()}, \code{abort()} or functions
+with \code{_Noreturn} specifier (in C) or \code{noreturn} attribute (in C/C++).
+  
 \item An expression statement, iteration statement, selection statement,
 or try block is considered to be a \emph{structured block} if the
 corresponding compound statement obtained by enclosing it in \tcode{\{}
@@ -169,17 +178,23 @@ For Fortran:
 \end{quote}
 \glossarydefend
 
+\glossaryterm{compilation unit}
+\glossarydefstart
+For C/C++, a translation unit.
+
+For Fortran, a program unit.
+\glossarydefend
 
 \glossaryterm{enclosing context}
 \glossarydefstart
-In C/C++, the innermost scope enclosing an OpenMP \emph{directive}.
+For C/C++, the innermost scope enclosing an OpenMP \emph{directive}.
 
-In Fortran, the innermost scoping unit enclosing an OpenMP \emph{directive}.
+For Fortran, the innermost scoping unit enclosing an OpenMP \emph{directive}.
 \glossarydefend
 
 \glossaryterm{directive}
 \glossarydefstart
-In C/C++, a \pcode{\#pragma}, and in Fortran, a comment, that specifies \emph{OpenMP
+For C/C++, a \pcode{\#pragma}, and for Fortran, a comment, that specifies \emph{OpenMP
 program} behavior.
 
 \begin{quote}
@@ -195,8 +210,8 @@ A non-empty sequence of space and/or horizontal tab characters.
 
 \glossaryterm{OpenMP program}
 \glossarydefstart
-A program that consists of a \emph{base program}, annotated with OpenMP \emph{directives} and
-runtime library routines.
+A program that consists of a \emph{base program} that is annotated with OpenMP
+\emph{directives} or that calls OpenMP API runtime library routines
 \glossarydefend
 
 \glossaryterm{conforming program}
@@ -242,6 +257,11 @@ A construct that is a shortcut for specifying one construct immediately nested i
 A construct that is composed of two constructs but does not have identical semantics to specifying one of the constructs immediately nested inside the other. A composite construct either adds semantics not included in the constructs from which it is composed or the nesting of the one construct inside the other is not conforming.
 \glossarydefend
 
+\glossaryterm{combined target construct}
+\glossarydefstart
+A \emph{combined construct} that is composed of a \code{target} construct and another construct.
+\glossarydefend
+
 
 \glossaryterm{region}
 \glossarydefstart
@@ -276,6 +296,17 @@ A \code{parallel} \emph{region} that is executed by a \emph{team} consisting of 
 \glossaryterm{inactive parallel region}
 \glossarydefstart
 A \code{parallel} \emph{region} that is executed by a \emph{team} of only one \emph{thread}.
+\glossarydefend
+
+\glossaryterm{active target region}
+\glossarydefstart
+A \code{target} \emph{region} that is executed on a \emph{device} other than the \emph{device} that encountered the \code{target} \emph{construct}. 
+\glossarydefend
+
+\smallskip
+\glossaryterm{inactive target region}
+\glossarydefstart
+A \code{target} \emph{region} that is executed on the same \emph{device} that encountered the \code{target} \emph{construct}.
 \glossarydefend
 
 \glossaryterm{sequential part}
@@ -572,9 +603,19 @@ A set of iterations executed concurrently, each by a \emph{SIMD lane}, by a sing
 by means of \emph{SIMD instructions}.
 \glossarydefend
 
+\glossaryterm{memory}
+\glossarydefstart
+A storage resource to store and to retrieve variables accessible by OpenMP threads.
+\glossarydefend
+
+\glossaryterm{memory space}
+\glossarydefstart
+A representation of storage resources from which \emph{memory} can be allocated or deallocated.
+\glossarydefend
+
 \glossaryterm{memory allocator}
 \glossarydefstart
-An OpenMP object that fulfills requests to allocate and deallocate storage for program variables.
+An OpenMP object that fulfills requests to allocate and to deallocate \emph{memory} for program variables from the storage resources of its associated \emph{memory space}.
 \glossarydefend
 
 %
@@ -605,6 +646,12 @@ A loop that is not associated with any OpenMP \emph{loop directive}.
 \glossaryterm{SIMD loop}
 \glossarydefstart
 A loop that includes at least one \emph{SIMD chunk}.
+\glossarydefend
+
+\glossaryterm{non-rectangular loop nest}
+\glossarydefstart
+A loop nest for which the iteration count of a loop inside the loop nest is the
+not same for all occurrences of the loop in the loop nest.
 \glossarydefend
 
 \glossaryterm{doacross loop nest}
@@ -649,14 +696,8 @@ COMMENT: For a list of cancellation points, see \specref{subsec:cancel Construct
 
 \glossaryterm{flush}
 \glossarydefstart
-An operation, applied to a set of variables, that a \emph{thread} performs
-to enforce consistency between its view and other \emph{threads}' view of
-memory.
-\glossarydefend
-
-\glossaryterm{flush-set}
-\glossarydefstart
-The set of variables to which a given \emph{flush} operation is applied.
+An operation that a \emph{thread} performs to enforce consistency between its
+view and other \emph{threads}' view of memory.
 \glossarydefend
 
 \glossaryterm{flush property}
@@ -664,19 +705,18 @@ The set of variables to which a given \emph{flush} operation is applied.
 Properties that determine the manner in which a \emph{flush} operation enforces
 memory consistency. These properties are:
 \begin{itemize}
-    \item \emph{strong}:  guarantees a completion ordering between memory operations
-        on different threads upon which all threads agree;
-    \item \emph{write}: makes modifications by the executing thread visible
-        to other threads;
-    \item \emph{read}: makes modifications by other threads visible to the
-        executing thread;
-    \item \emph{synchronizable}: allows the \emph{flush} operation to
-        synchronize with another \emph{flush} operation.
+    \item \emph{strong}: flushes a set of variables from the current thread's
+        temporary view of the memory to the memory;
+    \item \emph{release}: orders memory operations that precede the flush
+        before memory operations performed by a different thread with which it
+        synchronizes;
+    \item \emph{acquire}: orders memory operations that follow the flush after
+        memory operations performed by a different thread that synchronizes
+        with it.
 \end{itemize}
 
 \begin{quote}
-COMMENT: A given \emph{flush} operation can have one or more \emph{flush
-properties}, but must have at least the write or read flush property.
+COMMENT: Any \emph{flush} operation has one or more \emph{flush properties}.
 \end{quote}
 \glossarydefend
 
@@ -685,50 +725,75 @@ properties}, but must have at least the write or read flush property.
 A \emph{flush} operation that has the \emph{strong flush property}.
 \glossarydefend
 
-\glossaryterm{weak flush}
-\glossarydefstart
-A \emph{flush} operation that does not have the \emph{strong flush property}.
-\glossarydefend
-
-\glossaryterm{write flush}
-\glossarydefstart
-A \emph{flush} operation that has the \emph{write flush property}.
-\glossarydefend
-
-\glossaryterm{read flush}
-\glossarydefstart
-A \emph{flush} operation that has the \emph{read flush property}.
-\glossarydefend
-
-\glossaryterm{synchronizable flush}
-\glossarydefstart
-A \emph{flush} operation that has the \emph{synchronizable flush property}.
-\glossarydefend
-
-\glossaryterm{non-synchronizable flush}
-\glossarydefstart
-A \emph{flush} operation that does not have the \emph{synchronizable flush
-property}.
-\glossarydefend
-\medskip
-
 \glossaryterm{release flush}
 \glossarydefstart
-A \emph{write flush} that is a \emph{synchronizable flush}.
+A \emph{flush} operation that has the \emph{release flush property}.
 \glossarydefend
 
 \glossaryterm{acquire flush}
 \glossarydefstart
-A \emph{read flush} that is a \emph{synchronizable flush}.
+A \emph{flush} operation that has the \emph{acquire flush property}.
 \glossarydefend
 
-\glossaryterm{sync-set}
+\glossaryterm{atomic operation}
 \glossarydefstart
-The set of variables associated with a \emph{release flush} or \emph{acquire flush} that a
-program may use to force a \emph{release flush} to synchronize with an \emph{acquire flush}.
+An operation that is specified by an \code{atomic} construct and atomically
+accesses and/or modifies a specific storage location.
 \glossarydefend
 
+\glossaryterm{atomic read}
+\glossarydefstart
+An \emph{atomic operation} that is specified by an \code{atomic} construct on which the
+\code{read} clause is present.
+\glossarydefend
 
+\glossaryterm{atomic write}
+\glossarydefstart
+An \emph{atomic operation} that is specified by an \code{atomic} construct on which the
+\code{write} clause is present.
+\glossarydefend
+
+\glossaryterm{atomic update}
+\glossarydefstart
+An \emph{atomic operation} that is specified by an \code{atomic} construct on which the
+\code{update} clause is present.
+\glossarydefend
+
+\glossaryterm{atomic captured update}
+\glossarydefstart
+An \emph{atomic operation} that is specified by an \code{atomic} construct on which the
+\code{capture} clause is present.
+\glossarydefend
+
+\glossaryterm{read-modify-write}
+\glossarydefstart
+An \emph{atomic operation} that reads and writes to a given storage location.
+
+\begin{quote}
+COMMENT: All \emph{atomic update} and \emph{atomic captured update} operations
+are \emph{read-modify-write} operations.
+\end{quote}
+\glossarydefend
+
+\glossaryterm{sequentially consistent atomic construct}
+\glossarydefstart
+An \code{atomic} construct for which the \code{seq_cst} clause is specified.
+\glossarydefend
+\bigskip
+
+\glossaryterm{non-sequentially consistent atomic construct}
+\glossarydefstart
+An \code{atomic} construct for which the \code{seq_cst} clause is not specified
+\glossarydefend
+\bigskip
+\bigskip
+
+\glossaryterm{sequentially consistent atomic operation}
+\glossarydefstart
+An \emph{atomic operation} that is specified by a \emph{sequentially consistent atomic construct}. 
+\glossarydefend
+\bigskip
+\bigskip
 
 
 % \vspace{5ex}
@@ -939,10 +1004,10 @@ A scalar variable with intrinsic type, as defined by the base language,
 excluding character type.
 \glossarydefend
 
-%\glossaryterm{aggregate variable}
-%\glossarydefstart
-%A variable, such as an array or structure, composed of other variables.
-%\glossarydefend
+\glossaryterm{aggregate variable}
+\glossarydefstart
+A variable, such as an array or structure, composed of other variables.
+\glossarydefend
 
 \glossaryterm{array section}
 \glossarydefstart
@@ -956,8 +1021,14 @@ An array, an array section, or an array element.
 
 \glossaryterm{base expression}
 \glossarydefstart
-For C/C++: The expression in an array section or an array element that specifies
-the address of the initial element of the original array.
+For C/C++: For an \emph{array item} that is expressed in the program, the expression
+or sub-expression that specifies the address of the initial element
+of the original array.
+
+\begin{quote}
+COMMENT: The \emph{base expression} is \emph{x} for \emph{array} x, for \emph{array
+element} x[i], and for \emph{array section} x[i:j].
+\end{quote}
 \glossarydefend
 
 \glossaryterm{named array}
@@ -986,11 +1057,9 @@ A variable that has the \code{POINTER} attribute and appears as a pointer to
 the array to which a given array item implicitly refers.
 %array implicitly referred to by a given array item
 
-\begin{adjustwidth}{-0.75in}{0in}
-\begin{note}
-A given array item cannot have a \emph{named pointer} if it has a \emph{named array}.
-\end{note}
-\end{adjustwidth}
+\begin{quote}
+COMMENT: A given array item cannot have a \emph{named pointer} if it has a \emph{named array}.
+\end{quote}
 \glossarydefend
 
 
@@ -1005,7 +1074,7 @@ an attached pointer for the remainder of its lifetime in the device data environ
 
 \glossaryterm{simply contiguous array section}
 \glossarydefstart
-An array section that statically can be determined to have contiguous storage.
+An array section that statically can be determined to have contiguous storage or that has the \code{CONTIGUOUS} attribute.
 \glossarydefend
 \bigskip
 
@@ -1176,20 +1245,6 @@ COMMENT: Programs that rely upon \emph{variables} that are not \emph{defined} ar
 \glossarydefstart
 For C++: \emph{Variables} declared with one of the \code{class}, \code{struct}, or \code{union} keywords
 \glossarydefend
-
-\glossaryterm{sequentially consistent atomic construct}
-\glossarydefstart
-An \code{atomic} construct for which the \code{seq_cst} clause is specified.
-\glossarydefend
-\bigskip
-
-\glossaryterm{non-sequentially consistent atomic construct}
-\glossarydefstart
-An \code{atomic} construct for which the \code{seq_cst} clause is not specified
-\glossarydefend
-\bigskip
-\bigskip
-\bigskip
 
 
 
@@ -1392,7 +1447,7 @@ An interface that helps a third-party tool inspect the OpenMP state of a program
 
 \glossaryterm{OMPD library}
 \glossarydefstart
-A shared library that implements the OMPD interface.
+A dynamically loadable library that implements the OMPD interface.
 \glossarydefend
 
 \glossaryterm{image file}
@@ -1466,7 +1521,7 @@ A process may be live or a core file.
 %OMPD handles identify OpenMP entities during the execution of an OpenMP program. Handles
 %are opaque to the debugger, and defined internally by the OMPD implementation. Below we
 %define these handles and the conditions under which they are guaranteed to be valid.
-An opaque reference provided by an OMPD library implementation to a using tool. A handle uniquely identifies an abstraction.
+An opaque reference provided by an OMPD library to a using tool. A handle uniquely identifies an abstraction.
 
 % An identifier for an OpenMP entity that is valid during the execution of an OpenMP program. OMPD  handles are created by an OMPD library upon requests from a third-party tool and are opaque to  the third-party tool. Handles remain valid until they are released by third-party tools.
 \glossarydefend
@@ -1551,6 +1606,26 @@ A handle that refers to an OpenMP task region.
 % The handle is valid for the life time of the  task region. The handle is guaranteed to be valid if all threads in the task team are paused.
 \glossarydefend
 
+\glossaryterm{descendent handle}
+\glossarydefstart
+An output handle that is returned from the OMPD library in a function that 
+accepts an input handle: the output handle is a descendent of the input handle.
+\glossarydefend
+
+\glossaryterm{ancestor handle}
+\glossarydefstart
+An input handle that is passed to the OMPD library in a function that 
+returns an output handle: the input handle is an ancestor of the 
+output handle. For a given handle, the ancestors of the handle are 
+also the ancestors of the handle's descendent.
+
+\begin{quote}
+	COMMENT: A handle cannot be used by the tool in an OMPD call if at least 
+	one ancestor of the handle has been released, except for OMPD calls 
+	that release the handle.
+\end{quote}
+\glossarydefend
+
 \glossaryterm{tool context}
 \glossarydefstart
 %Debugger contexts are used to identify a process, address space, or thread
@@ -1559,7 +1634,7 @@ A handle that refers to an OpenMP task region.
 %For example, symbol lookup and memory accesses are done in the ``context''
 %of a particular address space and possibly thread in the debugger.
 %Contexts are opaque to the OMPD implementation, and defined by the debugger.
-An opaque reference provided by a tool to an OMPD library implementation. A tool context uniquely identifies an abstraction.
+An opaque reference provided by a tool to an OMPD library. A tool context uniquely identifies an abstraction.
 % a process, address space, or thread that resides in a third-party tool. Contexts are opaque to an OMPD library, and are defined by a third-party tool.
 \glossarydefend
 

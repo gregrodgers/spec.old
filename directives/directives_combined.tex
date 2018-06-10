@@ -52,15 +52,8 @@ inside another construct. The semantics of the combined constructs are identical
 of explicitly specifying the first construct containing one instance of the second
 construct and no other statements.
 
-Some combined constructs have clauses that are permitted on both constructs that were
-combined. Where specified, the effect is as if applying the clauses to one or both
-constructs. If not specified and applying the clause to one construct would result in
-different program behavior than applying the clause to the other construct then the
-program's behavior is unspecified.
-
 For combined constructs, tool callbacks shall be invoked as if the constructs were
 explicitly nested.
-
 
 
 
@@ -328,9 +321,7 @@ an \code{end}~\code{parallel}~\code{do}~\code{simd} directive.
 
 \descr
 The semantics of the parallel loop SIMD construct are identical to explicitly specifying
-a \code{parallel} directive immediately followed by a loop SIMD directive. The effect of
-any clause that applies to both constructs is as if it were applied to the loop SIMD
-construct and not to the \code{parallel} construct.
+a \code{parallel} directive immediately followed by a loop SIMD directive.
 
 \restrictions
 The restrictions for the \code{parallel} construct and the loop SIMD construct apply.
@@ -808,7 +799,7 @@ If an \code{end}~\code{teams}~\code{distribute} directive is not specified, an
 
 \descr
 The semantics are identical to explicitly specifying a \code{teams} directive immediately
-followed by a \code{distribute} directive. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately.
+followed by a \code{distribute} directive.
 
 
 \restrictions
@@ -878,7 +869,7 @@ directive is assumed at the end of the \plc{do-loops}.
 
 \descr
 The semantics are identical to explicitly specifying a \code{teams} directive immediately
-followed by a \code{distribute}~\code{simd} directive. The effect of any clause that applies to both constructs is as if it were applied to both constructs separately.
+followed by a \code{distribute}~\code{simd} directive.
 
 
 \restrictions
@@ -1087,8 +1078,7 @@ If an \code{end}~\code{teams}~\code{distribute}~\code{parallel}~\code{do} direct
 
 \descr
 The semantics are identical to explicitly specifying a \code{teams} directive immediately
-followed by a distribute parallel loop directive. The effect of any clause that applies to
-both constructs is as if it were applied to both constructs separately.
+followed by a distribute parallel loop directive.
 
 \restrictions
 The restrictions for the \code{teams} and distribute parallel loop constructs apply.
@@ -1248,8 +1238,7 @@ the \plc{do-loops}.
 
 \descr
 The semantics are identical to explicitly specifying a \code{teams} directive immediately
-followed by a distribute parallel loop SIMD directive. The effect of any clause that
-applies to both constructs is as if it were applied to both constructs separately.
+followed by a distribute parallel loop SIMD directive.
 
 \restrictions
 The restrictions for the \code{teams} and distribute parallel loop
@@ -1355,3 +1344,128 @@ loop SIMD constructs apply except for the following explicit modifications:
 \item Data attribute clauses, see
       \specref{subsec:Data-Sharing Attribute Clauses}.
 \end{itemize}
+
+%% \filbreak
+\section{Clauses on Combined and Composite Constructs}
+\label{sec:Clauses on Combined and Composite Constructs}
+This section specifies the handling of clauses on combined or composite constructs and handling of implicit clauses from
+variables with predetermined data sharing if they are not predetermined only on a particular construct.
+Some clauses are permitted only on a single construct from the constructs that
+constitute the combined or composite construct, the effect is then as if the
+clause is applied to that specific construct.  Other clauses have the effect as if
+they are applied to one or more constituent constructs as specified below:
+
+\begin{itemize}
+\item The \code{collapse} clause is applied once for the whole combined or composite construct.
+
+\item For the \code{private} clause the effect is as if it is applied to the innermost constituent construct only.
+
+\item For the \code{firstprivate} clause the effect is as if it is applied to one or more
+constructs as follows:
+\begin{itemize}
+\item to the \code{distribute} construct if it is among the constituent constructs,
+
+\item to the \code{teams} construct if it is among the constituent constructs and \code{distribute} construct is not,
+
+\item to the loop construct if it is among the constituent constructs,
+
+\item to the \code{parallel} construct if it is among the constituent constructs and the loop construct is not,
+
+\item to the outermost constituent construct if not already applied to it by the above
+rules and the outermost constituent construct is neither \code{teams} nor \code{parallel}
+nor \code{target} construct,
+
+\item to the \code{target} construct if it is among the constituent
+constructs and the same list item does not appear in \code{lastprivate} or \code{map} clause.
+\end{itemize}
+
+If the \code{parallel} construct is among the constituent constructs and the
+effect is not as if the \code{firstprivate} clause is applied to it by the
+above rules, then the effect is as if the \code{shared} clause with the same
+list item is applied to the \code{parallel} construct.
+
+If the \code{teams} construct is among the constituent constructs and the
+effect is not as if the \code{firstprivate} clause is applied to it by the
+above rules, then the effect is as if the \code{shared} clause with the same
+list item is applied to the \code{teams} construct.
+
+\item For the \code{lastprivate} clause the effect is as if it is applied to one or more
+constructs as follows:
+
+\begin{itemize}
+
+\item to the loop construct if it is among the constituent constructs,
+
+\item to the \code{distribute} construct if it is among the constituent constructs,
+
+\item to the innermost constituent construct that permits it unless it is a
+loop or \code{distribute} construct.
+\end{itemize}
+
+If the \code{parallel} construct is among the constituent constructs and the
+list item is not also mentioned in the \code{firstprivate} clause, then the effect is as
+if the \code{shared} clause with the same list item is applied to the \code{parallel} construct.
+
+If the \code{teams} construct is among the constituent constructs and the
+list item is not also mentioned in the \code{firstprivate} clause, then the effect is as
+if the \code{shared} clause with the same list item is applied to the \code{teams} construct.
+
+If the \code{target} construct is among the constituent constructs and the list item doesn't
+appear in a \code{map} clause the effect is as if the same list item appears in a \code{map} clause
+with a \plc{map-type} of \code{tofrom}.
+
+\item For the \code{shared}, \code{default}, or \code{allocate} clauses the effect is as if it is applied to all
+the constituent constructs that permit those clauses.
+
+\item For the \code{reduction} clause the effect is as if it is applied to all the constructs that permit
+the clause, except that it is not applied to the loop or \code{sections} construct if they are
+combined with the \code{parallel} construct.  If the construct is combined
+with the \code{target} construct, the effect is also as if the same list
+item appears in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+
+\item The \code{in_reduction} clause is permitted on a single construct
+among the combined or composite construct and the effect is as if it is
+applied to that construct, but if that construct is \code{target}, the
+effect is also as if the same list item appears in a \code{map} clause with
+a \plc{map-type} of \code{tofrom} and a \plc{map-type-modifier} of
+\code{always}.
+
+\item For the \code{if} clause the effect is described in the \specref{sec:if Clause} section.
+
+\item For the \code{linear} clause the effect is as if it is applied to the innermost
+constituent construct.
+Additionally, if the list item is not the iteration variable of the \code{simd} or loop SIMD
+construct, the effect on the outer constituent constructs is as if the list item was present
+in the \code{firstprivate} and \code{lastprivate} clauses on the combined or
+composite construct and the rules specified above would apply.  If the list item is the
+iteration variable of the \code{simd} or loop SIMD construct and it is not declared in the construct,
+the effect on the outer constituent constructs is as if the list item was present in the
+\code{lastprivate} clause on the combined or composite construct and the rules specified above
+would apply.
+
+\item For the \code{nowait} clause the effect is as if it is applied to the
+outermost constituent construct that permits it.
+
+\item If a \code{reduction} clause with the \code{task} modifier appears on a
+combined construct, at least one of the constructs that constitute the combined
+construct must allow the modifier to be specified on the clause.  The effect
+is as if the \code{task} modifier only modifies the behavior of the
+\code{reduction} clause for the innermost construct that constitutes the
+combined construct and accepts the \code{task} modifier on the
+\code{reduction} clause. For the other construct that constitutes the combined
+construct, the behavior is as if the \code{task} modifier were not specified.
+\end{itemize}
+
+If the clauses have expressions on them, such as for various clauses where the argument of the
+clause is an expression, or \plc{lower-bound}, \plc{length}, or \plc{stride} expressions inside array
+sections (or \plc{subscript} and \plc{stride} expressions in \plc{subscript-triple} for Fortran),
+or \plc{linear-step} or \plc{alignment} expressions, the expressions are evaluated immediately
+before the construct to which the clause has been split or duplicated per the
+above rules (therefore inside of the outer constituent constructs), except that the expressions inside
+of the \code{num_teams} and \code{thread_limit} clauses are always evaluated before the outermost
+constituent construct.
+
+The restriction that a list item may not appear in more than one data
+sharing clause with the exception of specifying a variable in both
+\code{firstprivate} and \code{lastprivate} clauses applies after the clauses
+are split or duplicated per the above rules.

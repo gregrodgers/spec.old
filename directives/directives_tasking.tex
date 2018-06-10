@@ -66,7 +66,8 @@ The syntax of the \code{task} construct is as follows:
 \end{samepage}
 
 \begin{samepage}
-where \plc{clause} is one of the following:
+% CT: {} to fix a bug in the diffing
+where \plc{clause} is one of the following{}:
 
 \begin{indentedcodelist}
 if(\plc{[} task :\plc{] scalar-expression})
@@ -78,10 +79,20 @@ private(\plc{list})
 firstprivate(\plc{list})
 shared(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
+affinity(\plc{[aff-modifier }:\plc{] locator-list})
+detach(\plc{event-handler})
 \end{indentedcodelist}
+
+where \plc{aff-modifier} is one of the following{}:
+\begin{indentedcodelist}
+iterator(\plc{iterators-definition}) 
+\end{indentedcodelist}
+
+where \plc{event-handler} is a variable of the \code{omp_event_t *} type.
+
 \end{samepage}
 \end{ccppspecific}
 
@@ -94,7 +105,8 @@ The syntax of the \code{task} construct is as follows:
 !$omp end task
 \end{ompfPragma}
 
-where \plc{clause} is one of the following:
+% CT: {} to fix a bug in the diffing
+where \plc{clause} is one of the following{}:
 
 \begin{indentedcodelist}
 if(\plc{[} task :\plc{] scalar-logical-expression})
@@ -106,10 +118,20 @@ private(\plc{list})
 firstprivate(\plc{list})
 shared(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-depend(\plc{dependence-type }:\plc{ locator-list}[:\plc{iterators-definition}])
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
+affinity(\plc{[aff-modifier }:\plc{] locator-list})
+detach(\plc{event-handler})
 \end{indentedcodelist}
+
+where \plc{aff-modifier} is one of the following{}:
+\begin{indentedcodelist}
+iterator(\plc{iterators-definition}) 
+\end{indentedcodelist}
+
+where \plc{event-handler} is a variable of the \code{omp_event_kind} integer \plc{kind}
+
 \end{fortranspecific}
 
 \binding
@@ -120,9 +142,10 @@ the innermost enclosing \code{parallel} region.
 
 The \code{task} construct is a \emph{task generating construct}. When a thread
 encounters a \code{task} construct, an explicit task is generated from the code
-for the associated structured block. The data environment of the task is
+for the associated \plc{structured-block}. The data environment of the task is
 created according to the data-sharing attribute clauses on the \code{task}
-construct, per-data environment ICVs, and any defaults that apply.
+construct, per-data environment ICVs, and any defaults that apply. The data environment of the task is destroyed 
+when the execution code of the associated \plc{structured-block} is completed.
 
 The encountering thread may immediately execute the task, or defer its execution. In the
 latter case, any thread in the team may be assigned the task. Completion of the task can
@@ -131,6 +154,10 @@ If a \code{task} construct is encountered during execution of an outer
 task, the generated \code{task} region corresponding to this construct is not a
 part of the outer task region unless the generated task is
 an included task.
+
+If a \code{detach} clause is present on a \code{task} construct a new event of type \code{omp_event_t}, \plc{allow-completion-event}, is created. The \plc{allow-completion-event} is connected to the completion of the associated \code{task} region. The original \plc{event-handler} will be updated to point to the \plc{allow-completion-event} event before the task data environment is created. The \plc{event-handler} will be considered as if it was specified on a \code{firstprivate} clause. Note that the use of a variable in a \code{detach} clause expression of a \code{task} construct causes an implicit reference to the variable in all enclosing constructs.
+
+If no \code{detach} clause is present on a \code{task} construct the generated \code{task} is completed when the execution of its associated \plc{structured-block} is completed. If a \code{detach} clause is present on a \code{task} construct the task is completed when the execution of its associated \plc{structured-block} is completed and the \plc{allow-completion-event} is fulfilled.
 
 When an \code{if} clause is present on a \code{task} construct, and the \code{if} clause expression
 evaluates to \plc{false}, an undeferred task is generated, and the encountering thread must
@@ -143,7 +170,8 @@ When a \code{final} clause is present on a \code{task} construct and the \code{f
 evaluates to \plc{true}, the generated task will be a final task. All \code{task} constructs
 encountered during execution of a final task will generate final and included tasks. Note
 that the use of a variable in a \code{final} clause expression of a \code{task} construct causes an
-implicit reference to the variable in all enclosing constructs.
+implicit reference to the variable in all enclosing constructs. Encountering a \code{task} construct with the \code{detach} clause
+during the execution of a final task results in unspecified behavior.
 
 The \code{if} clause expression and the \code{final} clause expression are evaluated in the context
 outside of the \code{task} construct, and no ordering of those evaluations is specified.
@@ -158,7 +186,7 @@ task is an included task.
 
 The \code{task} construct includes a task scheduling point in the task region of its generating
 task, immediately following the generation of the explicit task. Each explicit \code{task}
-region includes a task scheduling point at its point of completion.
+region includes a task scheduling point at the end of its associated \plc{structured-block}.
 
 When the \code{mergeable} clause is present on a \code{task} construct, the generated task is a \plc{mergeable task}.
 
@@ -170,6 +198,20 @@ tasks ready to be executed, higher priority tasks (those with a higher numerical
 specified in the \code{priority} clause that is higher than the \plc{max-task-priority-var} ICV then the
 implementation will use the value of that ICV. A program that relies on task execution order
 being determined by this \plc{priority-value} may have unspecified behavior.
+
+The \code{affinity} clause is a hint to indicate data affinity of the generated
+task. The task is recommended to execute closely to the location of the list items. 
+A program that relies on the task execution location
+being determined by this list may have unspecified behavior.
+
+The list items that appear in the \code{affinity} clause may reference iterators
+defined by an \plc{iterators-definition} appearing on the same clause.
+The list items that appear in the \code{affinity} clause may include array sections.
+\begin{ccppspecific}
+The list items that appear in the \code{affinity} clause may use shape-operators.
+\end{ccppspecific}
+
+If a list item appears in an \code{affinity} clause then data affinity refers to the original list item.
 
 \begin{note}
 When storage is shared by an explicit \code{task} region, the
@@ -213,6 +255,10 @@ Restrictions to the \code{task} construct are as follows:
 
 \item At most one \code{priority} clause can appear on the directive.
 
+\item At most one \code{detach} clause can appear on the directive.
+
+\item If a \code{detach} clause appears on the directive, then a \code{mergeable} clause cannot appear on the same directive.
+
 \begin{ccppspecific}
 \item A throw executed inside a \code{task} region must cause execution to resume within the
 same \code{task} region, and the same thread that threw the exception must catch it.
@@ -229,6 +275,7 @@ unspecified behavior
 \item Task scheduling constraints, see \specref{subsec:Task Scheduling}.
 \item \code{depend} clause, see \specref{subsec:depend Clause}.
 \item \code{if} Clause, see \specref{sec:if Clause}.
+\item \code{omp_fulfill_event}, see \specref{subsec:omp_fulfill_event}.
 \item Data-sharing attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}.
 \item \code{ompt_callback_task_create_t}, see
 \specref{sec:ompt_callback_task_create_t}.
@@ -315,14 +362,9 @@ If an \code{end}~\code{taskloop} directive is not specified, an
 \code{end}~\code{taskloop} directive is assumed at the end of the
 \plc{do-loops}.
 
-Any associated \plc{do-loop} must be \plc{do-construct} or an
-\plc{inner-shared-do-construct} as defined by the Fortran standard.
-If an \code{end}~\code{taskloop} directive follows a \plc{do-construct}
-in which several loop statements share a \code{DO}
-termination statement, then the directive can only be specified for the
-outermost of these \code{DO} statements.
-
-If any of the loop iteration variables would otherwise be shared, they are implicitly made private for the loop-iteration tasks generated by the \code{taskloop} construct. Unless the loop iteration variables are specified in a \code{lastprivate} clause on the \code{taskloop} construct, their values after the loop are unspecified.
+The \code{taskloop} directive places restrictions on the structure of all
+associated \plc{do-loops}. Specifically, all associated \plc{do-loops} must
+have canonical loop form (see \specref{sec:Canonical Loop Form}).
 \end{fortranspecific}
 
 \binding
@@ -368,7 +410,10 @@ then the number of times that any intervening code between any two
 associated loops will be executed is unspecified but will be at least
 once per iteration of the loop enclosing the intervening code and at
 most once per iteration of the innermost loop associated with the
-construct.
+construct.  If the iteration count of any loop that is associated with the
+\code{taskloop} construct and does not enclose the intervening code is zero
+then the behavior is unspecified.
+
 
 A taskloop loop has logical iterations numbered 0,1,...,N-1 where N is
 the number of loop iterations, and the logical numbering denotes the
@@ -408,18 +453,18 @@ When storage is shared by a \code{taskloop} region, the programmer must ensure, 
 {
 \events
 
-The \plc{#1{-begin}} event occurs after a task encounters a
+The \plc{#1-begin} event occurs after a task encounters a
 \code{#1} construct but before the task starts the execution of the structured
 block of the \code{#1} region.
 
-The \plc{#1{-end}} event occurs after a \code{#1} region finishes execution
+The \plc{#1-end} event occurs after a \code{#1} region finishes execution
 but before resuming execution of the encountering task.
 
 \tools
 
 A thread dispatches a registered \code{ompt_callback_work}
-callback for each occurrence of a \plc{#1{-begin}} and
-\plc{#1{-end}} event in that thread. The callback occurs in the
+callback for each occurrence of a \plc{#1-begin} and
+\plc{#1-end} event in that thread. The callback occurs in the
 context of the encountering task.  The callback has type signature
 \code{ompt_callback_work_t}. The callback receives
 \code{ompt_scope_begin} or \code{ompt_scope_end}
@@ -442,6 +487,9 @@ any \plc{task-create} events for generated tasks.
 The \plc{taskloop-end} event occurs after a \code{taskloop} region finishes execution
 but before resuming execution of the encountering task.
 
+The \plc{taskloop-iteration-begin} event occurs before an implicit
+task executes each iteration of a \code{taskloop}.
+
 \tools
 
 A thread dispatches a registered \code{ompt_callback_work}
@@ -452,6 +500,12 @@ context of the encountering task.  The callback has type signature
 \code{ompt_scope_begin} or \code{ompt_scope_end}
 as its \plc{endpoint} argument, as appropriate, and
 \code{ompt_work_taskloop} as its \plc{wstype} argument.
+
+A thread dispatches a registered \code{ompt_callback_dispatch}
+callback for each occurrence of a \plc{taskloop-iteration-begin} 
+event in that thread. The callback occurs in the
+context of the implicit task.  The callback has type signature
+\code{ompt_callback_dispatch_t}. 
 
 \restrictions
 The restrictions of the \code{taskloop} construct are as follows:
@@ -488,9 +542,11 @@ no intervening code between any two loops.
 \item \code{if} Clause, see \specref{sec:if Clause}.
 \item \code{ompt_scope_begin} and \code{ompt_scope_end}, see
   \specref{sec:ompt_scope_endpoint_t}.
-\item \code{ompt_work_taskloop}, see \specref{sec:ompt_work_type_t}.
+\item \code{ompt_work_taskloop}, see \specref{sec:ompt_work_t}.
 \item \code{ompt_callback_work_t}, see
 \specref{sec:ompt_callback_work_t}.
+\item \code{ompt_callback_dispatch_t}, see 
+\specref{sec:ompt_callback_dispatch_t}.
 
 \end{itemize}
 
@@ -660,7 +716,7 @@ callback.
 \begin{itemize}
 
 \item \code{ompt_task_initial}, see
-\specref{sec:ompt_task_type_t}.
+\specref{sec:ompt_task_flag_t}.
 
 \item \code{ompt_callback_thread_begin_t}, see
   \specref{sec:ompt_callback_thread_begin_t}.
