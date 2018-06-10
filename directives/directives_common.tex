@@ -223,84 +223,8 @@ initiates a comment. The comment extends to the end of the source line and is ig
 If the first non-blank character after the directive sentinel is an exclamation point, the
 line is ignored.
 
-One or more blanks or horizontal tabs must be used to separate adjacent keywords in
-directives in free source form, except in the following cases, where white space is
-optional between the given set of keywords:
-
-\begin{indentedcodelist}
-concurrent
-declare reduction
-declare simd
-declare target
-distribute parallel do
-distribute parallel do simd
-distribute simd
-do simd
-end atomic
-end concurrent
-end critical
-end distribute
-end distribute parallel do
-end distribute parallel do simd
-end distribute simd
-end do
-end do simd
-end master
-end ordered
-end parallel
-end parallel do
-end parallel do simd
-end parallel sections
-end parallel workshare
-end sections
-end simd
-end single
-end target
-end target data
-end target parallel
-end target parallel do
-end target parallel do simd
-end target simd
-end target teams
-end target teams distribute
-end target teams distribute parallel do
-end target teams distribute parallel do simd
-end target teams distribute simd
-end task
-end taskgroup
-end taskloop
-end taskloop simd
-end teams
-end teams distribute
-end teams distribute parallel do
-end teams distribute parallel do simd
-end teams distribute simd
-end workshare
-parallel do
-parallel do simd
-parallel sections
-parallel workshare
-target data
-target enter data
-target exit data
-target parallel
-target parallel do
-target parallel do simd
-target simd
-target teams
-target teams distribute
-target teams distribute parallel do
-target teams distribute parallel do simd
-target teams distribute simd
-target update
-taskloop simd
-teams distribute
-teams distribute parallel do
-teams distribute parallel do simd
-teams distribute simd
-concurrent
-end concurrent
-\end{indentedcodelist}
+One or more blanks or horizontal tabs are optional to separate adjacent
+keywords in \plc{directive-names} unless otherwise specified.
 
 \begin{note}
 in the following example the three formats for specifying the directive are
@@ -487,6 +411,7 @@ c23456789
 
 \summary The \code{requires} directive specifies the features an implementation
 must provide in order for the code to compile and to execute correctly.
+The \code{requires} directive is a declarative directive.
 
 
 
@@ -618,13 +543,19 @@ The restrictions for the \code{requires} directive are as follows:
 
 \begin{itemize}
 
+\item Each of the clauses can appear at most once on the directive.
+
+\item At most one \code{requires} directive with
+\code{atomic_default_mem_order} clause can appear in a single compilation
+unit.
+
 \item A \code{requires} directive with a \code{unified_address},
   \code{unified_shared_memory} or \code{reverse_offload} clause shall appear
   lexically before any device constructs or device routines.
 
-\item A \code{requires} directive with the \code{unified_shared_memory} clause
-  must appear in all \emph{compilation units} of a program that contain device
-  constructs or device routines or in none of them.
+\item The \code{requires} directive with \code{atomic_default_mem_order}
+clause may not appear lexically after any \code{atomic} construct on which
+\plc{memory-order-clause} is not specified.
 
 \end{itemize}
 
@@ -749,7 +680,7 @@ OMPD tool interface.
 \begin{itemize}
 \item
   \plc{debug-var} - determines whether an OpenMP implementation will collect
-  information that an OMPD-plugin can access to satisfy requests from
+  information that an OMPD library can access to satisfy requests from
   a tool.
   There is one copy of this ICV for the whole program.
 \end{itemize}
@@ -968,16 +899,16 @@ through OpenMP API routines.
 \descr
 \begin{itemize}
 \item The value of the \plc{nthreads-var} ICV is a list. The runtime call
-\code{omp_set_num_threads()} sets the value of the first element of this list, and
-\code{omp_get_max_threads()} retrieves the value of the first element of this list.
+\code{omp_set_num_threads} sets the value of the first element of this list, and
+\code{omp_get_max_threads} retrieves the value of the first element of this list.
 
-\item The value of the \plc{bind-var} ICV is a list. The runtime call \code{omp_get_proc_bind()}
+\item The value of the \plc{bind-var} ICV is a list. The runtime call \code{omp_get_proc_bind}
 retrieves the value of the first element of this list.
 
 \item
 Detailed values in the \plc{place-partition-var} ICV are retrieved using the runtime calls
-\code{omp_get_partition_num_places()}, \code{omp_get_partition_place_nums()},
-\code{omp_get_place_num_procs()}, and \code{omp_get_place_proc_ids()}.
+\code{omp_get_partition_num_places}, \code{omp_get_partition_place_nums},
+\code{omp_get_place_num_procs}, and \code{omp_get_place_proc_ids}.
 \end{itemize}
 
 \crossreferences
@@ -1014,13 +945,13 @@ Detailed values in the \plc{place-partition-var} ICV are retrieved using the run
 
 \item \code{omp_get_proc_bind} routine, see \specref{subsec:omp_get_proc_bind}.
 
-\item \code{omp_get_place_num_procs()} routine, see \specref{subsec:omp_get_place_num_procs}.
+\item \code{omp_get_place_num_procs} routine, see \specref{subsec:omp_get_place_num_procs}.
 
-\item \code{omp_get_place_proc_ids()} routine, see \specref{subsec:omp_get_place_proc_ids}.
+\item \code{omp_get_place_proc_ids} routine, see \specref{subsec:omp_get_place_proc_ids}.
 
-\item \code{omp_get_partition_num_places()} routine, see \specref{subsec:omp_get_partition_num_places}.
+\item \code{omp_get_partition_num_places} routine, see \specref{subsec:omp_get_partition_num_places}.
 
-\item \code{omp_get_partition_place_nums()} routine, see \specref{subsec:omp_get_partition_place_nums}.
+\item \code{omp_get_partition_place_nums} routine, see \specref{subsec:omp_get_partition_place_nums}.
 
 \item \code{omp_set_affinity_format} routine, see \specref{subsec:omp_set_affinity_format}.
 
@@ -1233,6 +1164,49 @@ first element of the \plc{bind-var} ICV; otherwise, the \code{proc_bind} clause 
 
 
 
+%% \filbreak
+\begin{ccppspecific}
+\section{Array Shaping}
+\label{sec:Array Shaping}
+\index{array shaping}
+
+
+If an expression has a pointer to \plc{T} type, then a shape-operator can be
+used to specify the extent of that pointer. In other words, the
+shape-operator is used to reinterpret, as an n-dimensional array, the region of
+memory pointed by that expression.
+
+Formally, the syntax of the shape-operator is as follows:
+\begin{indentedcodelist}
+\plc{ shaped-expression } := ([\plc{s}@\textsubscript{\plc{1}}@\plc{}][\plc{s}@\textsubscript{\plc{2}}@]...[\plc{s}@\textsubscript{\plc{n}}@])\plc{expression}
+\end{indentedcodelist}
+
+The result of applying the shape-operator to an expression is an lvalue
+expression with an n-dimensional array type with dimensions
+\plc{s}\textsubscript{\plc{1}} $\times$ \plc{s}\textsubscript{\plc{2}} ...
+$\times$ \plc{s}\textsubscript{\plc{n}} and element type \plc{T}.
+
+The precedence of the shape operator is the same as a type cast.
+
+Each $\plc{s}_\plc{i}$ is an integral type expression that must evaluate to a positive integer.
+
+\restrictions
+Restrictions on the shape-operator are as follows:
+
+\begin{itemize}
+\item The \plc{T} type must be a complete type.
+
+\item The shape-operator can appear only in clauses where it is explicitly allowed.
+
+\item The type of the expression upon which a shape-operator is applied must be a pointer type.
+
+\begin{cppspecific}
+\item If the \plc{T} type is a reference to a type \plc{T'} then the type will be considered to be \plc{T'}
+for all purposes of the designated array.
+\end{cppspecific}
+
+\end{itemize}
+\end{ccppspecific}
 
 
 
@@ -1248,11 +1222,27 @@ An array section designates a subset of the elements in an array.
 To specify an array section in an OpenMP construct, array subscript expressions are
 extended with the following syntax:
 \begin{indentedcodelist}
+[\plc{ lower-bound }:\plc{ length }:\plc{ stride}] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ length }:\plc{ }] \textnormal{or}
+
 [\plc{ lower-bound }:\plc{ length }] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ }:\plc{ stride}] \textnormal{or}
+
+[\plc{ lower-bound }:\plc{ }:\plc{ }] \textnormal{or}
 
 [\plc{ lower-bound }:\plc{ }] \textnormal{or}
 
+[ :\plc{ length }:\plc{ stride}] \textnormal{or}
+
+[ :\plc{ length }:\plc{ }] \textnormal{or}
+
 [ :\plc{ length }] \textnormal{or}
+
+[\plc{ }:\plc{ }:\plc{ stride}]
+
+[\plc{ }:\plc{ }:\plc{ }]
 
 [\plc{ }:\plc{ }]
 \end{indentedcodelist}
@@ -1268,20 +1258,27 @@ Array sections are allowed on multidimensional arrays. Base language array subsc
 expressions can be used to specify length-one dimensions of multidimensional array
 sections.
 
-The \plc{lower-bound} and \plc{length} are integral type expressions. When evaluated they
-represent a set of integer values as follows:
+The \plc{lower-bound}, \plc{length} and \plc{stride} are integral type 
+expressions. When evaluated they represent a set of integer values as follows:
 
-\{ \plc{lower-bound}, \plc{lower-bound} + 1, \plc{lower-bound} + 2,... , \plc{lower-bound} + \plc{length} - 1 \}
+\{ \plc{lower-bound}, \plc{lower-bound} + \plc{stride}, \plc{lower-bound} + 2 * \plc{stride},... , \plc{lower-bound} + ((\plc{length} - 1) * \plc{stride}) \}
 
 The \plc{length} must evaluate to a non-negative integer.
 
-When the size of the array dimension is not known, the \plc{length} must be specified
-explicitly.
+The \plc{stride} must to a positive integer.
 
-When the \plc{length} is absent, it defaults to the size of the array dimension minus the
-\plc{lower-bound}.
+When the size of the array dimension is not known, the \plc{length} must 
+be specified explicitly.
+
+When the \plc{stride} is absent it defaults to 1.
+
+When the \plc{length} is absent, it defaults to 
+$(\plc{size} - \plc{lower-bound})/\plc{stride}$ where \plc{size} is
+the size of the array dimension 
 
 When the \plc{lower-bound} is absent it defaults to 0.
+
+The precedence of an array section is the same as the subscript operator.
 
 % TODO: consider adding this in future ticket
 %Each array element specified by an array section is determined according to
@@ -1312,23 +1309,27 @@ expressions.
 \medskip
 \end{ccppspecific}
 
+\begin{fortranspecific}
 Fortran has built-in support for array sections although some
 restrictions apply to their use, as enumerated in the following section.
+\end{fortranspecific}
 
 \restrictions
 Restrictions to array sections are as follows:
 
 \begin{itemize}
 \item An array section can appear only in clauses where it is explicitly allowed.
+
+\item A \plc{stride} expression may not be specified unless otherwise stated.
+
 \begin{ccppspecific}
+
 %\item An array section can only be specified for a base expression.
 \item An element of an array section with a non-zero size must have a complete type.
 
 \item The type of the base expression appearing in an array section must be
     an array or pointer type.
 
-\item If the type of the base expression of the array section is a pointer type, the
-    base expression must be an lvalue expression.
 \end{ccppspecific}
 
 \begin{cppspecific}
@@ -1339,7 +1340,7 @@ Restrictions to array sections are as follows:
 
 \begin{fortranspecific}
 
-\item A stride expression may not be specified unless otherwise stated.
+\item If a stride expression is specified, it must be positive.
 
 \item The upper bound for the last dimension of an assumed-size dummy
   array must be specified.
@@ -1348,10 +1349,14 @@ Restrictions to array sections are as follows:
   first array element must be the lowest in the array element order of
   the array section.
 
+
 \end{fortranspecific}
 
 
 \end{itemize}
+
+
+
 
 \section{Iterators}
 \index{iterators}
@@ -1361,9 +1366,8 @@ Iterators are identifiers that expand to multiple values in the clause on which 
 
 The syntax to define an iterator is the following:
 \begin{ompSyntax}
-\plc{iterators-definition}
+\plc{iterator-specifier} [, \plc{iterators-definition}]
 \end{ompSyntax}
-where \plc{iterators-definition} is either an \plc{iterator-specifier} or an \plc{iterator-specifier-list}.
 
 The syntax of an \plc{iterator-specifier} is one of the following:
 \begin{indentedcodelist}
@@ -1380,15 +1384,8 @@ where:
 \item \plc{iterator-type} is a type specifier.
 \end{fortranspecific}
 
-\item \plc{range-specification} is of the form \plc{begin, end[, step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
+\item \plc{range-specification} is of the form \plc{begin : end[: step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
 \end{itemize}
-
-The syntax of an \plc{iterator-specifier-list} is as follows:
-\begin{indentedcodelist}
-( \plc{iterator-specifier} )[, \plc{iterator-specifier-list}]
-\end{indentedcodelist}
-
-%Each \plc{iterator-specifier} specifies an explicit iterator.
 
 \begin{ccppspecific}
 \begin{itemize}
@@ -1415,22 +1412,23 @@ The use of a variable in an expression that appears in the \plc{range-specificat
 \begin{ccppspecific}
 The values of the iterator are the set of values $i_{0}$...$i_{N-1}$ where $i_{0}=begin$,  $i_{j}=i_{j-1} + step$ and
 \begin{itemize}
-\item $i_{N-1} < end$ and $i_{N-1} + step >= end$ if $step > 0$.
-\item $i_{N-1} > end$ and $i_{N-1} + step <= end$ if $step < 0$.
+\item $i_{0} < end$ and $i_{N-1} < end$ and $i_{N-1} + step >= end$ if $step > 0$.
+\item $i_{0} > end$ and $i_{N-1} > end$ and $i_{N-1} + step <= end$ if $step < 0$.
 \end{itemize}
 \end{ccppspecific}
 \begin{fortranspecific}
 The values of the iterator are the set of values $i_{1}$...$i_{N}$ where $i_{1}=begin$,  $i_{j}=i_{j-1} + step$ and
 \begin{itemize}
-\item $i_{N} <= end$ and $i_{N} + step > end$ if $step > 0$.
-\item $i_{N} >= end$ and $i_{N} + step < end$ if $step < 0$.
+\item $i_{1} <= end$ and $i_{N} <= end$ and $i_{N} + step > end$ if $step > 0$.
+\item $i_{1} >= end$ and $i_{N} >= end$ and $i_{N} + step < end$ if $step < 0$.
 \end{itemize}
 \end{fortranspecific}
+The set of of values will be empty if no possible value complies with the conditions above.
 
  For those clauses that contain expressions containing iterator identifiers, the
 effect is as if the list item is instantiated within the clause for each
 value of the iterator in the set defined above, substituting each occurrence of
-the iterator identifier in the expression with the iterator value.
+the iterator identifier in the expression with the iterator value. If the set of values of the iterator is empty then the effect is as if the clause was not specified.
 
 \restrictions
 
@@ -1439,5 +1437,210 @@ the iterator identifier in the expression with the iterator value.
 \item If the \plc{step} expression of a \plc{range-specification} equals zero the behavior is unspecified.
 \item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
 \item Iterators cannot appear in the \plc{range-specification}.
+\end{itemize}
+
+\section{Variant Directives}
+\label{sec:Variant Directives}
+\index{variant directives}
+\index{directives!variant directives}
+
+\subsection{OpenMP Context}
+\label{subsec:OpenMP Context}
+
+At any point in a program, an OpenMP context exists that defines traits describing the active OpenMP constructs, the execution devices, and functionallity supported by the implementation. The traits are grouped in trait sets. The following trait sets exist: \plc{construct}, \plc{device} and \plc{implementation}.
+
+The \plc{construct} set is composed of the directive names, each being a trait, of all enclosing executable directives at that point in the program up to a \code{target} directive. Combined and composite constructs will be added to the set as independent constructs in the same nesting order specified by the original construct. The set is ordered by their nesting level in increasing order. In addition, if the point in the program is not enclosed by a \code{target} directive, the following rules will be applied in order:
+\begin{enumerate} 
+ \item for functions with a \code{declare simd} directive, the \plc{simd} trait will be added at the beginning of the set for the generated SIMD versions.  
+ \item for functions with a \code{declare variant} directive, the selectors of the \code{construct} selector set will be added in the same order at the beginning of the set.
+ \item for functions within a \code{declare target} block, the \plc{target} trait will be added at the beginning of the set for the versions of the function being generated for \code{target} regions.
+\end{enumerate}
+
+The \plc{simd} trait can be further defined with properties that match the clauses accepted by the \code{declare}~\code{simd} directive with the same name and semantics. The \plc{simd} trait will define at least the \plc{simdlen} property and one of  the \plc{inbrach} or \plc{notinbranch} properties.
+
+The \plc{device} set includes traits that define the characteristics of the device being targeted by the compiler at that point in the program. At least the following traits must be defined:
+\begin{itemize}
+ \item The \plc{kind(kind-name-list)} trait specifies the general kind of the device. The following \plc{kind-name} values are defined:
+ \begin{itemize}
+  \item \plc{host} specifies that the device is the host device.
+  \item \plc{nohost} specifies that the devices is not the host device. 
+  \item Values defined in the ``OpenMP Context Definitions'' document which is available on \url{http://www.openmp.org/}. 
+ \end{itemize}
+ \item The \plc{isa(isa-name-list)} trait specifies the Instruction Set Architectures supported by the device. The accepted \plc{isa-name} values are implementation defined.
+ \item The \plc{arch(arch-name-list)} trait specifies the architectures supported by the device. The accepted \plc{arch-name} values are implementation defined.
+\end{itemize}
+
+The \plc{implementation} set includes traits that describe the functionallity supported by the OpenMP implementation at that point in the program. At least the following traits can be defined:
+\begin{itemize}
+ \item The \plc{vendor(vendor-name)} trait specifies the name of the vendor of the implementation. OpenMP defined values for \plc{vendor-name} are defined in the ``OpenMP Context Definitions'' document which is available on \url{http://www.openmp.org/}. 
+ \item The \plc{extension(extension-name-list)} trait specifies vendor specific extensions to the OpenMP specification. The accepted \plc{extension-name} values are implementation defined.
+ \item A trait with the same name corresponding to each clause that can be supplied to the \code{requires} directive.
+\end{itemize}
+
+Implementations can define further traits in the \plc{device} and \plc{implementation} sets. All implementation defined traits must follow the following syntax:
+\begin{ompSyntax}
+\plc{identifier[}(\plc{context-element[}, \plc{context-element[}, \plc{...]]})\plc{]}
+
+\plc{context-element}:
+  \plc{identifier[}(\plc{context-element[}, \plc{context-element[}, \plc{...]]})\plc{]}
+  or
+  \plc{context-value}
+
+\plc{context-value}:
+  \plc{string}
+  or
+  \plc{integer expression}
+\end{ompSyntax}
+
+where \plc{identifier} is a base language identifier.
+
+\subsection{Context Selectors}
+\label{subsec:Context Selectors} 
+
+Context selectors allow to define the properties of an OpenMP context that a directive or clause wants to match. OpenMP defines different sets of selectors, each containing different selectors.
+
+The syntax to define a \plc{context-selector-specification} is the following:
+
+\begin{ompSyntax}
+\plc{trait-set-selector[},\plc{trait-set-selector[},\plc{...]]}
+
+\plc{trait-set-selector}:
+   \plc{trait-set-selector-name}={\plc{trait-selector[}, \plc{trait-selector[}, \plc{...]]}}
+
+\plc{trait-selector}:
+   \plc{trait-selector-name[}(\plc{trait-property[}, \plc{trait-property[}, \plc{...]]})\plc{]}
+\end{ompSyntax}
+
+The \code{construct} selector set defines which \plc{construct} traits should be active in the OpenMP context. The following selectors can be defined in the \code{construct} set: \code{target}, \code{teams}, \code{parallel}, \code{for} (in C/C++), \code{do} (in Fortran), and \code{simd}. The properties of each selector are the same defined for the corresponding trait. The \code{construct} selector is an ordered list.
+
+The \code{device} and \code{implementation} selector sets define which traits should be active in the corresponding trait set of the OpenMP context. The same traits defined in the corresponding traits sets can be used as selectors with the same properties. The \code{kind} selector of the \code{device} selector set can also be set to the value \code{any} which is as if no \code{kind} selector was specified. 
+
+The \code{user} selector set defines the \code{condition} selector that provides additional user-defined conditions. 
+\begin{cspecific}
+The \code{condition(}\plc{boolean-expr}\code{)} selector defines a \plc{constant expression} that must evaluate to true for the selector to be true. 
+\end{cspecific}
+\begin{cppspecific}
+The \code{condition(}\plc{boolean-expr}\code{)} selector defines a \plc{constexpr} expression that must evaluate to true for the selector to be true.  
+\end{cppspecific}
+\begin{fortranspecific}
+The \code{condition(}\plc{logical-expr}\code{)} selector defines a \plc{constant expression} that must evaluate to true for the selector to be true. 
+\end{fortranspecific}
+
+Implementations can allow further selectors to be specified. Implementations can ignore specified selectors that are not those described in this section.
+
+\restrictions
+\begin{itemize}
+ \item Each \plc{trait-set-selector-name} can only be specified once.
+ \item Each \plc{trait-selector-name} can only be specified once.
+\end{itemize}
+
+\subsection{Matching and Scoring Context Selectors}
+\label{subsec:Matching and Scoring Context Selectors}
+
+A given context selector is compatible with a given OpenMP context if:
+\begin{itemize}
+ \item All selectors in the \code{user} set of the context selector are true,
+ \item All selectors in the \code{construct}, \code{device} and \code{implementation} sets of the context selector appear in the corresponding trait set of the OpenMP context,
+ \item For each selector in the context selector, its properties are a subset of the properties of the corresponding trait of the OpenMP context,
+ \item Selectors in the \code{construct} set of the context selector appear in the same relative order as their correspending traits in the \plc{construct} trait set of the OpenMP context.
+\end{itemize}
+
+Some properties of the \code{simd} selector have special rules to match the properties of the \plc{simd} trait:
+\begin{itemize}
+ \item The \code{simdlen(}\plc{N}\code{)} property of the selector matches the \plc{simdlen(M)} trait of the OpenMP context $M \% N$ equals zero.
+ \item The \code{aligned(}\plc{list:N}\code{)} property of the selector matches the \plc{aligned(list:M)} trait of the OpenMP context if $N \% M$ equals zero.
+\end{itemize}
+
+Among compatible context selectors a score will be computed using the following algorithm:
+\begin{enumerate}
+ \item Each trait appearing in the \plc{construct} trait set in the OpenMP context gets assigned the value $2^{p-1}$ where $p$ is the position of trait in the set.
+ \item The \code{kind}, \code{arch} and \code{isa} selectors will have the value $2^{l}$, $2^{l+1}$ and $2^{l+2}$ respectively where $l$ is the number of traits in the \plc{construct} set.
+ \item Additional implementation allowed selector values are implementation defined.
+ \item Other selectors have a value of zero.
+ \item Context selectors which are a strict subset of another context selector have a score of zero. For other context selectors, the final score is the addition of the values of all the specified selectors plus $1$. If the traits corrpesding to the \code{construct} selectors appear multiple times in the OpenMP context, the highest valued subset of traits that contains all the selectors in the same order will be used.
+\end{enumerate}
+
+\subsection{\hcode{declare variant} Directive}
+\index{declare variant@{\code{declare variant}}}
+\index{directives!declare variant@{\code{declare variant}}}
+\label{subsec:declare variant Directive}
+\summary
+The \code{declare variant} declares a function to be a specialized variant of another function and in which context it should be used.
+
+\syntax
+\begin{ccppspecific}
+\begin{samepage}
+The syntax of the \code{declare variant} directive is as follows:
+
+\begin{ompcPragma}
+#pragma omp declare variant(\plc{base-func-name}) \plc{[clause[ [},\plc{] clause] ... ] new-line}
+   \plc{function definition or declaration}
+\end{ompcPragma}
+\end{samepage}
+
+\begin{samepage}
+where \plc{clause} is one of the following{}:
+
+\begin{indentedcodelist}
+match(\plc{context-selector-specification})
+\end{indentedcodelist}
+\end{samepage}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{declare variant} directive is as follows:
+
+\begin{ompfPragma}
+!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) \plc{[clause[ [},\plc{] clause] ... ]}
+\end{ompfPragma}
+
+where \plc{clause} is one of the following{}:
+
+\begin{indentedcodelist}
+match(\plc{context-selector-specification})
+\end{indentedcodelist}
+\end{fortranspecific}
+
+\descr
+
+The use of a \code{declare}~\code{variant} directive declares the function to be a function variant of the \plc{base-func-name} or \plc{base-proc-name} function. If no \code{match} clause is specified then the context selector for the variant is empty. If a \code{match} clause is specified then the context selector in the clause will be associated to the variant.
+
+At any point, after the declaration of variant for a given base function, where there is a direct call to that base function the compiler will check if there is any variant that is compatible with OpenMP context at that point. Among the compatible variants, the variant with the highest score according to the algorithm described in Section \ref{subsec:Matching and Scoring Context Selectors} will be selected. If multiple variants have the highest score, it is unspecified which one will be selected. If a compatible variant exists, the original call to the base function will be replaced with a call to the selected variant function. 
+
+The prototype of the variant function shall, in general, match that of the base function. It is implementation defined if for some specific OpenMP context the prototype of the variant should differ, and how, from that of the base function.
+
+\restrictions
+Restrictions to the \code{declare variant} directive are as follows:
+
+\begin{itemize}
+\item At most one \code{match} clause can appear in a \code{declare variant} directive.
+\item If the function definition has a \code{declare}~\code{variant} directive or if a declaration of the function in the same compilation unit has a \code{declare}~\code{variant}, then, calling the variant function directly in an OpenMP context that is different than the one specified by the \code{construct} set of the context selector is non-conforming.
+
+\begin{ccppspecific}
+\item If the function has any declarations, then the \code{declare}~\code{variant} directive for any
+declaration that has one must be equivalent. If the function definition has a \code{declare}~\code{variant} it must also be equivalent.
+Otherwise, the result is unspecified.
+\end{ccppspecific}
+
+\begin{cppspecific}
+\item \plc{base-func-name} should not designate an overloaded function name. Otherwise, \plc{base-func-name} must be a function declaration without the return type.
+\item The \plc{base-func-name} of a \code{declare variant} directive cannot be a template function.
+\item The \plc{base-func-name} of a \code{declare variant} directive cannot be a virtual function.
+\end{cppspecific}
+
+\begin{fortranspecific}
+\item \plc{proc-name} must not be a generic name, procedure pointer or entry name
+\item If \plc{proc-name} is omitted, the \code{declare variant} directive must appear in the specification part of a subroutine subprogram or a function subprogram.
+\item Any \code{declare variant} directive must appear in the specification part of a subroutine, subprogram, function subprogram or interface body to which it applies.
+\item If a \code{declare variant} directive is specified in an interface block for a procedure, it must match a \code{declare variant} directive in the definition of the procedure.
+\item If a procedure is declared via a procedure declaration statement, the procedure \plc{proc-name} should appear in the same specification.
+\item If a \code{declare variant} diretive is specified for a procedure name with explicit interface and a \code{declare variant} directive is also specified for the definition of the procedure the two \code{declare variant} directives must match. Otherwise the result is unspecified.
+\end{fortranspecific}
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item OpenMP Context Specification, see \specref{subsec:OpenMP Context}.
+\item Context Selectors, see \specref{subsec:Context Selectors}.
 \end{itemize}
 
