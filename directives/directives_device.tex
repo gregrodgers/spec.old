@@ -133,7 +133,8 @@ where \plc{clause} is one of the following:
 if(\plc{[} target data :\plc{] scalar-expression})
 device(\plc{integer-expression})
 map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
-use_device_ptr(\plc{list})
+use_device_ptr(\plc{ptr-list})
+use_device_addr(\plc{list})
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -154,7 +155,8 @@ where \plc{clause} is one of the following:
 if(\plc{[} target data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
 map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
-use_device_ptr(\plc{list})
+use_device_ptr(\plc{ptr-list})
+use_device_addr(\plc{list})
 \end{indentedcodelist}
 
 The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{target}~\code{data} construct.
@@ -167,11 +169,23 @@ The binding task set for a \code{target}~\code{data} region is the generating ta
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
-List items that appear in a \code{use_device_ptr} clause are converted into
-device pointers to the corresponding list items in the device data environment.
-If a \code{use_device_ptr} clause and one or more \code{map} clauses are
-present on the same construct, this conversion will occur as if performed after
-all variables are mapped according to those \code{map} clauses.
+Pointers that appear in a \code{use_device_ptr} clause are privatized and the
+device pointer to the corresponding list items in the device data environment
+are assigned into the private versions.  
+
+List items that appear in a \code{use_device_addr} clause have the address of
+the corresponding object in the device data environment inside the construct.
+For objects, any reference to the value of the object will be to the
+corresponding object on the device, while references to the address will result
+in a valid device address pointing to that object.  Array sections privatize the
+base of the array section and assign the private copy to the address of the
+corresponding array section in the device data environment.  
+
+If one or more of the \code{use_device_ptr} or
+\code{use_device_addr} clauses and one or more \code{map} clauses are present on the
+same construct, the address conversions of \code{use_device_addr} and
+\code{use_device_ptr} clauses will occur as if performed after all variables
+are mapped according to those \code{map} clauses.
 
 \def\omptTargetRegionEvents#1#2#3
 {
@@ -215,17 +229,20 @@ as its \plc{endpoint} argument, as appropriate, and
 
   \item At most one \code{if} clause can appear on the directive.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item At least one \code{map} or \code{use_device_ptr} clause must appear on the directive.
+  \item At least one \code{map}, \code{use_device_addr} or \code{use_device_ptr}
+    clause must appear on the directive.
 
 
-  \item A list item in a \code{use_device_ptr} clause must have a
+  \item A list item in a \code{use_device_ptr} clause must hold the address of
+    an object that has a corresponding list item in the device data environment.
+  \item A list item in a \code{use_device_addr} clause must have a
     corresponding list item in the device data environment.
 
   \item A list item that specifies a given variable may not appear in more than
 	  one \code{use_device_ptr} clause.
 
-  \item References in the construct to a list item that appears in a
-    \code{use_device_ptr} clause must be to the address of the list item.
+  \item A reference to a list item in a \code{use_device_addr} clause must be to
+    the address of the list item.
 
 \end{itemize}
 
