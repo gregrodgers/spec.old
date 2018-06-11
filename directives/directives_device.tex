@@ -132,8 +132,9 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
-use_device_ptr(\plc{list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
+use_device_ptr(\plc{ptr-list})
+use_device_addr(\plc{list})
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -153,8 +154,9 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
-use_device_ptr(\plc{list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
+use_device_ptr(\plc{ptr-list})
+use_device_addr(\plc{list})
 \end{indentedcodelist}
 
 The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{target}~\code{data} construct.
@@ -167,11 +169,23 @@ The binding task set for a \code{target}~\code{data} region is the generating ta
 \descr
 When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
 
-List items that appear in a \code{use_device_ptr} clause are converted into
-device pointers to the corresponding list items in the device data environment.
-If a \code{use_device_ptr} clause and one or more \code{map} clauses are
-present on the same construct, this conversion will occur as if performed after
-all variables are mapped according to those \code{map} clauses.
+Pointers that appear in a \code{use_device_ptr} clause are privatized and the
+device pointer to the corresponding list items in the device data environment
+are assigned into the private versions.  
+
+List items that appear in a \code{use_device_addr} clause have the address of
+the corresponding object in the device data environment inside the construct.
+For objects, any reference to the value of the object will be to the
+corresponding object on the device, while references to the address will result
+in a valid device address pointing to that object.  Array sections privatize the
+base of the array section and assign the private copy to the address of the
+corresponding array section in the device data environment.  
+
+If one or more of the \code{use_device_ptr} or
+\code{use_device_addr} clauses and one or more \code{map} clauses are present on the
+same construct, the address conversions of \code{use_device_addr} and
+\code{use_device_ptr} clauses will occur as if performed after all variables
+are mapped according to those \code{map} clauses.
 
 \def\omptTargetRegionEvents#1#2#3
 {
@@ -215,17 +229,20 @@ as its \plc{endpoint} argument, as appropriate, and
 
   \item At most one \code{if} clause can appear on the directive.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item At least one \code{map} or \code{use_device_ptr} clause must appear on the directive.
+  \item At least one \code{map}, \code{use_device_addr} or \code{use_device_ptr}
+    clause must appear on the directive.
 
 
-  \item A list item in a \code{use_device_ptr} clause must have a
+  \item A list item in a \code{use_device_ptr} clause must hold the address of
+    an object that has a corresponding list item in the device data environment.
+  \item A list item in a \code{use_device_addr} clause must have a
     corresponding list item in the device data environment.
 
   \item A list item that specifies a given variable may not appear in more than
 	  one \code{use_device_ptr} clause.
 
-  \item References in the construct to a list item that appears in a
-    \code{use_device_ptr} clause must be to the address of the list item.
+  \item A reference to a list item in a \code{use_device_addr} clause must be to
+    the address of the list item.
 
 \end{itemize}
 
@@ -266,28 +283,28 @@ The \code{target}~\code{enter}~\code{data} directive specifies that variables ar
 \begin{ccppspecific}
 The syntax of the \code{target}~\code{enter}~\code{data} construct is as follows:
 \begin{ompcPragma}
-#pragma omp target enter data \plc{[ clause[ [,] clause]...] new-line}
+#pragma omp target enter data \plc{[ clause[ [},\plc{] clause]...] new-line}
 \end{ompcPragma}
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 nowait
 \end{indentedcodelist}
 \end{ccppspecific}
 \begin{fortranspecific}
 The syntax of the \code{target}~\code{enter}~\code{data} is as follows:
 \begin{ompfPragma}
-!$omp target enter data \plc{[ clause[ [,] clause]...]}
+!$omp target enter data \plc{[ clause[ [},\plc{] clause]...]}
 \end{ompfPragma}
 where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 nowait
 \end{indentedcodelist}
 \end{fortranspecific}
@@ -389,28 +406,28 @@ The \code{target}~\code{exit}~\code{data} directive specifies that list items ar
 \begin{ccppspecific}
 The syntax of the \code{target}~\code{exit}~\code{data} construct is as follows:
 \begin{ompcPragma}
-#pragma omp target exit data \plc{[ clause[ [,] clause]...] new-line}
+#pragma omp target exit data \plc{[ clause[ [},\plc{] clause]...] new-line}
 \end{ompcPragma}
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 nowait
 \end{indentedcodelist}
 \end{ccppspecific}
 \begin{fortranspecific}
 The syntax of the \code{target}~\code{exit}~\code{data} is as follows:
 \begin{ompfPragma}
-!$omp target exit data \plc{[ clause[ [,] clause]...]}
+!$omp target exit data \plc{[ clause[ [},\plc{] clause]...]}
 \end{ompfPragma}
 where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[ [map-type-modifier[,]] map-type} : \plc{] list})
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 nowait
 \end{indentedcodelist}
 \end{fortranspecific}
@@ -509,12 +526,11 @@ device(\plc{integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-reduction(\plc{reduction-identifier }:\plc{ list})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
 is_device_ptr(\plc{list})
 defaultmap(\plc{implicit-behavior[:variable-category]})
 nowait
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 allocate([\plc{[allocator }:\plc{] list})
 uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
 	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
@@ -544,12 +560,11 @@ device(\plc{scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-reduction(\plc{reduction-identifier }:\plc{ list})
-map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
 is_device_ptr(\plc{list})
 defaultmap(\plc{implicit-behavior[:variable-category]})
 nowait
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 allocate(\plc{allocator:}\plc{list})
 uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
 	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
@@ -694,6 +709,10 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 
 \item Arrays containing allocators traits that appear in a \code{uses_allocators} clause must be constant arrays, have constant values and be defined in the same scope as the construct in which the clause appears. 
 
+\item Any IEEE floating-point exception status flag, halting mode, or rounding mode set prior to a \code{target} region is unspecified in the region.
+
+\item Any IEEE floating-point exception status flag, halting mode, or rounding mode set in a \code{target} region is unspecified upon exiting the region.
+
 \begin{ccppspecific}
 \item An attached pointer may not be modified in a \code{target} region.
 \end{ccppspecific}
@@ -715,15 +734,6 @@ same \code{target} region, and the same thread that threw the exception must cat
   must be a dummy argument that does not have the \code{ALLOCATABLE},
   \code{POINTER} or \code{VALUE} attribute.
 \item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable with a \code{POINTER} or \code{ALLOCATABLE} attribute then the behavior is unspecified if the corresponding list item's variable is modified in the region.
-
-\item Any IEEE exception flag, floating point status, halting mode,
-  underflow mode or rounding mode is set prior to a \code{target} region,
-  the settings are unspecified in the region.
-
-\item Any IEEE exception flag, floating point status, halting mode,
-  underflow mode or rounding mode is set during or in a \code{target}
-  region, the settings are unspecified upon exiting the region.
-
 \end{fortranspecific}
 \end{itemize}
 
@@ -797,7 +807,7 @@ where \plc{clause} is either \plc{motion-clause} or one of the following:
 if(\plc{[} target update :\plc{] scalar-expression})
 device(\plc{integer-expression})
 nowait
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 \end{indentedcodelist}
 
 and \plc{motion-clause} is one of the following:
@@ -821,7 +831,7 @@ where \plc{clause} is either \plc{motion-clause} or one of the following:
 if(\plc{[}target update :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
 nowait
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 \end{indentedcodelist}
 
 and \plc{motion-clause} is one of the following:
@@ -1225,8 +1235,9 @@ if they appear in a \code{to} clause.
       definition, any \code{declare}~\code{target} with the procedure
       name must appear in the same specification part.
 
-\item A variable that is part of another variable (as an array or structure
-      element) cannot appear in a \code{declare}~\code{target} directive.
+\item A variable that is part of another variable (as an array, structure
+      element or type parameter inquiry) cannot appear in a
+      \code{declare}~\code{target} directive.
 
 \item The \code{declare}~\code{target} directive must appear in the
       declaration section of a scoping unit in which the common block
@@ -1279,8 +1290,8 @@ clause. The \code{declare mapper} directive is a declarative directive.
 The syntax of the \code{declare mapper} directive is as follows:
 
 \begin{ompcPragma}
-#pragma omp declare mapper(\plc{[mapper-identifier:]type var})
-\plc{[clause[ [,] clause] ... ] new-line}
+#pragma omp declare mapper(\plc{[mapper-identifier [ [},\plc{] mapper-identifier ... ] :]type var})
+\plc{[clause[ [},\plc{] clause] ... ] new-line}
 \end{ompcPragma}
 
 \end{ccppspecific}
@@ -1289,8 +1300,8 @@ The syntax of the \code{declare mapper} directive is as follows:
 The syntax of the \code{declare mapper} directive is as follows:
 
 \begin{ompfPragma}
-!$omp declare mapper(\plc{[mapper-identifier:] type :: var})
-\plc{[clause[ [,] clause] ... ]}
+!$omp declare mapper(\plc{[mapper-identifier [ [},\plc{] mapper-identifier ... ]:] type :: var})
+\plc{[clause[ [},\plc{] clause] ... ]}
 \end{ompfPragma}
 
 \end{fortranspecific}
@@ -1303,7 +1314,7 @@ where:
   \item \plc{var} is a valid base-language identifier
   \item \plc{clause} is one of the following:
     \begin{itemize}
-      \item \pcode{map(\plc{[[map-type-modifier[,]] map-type}:\plc{ ] list})}
+      \item \pcode{map(}\plc{[[map-type-modifier[}\pcode{,}\plc{] [map-type-modifier[}\pcode{,}\plc{] ...]] map-type}\pcode{:}\plc{ ] list}\pcode{)}
       \item \code{use_by_default}
     \end{itemize}
   \item \plc{map-type} is one of the following:
@@ -1313,7 +1324,11 @@ where:
       \item \code{from}
       \item \code{tofrom}
     \end{itemize}
-  \item and \plc{map-type-modifier} is \code{always}
+  \item and \plc{map-type-modifier} is one of the following:
+    \begin{itemize}
+      \item \code{always}
+      \item \code{close}
+    \end{itemize}
 \end{itemize}
 
 \descr
@@ -1366,6 +1381,8 @@ declared at the same point in the program.
 \item No instance of the mapper type can be mapped as part of the mapper,
   either directly or indirectly through another type, except the instance passed
   as the list item.
+\item Each of the \plc{map-type-modifier} modifiers can appear at most once on the
+   \code{map} clause.
 \end{itemize}
 
 \subsection{\hcode{teams} Construct}
