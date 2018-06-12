@@ -284,13 +284,6 @@ the program.
 \end{fortranspecific}
 
 
-
-
-
-
-
-
-
 \section{Conditional Compilation}
 \label{sec:Conditional Compilation}
 \index{conditional compilation}
@@ -1371,14 +1364,14 @@ Restrictions to array sections are as follows:
 
 Iterators are identifiers that expand to multiple values in the clause on which they appear.
 
-The syntax to define an iterator is the following:
+The syntax of an \plc{iterators-definition} is the following:
 \begin{ompSyntax}
-\plc{iterator-specifier} [, \plc{iterators-definition}]
+\plc{iterator-specifier [}, \plc{iterators-definition ]}
 \end{ompSyntax}
 
 The syntax of an \plc{iterator-specifier} is one of the following:
 \begin{indentedcodelist}
-[\plc{iterator-type }] \plc{identifier} = \plc{range-specification}
+\plc{[ iterator-type ] } \plc{identifier} = \plc{range-specification}
 \end{indentedcodelist}
 
 where:
@@ -1391,24 +1384,18 @@ where:
 \item \plc{iterator-type} is a type specifier.
 \end{fortranspecific}
 
-\item \plc{range-specification} is of the form \plc{begin : end[: step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
-\end{itemize}
+\item \plc{range-specification} is of the form \plc{begin}\code{:}\plc{end[}\code{:}\plc{step]} where \plc{begin}, \plc{end} and \plc{step} are expressions for which their types can be converted to the \plc{iterator-type} type.
 
 \begin{ccppspecific}
-\begin{itemize}
-\item The \plc{iterator-type} must be an integral or pointer type.
 \item In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is of \code{int} type.
-\end{itemize}
 \end{ccppspecific}
 
 %\newpage %% HACK
 
 \begin{fortranspecific}
-\begin{itemize}
-\item The \plc{iterator-type} must be an integer type.
 \item In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is default integer.
-\end{itemize}
 \end{fortranspecific}
+\end{itemize}
 
 In a \plc{range-specification}, if the \plc{step} is not specified its value is implicitly defined to be 1.
 
@@ -1441,10 +1428,17 @@ the iterator identifier in the expression with the iterator value. If the set of
 
 \begin{itemize}
 \item An expression containing an iterator identifier can only appear in clauses that explicitly allow expressions containing iterators.
+\begin{ccppspecific}
+\item The \plc{iterator-type} must be an integral or pointer type.
+\end{ccppspecific}
+\begin{fortranspecific}
+\item The \plc{iterator-type} must be an integer type.
+\end{fortranspecific}
 \item If the \plc{step} expression of a \plc{range-specification} equals zero the behavior is unspecified.
 \item Each iterator identifier can only be defined once in an \plc{iterators-definition}.
 \item Iterators cannot appear in the \plc{range-specification}.
 \end{itemize}
+
 
 \section{Variant Directives}
 \label{sec:Variant Directives}
@@ -1651,3 +1645,135 @@ Otherwise, the result is unspecified.
 \item Context Selectors, see \specref{subsec:Context Selectors}.
 \end{itemize}
 
+
+\subsection{Metadirective Meta-Directive}
+\label{sec:directive variants}
+\summary
+The metadirective meta-directive can specify multiple directive variants
+of which one may be conditionally selected to replace the meta-directive based
+on the enclosing context.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the metadirective meta-directive takes one of the
+following forms:
+\begin{ompcPragma}
+#pragma omp metadirective \plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{ompcPragma}
+or
+\begin{ompcPragma}
+#pragma omp begin metadirective \plc{[clause[ [},\plc{] clause] ... ] new-line}
+    \plc{stmt(s)}
+#pragma omp end metadirective 
+\end{ompcPragma}
+
+
+\begin{samepage}
+where \plc{clause} is:
+\begin{indentedcodelist}
+    when(\plc{context-selector-specification}: \plc{[directive-variant]})
+    default(\plc{directive-variant})
+\end{indentedcodelist}
+\end{samepage}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the metadirective meta-directive takes one of the following
+forms:
+
+\begin{ompfPragma}
+!$omp metadirective \plc{[clause[ [},\plc{] clause] ... ]}
+\end{ompfPragma}
+
+or 
+
+\begin{ompfPragma}
+!$omp begin metadirective \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{stmt(s)}
+!$omp end metadirective 
+\end{ompfPragma}
+
+\begin{samepage}
+where \plc{clause} is:
+
+\begin{indentedcodelist}
+    when(\plc{context-selector-specification}: \plc{[directive-variant]})
+    default(\plc{directive-variant})
+\end{indentedcodelist}
+\end{samepage}
+
+\end{fortranspecific}
+
+In the \code{when} clause, \plc{context-selector-specification} specifies a context
+selector (see Section~\ref{subsec:Context Selectors}).
+
+In the \code{when} and \code{default} clauses, \plc{directive-variant}
+has the following form and specifies a directive variant that is an OpenMP
+directive that has the same directive name and clauses.
+
+\begin{indentedcodelist}
+\plc{ directive-name [clause[ [},\plc{] clause] ... ]}
+\end{indentedcodelist}
+
+\descr
+
+The metadirective directive is a meta-directive that
+behaves as if it is either ignored or replaced by the directive variant
+specified in one of the \code{when} or \code{default} clauses that appears on
+the directive.
+
+The OpenMP context for a given meta-directive is defined according to Section
+\ref{subsec:OpenMP Context}.  For each \code{when} clause that appears on the
+meta-directive, the specified directive variant, if present, is a candidate to
+replace the meta-directive if the corresponding context selector is compatible
+with the OpenMP context according to the matching rules defined in
+Section~\ref{subsec:Matching and Scoring Context Selectors}.  If only one
+compatible context selector specified by a \code{when} clause has the highest
+score and it specifies a directive variant, the directive variant will replace
+the meta-directive. If more than one \code{when} clause specifies a compatible
+context selector that has the highest computed score and at least one
+specifies a directive variant, the first directive variant specified in the
+lexical order of those \code{when} clauses will replace the meta-directive.
+
+If no context selector from any \code{when} clause is compatible with the
+OpenMP context and a \code{default} clause is present, the directive variant
+specified in the \code{default} clause will replace the meta-directive.
+
+If a directive variant is not selected to replace the meta-directive according
+to the above rules, the meta-directive has no effect on the execution of program. 
+
+The \code{begin}~\code{metadirective} directive behaves
+identically to the \code{metadirective} directive, except that the
+directive syntax for the specified directive variants must accept a paired
+\code{end}~\plc{directive}.  For any directive variant that is selected to
+replace the \code{begin}~\code{metadirective} meta-directive, the
+\code{end}~\code{metadirective} directive will be implicitly
+replaced by its paired \code{end}~\plc{directive} to demarcate the statements
+that are affected by or are associated with the directive variant. If no
+directive variant is selected to replace the meta-directive, its paired
+\code{end}~\code{metadirective} directive is ignored.
+
+\restrictions
+Restrictions for the metadirective directive are as follows:
+
+\begin{itemize}
+    \item The directive variant appearing in a \code{when} or \code{default}
+        clause must not specify a \code{metadirective},
+        \code{begin}~\code{metadirective}, or \code{end}~\code{metadirective}
+        directive.
+
+    \item The context selector that appears in a \code{when} clause must not
+        specify any properties for the \code{simd} selector.
+
+    \item Any replacement that occurs for a metadirective meta-directive must
+        not result in a non-conforming OpenMP program.
+
+    \item Any directive variant that is specified by a \code{when} or \code{default}
+        clause on a \code{begin}~\code{metadirective}
+        meta-directive must be an OpenMP directive that has a paired \code{end}~\plc{directive}, and
+        the \code{begin}~\code{metadirective} directive must have a paired
+        \code{end}~\code{metadirective} directive.
+
+    \item The \code{default} clause may appear at most once on the directive.
+\end{itemize}
