@@ -1,0 +1,192 @@
+%% TODOs:
+%% - do we need a barrier or join operation on the host at the end of the "teams"
+%%   region?
+
+% This is an included file. See the master file for more information.
+%
+% When editing this file:
+%
+%    1. To change formatting, appearance, or style, please edit openmp.sty.
+%
+%    2. Custom commands and macros are defined in openmp.sty.
+%
+%    3. Be kind to other editors -- keep a consistent style by copying-and-pasting to
+%       create new content.
+%
+%    4. We use semantic markup, e.g. (see openmp.sty for a full list):
+%         \code{}     % for bold monospace keywords, code, operators, etc.
+%         \plc{}      % for italic placeholder names, grammar, etc.
+%
+%    5. There are environments that provide special formatting, e.g. language bars.
+%       Please use them whereever appropriate.  Examples are:
+%
+%         \begin{fortranspecific}
+%         This is text that appears enclosed in blue language bars for Fortran.
+%         \end{fortranspecific}
+%
+%         \begin{note}
+%         This is a note.  The "Note -- " header appears automatically.
+%         \end{note}
+%
+%    6. Other recommendations:
+%         Use the convenience macros defined in openmp.sty for the minor headers
+%         such as Comments, Syntax, etc.
+%
+%         To keep items together on the same page, prefer the use of
+%         \begin{samepage}.... Avoid \parbox for text blocks as it interrupts line numbering.
+%         When possible, avoid \filbreak, \pagebreak, \newpage, \clearpage unless that's
+%         what you mean. Use \needspace{} cautiously for troublesome paragraphs.
+%
+%         Avoid absolute lengths and measures in this file; use relative units when possible.
+%         Vertical space can be relative to \baselineskip or ex units. Horizontal space
+%         can be relative to \linewidth or em units.
+%
+%         Prefer \emph{} to italicize terminology, e.g.:
+%             This is a \emph{definition}, not a placeholder.
+%             This is a \plc{var-name}.
+%
+
+\section{\hcode{teams} Construct}
+\index{teams@{\code{teams}}}
+\index{constructs!teams@{\code{teams}}}
+\index{device constructs!teams@{\code{teams}}}
+\label{sec:teams Construct}
+\summary
+The \code{teams} construct creates a league of initial teams and the initial thread in each
+team executes the region.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{teams} construct is as follows:
+
+\begin{ompcPragma}
+#pragma omp teams \plc{[clause[ [},\plc{] clause] ... ] new-line}
+    \plc{structured-block}
+\end{ompcPragma}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+num_teams(\plc{integer-expression})
+thread_limit(\plc{integer-expression})
+default(shared \textnormal{|} none)
+private(\plc{list})
+firstprivate(\plc{list})
+shared(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
+allocate(\plc{[allocator: ]}\plc{list})
+\end{indentedcodelist}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{teams} construct is as follows:
+
+\begin{ompfPragma}
+!$omp teams \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{structured-block}
+!$omp end teams
+\end{ompfPragma}
+
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+num_teams(\plc{scalar-integer-expression})
+thread_limit(\plc{scalar-integer-expression})
+default(shared \textnormal{|} firstprivate \textnormal{|} private \textnormal{|} none)
+private(\plc{list})
+firstprivate(\plc{list})
+shared(\plc{list})
+reduction(\plc{reduction-identifier }:\plc{ list})
+allocate(\plc{[allocator: ]}\plc{list})
+\end{indentedcodelist}
+
+The \code{end}~\code{teams} directive denotes the end of the \code{teams} construct.
+\end{fortranspecific}
+
+\begin{samepage}
+
+\binding
+The binding thread set for a \code{teams} region is the encountering thread.
+
+\descr
+When a thread encounters a \code{teams} construct, a league of teams is
+created. Each team is an initial team, and the initial thread in each team
+executes the \code{teams} region.
+
+The number of teams created is implementation defined, but is less than or equal to the
+value specified in the \code{num_teams} clause.
+A thread may obtain the number of initial teams created by the construct by a call to the \code{omp_get_num_teams} routine.
+
+\end{samepage}
+
+The maximum number of threads participating in the contention group that each team
+initiates is implementation defined, but is less than or equal to the value specified in the
+\code{thread_limit} clause.
+
+On a combined or composite construct that includes \code{target} and
+\code{teams} constructs, the expressions in \code{num_teams} and
+\code{thread_limit} clauses are evaluated on the host device on
+entry to the \code{target} construct.
+
+Once the teams are created, the number of initial teams remains constant for the duration of the
+\code{teams} region.
+
+Within a \code{teams} region, initial team numbers uniquely identify each
+initial team. Initial team numbers are
+consecutive whole numbers ranging from zero to one less than the number of
+initial teams. A
+thread may obtain its own initial team number by a call to the \code{omp_get_team_num} library
+routine.
+The policy for assigning the initial threads to places is implementation defined.
+The \code{team} construct sets the \plc{place-partition-var} and \plc{default-device-var} ICVs for each initial thread to an implementation-defined value.
+
+After the teams have completed execution of the \code{teams} region, the encountering task
+resumes execution of the enclosing task region.
+
+\restrictions
+Restrictions to the \code{teams} construct are as follows:
+
+\begin{itemize}
+\item A program that branches into or out of a \code{teams} region is non-conforming.
+
+\item A program must not depend on any ordering of the evaluations of the clauses of the
+\code{teams} directive, or on any side effects of the evaluation of the clauses.
+
+\item At most one \code{thread_limit} clause can appear on the directive. The
+\code{thread_limit} expression must evaluate to a positive integer value.
+
+\item At most one \code{num_teams} clause can appear on the directive. The \code{num_teams}
+expression must evaluate to a positive integer value.
+
+\item A \code{teams} region can only be strictly nested within the implicit parallel region or a \code{target} region.
+If a \code{teams} construct is nested within a \code{target} construct,
+that \code{target} construct must contain no statements, declarations or
+directives outside of the \code{teams} construct.
+
+\item \code{distribute}, \code{distribute simd}, distribute parallel loop,
+distribute parallel loop SIMD, \code{parallel} regions, including any
+\code{parallel} regions arising from combined constructs, \code{omp_get_num_teams()} regions, and \code{omp_get_team_num()} are the only OpenMP regions
+that may be strictly nested inside the \code{teams} region.
+
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+
+\item \code{parallel} construct, see \specref{sec:parallel Construct}.
+
+\item \code{distribute} construct, see \specref{subsec:distribute Construct}.
+
+\item \code{distribute simd} construct, see \specref{subsec:distribute simd Construct}.
+
+\item \code{target} construct, see \specref{subsec:target Construct}.
+
+\item Data-sharing attribute clauses, see
+\specref{subsec:Data-Sharing Attribute Clauses}.
+
+\item \code{omp_get_num_teams} routine, see
+\specref{subsec:omp_get_num_teams}.
+
+\item \code{omp_get_team_num} routine, see
+\specref{subsec:omp_get_team_num}.
+\end{itemize}
