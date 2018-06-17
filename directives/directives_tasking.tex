@@ -79,10 +79,11 @@ private(\plc{list})
 firstprivate(\plc{list})
 shared(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
 affinity(\plc{[aff-modifier }:\plc{] locator-list})
+detach(\plc{event-handler})
 \end{indentedcodelist}
 
 where \plc{aff-modifier} is one of the following{}:
@@ -90,6 +91,7 @@ where \plc{aff-modifier} is one of the following{}:
 iterator(\plc{iterators-definition}) 
 \end{indentedcodelist}
 
+where \plc{event-handler} is a variable of the \code{omp_event_t *} type.
 
 \end{samepage}
 \end{ccppspecific}
@@ -116,16 +118,19 @@ private(\plc{list})
 firstprivate(\plc{list})
 shared(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-depend(\plc{[depend-modifier}:\plc{]dependence-type }:\plc{ locator-list})
+depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 priority(\plc{priority-value})
 allocate(\plc{[allocator: ]}\plc{list})
 affinity(\plc{[aff-modifier }:\plc{] locator-list})
+detach(\plc{event-handler})
 \end{indentedcodelist}
 
 where \plc{aff-modifier} is one of the following{}:
 \begin{indentedcodelist}
 iterator(\plc{iterators-definition}) 
 \end{indentedcodelist}
+
+where \plc{event-handler} is a variable of the \code{omp_event_kind} integer \plc{kind}
 
 \end{fortranspecific}
 
@@ -137,9 +142,10 @@ the innermost enclosing \code{parallel} region.
 
 The \code{task} construct is a \emph{task generating construct}. When a thread
 encounters a \code{task} construct, an explicit task is generated from the code
-for the associated structured block. The data environment of the task is
+for the associated \plc{structured-block}. The data environment of the task is
 created according to the data-sharing attribute clauses on the \code{task}
-construct, per-data environment ICVs, and any defaults that apply.
+construct, per-data environment ICVs, and any defaults that apply. The data environment of the task is destroyed 
+when the execution code of the associated \plc{structured-block} is completed.
 
 The encountering thread may immediately execute the task, or defer its execution. In the
 latter case, any thread in the team may be assigned the task. Completion of the task can
@@ -148,6 +154,10 @@ If a \code{task} construct is encountered during execution of an outer
 task, the generated \code{task} region corresponding to this construct is not a
 part of the outer task region unless the generated task is
 an included task.
+
+If a \code{detach} clause is present on a \code{task} construct a new event of type \code{omp_event_t}, \plc{allow-completion-event}, is created. The \plc{allow-completion-event} is connected to the completion of the associated \code{task} region. The original \plc{event-handler} will be updated to point to the \plc{allow-completion-event} event before the task data environment is created. The \plc{event-handler} will be considered as if it was specified on a \code{firstprivate} clause. Note that the use of a variable in a \code{detach} clause expression of a \code{task} construct causes an implicit reference to the variable in all enclosing constructs.
+
+If no \code{detach} clause is present on a \code{task} construct the generated \code{task} is completed when the execution of its associated \plc{structured-block} is completed. If a \code{detach} clause is present on a \code{task} construct the task is completed when the execution of its associated \plc{structured-block} is completed and the \plc{allow-completion-event} is fulfilled.
 
 When an \code{if} clause is present on a \code{task} construct, and the \code{if} clause expression
 evaluates to \plc{false}, an undeferred task is generated, and the encountering thread must
@@ -160,7 +170,8 @@ When a \code{final} clause is present on a \code{task} construct and the \code{f
 evaluates to \plc{true}, the generated task will be a final task. All \code{task} constructs
 encountered during execution of a final task will generate final and included tasks. Note
 that the use of a variable in a \code{final} clause expression of a \code{task} construct causes an
-implicit reference to the variable in all enclosing constructs.
+implicit reference to the variable in all enclosing constructs. Encountering a \code{task} construct with the \code{detach} clause
+during the execution of a final task results in unspecified behavior.
 
 The \code{if} clause expression and the \code{final} clause expression are evaluated in the context
 outside of the \code{task} construct, and no ordering of those evaluations is specified.
@@ -175,7 +186,7 @@ task is an included task.
 
 The \code{task} construct includes a task scheduling point in the task region of its generating
 task, immediately following the generation of the explicit task. Each explicit \code{task}
-region includes a task scheduling point at its point of completion.
+region includes a task scheduling point at the end of its associated \plc{structured-block}.
 
 When the \code{mergeable} clause is present on a \code{task} construct, the generated task is a \plc{mergeable task}.
 
@@ -244,6 +255,10 @@ Restrictions to the \code{task} construct are as follows:
 
 \item At most one \code{priority} clause can appear on the directive.
 
+\item At most one \code{detach} clause can appear on the directive.
+
+\item If a \code{detach} clause appears on the directive, then a \code{mergeable} clause cannot appear on the same directive.
+
 \begin{ccppspecific}
 \item A throw executed inside a \code{task} region must cause execution to resume within the
 same \code{task} region, and the same thread that threw the exception must catch it.
@@ -258,9 +273,10 @@ unspecified behavior
 \crossreferences
 \begin{itemize}
 \item Task scheduling constraints, see \specref{subsec:Task Scheduling}.
-\item \code{depend} clause, see \specref{subsec:depend Clause}.
 \item \code{if} Clause, see \specref{sec:if Clause}.
+\item \code{depend} clause, see \specref{subsec:depend Clause}.
 \item Data-sharing attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}.
+\item \code{omp_fulfill_event}, see \specref{subsec:omp_fulfill_event}.
 \item \code{ompt_callback_task_create_t}, see
 \specref{sec:ompt_callback_task_create_t}.
 %\item \code{ompt_callback_task_schedule_t}, see
@@ -312,7 +328,7 @@ nogroup
 allocate(\plc{[allocator: ]}\plc{list})
 \end{indentedcodelist}
 
-The \code{taskloop} directive places restrictions on the structure of all associated \plc{for-loops}. Specifically, all associated \plc{for-loops} must have canonical loop form (see \specref{sec:Canonical Loop Form}).
+The \code{taskloop} directive places restrictions on the structure of all associated \plc{for-loops}. Specifically, all associated \plc{for-loops} must have canonical loop form (see \specref{subsec:Canonical Loop Form}).
 \end{ccppspecific}
 \begin{fortranspecific}
 The syntax of the \code{taskloop} construct is as follows:
@@ -348,7 +364,7 @@ If an \code{end}~\code{taskloop} directive is not specified, an
 
 The \code{taskloop} directive places restrictions on the structure of all
 associated \plc{do-loops}. Specifically, all associated \plc{do-loops} must
-have canonical loop form (see \specref{sec:Canonical Loop Form}).
+have canonical loop form (see \specref{subsec:Canonical Loop Form}).
 \end{fortranspecific}
 
 \binding
@@ -521,9 +537,9 @@ no intervening code between any two loops.
 \crossreferences
 \begin{itemize}
 \item \code{task} construct, \specref{subsec:task Construct}.
+\item \code{if} Clause, see \specref{sec:if Clause}.
 \item \code{taskgroup} construct, \specref{subsec:taskgroup Construct}.
 \item Data-sharing attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}.
-\item \code{if} Clause, see \specref{sec:if Clause}.
 \item \code{ompt_scope_begin} and \code{ompt_scope_end}, see
   \specref{sec:ompt_scope_endpoint_t}.
 \item \code{ompt_work_taskloop}, see \specref{sec:ompt_work_t}.
@@ -594,8 +610,8 @@ This composite construct dispatches the same callbacks as the \code{taskloop} co
 
 \crossreferences
 \begin{itemize}
+\item \code{simd} construct, see \specref{subsubsec:simd Construct}.
 \item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
-\item \code{simd} construct, see \specref{subsec:simd Construct}.
 \item Data-sharing attribute clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
 \item Events and tool callbacks for \code{taskloop} construct, see
 \specref{subsec:taskloop Construct}.

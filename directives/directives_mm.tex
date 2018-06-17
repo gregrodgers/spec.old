@@ -84,6 +84,7 @@ The behavior of the allocation process can be affected by the allocator traits t
 {\scode{fallback}} & {\scode{default_mem_fb}, \scode{null_fb}, \scode{abort_fb}, \scode{allocator_fb}} & {\scode{default_mem_fb}}\\
 {\scode{fb_data}} & an allocator handle & (none)\\
 {\scode{pinned}} & \scode{true}, \scode{false} & \scode{false}\\
+{\scode{partition}} & {\scode{environment}, \scode{nearest}, \scode{blocked}, \scode{interleaved}} & {\scode{environment}}\\
 \end{supertabular}
 \linenumbers
 
@@ -104,6 +105,19 @@ The total amount of storage in bytes that an allocator can use is limited by the
 The \scode{fallback} trait specifies how the allocator behaves when it cannot fulfil an allocation request. If the \scode{fallback} trait is set to \scode{null_fb} the allocator returns the value zero if it fails to allocate the memory. If the \scode{fallback} trait is set to \scode{abort_fb} the program execution will be terminated if the allocation fails. If the \scode{fallback} trait is set to \scode{allocator_fb} then when an allocation fails the request will be delegated to the allocator specified in the \scode{fb_data} trait. If the \scode{fallback} trait is set to \scode{default_mem_fb} then when an allocation fails another allocation will be tried in the \scode{omp_default_mem_space} memory space assuming all allocator traits to be set to their default values except for \scode{fallback} trait which will be set to \scode{null_fb}.
 
 Allocators with the \scode{pinned} trait defined to be \scode{true} ensure that their allocations remain in the same storage resource at the same location for their entire lifetime.
+
+The {\scode{partition}} trait describes the partitioning of allocated
+memory over the storage resources represented by the memory space associated
+with the allocator. The partitioning will be done in parts with a minimum size
+that is implementation defined. The values are:
+\begin{itemize}
+ \item \scode{environment}: the placement of allocated memory is determined by the execution environment.
+ \item \scode{nearest}: allocated memory is placed in the storage resource that is nearest to the thread that requests the allocation.
+ \item \scode{blocked}: allocated memory is partitioned into parts of approximately the same size with at most one part per storage resource.
+ \item \scode{interleaved}: allocated memory parts are distributed in a round-robin fashion across the storage resources.
+\end{itemize}
+
+%TODO: add reference to appendix because of implementation defined behavior
 
 Table~\ref{tab:Predefined Allocators} shows the list of predefined memory allocators and their associated memory spaces. The predefined memory allocators have default values for their allocator traits unless otherwise specified.
 
@@ -235,14 +249,15 @@ For allocations that arise from this directive the \scode{null_fb} value of the 
 \item List items specified in an \code{allocate} directive that is associated with an \code{allocate} statement must be variables that are allocated by the \code{allocate} statement.
 \item Multiple directives can only be associated with an \code{allocate} statement if list items are specified on each \code{allocate} directive.
 \item If a list item has the \code{SAVE} attribute, is a common block name, or is declared in the scope of a module, then only predefined memory allocator variables can be used in the \code{allocator} clause.
+\item A type parameter inquiry cannot appear in an \code{allocate} directive.
 \end{fortranspecific}
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
+\item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \item Memory allocators, see \specref{subsec:Memory Allocators}.
 \item \code{omp_allocator_t} and \code{omp_allocator_kind}, see \specref{subsec:Memory Management Types}.
-\item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \end{itemize}
 
 \subsection{\hcode{allocate} Clause}
@@ -283,7 +298,7 @@ For allocations that arise from this clause the \scode{null_fb} value of the fal
 
 \crossreferences
 \begin{itemize}
+\item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \item Memory allocators, see \specref{subsec:Memory Allocators}.
 \item \code{omp_allocator_t} and \code{omp_allocator_kind}, see \specref{subsec:Memory Management Types}.
-\item \plc{def-allocator-var} ICV, see \specref{subsec:ICV Descriptions}.
 \end{itemize}
