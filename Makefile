@@ -19,7 +19,6 @@ TEXFILES=openmp.tex \
          directives/directives_cancellation.tex \
          directives/directives_combined.tex \
          directives/directives_common.tex \
-         directives/directives_concurrent.tex \
          directives/directives_data_environment.tex \
          directives/directives_declare.tex \
          directives/directives_device.tex \

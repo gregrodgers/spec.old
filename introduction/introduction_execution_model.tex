@@ -138,14 +138,30 @@ When any thread encounters a \code{simd} construct, the iterations of the loop a
 the construct may be executed concurrently using the SIMD lanes that are available to
 the thread.
 
-When a thread encounters a \code{concurrent} construct, an implementation may
-choose to apply optimizations, parallelization, and/or vectorization, including
-scheduling loop iterations in ways that cannot be directly represented in
-OpenMP. When a \code{concurrent} construct is encountered, an implementation
-must guarantee that the logical iterations of the associated loops are executed
-exactly once. When encountering a \code{concurrent} construct an implementation
-will not generate a new league of thread teams, but may use any thread teams
-currently available on which to execute.
+When a \code{loop} construct is encountered, the iterations of the loop
+associated with the construct are executed in the context of its encountering
+thread(s), as determined according to its binding region. If the \code{loop}
+region binds to a \code{teams} region, the region is encountered by the set
+of master threads that execute the \code{teams} region. If the \code{loop}
+region binds to a \code{parallel} region, the region is encountered by the team
+of threads executing the \code{parallel} region. Otherwise, the region is
+encountered by a single thread.
+
+If the \code{loop} region binds to a \code{teams} region, the encountering
+threads may continue execution after the \code{loop} region without waiting
+for all iterations to complete; the iterations are guaranteed to complete
+before the end of \code{teams} region.  Otherwise, all iterations must
+complete before the encountering thread(s) continue execution after the
+\code{loop} region. All threads that encounter the \code{loop} construct may
+participate in the execution of the iterations. Only one of these threads may
+execute any given iteration.
+
+%an implementation may
+%choose to apply optimizations, parallelization, and/or vectorization, including
+%scheduling loop iterations in ways that cannot be directly represented in
+%OpenMP. When encountering a \code{concurrent} construct an implementation
+%will not generate a new league of thread teams, but may use any thread teams
+%currently available on which to execute.
 
 The \code{cancel} construct can alter the previously described flow of execution in an
 OpenMP region. The effect of the \code{cancel} construct depends on its
