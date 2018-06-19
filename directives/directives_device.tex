@@ -522,7 +522,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 if(\plc{[} target :\plc{] scalar-expression})
-device(\plc{[device-modifier:] integer-expression})
+device(\plc{[device-modifier}:\plc{] integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
@@ -536,7 +536,7 @@ uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
 	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
 \end{indentedcodelist}
 
-where \plc{device-modifier} is one of:
+where \plc{device-modifier} is one of the following:
 \begin{indentedcodelist}
 ancestor
 device_num
@@ -562,7 +562,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 if(\plc{[} target :\plc{] scalar-logical-expression})
-device(\plc{[device-modifier:] scalar-integer-expression})
+device(\plc{[device-modifier}:\plc{] scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
@@ -576,7 +576,7 @@ uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
 	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
 \end{indentedcodelist}
 
-where \plc{device-modifier} is one of:
+where \plc{device-modifier} is one of the following:
 \begin{indentedcodelist}
 ancestor
 device_num
@@ -618,15 +618,21 @@ task}.
 
 Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
-If a \code{device} clause is present with \code{ancestor} as \plc{device-modifier}, execution of the \code{target} region
-occurs on the parent device synchronously. The encountering device thread waits for completion of the
-\code{target} region on the parent before resuming. If the \code{target} construct is in an inactive target
-region the encountering thread continues execution.
+If a \code{device} clause with the \code{device_num} modifier is present on the construct, the
+\code{device} expression specifies the device number of the target device. If
+\plc{device-modifier} does not appear in the clause, the behavior of the
+clause is as if \plc{device-modifier} is \code{device_num}.
 
-For any list item in a map clause of a \code{target} construct with \code{device} clause with \code{ancestor}
-as \plc{device-modifier},
-if the corresponding item exists in the device data environment of the parent device it is treated 
-as if it has a reference count of positive infinity.
+If a \code{device} clause with the \code{ancestor} modifier is present on the
+\code{target} construct and the \code{device} expression evaluates to 1,
+execution of the \code{target} region occurs on the parent device.  If the
+\code{target} construct is not encountered in a \code{target} region or is
+encountered in an inactive target region, the current device is treated as the
+parent device.  The encountering thread waits for completion of the
+\code{target} region on the parent device before resuming. For any list item
+that appears in a \code{map} clause on the same construct, if the
+corresponding list item exists in the device data environment of the parent
+device, it is treated as if it has a reference count of positive infinity.
 
 If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
 
@@ -716,25 +722,20 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 
 \item A list item that appears in an \code{is_device_ptr} clause must be a valid device pointer in the device data environment.
 
-\item At most one \code{device} clause can appear on the
-directive.  If the \code{device} clause contains \code{ancestor} as \plc{device-modifier} then the 
-value should be constant 1. If the \plc{device-modifier} is not specified or specified as \code{device-num} then expression 
-must evaluate to a non-negative integer value less than the value of
-  \code{omp_get_num_devices()}.
+\item At most one \code{device} clause can appear on the directive.  The \code{device} expression 
+must evaluate to a non-negative integer value less than the value of \code{omp_get_num_devices()}.
 
-If the \code{device} clause contains \code{ancestor} as \plc{device-modifier} then the following 
-restrictions apply :
+\item If a \code{device} clause with the \code{ancestor} modifier is present
+    on the construct, then the following restrictions apply:
 \begin{itemize}
-\item The \code{target} construct must not be contained within a \code{target} region for which a \code{device}
-clause with \code{ancestor} as \plc{device-modifier} was specified.
-
-\item The \code{omp requires reverse_offload} has to be been specified.
-
-\item The only valid clauses are \code{device}, \code{firstprivate}, \code{private}, \code{defaultmap} and \code{map} clause.
-
-\item No OpenMP constructs or OpenMP API runtime routines are allowed inside the \code{target} region.
+   \item A \code{requires} directive with the \code{reverse_offload}
+       clause must be present in the same compilation unit.
+   \item The \code{device} expression must evaluate to 1.
+   \item Only the \code{device}, \code{firstprivate}, \code{private},
+       \code{defaultmap}, and \code{map} clauses may appear on the construct.
+   \item No OpenMP constructs or calls to OpenMP API runtime routines are allowed
+       inside the corresponding \code{target} region.
 \end{itemize}
-
 
 \item Memory allocators that do not appear in a \code{uses_allocators} clause cannot appear as an allocator in an \code{allocate} clause or be used in the \code{target} region unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit.
 
