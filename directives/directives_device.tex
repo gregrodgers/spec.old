@@ -522,7 +522,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 if(\plc{[} target :\plc{] scalar-expression})
-device(\plc{integer-expression})
+device(\plc{[device-modifier:] integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
@@ -534,6 +534,12 @@ depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 allocate([\plc{[allocator }:\plc{] list})
 uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
 	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
+\end{indentedcodelist}
+
+where \plc{device-modifier} is one of:
+\begin{indentedcodelist}
+ancestor
+device_num
 \end{indentedcodelist}
 
 where \plc{allocator} is an identifier of \code{const omp_allocator_t *} type.
@@ -556,7 +562,7 @@ where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
 if(\plc{[} target :\plc{] scalar-logical-expression})
-device(\plc{scalar-integer-expression})
+device(\plc{[device-modifier:] scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
@@ -568,6 +574,12 @@ depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 allocate(\plc{allocator:}\plc{list})
 uses_allocators(\plc{allocator}[(\plc{allocator-traits-array})]
 	       [,\plc{allocator}[(\plc{allocator-traits-array})] ...])
+\end{indentedcodelist}
+
+where \plc{device-modifier} is one of:
+\begin{indentedcodelist}
+ancestor
+device_num
 \end{indentedcodelist}
 
 where \plc{allocator} is an integer expression of \code{omp_allocator_kind} \plc{kind}.
@@ -605,6 +617,16 @@ data-sharing attribute of shared in the data environment of the \plc{target
 task}.
 
 Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+
+If a \code{device} clause is present with \code{ancestor} as \plc{device-modifier}, execution of the \code{target} region
+occurs on the parent device synchronously. The encountering device thread waits for completion of the
+\code{target} region on the parent before resuming. If the \code{target} construct is in an inactive target
+region the encountering thread continues execution.
+
+For any list item in a map clause of a \code{target} construct with \code{device} clause with \code{ancestor}
+as \plc{device-modifier},
+if the corresponding item exists in the device data environment of the parent device it is treated 
+as if it has a reference count of positive infinity.
 
 If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
 
@@ -695,9 +717,24 @@ declared in the \code{target} region must appear in a \code{declare}~\code{targe
 \item A list item that appears in an \code{is_device_ptr} clause must be a valid device pointer in the device data environment.
 
 \item At most one \code{device} clause can appear on the
-  directive.  The \code{device} expression must evaluate to a
-  non-negative integer value less than the value of
+directive.  If the \code{device} clause contains \code{ancestor} as \plc{device-modifier} then the 
+value should be constant 1. If the \plc{device-modifier} is not specified or specified as \code{device-num} then expression 
+must evaluate to a non-negative integer value less than the value of
   \code{omp_get_num_devices()}.
+
+If the \code{device} clause contains \code{ancestor} as \plc{device-modifier} then the following 
+restrictions apply :
+\begin{itemize}
+\item The \code{target} construct must not be contained within a \code{target} region for which a \code{device}
+clause with \code{ancestor} as \plc{device-modifier} was specified.
+
+\item The \code{omp requires reverse_offload} has to be been specified.
+
+\item The only valid clauses are \code{device}, \code{firstprivate}, \code{private}, \code{defaultmap} and \code{map} clause.
+
+\item No OpenMP constructs or OpenMP API runtime routines are allowed inside the \code{target} region.
+\end{itemize}
+
 
 \item Memory allocators that do not appear in a \code{uses_allocators} clause cannot appear as an allocator in an \code{allocate} clause or be used in the \code{target} region unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit.
 
