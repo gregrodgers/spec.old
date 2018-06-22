@@ -334,7 +334,7 @@ private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[ reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk_size]})
 collapse(\plc{n})
 ordered\plc{[}(\plc{n})\plc{]}
@@ -365,7 +365,7 @@ private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
 linear(\plc{list[ }:\plc{ linear-step]})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[ reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
 schedule(\plc{[modifier [}, \plc{modifier]}:\plc{]kind[},\plc{ chunk_size]})
 collapse(\plc{n})
 ordered\plc{[}(\plc{n})\plc{]}
@@ -610,15 +610,23 @@ in any order and the behavior of an application that depends on any execution or
 \linenumbers
 \medskip
 
-\omptWorksharingEvents{loop}
+% \omptWorksharingEvents{loop}
+\events
 
-The \plc{loop-iteration-begin} event occurs before an implicit task
+The \plc{ws-loop-begin} event occurs after an implicit task encounters a
+worksharing-loop construct but before the task starts the execution of the structured
+block of the worksharing-loop region.
+
+The \plc{ws-loop-end} event occurs after a worksharing-loop region finishes
+execution but before resuming execution of the encountering task.
+
+The \plc{ws-loop-iteration-begin} event occurs before an implicit task
 executes each iteration of a parallel loop.
 
-\omptWorksharingTools{loop}{work_loop}
+\omptWorksharingTools{ws-loop}{work_loop}
 
 A thread dispatches a registered \code{ompt_callback_dispatch}
-callback for each occurrence of a \plc{loop-iteration-begin} 
+callback for each occurrence of a \plc{ws-loop-iteration-begin} 
 event in that thread. The callback occurs in the
 context of the implicit task.  The callback has type signature
 \code{ompt_callback_dispatch_t}. 
@@ -639,7 +647,7 @@ with the construct must be perfectly nested; that is there must be
 no intervening code between any two loops.
 
 \item If a \code{reduction} clause with the \code{inscan} modifier is
-    specified, neither the \code{ordered} or \code{schedule} clause may appear
+    specified, neither the \code{ordered} nor \code{schedule} clause may appear
     on the worksharing-loop directive.
 
 \item The values of the loop control expressions of the loops associated with
@@ -973,10 +981,10 @@ no intervening code between any two loops.
 
 \item A \plc{modifier} may not be specified on a \code{linear} clause.
 
-\item A \code{scan} directive, an \code{atomic} construct, a \code{concurrent}
-construct, a \code{simd} construct or an \code{ordered} construct with the
-\code{simd} clause is the only OpenMP construct that can be encountered
-during execution of a \code{simd} region.
+\item The only OpenMP constructs that can be encountered during execution of a
+\code{simd} region are the \code{atomic} construct, the \code{loop}
+construct, the \code{simd} construct and the \code{ordered} construct with
+the \code{simd} clause.
 
 \item If a \code{order(concurrent)} clause is present, all restrictions from
   the \code{loop} construct with an \code{order(concurrent)} clause also apply.
@@ -1034,7 +1042,10 @@ reference to array, or reference to pointer.
 \index{do SIMD@{\code{do}~\code{simd}}}
 \index{for SIMD@{\code{for}~\code{simd}}}
 \summary
-The worksharing-loop SIMD construct specifies that the iterations of one or more associated loops will be distributed across threads that already exist in the team and that the iterations executed by each thread can also be executed concurrently using SIMD instructions. The loop SIMD construct is a composite construct.
+The worksharing-loop SIMD construct specifies that the iterations of one or
+more associated loops will be distributed across threads that already exist in
+the team and that the iterations executed by each thread can also be executed
+concurrently using SIMD instructions. The worksharing-loop SIMD construct is a composite construct.
 \end{samepage}
 
 \begin{samepage}
@@ -1080,8 +1091,8 @@ This composite construct generates the same events as the worksharing-loop const
 This composite construct dispatches the same callbacks as the worksharing-loop construct.
 
 \restrictions
-All restrictions to the loop construct and the \code{simd} construct apply to the loop SIMD
-construct. In addition, the following restrictions apply:
+All restrictions to the loop construct and the \code{simd} construct apply to
+the worksharing-loop SIMD construct. In addition, the following restrictions apply:
 
 \begin{itemize}
 \item No \code{ordered} clause with a parameter can be specified.
@@ -1513,7 +1524,7 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 
 \restrictions
 \begin{itemize}
-\item The restrictions for the \code{distribute} and parallel loop SIMD constructs apply.
+\item The restrictions for the \code{distribute} and parallel worksharing-loop SIMD constructs apply.
 \item No \code{ordered} clause can be specified.
 \item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
 \item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
@@ -1887,11 +1898,11 @@ and where \plc{loop-directive} (\plc{end-loop-directive}) is a \code{do}
 
 \descr
 The \code{scan} directive may appear in the body of a loop or loop nest
-associated with an enclosing loop, loop SIMD, or \code{simd} construct, to
-specify that one or more scan computations is to be performed by the loop.
+associated with an enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct, to
+specify that one or more scan computations are to be performed by the loop.
 The directive specifies that either an inclusive scan computation is to be performed
 for each list item that appears in an \code{inclusive} clause on the
-directive, or an an exclusive scan computation is to be performed for each list item that
+directive, or an exclusive scan computation is to be performed for each list item that
 appears in an \code{exclusive} clause on the directive.  For each list item
 for which a scan computation is specified, statements that lexically precede
 or follow the directive constitute one of two phases for a given logical
@@ -1942,7 +1953,7 @@ The \textit{update value} of a list item is, for a given iteration, the value
 of the list item on completion of its input phase. 
 
 Let \plc{orig-val} be the value of the original list item on entry to
-enclosing loop, loop SIMD, or \code{simd} construct. Let \plc{combiner} be the
+enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct. Let \plc{combiner} be the
 combiner for the \plc{reduction-identifier} specified by the \code{reduction}
 clause on the construct. And let \plc{u}\textsubscript{I} be the update value
 of a list item for iteration \plc{I}.  For list items appearing in an
@@ -1964,12 +1975,12 @@ Restrictions to the \code{scan} directive are as follows:
 \begin{itemize}
 
 \item Exactly one \code{scan} directive must appear in the loop body of an
-    enclosing loop, loop SIMD, or \code{simd} construct on which a
+    enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct on which a
     \code{reduction} clause with the \code{inscan} modifier is present.
 
 \item A list item that appears in the \code{inclusive} or \code{exclusive}
     clause must appear in a \code{reduction} clause with the \code{inscan}
-    modifier on the enclosing loop, loop SIMD, or \code{simd} construct.
+    modifier on the enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct.
 
 \item Cross-iteration dependences across different logical iterations must not
     exist, except for dependences for the list items specified in an
@@ -1981,28 +1992,17 @@ Restrictions to the \code{scan} directive are as follows:
     for the list items specified in an \code{inclusive} or \code{exclusive}
     clause.
 
-%\item A list item must not appear in more than one \code{inclusive} or
-%    \code{exclusive} clause of \code{scan} directives inside the enclosing
-%    loop, loop SIMD, or \code{simd} construct.
-
-%\item At most one \code{scan} directive specified with the \code{exclusive}
-%    clause is permitted within the enclosing loop, loop SIMD, or \code{simd}
-%    construct.
-
-%\item An \code{inclusive} clause must not appear on a \code{scan} directive
-%    specified with the \code{exclusive} clause. 
-
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item loop construct, see
+\item worksharing-loop construct, see
 \specref{subsec:Worksharing-Loop Construct}.
 
 \item \code{simd} construct, see
 \specref{subsubsec:simd Construct}.
 
-\item loop SIMD construct, see
+\item worksharing-loop SIMD construct, see
 \specref{subsubsec:Worksharing-Loop SIMD Construct}.
 
 \item \code{reduction} clause, see \specref{subsubsec:reduction clause}.

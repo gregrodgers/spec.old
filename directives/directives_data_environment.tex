@@ -107,8 +107,8 @@ construct are private.
 one associated \plc{for-loop} is linear with a \plc{linear-step} that is the increment of
 the associated \plc{for-loop}.
 
-\item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with
-multiple associated \plc{for-loops} are lastprivate.
+\item The loop iteration variables in the associated \plc{for-loops} of a
+\code{simd} or \code{loop} construct with multiple associated \plc{for-loops} are lastprivate.
 
 \item Variables with static storage duration that are declared in a scope inside the construct
 are shared.
@@ -135,8 +135,8 @@ threadprivate.
 one associated \plc{do-loop} is linear with a \plc{linear-step} that is the increment of
 the associated \plc{do-loop}.
 
-\item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with
-multiple associated \plc{do-loops} are lastprivate.
+\item The loop iteration variables in the associated \plc{do-loops} of a
+\code{simd} or \code{loop} construct with multiple associated \plc{do-loops} are lastprivate.
 
 \item A loop iteration variable for a sequential loop in a \code{parallel} or task generating construct is
 private in the innermost such construct that encloses the loop.
@@ -172,6 +172,9 @@ that is the increment of the associated \plc{for-loop}.
 \item The loop iteration variables in the associated \plc{for-loops} of a \code{simd} construct with
 multiple associated \plc{for-loops} may be listed in a \code{private} or \code{lastprivate} clause.
 
+\item The loop iteration variable(s) in the associated \plc{for-loop(s)} of a \code{loop}
+construct may be listed in a \code{private} clause.
+
 \item Variables with \code{const}-qualified type having no mutable member may be listed in a
 \code{firstprivate} clause, even if they are static data members.
 \end{itemize}
@@ -190,6 +193,9 @@ that is the increment of the associated loop.
 
 \item The loop iteration variables in the associated \plc{do-loops} of a \code{simd} construct with
 multiple associated \plc{do-loops} may be listed in a \code{private} or \code{lastprivate} clause.
+
+\item The loop iteration variable(s) in the associated \plc{do-loop(s)} of a \code{loop}
+construct may be listed in a \code{private} clause.
 
 \item Variables used as loop iteration variables in sequential loops in a \code{parallel}
 or task generating construct may be listed in data-sharing attribute clauses on the construct itself, and on
@@ -1822,8 +1828,8 @@ reduction(\plc{[reduction-modifier},\plc{] }\plc{reduction-identifier }:\plc{ li
 \end{ompSyntax}
 
 Where \plc{reduction-identifier} is defined in Section
-\ref{subsubsec:Properties Common To All Reduction Clauses} and
-\plc{reduction-modifier} is:
+\ref{subsubsec:Properties Common To All Reduction Clauses}, and
+\plc{reduction-modifier} is one of the following:
 \begin{indentedcodelist}
 inscan
 task
@@ -1835,7 +1841,7 @@ The \code{reduction} clause is a reduction scoping clause and a reduction
 participating clause, as described in Sections \ref{subsubsec:Reduction Scoping
 Clauses} and \ref{subsubsec:Reduction Participating Clauses}. 
 
-When the \code{inscan} modifier appears on the clause, a scan computation is
+If the \code{inscan} \plc{reduction-modifier} is present, a scan computation is
 performed over updates to the list item performed in each logical iteration of
 the loop associated with the loop, loop SIMD, or \code{simd} construct (see
 Section~\ref{subsec:scan Directive}). The list items are privatized in the
@@ -1843,8 +1849,9 @@ construct according to Section~\ref{subsec:List Item Privatization}.  At the
 end of the region, each original list item is assigned the
 value of the private copy from the last logical iteration of the loops
 associated with the construct.
-   
-When the \code{inscan} modifier does not appear on the clause, the behavior is
+
+If \plc{reduction-modifier} is not present or the \code{default}
+\plc{reduction-modifier} is present, the behavior is
 as follows. For \code{parallel} and worksharing constructs, one or more
 private copies of each list item are created for each implicit task, as if the
 \code{private} clause had been used. For the \code{simd} construct, one or
@@ -1861,25 +1868,26 @@ specified, the original list item is updated by combining its original value
 with the final value of each of the private copies, using the combiner of the
 specified \plc{reduction-identifier}. 
 
-If the \code{task} modifier is present, then each list item is privatized
-according to Section~\ref{subsec:List Item Privatization}, and an unspecified
-number of additional private copies are created to support task reductions.
-Any copies associated with the reduction are initialized before they are
-accessed by the tasks participating in the reduction. After the end of the
-region, the original list item contains the result of the reduction.
+The \code{task} \plc{reduction-modifier} has the same effect on the
+\code{reduction} clause as the \code{default} \plc{reduction-modifier} for a \code{simd} or
+\code{teams} construct. If the \code{task} \plc{reduction-modifier} is present
+for a \code{parallel} or worksharing construct, then each list item is
+privatized according to Section~\ref{subsec:List Item Privatization}, and an
+unspecified number of additional private copies are created to support task
+reductions.  Any copies associated with the reduction are initialized before
+they are accessed by the tasks participating in the reduction, which include
+all implicit tasks in the corresponding region and all participating explicit
+tasks that specify an \code{in_reduction} clause (see
+Section~\ref{subsubsec:in_reduction clause}). After the end of the region, the
+original list item contains the result of the reduction.
 
-If \code{nowait} is not used, the reduction computation will be complete at the end of the
-construct; however, if the reduction clause is used on a construct to which \code{nowait} is
+If \code{nowait} is not specified for the construct, the reduction computation will be complete at the end of the
+construct; however, if the \code{reduction} clause is used on a construct to which \code{nowait} is
 also applied, accesses to the original list item will create a race and, thus, have
 unspecified effect unless synchronization ensures that they occur after all threads have
 executed all of their iterations or \code{section} constructs, and the reduction computation
 has completed and stored the computed value of that list item. This can most simply be
 ensured through a barrier synchronization.
-
-If the \code{task} modifier is present for a \code{parallel} or worksharing
-construct, all implicit tasks in the corresponding region and those explicit tasks in the
-region that specify an \code{in_reduction} clause for that list item
-participate in the reduction.
 
 \restrictions
 The restrictions to the \code{reduction} clause are as follows:
@@ -1894,20 +1902,20 @@ construct must be shared in the \code{parallel} region to which a corresponding
 worksharing region binds.
 
 \item A list item that appears in a \code{reduction} clause with
-the \code{inscan} modifier must appear as a list item in an \code{inclusive} or
+the \code{inscan} \plc{reduction-modifier} must appear as a list item in an \code{inclusive} or
 \code{exclusive} clause on a \code{scan} directive enclosed by the
 construct.
 
-\item If a \code{reduction} clause without the \code{inscan} modifier may not
-    appear on a construct on which a \code{reduction} clause with the
-    \code{inscan} modifier appears.
+\item A \code{reduction} clause without the \code{inscan} \plc{reduction-modifier} may not
+appear on a construct on which a \code{reduction} clause with the
+\code{inscan} \plc{reduction-modifier} appears.
 
 \item A list item that appears in a \code{reduction} clause of the innermost
 enclosing worksharing or \code{parallel} construct may not be accessed in an
 explicit task generated by a construct for which an \code{in_reduction} clause
 over the same list item does not appear.
 
-\item The \code{task} modifier may not appear in a \code{reduction} clause if
+\item The \code{task} \plc{reduction-modifier} may not appear in a \code{reduction} clause if
 the \code{nowait} clause is specified on the same construct.
 
 \begin{ccppspecific}
@@ -1915,13 +1923,13 @@ the \code{nowait} clause is specified on the same construct.
 construct has a reference type then it must bind to the same object for all threads of the team.
 
 \item A variable of class type (or array thereof) that appears in a
-\code{reduction} clause with the \code{inscan} modifier requires an
+\code{reduction} clause with the \code{inscan} \plc{reduction-modifier} requires an
 accessible, umambiguous default constructor for the class type. The number of
 calls to the default constructor while performing the scan computation is
 unspecified.
 
 \item A variable of class type (or array thereof) that appears in a
-\code{reduction} clause with the \code{inscan} modifier requires an
+\code{reduction} clause with the \code{inscan} \plc{reduction-modifier} requires an
 accessible, unambiguous copy assignment operator for the class type. The
 number of calls to the copy assignment operator while
 performing the scan computation is unspecified.
