@@ -442,6 +442,7 @@ clause of the form {\scode{ext_}\plc{implementation-defined-requirement}} for an
 implementation defined requirement clause.
 
 \begin{indentedcodelist}
+reverse_offload
 unified_address
 unified_shared_memory
 atomic_default_mem_order(seq_cst \textnormal{|} acq_rel \textnormal{|} relaxed)
@@ -468,6 +469,11 @@ code in the current program unit.
 Use of this directive makes your code less portable. Users should be aware that not all
 devices or implementations support all requirements.
 \end{note}
+
+When the \code{reverse_offload} clause appears on a \code{requires} directive, the 
+implementation guarantees that a \code{target} region, for which the \code{target} 
+construct specifies a \code{device} clause in which the \code{ancestor} modifier appears, 
+can execute on the parent device of an enclosing \code{target} region.
 
 When the \code{unified_address} clause appears on a \code{requires}
 directive, the implementation guarantees that all devices accessible through
@@ -553,8 +559,12 @@ unit.
   \code{unified_shared_memory} or \code{reverse_offload} clause shall appear
   lexically before any device constructs or device routines.
 
-\item A \code{requires} directive with the \code{unified_shared_memory} clause
- must appear in all \emph{compilation units} of a program that contain device
+\item A \code{requires} directive with the \code{unified_shared_memory}
+ clause must appear in all \emph{compilation units} of a program that contain device
+ constructs or device routines or in none of them.
+
+\item A \code{requires} directive with the \code{reverse_offload} 
+ clause must appear in all \emph{compilation units} of a program that contain device
  constructs or device routines or in none of them.
 
 \item The \code{requires} directive with \code{atomic_default_mem_order}
@@ -634,8 +644,8 @@ The following ICVs store values that affect the operation of worksharing-loop re
 \item \plc{run-sched-var} - controls the schedule that the \code{runtime} schedule clause uses for
 worksharing-loop regions. There is one copy of this ICV per data environment.
 
-\item \plc{def-sched-var} - controls the implementation defined default scheduling of loop
-regions. There is one copy of this ICV per device.
+\item \plc{def-sched-var} - controls the implementation defined default
+  scheduling of worksharing-loop regions. There is one copy of this ICV per device.
 \end{itemize}
 
 The following ICVs store values that affect program execution.
@@ -1178,7 +1188,7 @@ first element of the \plc{bind-var} ICV; otherwise, the \code{proc_bind} clause 
 If an expression has a pointer to \plc{T} type, then a shape-operator can be
 used to specify the extent of that pointer. In other words, the
 shape-operator is used to reinterpret, as an n-dimensional array, the region of
-memory pointed by that expression.
+memory to which that expression points.
 
 Formally, the syntax of the shape-operator is as follows:
 \begin{indentedcodelist}
@@ -1269,7 +1279,7 @@ expressions. When evaluated they represent a set of integer values as follows:
 
 The \plc{length} must evaluate to a non-negative integer.
 
-The \plc{stride} must to a positive integer.
+The \plc{stride} must evaluate to a positive integer.
 
 When the size of the array dimension is not known, the \plc{length} must 
 be specified explicitly.
