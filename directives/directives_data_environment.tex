@@ -1841,15 +1841,6 @@ The \code{reduction} clause is a reduction scoping clause and a reduction
 participating clause, as described in Sections \ref{subsubsec:Reduction Scoping
 Clauses} and \ref{subsubsec:Reduction Participating Clauses}. 
 
-If the \code{inscan} \plc{reduction-modifier} is present, a scan computation is
-performed over updates to the list item performed in each logical iteration of
-the loop associated with the loop, loop SIMD, or \code{simd} construct (see
-Section~\ref{subsec:scan Directive}). The list items are privatized in the
-construct according to Section~\ref{subsec:List Item Privatization}.  At the
-end of the region, each original list item is assigned the
-value of the private copy from the last logical iteration of the loops
-associated with the construct.
-
 If \plc{reduction-modifier} is not present or the \code{default}
 \plc{reduction-modifier} is present, the behavior is
 as follows. For \code{parallel} and worksharing constructs, one or more
@@ -1868,18 +1859,25 @@ specified, the original list item is updated by combining its original value
 with the final value of each of the private copies, using the combiner of the
 specified \plc{reduction-identifier}. 
 
-The \code{task} \plc{reduction-modifier} has the same effect on the
-\code{reduction} clause as the \code{default} \plc{reduction-modifier} for a \code{simd} or
-\code{teams} construct. If the \code{task} \plc{reduction-modifier} is present
-for a \code{parallel} or worksharing construct, then each list item is
-privatized according to Section~\ref{subsec:List Item Privatization}, and an
-unspecified number of additional private copies are created to support task
-reductions.  Any copies associated with the reduction are initialized before
-they are accessed by the tasks participating in the reduction, which include
-all implicit tasks in the corresponding region and all participating explicit
-tasks that specify an \code{in_reduction} clause (see
-Section~\ref{subsubsec:in_reduction clause}). After the end of the region, the
-original list item contains the result of the reduction.
+If the \code{inscan} \plc{reduction-modifier} is present, a scan computation is
+performed over updates to the list item performed in each logical iteration of
+the loop associated with the loop, loop SIMD, or \code{simd} construct (see
+Section~\ref{subsec:scan Directive}). The list items are privatized in the
+construct according to Section~\ref{subsec:List Item Privatization}.  At the
+end of the region, each original list item is assigned the
+value of the private copy from the last logical iteration of the loops
+associated with the construct.
+
+If the \code{task} \plc{reduction-modifier} is present for a \code{parallel}
+or worksharing construct, then each list item is privatized according to
+Section~\ref{subsec:List Item Privatization}, and an unspecified number of
+additional private copies are created to support task reductions.  Any copies
+associated with the reduction are initialized before they are accessed by the
+tasks participating in the reduction, which include all implicit tasks in the
+corresponding region and all participating explicit tasks that specify an
+\code{in_reduction} clause (see Section~\ref{subsubsec:in_reduction clause}).
+After the end of the region, the original list item contains the result of the
+reduction.
 
 If \code{nowait} is not specified for the construct, the reduction computation will be complete at the end of the
 construct; however, if the \code{reduction} clause is used on a construct to which \code{nowait} is
@@ -1909,6 +1907,16 @@ construct.
 \item A \code{reduction} clause without the \code{inscan} \plc{reduction-modifier} may not
 appear on a construct on which a \code{reduction} clause with the
 \code{inscan} \plc{reduction-modifier} appears.
+
+\item A \code{reduction} clause with the \code{task} \plc{reduction-modifier}
+may only appear on a \code{parallel} construct, a worksharing construct. or a
+combined construct for which any of the aforementioned constructs is a
+constituent construct.
+
+\item A \code{reduction} clause with the \code{inscan} \plc{reduction-modifier}
+may only appear on a worksharing-loop construct, a worksharing-loop SIMD
+construct, a \code{simd} construct, or a combined construct for which any of
+the aforementioned constructs is a constitutent construct.
 
 \item A list item that appears in a \code{reduction} clause of the innermost
 enclosing worksharing or \code{parallel} construct may not be accessed in an
