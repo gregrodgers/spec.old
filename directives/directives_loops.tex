@@ -885,7 +885,7 @@ concurrently by means of SIMD instructions.
 The \code{collapse} clause may be used to specify how many loops are associated with the
 construct. The parameter of the \code{collapse} clause must be a constant positive integer
 expression. If no \code{collapse} clause is present, the only loop that is associated with the
-loop construct is the one that immediately follows the directive.
+\code{simd} construct is the one that immediately follows the directive.
 
 If more than one loop is associated with the \code{simd} construct, then the iterations of all
 associated loops are collapsed into one larger iteration space that is then executed with
@@ -986,7 +986,7 @@ no intervening code between any two loops.
 construct, the \code{simd} construct and the \code{ordered} construct with
 the \code{simd} clause.
 
-\item If a \code{order(concurrent)} clause is present, all restrictions from
+\item If an \code{order(concurrent)} clause is present, all restrictions from
   the \code{loop} construct with an \code{order(concurrent)} clause also apply.
 
 \begin{ccppspecific}
@@ -1091,7 +1091,7 @@ This composite construct generates the same events as the worksharing-loop const
 This composite construct dispatches the same callbacks as the worksharing-loop construct.
 
 \restrictions
-All restrictions to the loop construct and the \code{simd} construct apply to
+All restrictions to the worksharing-loop construct and the \code{simd} construct apply to
 the worksharing-loop SIMD construct. In addition, the following restrictions apply:
 
 \begin{itemize}
@@ -1258,7 +1258,7 @@ When no \code{dist_schedule} clause is specified, the schedule is implementation
 Restrictions to the \code{distribute} construct are as follows:
 
 \begin{itemize}
-\item The \code{distribute} construct inherits the restrictions of the loop construct.
+\item The \code{distribute} construct inherits the restrictions of the worksharing-loop construct.
 
 \item Each \code{distribute} region must be encountered by the initial
 threads of all initial teams in a league or by none at all.
@@ -1396,8 +1396,8 @@ The syntax of the distribute parallel worksharing-loop construct is as follows:
     \plc{for-loops}
 \end{ompcPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
-directives with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{distribute}
+or parallel worksharing-loop directives with identical meanings and restrictions.
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -1407,15 +1407,21 @@ directives with identical meanings and restrictions.
 \plc{[}!$omp end distribute parallel do\plc{]}
 \end{ompfPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
-directives with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} or 
+parallel worksharing-loop directives with identical meanings and restrictions.
 
 If an \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is not specified, an
 \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is assumed at the end of the \plc{do-loops}.
 \end{fortranspecific}
 
 \descr
-The distribute parallel worksharing-loop construct will first distribute the iterations of the associated loop(s) into chunks according to the semantics of the \code{distribute} construct and any clauses that apply to the \code{distribute} construct. Each of these chunks will form a loop. Each resulting loop will then be distributed across the threads within the teams region to which the \code{distribute} construct binds in a manner consistent with any clauses that apply to the parallel loop construct.
+The distribute parallel worksharing-loop construct will first distribute the
+iterations of the associated loop(s) into chunks according to the semantics of
+the \code{distribute} construct and any clauses that apply to the
+\code{distribute} construct. Each of these chunks will form a loop. Each
+resulting loop will then be distributed across the threads within the
+\code{teams} region to which the \code{distribute} construct binds in a manner 
+consistent with any clauses that apply to the parallel worksharing-loop construct.
 
 \events
 
@@ -1511,7 +1517,7 @@ associated loop(s) according to the semantics of the \code{distribute} construct
 clauses that apply to the \code{distribute} construct. The resulting loops will then be
 distributed across the threads contained within the \code{teams} region to which the
 \code{distribute} construct binds in a manner consistent with any clauses that apply to the
-parallel loop construct. The resulting chunks of iterations will then be converted to a
+parallel worksharing-loop construct. The resulting chunks of iterations will then be converted to a
 SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct.
 
 \events
@@ -1543,7 +1549,7 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \item Events and tool callbacks for \code{distribute} construct, see
 \specref{subsec:distribute Construct}.
 
-\item Events and tool callbacks for parallel loop construct, see
+\item Events and tool callbacks for parallel worksharing-loop construct, see
 \specref{subsec:Parallel Worksharing-Loop Construct}.
 
 \end{itemize}
@@ -1635,10 +1641,10 @@ Where \plc{binding} is one of the following:
 \binding
 
 If the \code{bind} clause is present on the construct, the binding region is
-determined by \plc{binding}. If the \code{loop} construct is closely
+determined by \plc{binding}. Otherwise, if the \code{loop} construct is closely
 nested inside a \code{teams} or \code{parallel} construct, the binding region
-is the corresponding \code{teams} or \code{parallel} region. Otherwise, the
-\code{loop} region does not have a binding region.
+is the corresponding \code{teams} or \code{parallel} region. If none of the
+above conditions are true, the \code{loop} region does not have a binding region.
 
 If the binding region is a \code{teams} region, then the binding thread set is
 the set of master threads executing that region. If the binding region is a
@@ -1769,7 +1775,9 @@ Restrictions to the \code{loop} construct are as follows:
       or by none of them.
 
   \item The only constructs that may be nested inside a \code{loop} region
-    are \code{loop}, \code{parallel} and its derivatives and \code{simd}.
+    are the \code{loop} construct, the \code{parallel} construct, the
+    \code{simd} construct, and combined constructs for which the first
+    construct is a \code{parallel} construct.
 
 %JLARKIN Moved to directives_nesting.tex
 %    \item Only the following directives may be nested within an
