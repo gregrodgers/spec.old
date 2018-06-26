@@ -1528,7 +1528,7 @@ constructs as follows:
 \item to the \code{distribute} construct if it is among the constituent constructs,
 
 \item to the innermost constituent construct that permits it unless it is a
-loop or \code{distribute} construct.
+worksharing-loop or \code{distribute} construct.
 \end{itemize}
 
 If the \code{parallel} construct is among the constituent constructs and the
@@ -1546,11 +1546,28 @@ with a \plc{map-type} of \code{tofrom}.
 \item For the \code{shared}, \code{default}, \code{order}, or \code{allocate} clauses the effect is as if it is applied to all
 the constituent constructs that permit those clauses.
 
+%\item For the \code{reduction} clause the effect is as if it is applied to all the constructs that permit
+%the clause, except that it is not applied to the worksharing-loop or \code{sections} construct if they are
+%combined with the \code{parallel} construct and neither the \code{inscan} or \code{task} modifier is present.  
+%If the construct is combined with the \code{target} construct, the effect is also as if the same list
+%item appears in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+
 \item For the \code{reduction} clause the effect is as if it is applied to all the constructs that permit
-the clause, except that it is not applied to the loop or \code{sections} construct if they are
-combined with the \code{parallel} construct.  If the construct is combined
-with the \code{target} construct, the effect is also as if the same list
-item appears in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
+the clause, except for the following constructs:
+\begin{itemize}
+\item the \code{parallel} construct, when combined with the
+    worksharing-loop, \code{loop}, or \code{sections} construct;
+\item the \code{teams} construct,  when combined with the \code{loop} construct.
+\end{itemize}
+For the \code{parallel} and \code{teams} constructs above, the behavior
+instead is as if each list item or, for any list item that is an array item, its corresponding
+named array or named pointer appears in a \code{shared} clause for the construct.
+If \plc{reduction-modifier} is specified, the effect is as if it only modifies
+the behavior of the \code{reduction} clause for the innermost construct that
+constitutes the combined construct and accepts the modifier (see
+Section~\ref{subsubsec:reduction clause}). If the construct is combined with
+the \code{target} construct, the effect is also as if the same list item
+appears in a \code{map} clause with a \plc{map-type} of \code{tofrom}.
 
 \item The \code{in_reduction} clause is permitted on a single construct
 among the combined or composite construct and the effect is as if it is
@@ -1563,11 +1580,12 @@ a \plc{map-type} of \code{tofrom} and a \plc{map-type-modifier} of
 
 \item For the \code{linear} clause the effect is as if it is applied to the innermost
 constituent construct.
-Additionally, if the list item is not the iteration variable of the \code{simd} or loop SIMD
+Additionally, if the list item is not the iteration variable of the
+\code{simd} or worksharing-loop SIMD
 construct, the effect on the outer constituent constructs is as if the list item was present
 in the \code{firstprivate} and \code{lastprivate} clauses on the combined or
 composite construct and the rules specified above would apply.  If the list item is the
-iteration variable of the \code{simd} or loop SIMD construct and it is not declared in the construct,
+iteration variable of the \code{simd} or worksharing-loop SIMD construct and it is not declared in the construct,
 the effect on the outer constituent constructs is as if the list item was present in the
 \code{lastprivate} clause on the combined or composite construct and the rules specified above
 would apply.
@@ -1575,14 +1593,6 @@ would apply.
 \item For the \code{nowait} clause the effect is as if it is applied to the
 outermost constituent construct that permits it.
 
-\item If a \code{reduction} clause with the \code{task} modifier appears on a
-combined construct, at least one of the constructs that constitute the combined
-construct must allow the modifier to be specified on the clause.  The effect
-is as if the \code{task} modifier only modifies the behavior of the
-\code{reduction} clause for the innermost construct that constitutes the
-combined construct and accepts the \code{task} modifier on the
-\code{reduction} clause. For the other construct that constitutes the combined
-construct, the behavior is as if the \code{task} modifier were not specified.
 \end{itemize}
 
 If the clauses have expressions on them, such as for various clauses where the argument of the
