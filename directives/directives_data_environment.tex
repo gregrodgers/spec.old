@@ -3210,7 +3210,7 @@ the \code{defaultmap} clause is as follows:
     normally gets is only provided for the \code{default} behavior.
 
 \end{itemize}
- 
+
 If no \plc{variable-category} is specified in the clause then
 \plc{implicit-behavior} specifies the implicitly determined data-mapping or
 data-sharing attribute for all variables referenced in the construct.  If
@@ -3224,3 +3224,132 @@ an \code{is_device_ptr} clause. If \plc{implicit-behavior} is \code{default},
 then the clause has no effect for the variables in the category specified by
 \plc{variable-category}.
 
+
+
+
+\subsubsection{\hcode{declare}~\hcode{mapper} Directive}
+\index{declare mapper@{\code{declare}~\code{mapper}}}
+\index{directives!declare mapper@{\code{declare}~\code{mapper}}}
+\index{constructs!declare mapper@{\code{declare}~\code{mapper}}}
+\index{device constructs!declare mapper@{\code{declare}~\code{mapper}}}
+\label{subsec:declare mapper Directive}
+
+\summary
+
+The \code{declare mapper} directive declares a user-defined mapper for a given
+type, and may define a \plc{mapper-identifier} that can be used in a \code{map}
+clause. The \code{declare mapper} directive is a declarative directive.
+
+\syntax
+\begin{ccppspecific}
+The syntax of the \code{declare mapper} directive is as follows:
+
+\begin{ompcPragma}
+#pragma omp declare mapper(\plc{[mapper-identifier}:\plc{]type var})
+\plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{ompcPragma}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{declare mapper} directive is as follows:
+
+\begin{ompfPragma}
+!$omp declare mapper(\plc{[mapper-identifier}:\plc{] type :: var})
+\plc{[clause[ [},\plc{] clause] ... ]}
+\end{ompfPragma}
+
+\end{fortranspecific}
+
+where:
+
+\begin{itemize}
+  \item \plc{mapper-identifier} is a base-language identifier or \pcode{default}
+  \item \plc{type} is a valid type in scope (in Fortran, it must not be an abstract type)
+  \item \plc{var} is a valid base-language identifier
+  \item \plc{clause} is \pcode{map(}\plc{[[map-type-modifier[}\pcode{,}\plc{] [map-type-modifier[}\pcode{,}\plc{] ...]] map-type}\pcode{:}\plc{ ] list}\pcode{)}
+  \item \plc{map-type} is one of the following:
+    \begin{itemize}
+      \item \code{alloc}
+      \item \code{to}
+      \item \code{from}
+      \item \code{tofrom}
+    \end{itemize}
+  \item and \plc{map-type-modifier} is one of the following:
+    \begin{itemize}
+      \item \code{always}
+      \item \code{close}
+    \end{itemize}
+\end{itemize}
+
+\descr
+
+
+User-defined mappers can be defined using the \code{declare mapper} directive.
+The type and the \plc{mapper-identifier} uniquely identify the mapper for use in
+a \code{map} clause later in the program.  If the \plc{mapper-identifier} is not
+specified, then \code{default} is used.  The visibility and accessibility of
+this declaration are the same as those of a variable declared at the same point
+in the program.
+
+The variable declared by \plc{var} is available for use in all \code{map}
+clauses on the directive, and no part of the variable to be mapped is mapped by
+default.
+
+The default mapper for all types \plc{T}, designated by the pre-defined
+\plc{mapper-identifier} \code{default}, is as follows unless a user-defined mapper is
+specified for that type.
+
+\begin{ompSyntax}
+
+declare mapper(\plc{T} v) map(tofrom: v)
+
+\end{ompSyntax}
+
+Using the \code{default} \plc{mapper-identifier} overrides the pre-defined
+default mapper for the given type, making it the default for all
+variables of \plc{type}. All \code{map} clauses with this construct in scope
+that map a list item of \plc{type} will use this mapper unless another is
+explicitly specified.
+
+All \code{map} clauses on the directive are expanded into corresponding
+\code{map} clauses wherever this mapper is invoked, either by matching type or
+by being explicitly named in a \code{map} clause. A \code{map} clause with list item
+\plc{var} maps var as though no mapper were specified.
+
+
+\begin{cppspecific}
+The \code{declare mapper} directive can also appear at points in the program at
+which a static data member could be declared. In this case, the visibility and
+accessibility of the declaration are the same as those of a static data member
+declared at the same point in the program.
+
+\end{cppspecific}
+
+\restrictions
+
+\begin{itemize}
+
+\item No instance of the mapper type can be mapped as part of the mapper, either
+  directly or indirectly through another type, except the instance passed as the
+  list item. If a set of \code{declare}~\code{mapper} directives results in a
+  cyclic definition then the behavior is unspecified.
+
+\item The \plc{type} must be of struct, union or class type in C and C++ or a
+  non-intrisic type in Fortran.
+
+\item At least one \code{map} clause that maps \plc{var} or at least one element
+  of \plc{var} is required.
+
+\item List-items in \code{map} clauses on this construct may only refer to the
+  declared variable \plc{var} and entities that could be referenced by a
+  procedure defined at the same location.
+
+\item Each \plc{map-type-modifier} can appear at most once on the
+   \code{map} clause.
+
+ \item A \plc{mapper-identifier} may not be re-declared in the current scope for
+   the same type or for a type that is compatible according to the base language
+   rules.
+
+\end{itemize}
