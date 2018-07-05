@@ -992,7 +992,7 @@ execution of a program.
 
 \begin{adjustwidth}{-0.75in}{0in}
 \begin{note}
-An array or structure element is a variable that is part of another variable.
+An array element or structure element is a variable that is part of another variable.
 \end{note}
 \end{adjustwidth}
 \glossarydefend
@@ -1016,7 +1016,8 @@ A variable, such as an array or structure, composed of other variables.
 
 \glossaryterm{array section}
 \glossarydefstart
-A designated subset of the elements of an array.
+A designated subset of the elements of an array that is specified using a
+subscript notation that can select more than one element.
 \glossarydefend
 
 \glossaryterm{array item}
@@ -1024,55 +1025,198 @@ A designated subset of the elements of an array.
 An array, an array section, or an array element.
 \glossarydefend
 
-\glossaryterm{base expression}
+\glossaryterm{implicit array}
 \glossarydefstart
-For C/C++: The expression in an array section or array element that specifies
-the address of the original array.
+For C/C++: The set of array elements of non-array type \emph{T} that may be
+accessed by applying a sequence of [] operators to a given pointer that is
+either a pointer to type \emph{T} or a pointer to an n-dimensional array of type \emph{T}.
 
+For Fortran: The set of array elements for a given array pointer.
 \begin{quote}
-COMMENT: The \emph{base expression} is \emph{x} for \emph{array
-element} x[i] and for \emph{array section} x[i:j].
+COMMENT:
+
+For C/C++: The implicit array for pointer p with type \emph{T} (*)[10] consists of
+all accessible elements p[\emph{i}][\emph{j}], for all \emph{i} and \emph{j}=0..9.
 \end{quote}
 \glossarydefend
+
+\glossaryterm{array-normalized form}
+\glossarydefstart
+For C/C++: A semantically equivalent form of an expression or array section
+that results from the following steps, where \emph{P} is an lvalue pointer
+expression, \emph{I} is an integer expression, and \emph{E} is a parenthesized
+expression that adds integer expression \emph{I} to lvalue pointer expression
+\emph{P}:
+\begin{enumerate}
+\item All superfluous sets of parentheses are removed from the expression or
+array section.
+
+\item Any subexpression \emph{E}[:\emph{[N[}:\emph{S]]}] is replaced with
+\emph{P}[\emph{I}:\emph{[N[}:\emph{S]]}] and any subexpression
+\emph{E}[\emph{L}:\emph{[N[}:\emph{S]]}] is replaced with
+\emph{P}[\emph{I}+\emph{L}:\emph{[N[}:\emph{S]]}].
+
+\item Any subexpression \emph{E}[\emph{J}] is replaced with
+\emph{P}[\emph{I}+\emph{J}].
+
+\item Any subexpression *\emph{E} is replaced with \emph{P}[\emph{I}] and any
+subexpression *\emph{P} is replaced with \emph{P}[0].
+
+\item Any subexpression \emph{E}->\emph{identifier} is replaced with
+\emph{P}[\emph{I}].\emph{identifier} and any subexpression
+\emph{P}->\emph{identifier} is replaced with \emph{P}[0].\emph{identifier}.
+
+\item All superfluous sets of parentheses are removed from the resulting
+normalized form.
+
+\end{enumerate}
+
+\begin{quote}
+COMMENT: The \emph{array-normalized form} for ((*((p+i)->x+j)).y+k)[l:n],
+where i, j, and k have integer type and where p, (p+i)->x, and (*((p+i)->x+j)).y
+have pointer type, is p[i].x[j].y[k+l:n].
+\end{quote}
+\glossarydefend
+
+\glossaryterm{base expression}
+\glossarydefstart
+For C/C++: For a given array section or array element that designates zero or
+more elements of an array or \emph{implicit array}, the leftmost subexpression
+that is the array or is a pointer to the \emph{implicit array} and is
+not itself an array element that has an array type.
+
+For Fortran: For a given array section or array element that designates zero
+or more elements of an array, the designator that precedes its subscript list.
+
+\begin{quote}
+COMMENT: 
+
+For C/C++:
+\begin{itemize}
+\item The \emph{base expression} is x for x[i] and for 
+    x[i:n], if x is an array or pointer.
+\item The \emph{base expression} is x for x[5][i] and for x[5][i:n], if x is a
+    pointer to an array or x is 2-dimensional array.
+\item The \emph{base expression} is y[5] for y[5][i] and for y[5][i:n], if
+    y is an array of pointers or y is a pointer to a pointer.
+\end{itemize}
+For Fortran:
+\begin{itemize}
+\item The \emph{base expression} is x for x(i) and for 
+    x(i:j), if x is an array or array pointer.
+\end{itemize}
+\end{quote}
+\glossarydefend
+
+
+%\glossaryterm{named array}
+%\glossarydefstart
+%For C/C++: A given array that is not an array section or array element, the \emph{base
+%expression}, if it is an array, of a given array section or array element, or
+%the \emph{named array}, if it exists, of:
+%\begin{itemize}
+%\item the structure for a given structure element resulting from a . operator, or
+%\item the \emph{named array} for a given array section or array element.
+%\end{itemize}
+%
+%For Fortran: A given array that is not an array pointer, the \emph{base
+%expression}, if it is not an array pointer, of a given array section or array element, or the 
+%\emph{named array}, if it exists and is not a deferred-shape array, of:
+%\begin{itemize}
+%\item the structure of a given structure element, if the structure does
+%    not have the \code{POINTER} or \code{ALLOCATABLE} attribute, or
+%\item the \emph{named array} for a given array section or array element.
+%\end{itemize}
+%\glossarydefend
 
 \glossaryterm{named array}
 \glossarydefstart
-For C/C++:
-\nopagebreak
-An expression that is an array but not an array element and appears as the
-array referred to by a given array item.
+For C/C++: For the \emph{array-normalized form}, \emph{F}, of a given lvalue
+expression or array section:
+\begin{itemize}
+\item if \emph{F} is an array but not an array section or array element,
+       \emph{F};
+\item if \emph{F} is an array section or array element and its \emph{base
+        expression} is an array, its \emph{base expression};
+\item if \emph{F} is a structure element, any \emph{named array}, if it
+        exists, of its structure;
+\item if \emph{F} has a \emph{named array}, any \emph{named array}, if it
+        exists, of its \emph{named array}.
+\end{itemize}
 
-For Fortran:
-\nopagebreak
-A variable that is an array and appears as the array referred to by a given
-array item.
+For Fortran: For a given data object designator:
+\begin{itemize}
+\item if the designator is an array but not an array pointer, the
+    desigator;
+\item if the designator is an array section or array element and its
+    \emph{base expression} is not an array pointer, its \emph{base
+    expression};
+\item if the designator is a structure element and its structure does not have
+    the \code{POINTER} or \code{ALLOCATABLE} attribute, the \emph{named array}, if it
+    exists, of its structure;
+\item if the designator has a \emph{named array}, the \emph{named array}, if it
+        exists, of its \emph{named array}.
+\end{itemize}
 \glossarydefend
+
+%\glossaryterm{named pointer}
+%\glossarydefstart
+%For C/C++: The \emph{base expression}, if it exists and is an lvalue pointer expression,
+%of the \emph{array-normalized form} of a given array section or lvalue
+%expression, or the \emph{named pointer}, if it exists, of:
+%\begin{itemize}
+%\item the structure for a given structure element resulting from a . operator, or
+%\item the \emph{named array} for a given array section or array element.
+%\end{itemize}
+%
+%For Fortran: A given array that is an array pointer, the \emph{base
+%expression}, if it is an array pointer, of a given array section or array element, the structure for a given
+%structure element if it has the \code{POINTER} attribute, or the \emph{named
+%pointer}, if it exists, of one:
+%\begin{itemize}
+%\item the structure for a given structure element, if the structure does
+%    not have the \code{POINTER} or \code{ALLOCATABLE} attribute, or
+%\item the \emph{named array} for a given array section or array element.
+%\end{itemize}
+%
+%\glossarydefend
 
 \glossaryterm{named pointer}
 \glossarydefstart
-For C/C++:
-\nopagebreak
-An lvalue expression that is a pointer and appears as a pointer to the array
-implicitly referred to by a given array item.
+For C/C++: For the \emph{array-normalized form}, \emph{F}, of a given lvalue
+expression or array section:
+\begin{itemize}
+\item if \emph{F} is an array section or array element and its \emph{base
+        expression} is an lvalue pointer expression, its \emph{base expression};
+\item if \emph{F} is a structure element, the \emph{named pointer}, if it
+        exists, of its structure;
+\item if \emph{F} has a \emph{named array}, the \emph{named pointer}, if it
+        exists, of its \emph{named array}.
+\end{itemize}
 
-For Fortran:
-\nopagebreak
-A variable that has the \code{POINTER} attribute and appears as a pointer to
-the array to which a given array item implicitly refers.
-%array implicitly referred to by a given array item
+For Fortran: For a given data object designator:
+\begin{itemize}
+\item if the designator is an array pointer, the designator;
+\item if the designator is an array section or array element and its
+    \emph{base expression} is an array pointer, its \emph{base
+    expression};
+\item if the designator is a structure element and its structure has
+    the \code{POINTER} attribute, the structure;
+\item if the designator is a structure element and its structure does not have
+    the \code{POINTER} or \code{ALLOCATABLE} attribute, the \emph{named
+    pointer}, if it exists, of its structure;
+\item if the designator has a \emph{named array}, the \emph{named pointer}, if it
+        exists, of its \emph{named array}.
+\end{itemize}
 
-\begin{quote}
-COMMENT: A given array item cannot have a \emph{named pointer} if it has a \emph{named array}.
-\end{quote}
 \glossarydefend
-
 
 \glossaryterm{attached pointer}
 \glossarydefstart
-A pointer variable in a device data environment to which the effect of a \code{map} clause
-assigns the address of
-an array section.  The pointer is
-an attached pointer for the remainder of its lifetime in the device data environment.
+A pointer variable in a device data environment to which the effect of a
+\code{map} clause assigns the address of an object, minus some offset,  that
+is created in the device data environment. The pointer is an attached pointer
+for the remainder of its lifetime in the device data environment.
 \glossarydefend
 \bigskip
 
