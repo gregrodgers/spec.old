@@ -20,7 +20,6 @@ TEXFILES=openmp.tex \
          directives/directives_combined.tex \
          directives/directives_common.tex \
          directives/directives_data_environment.tex \
-         directives/directives_declare.tex \
          directives/directives_device.tex \
          directives/directives_if.tex \
          directives/directives_loops.tex \
