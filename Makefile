@@ -119,7 +119,7 @@ DIFF_FROM:=master
 DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole  \
-                  --append-safecmd=plc,code,hcode,scode,pcode,splc,glossaryterm \
+                  --append-safecmd=plc,code,hcode,scode,pcode,splc \
                   --append-textcmd=subsubsubsection
                   #,binding,comments,constraints,crossreferences,descr,argdesc,effect,format,restrictions,summary,syntax,events,tools,record
 #                  --exclude-textcmd=chapter,section,subsection,subsubsection,vcode
