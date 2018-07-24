@@ -49,7 +49,9 @@
 \label{subsec:Canonical Loop Form}
 \index{canonical loop form}
 \begin{cppspecific}
-A range-based for loop with random access iterator has a \emph{canonical loop form}.
+A range-based for loop that is valid in the base language and results in a begin
+expression that provides a random access iterator has a \emph{canonical loop
+form}.
 \end{cppspecific}
 \begin{ccppspecific}
 The loops associated with a loop directive have \emph{canonical loop form} if
@@ -238,6 +240,38 @@ those cases.
 %Restrictions
 \end{note}
 
+\begin{cppspecific}
+
+Range-based for loops are of the following form:
+
+\begin{ompcPragma}
+  for (\plc{range-decl} : \plc{range-expr})
+  {
+    \plc{loop-statement} 
+  }
+\end{ompcPragma}
+
+These range-for loops are treated as though they expand
+to the following, or equivalent base-language expansion:
+
+\begin{ompcPragma}
+auto && __range = \plc{range-expr};
+auto __begin = \plc{begin-expr};
+auto __end = \plc{end-expr};
+// OpenMP construct
+for ( ; __begin != __end; ++__begin) {
+  \plc{range-decl} = *__begin;
+  \plc{loop-statement}
+}
+\end{ompcPragma}
+
+The \plc{begin-expr} and \plc{end-expr} expressions are determined by the base
+language.  Both \code{__begin} and \code{__end} are privatized.  For the purpose
+of the rest of the standard \code{__begin} is the iteration variable of the
+range-for loop.
+
+\end{cppspecific}
+
 \restrictions
 The following restrictions also apply:
 
@@ -267,13 +301,16 @@ The following restrictions also apply:
 \end{ccppspecific}
 
 \begin{cppspecific}
-\begin{itemize}
+  \begin{itemize}
     \item In the \code{simd} construct the only random access iterator types that are
-    allowed for \plc{var} are pointer types.
+      allowed for \plc{var} are pointer types.
 
-\item The iteration count of a range-based for loop must be loop invariant
-    with respect to the outermost associated loop.
-\end{itemize}
+    \item The \plc{range-expr} of a range-for loop must be loop invariant
+      with respect to the outermost associated loop.
+
+    \item Range-for loops must not appear in the loops associated with an
+      \code{ordered} clause
+  \end{itemize}
 \end{cppspecific}
 
 \begin{itemize}
