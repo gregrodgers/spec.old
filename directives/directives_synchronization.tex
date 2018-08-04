@@ -72,11 +72,11 @@ The syntax of the \code{master} construct is as follows:
 
 \binding
 The binding thread set for a \code{master} region is the current team. A \code{master} region
-binds to the innermost enclosing \code{parallel} region. Only the master thread of the team
-executing the binding \code{parallel} region participates in the execution of the structured
-block of the \code{master} region.
+binds to the innermost enclosing \code{parallel} region. 
 
 \descr
+Only the master thread of the team executing the binding \code{parallel} region
+participates in the execution of the structured block of the \code{master} region.
 Other threads in the team do not execute the associated structured block. There is no
 implied barrier either on entry to, or exit from, the \code{master} construct.
 
@@ -134,34 +134,6 @@ Section~\ref{subsec:OpenMP Memory Consistency}.  Section~\ref{subsec:implicit fl
 defines the behavior of synchronizing flush operations that are
 implied at various other locations in an OpenMP program.
 
-The OpenMP API defines the following synchronization constructs, and these are
-described in the sections that follow:
-\begin{itemize}
-\item the \code{critical} construct;
-
-\item the \code{barrier} construct;
-
-\item the \code{taskwait} construct;
-
-\item the \code{taskgroup} construct;
-
-\item the \code{atomic} construct;
-
-\item the \code{flush} construct;
-
-\item the \code{ordered} construct.
-\end{itemize}
-
-
-
-
-
-
-
-
-
-
-
 \subsection{\hcode{critical} Construct}
 \index{critical@{\code{critical}}}
 \index{constructs!critical@{\code{critical}}}
@@ -200,10 +172,10 @@ in~\specref{subsec:Synchronization Hints}).
 
 \binding
 The binding thread set for a \code{critical} region is all threads in the contention group.
-The region is executed as if only a single thread at a time among all threads in the
-contention group is entering the region for execution, without regard to the team(s) to which the threads belong.
 
 \descr
+The region associated to a \code{critical} construct is executed as if only a single thread at a time among all threads in the
+contention group is entering the region for execution, without regard to the team(s) to which the threads belong.
 An optional \plc{name} may be used to identify the \code{critical} construct. All \code{critical}
 constructs without a name are considered to have the same unspecified name.
 
@@ -220,7 +192,7 @@ conflicts with any other entity, the behavior of the program is unspecified.
 
 The threads of a contention group execute the \code{critical} region as if only one thread of the contention group is executing the \code{critical} region at a time.
 The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all
-threads in the contention group, not just those threads in the current team.
+threads in the contention group.
 
 If present, the \code{hint} clause gives the implementation additional
 information about the expected runtime properties of the \code{critical} region
@@ -266,8 +238,7 @@ as their \plc{kind} argument if practical, but a less specific kind is acceptabl
 
 \restrictions
 \begin{itemize}
-\item If the \code{hint} clause is specified, the \code{critical}
-      construct must have a \plc{name}.
+\item Unless the effect is as if \code{hint}(\code{omp_sync_hint_none}) was specified, the \code{critical} construct must specify a name.
 \item If the \code{hint} clause is specified, each of the
   \code{critical} constructs with the same \plc{name} must have a
   \code{hint} clause for which the \plc{hint-expression} evaluates to the same
@@ -542,13 +513,13 @@ argument and \code{ompt_scope_begin} or \code{ompt_scope_end} as
 its \plc{endpoint} argument, as appropriate.
 
 \restrictions
-If a thread is in the state \code{omp_state_wait_barrier_implicit_parallel},
-a call to \code{ompt_get_parallel_info}
-may return a pointer to a copy of the current parallel region's \plc{parallel_data}
-rather than a pointer to the data word for the region itself. This convention enables the master thread
-for a parallel region to free storage for the region immediately after the region ends, yet
-avoid having some other thread in the region's team
-potentially reference the region's \plc{parallel_data} object after it has been freed.
+
+If a thread is in the state \code{omp_state_wait_barrier_implicit_parallel}, 
+a call to \code{ompt_get_parallel_info} may return a pointer to a copy of the 
+data object associated with the parallel region rather than a pointer to 
+the associated data object itself. Writing to the data object 
+returned by \code{omp_get_parallel_info} when a thread is in the 
+\code{omp_state_wait_barrier_implicit_parallel} results in unspecified behavior.
 
 \crossreferences
 \begin{itemize}
@@ -946,21 +917,21 @@ where \plc{expression-stmt} is an expression statement with one of the following
 and where \plc{structured-block} is a structured block with one of the following forms:
 
 \begin{ompSyntax}
-\plc{v} = \plc{x}; \plc{x} \plc{binop}= \plc{expr};
-\plc{x} \plc{binop}= \plc{expr}; \plc{v} = \plc{x};
-\plc{v} = \plc{x}; \plc{x} = \plc{x} \plc{binop} \plc{expr};
-\plc{v} = \plc{x}; \plc{x} = \plc{expr} \plc{binop} \plc{x};
-\plc{x} = \plc{x} \plc{binop} \plc{expr}; \plc{v} = \plc{x};
-\plc{x} = \plc{expr} \plc{binop} \plc{x}; \plc{v} = \plc{x};
-\plc{v} = \plc{x}; \plc{x} = \plc{expr};
-\plc{v} = \plc{x}; \plc{x}++;
-\plc{v} = \plc{x}; ++\plc{x};
-++\plc{x}; \plc{v} = \plc{x};
-\plc{x}++\code{;} \plc{v} = \plc{x};
-\plc{v} = \plc{x}; \plc{x}--;
-\plc{v} = \plc{x}; --\plc{x};
---\plc{x}; \plc{v} = \plc{x};
-\plc{x}--; \plc{v} = \plc{x};
+{ \plc{v} = \plc{x}; \plc{x} \plc{binop}= \plc{expr}; }
+{ \plc{x} \plc{binop}= \plc{expr}; \plc{v} = \plc{x}; }
+{ \plc{v} = \plc{x}; \plc{x} = \plc{x} \plc{binop} \plc{expr}; }
+{ \plc{v} = \plc{x}; \plc{x} = \plc{expr} \plc{binop} \plc{x}; }
+{ \plc{x} = \plc{x} \plc{binop} \plc{expr}; \plc{v} = \plc{x}; }
+{ \plc{x} = \plc{expr} \plc{binop} \plc{x}; \plc{v} = \plc{x}; }
+{ \plc{v} = \plc{x}; \plc{x} = \plc{expr}; }
+{ \plc{v} = \plc{x}; \plc{x}++; }
+{ \plc{v} = \plc{x}; ++\plc{x}; }
+{ ++\plc{x}; \plc{v} = \plc{x}; }
+{ \plc{x}++\code{;} \plc{v} = \plc{x}; }
+{ \plc{v} = \plc{x}; \plc{x}--; }
+{ \plc{v} = \plc{x}; --\plc{x}; }
+{ --\plc{x}; \plc{v} = \plc{x}; }
+{ \plc{x}--; \plc{v} = \plc{x}; }
 \end{ompSyntax}
 \end{itemize}
 
@@ -996,6 +967,9 @@ than \plc{binop}, or by using parentheses around \plc{expr} or subexpressions of
 
 \item For forms that allow multiple occurrences of \plc{x}, the number of times that \plc{x} is
 evaluated is unspecified.
+
+\item \plc{hint-expression} is a constant integer expression that evaluates to a valid synchronization
+hint.
 \end{itemize}
 
 \end{ccppspecific}
@@ -1144,6 +1118,9 @@ program entities.
 
 \item For forms that allow multiple occurrences of \plc{x}, the number of times that \plc{x} is
 evaluated is unspecified.
+
+\item Where \plc{hint-expression} is a constant expression that evaluates to a scalar value with kind
+ \code{omp_sync_hint_kind} and a value that is a valid synchronization hint.
 %% \item In all \code{atomic} construct forms, the \code{seq_cst} clause and the clause that denotes the
 %% type of the atomic construct can appear in any order. In addition, an optional comma
 %% may be used to separate the clauses
@@ -1965,9 +1942,10 @@ The binding thread set for \code{depobj} regions is the encountering thread.
 
 \descr
 
-A \code{depobj} construct with a \code{depend} clause present initializes the \plc{depobj} to represent the dependence specified by the \code{depend} clause.
+A \code{depobj} construct with a \code{depend} clause present sets the state of \plc{depobj} to initialized. The \plc{depobj} is initialized 
+to represent the dependence specified by the \code{depend} clause.
 
-A \code{depobj} construct with a \code{destroy} clause present changes the state of the \plc{depobj} to uninitialize.
+A \code{depobj} construct with a \code{destroy} clause present changes the state of the \plc{depobj} to uninitialized.
 
 A \code{depobj} construct with a \code{update} clause present changes the dependence type of the dependence represented by \plc{depobj} to the one specified by \plc{update} clause.
 
@@ -2113,7 +2091,8 @@ If the iteration vector \plc{vec} does not indicate a lexicographically earlier 
 \events
 
 The \plc{task-dependences} event occurs in a thread encountering a
-tasking construct or a taskwait construct with a \code{depend} clause immediately after 
+\code{task} construct, a construct generating a target task or a \code{taskwait}
+construct with a \code{depend} clause immediately after 
 the \plc{task-create} event for the new task or the \plc{taskwait-begin} event.
 
 The \plc{task-dependence} event indicates an unfulfilled dependence for the generated task.
@@ -2226,9 +2205,9 @@ can be provided by the programmer to locks (by using
 the \code{omp_init_lock_with_hint} or
 \code{omp_init_nest_lock_with_hint} functions to initialize the lock), and to
 \code{atomic} and \code{critical} directives by using the \code{hint}
-clause.  The effect of a hint is implementation defined. The OpenMP
-implementation is free to ignore the hint since doing so cannot change
-program semantics.
+clause. The effect of a hint is implementation defined but cannot 
+change the semantics of the associated construct; if ignoring the 
+hint changes the program semantics, the result is unspecified.
 
 The C/C++ header file (\code{omp.h}) and the Fortran include file (\code{omp_lib.h}) and/or Fortran~90 module file (\code{omp_lib}) define the valid hint constants.
 The valid constants must include the following, which can be extended with implementation-defined values:
@@ -2284,16 +2263,7 @@ integer (kind=omp_lock_hint_kind), &
 \end{fortranspecific}
 
 The hints can be combined by using the \code{+} or \code{|} operators in C/C++ or the \code{+} operator in Fortran.
-The effect of the combined hint is implementation defined and can be ignored by the implementation.
 Combining \code{omp_sync_hint_none} with any other hint is equivalent to specifying the other hint.
-The following restrictions apply to combined hints; violating these
-restrictions results in unspecified behavior:
-\begin{itemize}
-\item the hints \code{omp_sync_hint_uncontended} and \code{omp_sync_hint_contended} cannot be combined,
-\item the hints \code{omp_sync_hint_nonspeculative} and \code{omp_sync_hint_speculative} cannot be combined.
-\end{itemize}
-The rules for combining multiple values of \code{omp_sync_hint} apply equally to the
-corresponding values of \code{omp_lock_hint}, and expressions mixing the two types.
 
 The intended meaning of hints is
 \begin{itemize}
@@ -2320,6 +2290,17 @@ with other OpenMP implementations.
 The \code{omp_sync_hint_t} and \code{omp_lock_hint_t} enumeration types and the equivalent types in Fortran
 are synonyms for each other.
 The type \code{omp_lock_hint_t} has been deprecated.
+
+\restrictions
+
+Restrictions to the synchronization hints are as follows:
+\begin{itemize}
+\item the hints \code{omp_sync_hint_uncontended} and \code{omp_sync_hint_contended} cannot be combined,
+\item the hints \code{omp_sync_hint_nonspeculative} and \code{omp_sync_hint_speculative} cannot be combined.
+\end{itemize}
+
+The restrictions for combining multiple values of \code{omp_sync_hint} apply equally to the
+corresponding values of \code{omp_lock_hint}, and expressions that mix the two types.
 
 \crossreferences
 \begin{itemize}
