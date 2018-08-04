@@ -72,11 +72,11 @@ The syntax of the \code{master} construct is as follows:
 
 \binding
 The binding thread set for a \code{master} region is the current team. A \code{master} region
-binds to the innermost enclosing \code{parallel} region. Only the master thread of the team
-executing the binding \code{parallel} region participates in the execution of the structured
-block of the \code{master} region.
+binds to the innermost enclosing \code{parallel} region. 
 
 \descr
+Only the master thread of the team executing the binding \code{parallel} region
+participates in the execution of the structured block of the \code{master} region.
 Other threads in the team do not execute the associated structured block. There is no
 implied barrier either on entry to, or exit from, the \code{master} construct.
 
@@ -134,34 +134,6 @@ Section~\ref{subsec:OpenMP Memory Consistency}.  Section~\ref{subsec:implicit fl
 defines the behavior of synchronizing flush operations that are
 implied at various other locations in an OpenMP program.
 
-The OpenMP API defines the following synchronization constructs, and these are
-described in the sections that follow:
-\begin{itemize}
-\item the \code{critical} construct;
-
-\item the \code{barrier} construct;
-
-\item the \code{taskwait} construct;
-
-\item the \code{taskgroup} construct;
-
-\item the \code{atomic} construct;
-
-\item the \code{flush} construct;
-
-\item the \code{ordered} construct.
-\end{itemize}
-
-
-
-
-
-
-
-
-
-
-
 \subsection{\hcode{critical} Construct}
 \index{critical@{\code{critical}}}
 \index{constructs!critical@{\code{critical}}}
@@ -200,10 +172,10 @@ in~\specref{subsec:Synchronization Hints}).
 
 \binding
 The binding thread set for a \code{critical} region is all threads in the contention group.
-The region is executed as if only a single thread at a time among all threads in the
-contention group is entering the region for execution, without regard to the team(s) to which the threads belong.
 
 \descr
+The region associated to a \code{critical} construct is executed as if only a single thread at a time among all threads in the
+contention group is entering the region for execution, without regard to the team(s) to which the threads belong.
 An optional \plc{name} may be used to identify the \code{critical} construct. All \code{critical}
 constructs without a name are considered to have the same unspecified name.
 
@@ -220,7 +192,7 @@ conflicts with any other entity, the behavior of the program is unspecified.
 
 The threads of a contention group execute the \code{critical} region as if only one thread of the contention group is executing the \code{critical} region at a time.
 The \code{critical} construct enforces these execution semantics with respect to all \code{critical} constructs with the same name in all
-threads in the contention group, not just those threads in the current team.
+threads in the contention group.
 
 If present, the \code{hint} clause gives the implementation additional
 information about the expected runtime properties of the \code{critical} region
@@ -266,8 +238,7 @@ as their \plc{kind} argument if practical, but a less specific kind is acceptabl
 
 \restrictions
 \begin{itemize}
-\item If the \code{hint} clause is specified, the \code{critical}
-      construct must have a \plc{name}.
+\item Unless the effect is as \code{hint}(\code{omp_sync_hint_none}) was specified, the \code{critical} construct must specify a name.
 \item If the \code{hint} clause is specified, each of the
   \code{critical} constructs with the same \plc{name} must have a
   \code{hint} clause for which the \plc{hint-expression} evaluates to the same
@@ -2227,9 +2198,8 @@ can be provided by the programmer to locks (by using
 the \code{omp_init_lock_with_hint} or
 \code{omp_init_nest_lock_with_hint} functions to initialize the lock), and to
 \code{atomic} and \code{critical} directives by using the \code{hint}
-clause.  The effect of a hint is implementation defined. The OpenMP
-implementation is free to ignore the hint since doing so cannot change
-program semantics.
+clause.  The effect of a hint is implementation defined; if ignoring the 
+hint changes the program semantics, the result is unspecified.
 
 The C/C++ header file (\code{omp.h}) and the Fortran include file (\code{omp_lib.h}) and/or Fortran~90 module file (\code{omp_lib}) define the valid hint constants.
 The valid constants must include the following, which can be extended with implementation-defined values:
@@ -2285,16 +2255,7 @@ integer (kind=omp_lock_hint_kind), &
 \end{fortranspecific}
 
 The hints can be combined by using the \code{+} or \code{|} operators in C/C++ or the \code{+} operator in Fortran.
-The effect of the combined hint is implementation defined and can be ignored by the implementation.
 Combining \code{omp_sync_hint_none} with any other hint is equivalent to specifying the other hint.
-The following restrictions apply to combined hints; violating these
-restrictions results in unspecified behavior:
-\begin{itemize}
-\item the hints \code{omp_sync_hint_uncontended} and \code{omp_sync_hint_contended} cannot be combined,
-\item the hints \code{omp_sync_hint_nonspeculative} and \code{omp_sync_hint_speculative} cannot be combined.
-\end{itemize}
-The rules for combining multiple values of \code{omp_sync_hint} apply equally to the
-corresponding values of \code{omp_lock_hint}, and expressions mixing the two types.
 
 The intended meaning of hints is
 \begin{itemize}
@@ -2321,6 +2282,17 @@ with other OpenMP implementations.
 The \code{omp_sync_hint_t} and \code{omp_lock_hint_t} enumeration types and the equivalent types in Fortran
 are synonyms for each other.
 The type \code{omp_lock_hint_t} has been deprecated.
+
+\restrictions
+
+Restrictions to the synchronization hints are as follows:
+\begin{itemize}
+\item the hints \code{omp_sync_hint_uncontended} and \code{omp_sync_hint_contended} cannot be combined,
+\item the hints \code{omp_sync_hint_nonspeculative} and \code{omp_sync_hint_speculative} cannot be combined.
+\end{itemize}
+
+The restrictions for combining multiple values of \code{omp_sync_hint} apply equally to the
+corresponding values of \code{omp_lock_hint}, and expressions mixing the two types.
 
 \crossreferences
 \begin{itemize}
