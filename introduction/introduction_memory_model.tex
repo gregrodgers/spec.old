@@ -122,8 +122,10 @@ When a task executes in the context of a device data environment, references to
 the original variable refer to the corresponding variable in the device data environment.
 If a corresponding variable does not exist in the device data
 environment then accesses to the original variable result in
-unspecified behavior unless the unified\_shared\_memory requirement
-is specified.
+unspecified behavior unless the \code{unified_shared_memory} requirement clause
+is specified on a \code{requires} directive for the program.
+%% \code{unified_address} requirement in 45:18 should be \code{unified_address} requirement clause
+%%  as defined by 44:1
 
 The relationship between the value of the original variable and the initial or final value
 of the corresponding variable depends on the \plc{map-type}. Details of this issue, as well as
@@ -134,10 +136,18 @@ more device data environments may share storage. Without intervening synchroniza
 data races can occur.
 
 \subsection{Memory Management}
-The host device, and target devices that an implementation may support, have attached storage resources where program variables are stored. These resources can be of different kinds and have different traits. A memory space in an OpenMP program represents a set of these storage resources. Memory spaces are defined according to a set of traits and a single resource may be exposed as multiple memory spaces with different traits or may be part of multiple memory spaces. In any device at least one memory space is guaranteed to exist.
+The host device, and target devices that an implementation may support, have attached storage resources where program variables are stored. These resources can be of different kinds and have different traits. A memory space in an OpenMP program represents a set of these storage resources. Memory spaces are defined according to a set of traits, and a single resource may be exposed as multiple memory spaces with different traits or may be part of multiple memory spaces. In any device, at least one memory space is guaranteed to exist.
 
-An OpenMP program can use a memory allocator to allocate \emph{memory} to which store and from which retrieve its variables. This \emph{memory} will be allocated from the storage resources of the \emph{memory space} associated with the allocator. Memory allocators are also used to deallocate previously allocated \emph{memory}. When an OpenMP memory allocator is not used variables may be allocated in any storage resource.
-%The behavior of a memory management construct, clause or API is unspecified if the variable that is applied to was not allocated with an OpenMP memory allocator.
+%% Using definition from 1st sentence in last paragraph for first sentence in this paragraph.
+An OpenMP program can use a \emph{memory allocator} to allocate \emph{memory} 
+in which to store variables. This \emph{memory} will be allocated from the 
+storage resources of the \emph{memory space} associated with the memory 
+allocator. Memory allocators are also used to deallocate previously allocated
+\emph{memory}. When an OpenMP memory allocator is not used variables may be 
+allocated in any storage resource.
+%% MAYBE for previous original sentence use (?): 
+%% "When an OpenMP memory allocators is not used in the allocation of a variable,
+%%  the storage resource used for allocation of the variable is not prescribed by OpenMP."
 
 
 \subsection{The Flush Operation}
@@ -172,14 +182,15 @@ that variable, the strong flush ensures that the value of the last write is
 written to the variable in memory. A strong flush of a variable executed by a
 thread also causes its temporary view of the variable to be discarded, so that
 if its next memory operation for that variable is a read, then the thread will
-read from memory when it may again capture the value in the temporary view.
+%% it may not be a "capture again" if all memory operation before were only writes.
+read from memory and capture the value in its temporary view.
 When a thread executes a strong flush, no later memory operation by that
 thread for a variable involved in that strong flush is allowed to start until
-the strong flush completes.  The completion of a strong flush of a set of
-variables executed by a thread is defined as the point at which all writes to
-those variables performed by the thread before the strong flush are visible in
-memory to all other threads and that thread’s temporary view of all variables
-involved is discarded.
+the strong flush completes.  The completion of a strong flush 
+of a flush-set executed by a thread is defined as the point at which all writes to
+the flush-set performed by the thread before the strong flush are visible in 
+memory to all other threads, and at which that thread's temporary view of the flush-set
+is discarded.
 
 A strong flush operation provides a guarantee of consistency between a thread’s
 temporary view and memory. Therefore, a strong flush can be used to
@@ -197,6 +208,11 @@ order:
 \end{enumerate}
 
 If a flush operation is a release flush or acquire flush, it can enforce
+% Although 100% technically correct, the expression 
+% "consistency between two synchronizing threads' view of memory",
+% slows the read down, a more natural 
+% "consistency between the view of memory for two synchronizing threads"
+% flows much better (Just my opinion-- puts consistency closer to view).
 consistency between two synchronizing threads' view of memory.  A release
 flush guarantees that any prior operation that writes or reads a shared
 variable will appear to be completed before any operation that writes or reads
@@ -207,6 +223,9 @@ shared variables in its temporary view to memory prior to the thread
 performing any subsequent atomic operation that may establish a
 synchronization. An acquire flush will discard any value of a shared variable
 in its temporary view to which the thread has not written since last performing
+% should this be an acquire flush (see line 25:24).  If not, maybe this
+% description should be expanded to explain why this is specific to
+% a release flush and not generically an acquire, release  or even a strong flush.
 a release flush, so that it may subsequently read a value propagated by a
 release flush that synchronizes with it.   Therefore, release and acquire
 flushes may also be used to guarantee that a value written to a variable by
@@ -255,9 +274,9 @@ associated release sequence are determined as follows:
 \begin{itemize}
 \item If a release flush is performed on entry to an atomic operation, that
     atomic operation starts its release sequence.
-\item If a release flush is performed by an implicit \code{flush} region, some
-    atomic operation performed by the implementation on an internal
-    synchronization variable starts its release sequence.
+\item If a release flush is performed in an implicit \code{flush} region, some atomic 
+    operation that is provided by the implementation and modifies an internal
+    synchronization variable starts its release sequence
 \item If a release flush is performed by an explicit \code{flush} region, any
     atomic operation that modifies a shared variable and follows the
     \code{flush} region in its thread's program order starts an associated
@@ -272,8 +291,8 @@ determined as follows:
 \begin{itemize}
 \item If an acquire flush is performed on exit from an atomic operation, that
     atomic operation is its associated atomic operation.
-\item If an acquire flush is performed by an implicit \code{flush} region, some
-    atomic operation performed by the implementation that reads an internal
+\item If an acquire flush is performed in an implicit \code{flush} region, some  
+    atomic operation that is provided by the implementation and reads an internal
     synchronization variable is its associated atomic operation.
 \item If an acquire flush is performed by an explicit \code{flush} region, any
     atomic operation that reads a shared variable and precedes the
