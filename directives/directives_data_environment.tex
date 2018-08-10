@@ -1496,8 +1496,8 @@ value is that value as expressed in the data type of the reduction list item.
 \tablelasttail{\hline}
 \begin{supertabular}{ p{0.1\textwidth} p{0.3\textwidth} p{0.5\textwidth}}
 {\scode{+}} & {\scode{omp_priv = 0}} & {\scode{omp_out += omp_in}}\\
-{\scode{*}} & {\scode{omp_priv = 1}} & {\scode{omp_out *= omp_in}}\\
 {\scode{-}} & {\scode{omp_priv = 0}} & {\scode{omp_out += omp_in}}\\
+{\scode{*}} & {\scode{omp_priv = 1}} & {\scode{omp_out *= omp_in}}\\
 {\scode{&}} & {\scode{omp_priv =  ~ 0}} & {\scode{omp_out &= omp_in}}\\
 {\scode{|}} & {\scode{omp_priv = 0}} & {\scode{omp_out |= omp_in}}\\
 {\scode{^}} & {\scode{omp_priv = 0}} & {\scode{omp_out ^}}{\scode{= omp_in}}\\
@@ -1539,8 +1539,8 @@ value as expressed in the data type of the reduction list item.
 \tablecaption{Implicitly Declared Fortran \plc{reduction-identifiers}\label{tab:Implicitly Declared Fortran Reduction Identifiers}}
 \begin{supertabular}{ p{0.1\textwidth} p{0.30\textwidth} p{0.5\textwidth}}
 {\scode{+}} & {\scode{omp_priv = 0}} & {\scode{omp_out = omp_in + omp_out}}\\
-{\scode{*}} & {\scode{omp_priv = 1}} & {\scode{omp_out = omp_in * omp_out}}\\
 {\scode{-}} & {\scode{omp_priv = 0}} & {\scode{omp_out = omp_in + omp_out}}\\
+{\scode{*}} & {\scode{omp_priv = 1}} & {\scode{omp_out = omp_in * omp_out}}\\
 {\scode{.and.}} & {\scode{omp_priv = .true.}} & {\scode{omp_out = omp_in .and. omp_out}}\\
 {\scode{.or.}} & {\scode{omp_priv = .false.}} & {\scode{omp_out = omp_in .or. omp_out}}\\
 {\scode{.eqv.}} & {\scode{omp_priv = .true.}} & {\scode{omp_out = omp_in .eqv. omp_out}}\\
@@ -1611,11 +1611,33 @@ the list item are associated with private targets.
 \end{fortranspecific}
 \end{samepage}
 
-Any copies associated with the reduction are initialized with the intializer
+Any copies associated with the reduction are initialized with the initializer
 value of the \plc{reduction-identifier}.
 
 Any copies are combined using the combiner associated with the
 \plc{reduction-identifier}.
+
+\events
+
+The \plc{reduction-begin} event occurs before a task 
+begins to perform loads and stores that belong to the implementation of a reduction
+and the \plc{reduction-end} event occurs after the task 
+has completed loads and stores associated with the reduction.
+If a task participates in multiple reductions, each reduction may be bracketed by its own pair of 
+\plc{reduction-begin}/\plc{reduction-end} events or multiple reductions may be bracketed by a single pair of events.
+The interval defined by a pair of \plc{reduction-begin}/\plc{reduction-end} events may not contain a task scheduling point.
+
+
+\tools
+
+A thread dispatches a registered \code{ompt_callback_reduction}
+for each occurrence of a \plc{reduction-begin} or \plc{reduction-end} 
+event in that thread.  The callback occurs in the context of the task performing the reduction.
+This callback has the type signature \code{ompt_callback_sync_region_t}.  
+The callback receives \code{ompt_sync_region_reduction} in its \plc{kind} argument and
+\code{ompt_scope_begin} or \code{ompt_scope_end} as its
+\plc{endpoint} argument, as appropriate.
+
 
 \restrictions
 The restrictions common to reduction clauses are as follows:
@@ -1713,26 +1735,6 @@ interface where the same explicit interface is accessible as at the
 \end{fortranspecific}
 \end{itemize}
 
-\events
-
-The \plc{reduction-begin} event occurs before a task 
-begins to perform loads and stores that belong to the implementation of a reduction
-and the \plc{reduction-end} event occurs after the task 
-has completed loads and stores associated with the reduction.
-If a task participates in multiple reductions, each reduction may be bracketed by its own pair of 
-\plc{reduction-begin}/\plc{reduction-end} events or multiple reductions may be bracketed by a single pair of events.
-The interval defined by a pair of \plc{reduction-begin}/\plc{reduction-end} events may not contain a task scheduling point.
-
-
-\tools
-
-A thread dispatches a registered \code{ompt_callback_reduction}
-for each occurrence of a \plc{reduction-begin} or \plc{reduction-end} 
-event in that thread.  The callback occurs in the context of the task performing the reduction.
-This callback has the type signature \code{ompt_callback_sync_region_t}.  
-The callback receives \code{ompt_sync_region_reduction} in its \plc{kind} argument and
-\code{ompt_scope_begin} or \code{ompt_scope_end} as its
-\plc{endpoint} argument, as appropriate.
 
 \crossreferences
 \begin{itemize}
