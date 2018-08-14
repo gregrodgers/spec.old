@@ -1218,7 +1218,10 @@ Restrictions on the shape-operator are as follows:
 \begin{itemize}
 \item The \plc{T} type must be a complete type.
 
-\item The shape-operator can appear only in clauses where it is explicitly allowed.
+\item The shape-operator can appear only in clauses where it is explicitly
+    allowed.
+
+\item The result of a shape-operator must be a named array of a list item.
 
 \item The type of the expression upon which a shape-operator is applied must be a pointer type.
 
@@ -1300,21 +1303,50 @@ The following are examples of array sections:
 
 \begin{indentedcodelist}
 a[0:6]
-a[:6]
+a[0:6:1]
 a[1:10]
 a[1:]
+a[:10:2]
+b[10][:][:]
 b[10][:][:0]
+c[42][0:6][:]
+c[42][0:6:2][:]
 c[1:10][42][0:6]
 S.c[:100]
 p->y[:10]
 this->a[:N]
+(p+10)[:N]
 \end{indentedcodelist}
 
-The first two examples are equivalent. If \code{a} is declared to be an eleven
-element array, the third and fourth examples are equivalent. The fifth example
-is a zero-length array section. The sixth example is not contiguous.  The
-remaining examples show array sections that are formed from more general base
-expressions.
+Assume \code{a} is declared to be a 1-dimensional array with dimension size
+11.  The first two examples are equivalent, and the third and fourth
+examples are equivalent. The fifth example specifies a stride of 2 and
+therefore is not contiguous.
+
+Assume \code{b} is declared to be a pointer to a 2-dimensional array with
+dimension sizes 10 and 10. The sixth example refers to all elements of the
+2-dimensional array to which the pointer \code{b[10]} points. The seventh
+example is a zero-length array section.
+
+Assume \code{c} is declared to be a 3-dimensional array with dimension sizes
+50, 50, and 50.  The eighth example is contiguous, while the ninth and
+tenth examples are not contiguous.
+
+The final four examples show array sections that are formed from
+more general base expressions.
+
+The following are examples that are non-conforming array sections:
+
+\begin{indentedcodelist}
+s[:10].x
+p[:10]->y
+*(xp[:10])
+\end{indentedcodelist}
+
+For all three examples, a base language operator is applied in an undefined
+manner to an array section. The only operator that may be applied to an array
+section is a subscript operator for which the array section appears as the
+postfix expression.
 \end{note}
 \medskip
 \end{ccppspecific}
@@ -1340,6 +1372,11 @@ Restrictions to array sections are as follows:
 \item The type of the base expression appearing in an array section must be
     an array or pointer type.
 
+\item If a consecutive sequence of array subscript expressions appears in an
+    array section, and the first subscript expression in the sequence uses the
+    extended array section syntax defined in this section, then only the last
+    subscript expression in the sequence may select array elements that have
+    a pointer type.
 \end{ccppspecific}
 
 \begin{cppspecific}
@@ -1359,7 +1396,8 @@ Restrictions to array sections are as follows:
   first array element must be the lowest in the array element order of
   the array section.
 
-
+\item If a list item is an array section, the last \plc{part-ref} of the list
+    item must have a section subscript list.
 \end{fortranspecific}
 
 
