@@ -124,7 +124,7 @@ and assign the name associated with the next thread state
 to the character pointer passed by reference as the third argument.
 
 Whenever one or more states are left in the enumeration,
-the enumerate states runtime entry point will return $1$.
+the \code{ompt_enumerate_states} runtime entry point will return $1$.
 When the last state in the enumeration is passed
 as the first argument, the runtime entry point will return $0$
 indicating that the enumeration is complete.
@@ -236,6 +236,11 @@ Any string returned through the argument
 \plc{next_impl_name} must be immutable and defined
 for the lifetime of a program execution.
 
+\crossreferences
+\begin{itemize}
+\item \code{ompt_mutex_t}, see \specref{sec:ompt_mutex_t}.
+\end{itemize}
+
 \subsubsubsection{\hcode{ompt_set_callback_t}}
 \label{sec:ompt_set_callback_t}
 \label{sec:ompt_set_callback}
@@ -252,7 +257,7 @@ OpenMP event occurs.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef int (*ompt_set_callback_t) (
-  ompt_callbacks_t \plc{which},
+  ompt_callbacks_t \plc{event},
   ompt_callback_t \plc{callback}
 );
 \end{omptCallback}
@@ -272,7 +277,7 @@ The return value of the \code{ompt_set_callback} runtime entry point may indicat
 outcomes. Callback registration may fail if it is called outside the initializer for the
 callback interface, returning \code{omp_set_error}.
 Otherwise, the return value of \code{ompt_set_callback}
-indicates whether \emph{dispatching} a callback leads to its invocation.
+indicates whether \emph{dispatching} a callback event leads to its invocation.
 A return value of \code{ompt_set_never} indicates that the callback
 will never be invoked at runtime.
 A return value of \code{ompt_set_sometimes} indicates that the callback
@@ -289,12 +294,12 @@ will be always invoked at runtime for associated event occurrences.
 
 \argdesc
 
-The argument \plc{which} indicates the callback being registered.
+The argument \plc{event} indicates the event the callback being registered with.
 
 The argument \plc{callback} is a tool callback function.
 
 A tool may pass a \code{NULL} value for \plc{callback} to disable
-any callback associated with \plc{which}. If disabling was successful,
+any callback associated with \plc{event}. If disabling was successful,
 \code{ompt_set_always} is returned.
 
 \constraints
@@ -341,7 +346,7 @@ that an OpenMP implementation will invoke when an OpenMP event occurs.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef int (*ompt_get_callback_t) (
-  ompt_callbacks_t \plc{which},
+  ompt_callbacks_t \plc{event},
   ompt_callback_t *\plc{callback}
 );
 \end{omptCallback}
@@ -353,7 +358,7 @@ A tool uses the runtime entry point known
 as \code{ompt_get_callback}
 with type signature \code{ompt_get_callback_t}
 to obtain a pointer to the tool callback that
-an OpenMP implementation will invoke when a host OpenMP event occurs.
+an OpenMP implementation may invoke when a host OpenMP event occurs.
 If a non-null tool callback is registered for the specified event,
 the pointer to the tool callback will be assigned to the variable
 passed by reference as the second argument and the entry
@@ -363,7 +368,7 @@ argument is undefined.
 
 \argdesc
 
-The argument \plc{which} indicates the callback being inspected.
+The argument \plc{event} indicates the event the callback being inspected upon.
 
 The argument \plc{callback} returns a pointer to the callback being inspected.
 
@@ -398,7 +403,7 @@ typedef ompt_data_t *(*ompt_get_thread_data_t) (void);
 
 \binding
 
-The binding thread for runtime entry point known as
+The binding thread for the runtime entry point known as
 \code{ompt_get_thread_data} is the current thread.
 
 \descr
@@ -445,8 +450,8 @@ typedef int (*ompt_get_num_procs_t) (void);
 
 \binding
 
-The binding thread set for runtime entry point known as
-\code{ompt_get_num_procs} is all threads on a device.
+The binding thread set for the runtime entry point known as
+\code{ompt_get_num_procs} is all threads on the host device.
 
 \descr
 
@@ -568,7 +573,7 @@ their order in the array is implementation defined.
 
 Otherwise, if the \plc{ids} array is too small, the values in \plc{ids} when the function returns are unspecified.
 
-In both cases, the routine returns the number of numerical identifiers
+In both cases, the routine returns the number of numerical identifiers of the processors
 available to the execution environment in the specified place.
 
 % This runtime entry point is \emph{async signal safe}.
@@ -621,7 +626,7 @@ This runtime entry point is \emph{async signal safe}.
 A runtime entry point known as
 \code{ompt_get_partition_place_nums} with type signature
 \code{ompt_get_partition_place_nums_t}
-returns the list of place numbers corresponding to the places in the \plc{place-partition-var}
+returns a list of place numbers corresponding to the places in the \plc{place-partition-var}
 ICV of the innermost implicit task.
 
 \format
@@ -645,7 +650,7 @@ is the current implicit task.
 
 The runtime entry point known as
 \code{ompt_get_partition_place_nums} with type signature
-\code{ompt_get_partition_place_nums_t} returns the list of place
+\code{ompt_get_partition_place_nums_t} returns a list of place
 numbers corresponding to the places in the \plc{place-partition-var}
 ICV of the innermost implicit task.
 
@@ -779,7 +784,7 @@ This runtime entry point is \emph{async signal safe}.
 The argument \plc{wait_id} is a pointer to an opaque handle
 available to receive the value of the thread's wait identifier.  If
 the \plc{wait_id} pointer is not \code{NULL}, the entry point
-will assign the value of the thread's wait identifier
+will assign the value of the thread's wait identifier to
 *\plc{wait_id}.  If the returned state is not one of the specified
 wait states, the value of *\plc{wait_id} is undefined after the call.
 
@@ -1227,14 +1232,14 @@ dispatched.
 
 \effect
 
-The \code{ompt_finalize_tool} routine detaches the tool from the runtime and unregisters 
+The \code{ompt_finalize_tool} routine detaches the tool from the runtime, unregisters 
 all callbacks and invalidates all OMPT entry points passed to the tool in the 
 lookup-function. 
 Upon completion of the \code{ompt_finalize_tool} routine, no further callbacks on any 
 thread will be issued.
 
 Before the callbacks get unregistered, the OpenMP runtime should make all efforts to 
-dispatch all outstanding registered callbacks as well as dispatch callbacks that would be 
+dispatch all outstanding registered callbacks as well as the callbacks that would be 
 encountered during shutdown of the runtime, if possible in the current execution context.
 
 \subsubsection{Entry Points in the OMPT Device Tracing Interface}
@@ -1358,7 +1363,7 @@ the same meaning as the value returned from \code{omp_get_wtime}.
 
 \needspace{6\baselineskip}\begin{note}
 The accuracy of time translations may degrade if they are not
-performed promptly after a device time value is received if either
+performed promptly after a device time value is received and if either
 the host or device vary their clock speeds. Prompt translation of
 device times to host times is recommended.
 \end{note}
@@ -1505,7 +1510,7 @@ Flags can be composed by using logical {\ttfamily or}  to combine enumeration
 values from type \code{ompt_native_mon_flag_t}.
 Table~\ref{table:record_set} shows the possible return codes for
 \code{ompt_set_trace_native}.  If a single invocation of
-\code{ompt_set_trace_ompt} is used to enable/disable more
+\code{ompt_set_trace_native} is used to enable/disable more
 than one kind of monitoring, the return code will be 3 if tracing
 is possible for one or more kinds of monitoring but not for others.
 
@@ -1552,7 +1557,7 @@ program, the OpenMP runtime may not return buffers provided to the
 device.
 
 An invocation of \code{ompt_start_trace} returns 1 if the command
-succeeded and 0 otherwise.
+succeeds and 0 otherwise.
 
 \argdesc
 
@@ -1562,7 +1567,7 @@ The argument \emph{buffer request} specifies a tool callback
 that will supply a device with a buffer to deposit events.
 
 The argument \emph{buffer complete} specifies a tool callback
-that will be invoked by the OpenMP implmementation to empty a buffer
+that will be invoked by the OpenMP implementation to empty a buffer
 containing event records.
 
 \crossreferences
@@ -1597,7 +1602,7 @@ typedef int (*ompt_pause_trace_t) (
 A tool may pause or resume tracing on a device by invoking the device's
 \code{ompt_pause_trace} runtime entry point.
 An invocation of \code{ompt_pause_trace} returns 1 if the command
-succeeded and 0 otherwise.
+succeeds and 0 otherwise.
 
 Redundant pause or resume commands are idempotent and will
 return 1 indicating success.
@@ -1640,7 +1645,7 @@ Invoking \code{ompt_flush_trace} causes the OpenMP implementation to issue a seq
 of zero or more buffer completion callbacks to deliver to the tool all trace records 
 that have been collected prior to the flush.
 An invocation of \code{ompt_flush_trace} returns 1 if the command
-succeeded and 0 otherwise.
+succeeds and 0 otherwise.
 
 \argdesc
 
@@ -1673,7 +1678,7 @@ typedef int (*ompt_stop_trace_t) (
 A tool may halt tracing on a device and request that the device flush any pending trace records
 by invoking the \code{ompt_stop_trace} runtime entry point for the device.
 An invocation of \code{ompt_stop_trace} returns 1 if the command
-succeeded and 0 otherwise.
+succeeds and 0 otherwise.
 
 \argdesc
 
@@ -1789,6 +1794,8 @@ The argument \plc{current} is an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
+\item \code{ompt_record_t},
+see \specref{sec:ompt_record_t}.
 \item \code{ompt_buffer_t},
 see \specref{sec:ompt_buffer_t}.
 \item \code{ompt_buffer_cursor_t},
@@ -1821,7 +1828,7 @@ where the information extracted from a record was assembled. The
 information available for an event depends upon its type.
 
 The return value of type \code{ompt_record_ompt_t}
-defines a union type that can represent
+includes a filed of a union type that can represent
 information for any OMPT event record type.
 Another call to the runtime entry point may overwrite the
 contents of the fields in a record returned by a prior invocation.
