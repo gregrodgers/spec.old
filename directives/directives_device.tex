@@ -166,7 +166,13 @@ The binding task set for a \code{target}~\code{data} region is the generating ta
 \code{target}~\code{data} region binds to the region of the generating task.
 
 \descr
-When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
+When a \code{target}~\code{data} construct is encountered, the encountering task
+executes the region. If there is no \code{device} clause, the default device is
+determined by the \plc{default-device-var} ICV. Variables are mapped for the
+extent of the region, according to any data-mapping attribute clauses, from the
+data environment of the encountering task to the device data environment. When
+an \code{if} clause is present and the \code{if} clause expression evaluates to
+\plc{false}, the device is the host.
 
 Pointers that appear in a \code{use_device_ptr} clause are privatized and the
 device pointer to the corresponding list items in the device data environment
@@ -222,9 +228,10 @@ as its \plc{endpoint} argument, as appropriate, and
     \item A program must not depend on any ordering of the evaluations of the clauses of the
     \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
 
-  \item At most one \code{device} clause can appear on the directive. The \code{device} clause expression  
-      must evaluate to a non-negative integer value less than the value
-    of \code{omp_get_num_devices()}.
+  \item At most one \code{device} clause can appear on the directive. The
+    \code{device} clause expression  must evaluate to a non-negative integer
+    value less than the value of \code{omp_get_num_devices()} or to the value of
+    \code{omp_get_initial_device()}.
 
   \item At most one \code{if} clause can appear on the directive.
   \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
@@ -276,9 +283,12 @@ as its \plc{endpoint} argument, as appropriate, and
 \label{subsec:target enter data Construct}
 \index{constructs!target enter data@{\code{target}~\code{enter}~\code{data}}}
 \index{device data environments}
+
 \summary
 The \code{target}~\code{enter}~\code{data} directive specifies that variables are mapped to a device data environment. The \code{target}~\code{enter}~\code{data} directive is a stand-alone directive.
+
 \syntax
+
 \begin{ccppspecific}
 The syntax of the \code{target}~\code{enter}~\code{data} construct is as follows:
 \begin{ompcPragma}
@@ -293,6 +303,7 @@ depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
 nowait
 \end{indentedcodelist}
 \end{ccppspecific}
+
 \begin{fortranspecific}
 The syntax of the \code{target}~\code{enter}~\code{data} is as follows:
 \begin{ompfPragma}
@@ -598,7 +609,7 @@ region binds to the corresponding \plc{target task} region.
 \descr
 The \code{target} construct provides a superset of the functionality
 provided by the \code{target}~\code{data} directive, except for
-the \code{use_device_ptr} clause.
+the \code{use_device_ptr} and \code{use_device_addr} clauses.
 
 The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
 
@@ -665,6 +676,7 @@ private variable is initialized relative to the address of the storage
 location of the corresponding array section in the device data environment
 that is created by the \code{map} clause.
 
+% TODO: consider changing this to keep host value without unified_address
 \item If the list item is a zero-length array section, the corresponding
 private variable is initialized relative to the address of the
 corresponding storage location in the device data environment. If the
@@ -693,7 +705,8 @@ in that thread. The callback has type signature
 
 \restrictions
 \begin{itemize}
-\item If a \code{target}, \code{target}~\code{update},
+% NOTE: removed target, because ancestor offload requires it
+\item If a \code{target}~\code{update},
 \code{target}~\code{data}, \code{target}~\code{enter}~\code{data}, or
 \code{target}~\code{exit}~\code{data} construct is encountered during
 execution of a \code{target} region, the behavior is unspecified.
@@ -1119,29 +1132,27 @@ of the procedure is made available.  If \code{nohost} is specified then only dev
 version of the procedure is made available.  If \code{any} is specified then both
 device and host version of the procedure is made available.
 
-\begin{ccppspecific}
-If a function is treated as if it appeared as a list item in a \code{to} clause
-on a \code{declare}~\code{target} directive in the same translation unit in
-which the definition of the function occurs then a device-specific version of
-the function is created.
+\def\marked{marked-to}
 
-If a variable is treated as if it appeared as a list item in a \code{to} clause
-on a \code{declare}~\code{target} directive in the same translation unit in
-which the definition of the variable occurs then the original list item is
-allocated a corresponding list item in the device data environment of all
-devices.
+For the purpose of this section, the term ``\marked'' applied to a function or variable refers to that function or variable being treated as if it appeared as a list item in a \code{to} clause on a \code{declare}~\code{target} directive.
+
+\begin{ccppspecific}
+If a function is \marked in the same translation unit in which the definition of
+the function occurs then a device-specific version of the function is created.
+
+If a variable is \marked in the same translation unit in which the definition
+of the variable occurs then the original list item is allocated a corresponding
+list item in the device data environment of all devices.
 
 All calls in \code{target} constructs to the function in the \code{implements} clause
 are replaced by the function following the \code{declare} \code{target} constructs.
 \end{ccppspecific}
 
 \begin{fortranspecific}
-If an internal procedure is treated as if it appeared as a
-list item in a \code{to} clause on a \code{declare}~\code{target} directive
+If an internal procedure is \marked
 then a device-specific version of the procedure is created.
 
-If a variable that is host associated is treated as if it appeared as a
-list item in a \code{to} clause on a \code{declare}~\code{target} directive
+If a variable that is host associated is \marked
 then the original list item is allocated a corresponding list item in the
 device data environment of all devices.
 
@@ -1151,8 +1162,7 @@ All calls in \code{target} constructs to the procedure in the \code{implements}
 clause are replaced by the procedure in which \code{declare} \code{target} construct appeared.
 \end{fortranspecific}
 
-If a variable is treated as if it appeared as a list item in a \code{to}
-clause on a \code{declare}~\code{target} directive then the corresponding list
+If a variable is \marked then the corresponding list
 item in the device data environment of each device is initialized once, in the
 manner specified by the program, but at an unspecified point in the program
 prior to the first reference to that list item.  The list item is never removed
@@ -1166,18 +1176,13 @@ directive.  Instead, they are mapped according to the data mapping
 rules described in \specref{subsec:Data-Mapping Attribute Rules, Clauses, and Directives}.
 
 \begin{ccppspecific}
-If a function is referenced in a function that is treated as if it appeared as
-a list item in a \code{to} clause on a \code{declare}~\code{target} directive
-then the name of the referenced function is treated as if it had appeared in a
-\code{to} clause on a \code{declare}~\code{target} directive.
+If a function is referenced in a function that is \marked
+then the referenced function is also \marked.
 
-If a variable with static storage duration or a function (except
-\plc{lambda} for C++) is referenced in the
-initializer expression list of a variable with static storage duration that is
-treated as if it appeared as a list item in a \code{to} clause on a
-\code{declare}~\code{target} directive then the name of the referenced variable
-or function is treated as if it had appeared in a \code{to} clause on a
-\code{declare}~\code{target} directive.
+If a variable with static storage duration or a function (except \plc{lambda}
+for C++) is referenced in the initializer expression list of a variable with
+static storage duration that is \marked then the referenced variable or
+function is \marked.
 
 The form of the \code{declare}~\code{target} directive that has no clauses
 and requires a matching \code{end}~\code{declare}~\code{target} directive
@@ -1199,10 +1204,7 @@ list determines which versions are made available.
 \end{ccppspecific}
 
 \begin{fortranspecific}
-If a procedure is referenced in a procedure that is treated as if it appeared
-as a list item in a \code{to} clause on a \code{declare}~\code{target}
-directive then the name of the procedure is treated as if it had appeared in a
-\code{to} clause on a \code{declare}~\code{target} directive.
+If a procedure is referenced in a procedure that is \marked then the procedure is \marked.
 
 If a \code{declare}~\code{target} does not have any clauses then an implicit
 \plc{extended-list} to an implicit \code{to} clause of one item is formed from
@@ -1240,8 +1242,7 @@ may only be specified within an implicit \plc{extended-list}.
 
 \item If a \plc{lambda declaration and definition} appears between a
 \code{declare target} directive and the matching \code{end declare target} directive, all the variables that are captured by the
-\plc{lambda} expression must also be variables that are treated as
-if they appear in a \code{to} clause.
+\plc{lambda} expression must also be \marked.
 \end{itemize}
 \end{cppspecific}
 
@@ -1271,7 +1272,7 @@ if they appear in a \code{to} clause.
 
 \item If any procedure is declared via a procedure declaration statement
       that is not in the type-bound procedure part of a derived-type
-      definition, any \code{declare}~\code{target} with the procedure
+      definition, any \code{declare}~\code{target} with the lure
       name must appear in the same specification part.
 
 \item A variable that is part of another variable (as an array, structure
