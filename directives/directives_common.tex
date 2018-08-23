@@ -615,9 +615,6 @@ The following ICVs store values that affect the operation of \code{parallel} reg
 for encountered \code{parallel} regions. There is one copy of this ICV per data
 environment.
 
-\item \plc{nest-var} - controls whether nested parallelism is enabled for encountered \code{parallel}
-regions. There is one copy of this ICV per data environment. The \plc{nest-var} ICV has been deprecated.
-
 \item \plc{nthreads-var} - controls the number of threads requested for encountered \code{parallel}
 regions. There is one copy of this ICV per data environment.
 
@@ -635,7 +632,7 @@ implicit task.
 task such that all of the \code{parallel} regions are enclosed by the outermost initial task
 region on the current device. There is one copy of this ICV per data environment.
 
-\item \plc{levels-var} - the number of nested active parallel regions enclosing the current task such that
+\item \plc{levels-var} - the number of nested parallel regions enclosing the current task such that
 all of the \code{parallel} regions are enclosed by the outermost initial task region on the
 current device. There is one copy of this ICV per data environment.
 
@@ -744,7 +741,6 @@ environment variables, and initial values.
 \tablecaption{ICV Initial Values\label{tab:ICV Initial Values}}
 \begin{supertabular}{p{1.4in} p{1.8in} p{1.5in}}
 {\splc{dyn-var}} & {\scode{OMP_DYNAMIC}} & See description below\\
-{\splc{nest-var}} & {\scode{OMP_NESTED}} & See description below\\
 {\splc{nthreads-var}} & {\scode{OMP_NUM_THREADS}} & Implementation defined\\
 {\splc{run-sched-var}} & {\scode{OMP_SCHEDULE}} & Implementation defined\\
 {\splc{def-sched-var}} & (none) & Implementation defined\\
@@ -752,7 +748,7 @@ environment variables, and initial values.
 {\splc{stacksize-var}} & {\scode{OMP_STACKSIZE}} & Implementation defined\\
 {\splc{wait-policy-var}} & {\scode{OMP_WAIT_POLICY}} & Implementation defined\\
 {\splc{thread-limit-var}} & {\scode{OMP_THREAD_LIMIT}} & Implementation defined\\
-{\splc{max-active-levels-var}} & {\scode{OMP_MAX_ACTIVE_LEVELS}} & See description below\\
+{\splc{max-active-levels-var}} & {\scode{OMP_MAX_ACTIVE_LEVELS}}, {\scode{OMP_NESTED}} & See description below\\
 {\splc{active-levels-var}} & (none) & {\splc{zero}}\\
 {\splc{levels-var}} & (none) & {\splc{zero}}\\
 {\splc{place-partition-var}} & {\scode{OMP_PLACES}} & Implementation defined\\
@@ -771,19 +767,22 @@ environment variables, and initial values.
 \linenumbers
 
 \descr
+
 \begin{itemize}
 \item Each device has its own ICVs.
 
 \item The initial value of \plc{dyn-var} is implementation defined if the implementation supports
 dynamic adjustment of the number of threads; otherwise, the initial value is \plc{false}.
 
-\item The initial value of the \plc{nest-var} ICV is determined to be \plc{true} if \plc{max-active-levels-var} is set to a value greater than 1 (one); otherwise, it is set to \plc{false}.
-
 \item The value of the \plc{nthreads-var} ICV is a list.
 
 \item The value of the \plc{bind-var} ICV is a list.
 
-\item  The default initial value for \plc{max-active-levels-var} is implementation defined, unless \plc{nthreads-var} or \plc{bind-var} is initialized to a list consisting of more than one element via the respective environment variables, in which case the default initial value for \plc{max-active-levels-var} is the number of active levels of parallelism that the implementation supports.
+\item The initial value of \plc{max-active-levels-var} is the number of active
+    levels of parallelism that the implementation supports if
+    \code{OMP_NUM_THREADS} or \code{OMP_PROC_BIND} is set to a comma separated
+    list of more than one value. Otherwise, the initial value of
+    \plc{max-active-levels-var} is implementation defined.
 \end{itemize}
 
 The host and target device ICVs are initialized before any OpenMP API construct or
@@ -872,8 +871,6 @@ through OpenMP API routines.
 \begin{supertabular}{ p{1.2in} p{2.0in} p{1.5in}}
 {\splc{dyn-var}} & {\scode{omp_set_dynamic()}} & {\scode{omp_get_dynamic()}}\\
 
-{\splc{nest-var}} & {\scode{omp_set_nested()}} & {\scode{omp_get_nested()}}\\
-
 {\splc{nthreads-var}} & {\scode{omp_set_num_threads()}} & {\scode{omp_get_max_threads()}}\\
 
 {\splc{run-sched-var}} & {\scode{omp_set_schedule()}} & {\scode{omp_get_schedule()}}\\
@@ -888,7 +885,7 @@ through OpenMP API routines.
 
 {\splc{thread-limit-var}} & {\scode{thread_limit}} clause & {\scode{omp_get_thread_limit()}}\\
 
-{\splc{max-active-levels-var}} & {\scode{omp_set_max_active_levels()}} & {\scode{omp_get_max_active_levels()}}\\
+{\splc{max-active-levels-var}} & {\scode{omp_set_max_active_levels()}}, {\scode{omp_set_nested()}} & {\scode{omp_get_max_active_levels()}}\\
 
 {\splc{active-levels-var}} & (none) & {\scode{omp_get_active_level()}}\\
 
@@ -1023,7 +1020,6 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \tablecaption{Scopes of ICVs\label{tab:Scopes of ICVs}}
 \begin{supertabular}{p{1.5in} p{2.5in}}
 {\splc{dyn-var}} & data environment\\
-{\splc{nest-var}} & data environment\\
 {\splc{nthreads-var}} & data environment\\
 {\splc{run-sched-var}} & data environment\\
 {\splc{def-sched-var}} & device\\
@@ -1130,7 +1126,6 @@ among construct clauses and ICVs.
 \tablecaption{ICV Override Relationships\label{tab:ICV Override Relationships}}
 \begin{supertabular}{ p{1.3in} p{2.0in}}
 {\splc{dyn-var}} & (none)\\
-{\splc{nest-var}} & (none)\\
 {\splc{nthreads-var}} & {\scode{num_threads}}\\
 {\splc{run-sched-var}} & {\scode{schedule}}\\
 {\splc{def-sched-var}} & {\scode{schedule}}\\
