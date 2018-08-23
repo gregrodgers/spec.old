@@ -119,7 +119,7 @@ DIFF_FROM:=master
 DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole  \
-                  --append-safecmd=plc,code,hcode,scode,pcode,splc,glossaryterm \
+                  --append-safecmd=plc,code,hcode,scode,pcode,splc \
                   --append-textcmd=subsubsubsection
                   #,binding,comments,constraints,crossreferences,descr,argdesc,effect,format,restrictions,summary,syntax,events,tools,record
 #                  --exclude-textcmd=chapter,section,subsection,subsubsection,vcode
@@ -128,9 +128,9 @@ COMMON_DIFF_OPTS:=--math-markup=whole  \
 #                  --append-textcmd=plc,code,glossaryterm \
 #                  --exclude-textcmd=section,subsection,subsubsection,vcode
 
-VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --flatten --type="${DIFF_TYPE}" --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}  --subtype=ZLABEL --graphics-markup=none
+VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} --force -c latexdiff.cfg --flatten --type="${DIFF_TYPE}" --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}  --subtype=ZLABEL --graphics-markup=none
 
-VC_DIFF_MINIMAL_OPTS:= --only-changes
+VC_DIFF_MINIMAL_OPTS:= --only-changes --force
 
 git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
