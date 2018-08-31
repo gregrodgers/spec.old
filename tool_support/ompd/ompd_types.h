@@ -9,13 +9,13 @@
 #define OMPD_TYPES_VERSION   20170927 /* YYYYMMDD Format */
 
 /* Kinds of device threads  */
-#define OMPD_OSTHREAD_PTHREAD     ((ompd_osthread_kind_t)1)
-#define OMPD_OSTHREAD_LWP         ((ompd_osthread_kind_t)2)
-#define OMPD_OSTHREAD_WINTHREAD   ((ompd_osthread_kind_t)3)
-#define OMPD_OSTHREAD_CUDALOGICAL ((ompd_osthread_kind_t)4)
+#define OMPD_THREAD_ID_PTHREAD      ((ompd_thread_id_t)0)
+#define OMPD_THREAD_ID_LWP          ((ompd_thread_id_t)1)
+#define OMPD_THREAD_ID_WINTHREAD    ((ompd_thread_id_t)2)
+#define OMPD_THREAD_ID_CUDALOGICAL  ((ompd_thread_id_t)3)
 /* The range of non-standard implementation defined values */
-#define OMPD_OSTHREAD_IMPL_LO       ((ompd_osthread_kind_t)1000000)
-#define OMPD_OSTHREAD_IMPL_HI       ((ompd_osthread_kind_t)1100000)
+#define OMPD_THREAD_ID_LO       ((ompd_thread_id_t)1000000)
+#define OMPD_THREAD_ID_HI       ((ompd_thread_id_t)1100000)
 
 /* Target Cuda device-specific thread identification */
 typedef struct ompd_dim3_t {
