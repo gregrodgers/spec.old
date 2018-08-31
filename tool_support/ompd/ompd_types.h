@@ -29,7 +29,6 @@ typedef struct ompd_cudathread_coord_t {
     ompd_addr_t cudaContext;
     ompd_addr_t warpSize;
     ompd_addr_t gridId;
-    ompd_addr_t kernelId;
     ompd_dim3_t  gridDim;
     ompd_dim3_t  blockDim;
     ompd_dim3_t  blockIdx;
