@@ -361,21 +361,6 @@ Restrictions to the \code{single} construct are as follows:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-% Here we need to force the blue marker lower, and force the subsection header higher
-% in order to reduce the space between the marker and the header, per Richard:
-%\begin{samepage}
-
 \begin{fortranspecific}
 
 \subsection{\hcode{workshare} Construct}
@@ -383,12 +368,11 @@ Restrictions to the \code{single} construct are as follows:
 \index{constructs!workshare@{\code{workshare}}}
 \label{subsec:workshare Construct}
 \summary
-The \code{workshare} construct divides the execution of the enclosed structured block into
-separate units of work, and causes the threads of the team to share the work such that
-each unit is executed only once by one thread, in the context of its implicit task.
-%\end{samepage}
+The \code{workshare} construct divides the execution of the enclosed structured 
+block into separate units of work, and causes the threads of the team to share 
+the work such that each unit is executed only once by one thread, in the context 
+of its implicit task.
 
-%\begin{samepage}
 \syntax
 The syntax of the \code{workshare} construct is as follows:
 
@@ -397,7 +381,6 @@ The syntax of the \code{workshare} construct is as follows:
     \plc{structured-block}
 !$omp end workshare \plc{[}nowait\plc{]}
 \end{ompfPragma}
-%\end{samepage}
 
 The enclosed structured block must consist of only the following:
 
@@ -421,83 +404,81 @@ The enclosed structured block must consist of only the following:
 \item \code{parallel} constructs
 \end{itemize}
 
-Statements contained in any enclosed \code{critical} construct are also subject to these
-restrictions. Statements in any enclosed \code{parallel} construct are not restricted.
+Statements contained in any enclosed \code{critical} construct are also subject 
+to these restrictions. Statements in any enclosed \code{parallel} construct are 
+not restricted.
 
 \binding
-The binding thread set for a \code{workshare} region is the current team. A \code{workshare}
-region binds to the innermost enclosing \code{parallel} region. Only the threads of the team
-executing the binding \code{parallel} region participate in the execution of the units of
-work and the implied barrier of the \code{workshare} region if the barrier is not eliminated
+The binding thread set for a \code{workshare} region is the current team. 
+A \code{workshare} region binds to the innermost enclosing \code{parallel} 
+region. Only the threads of the team that executes the binding \code{parallel} 
+region participate in the execution of the units of work and the implied 
+barrier of the \code{workshare} region if the barrier is not eliminated
 by a \code{nowait} clause.
 
 \descr
-There is an implicit barrier at the end of a \code{workshare} construct unless a \code{nowait}
-clause is specified.
+There is an implicit barrier at the end of a \code{workshare} construct 
+unless a \code{nowait} clause is specified.
 
-An implementation of the \code{workshare} construct must insert any synchronization that is
-required to maintain standard Fortran semantics. For example, the effects of one
-statement within the structured block must appear to occur before the execution of
-succeeding statements, and the evaluation of the right hand side of an assignment must
-appear to complete prior to the effects of assigning to the left hand side.
+An implementation of the \code{workshare} construct must insert any synchronization 
+that is required to maintain standard Fortran semantics. For example, the effects 
+of one statement within the structured block must appear to occur before the 
+execution of succeeding statements, and the evaluation of the right hand side of 
+an assignment must appear to complete prior to the effects of assigning to the left 
+hand side. 
 
-The statements in the \code{workshare} construct are divided into units of work as follows:
+The statements in the \code{workshare} construct are divided into units of work 
+as follows:
 
 \begin{itemize}
-\item For array expressions within each statement, including transformational array
-intrinsic functions that compute scalar values from arrays:
+\item For array expressions within each statement, including transformational 
+      array intrinsic functions that compute scalar values from arrays:
 
-\begin{itemize} % nested level
-\item Evaluation of each element of the array expression, including any references to
-\code{ELEMENTAL} functions, is a unit of work.
-
-\item Evaluation of transformational array intrinsic functions may be freely subdivided
-into any number of units of work.
+\begin{itemize}
+\item Evaluation of each element of the array expression, including any 
+      references to \code{ELEMENTAL} functions, is a unit of work.
+\item Evaluation of transformational array intrinsic functions may be freely
+      subdivided into any number of units of work.
 \end{itemize}
 
-\item For an array assignment statement, the assignment of each element is a unit of work.
-
+\item For an array assignment statement, the assignment of each element is 
+      a unit of work.
 \item For a scalar assignment statement, the assignment operation is a unit of work.
-
-\item For a \code{WHERE} statement or construct, the evaluation of the mask expression and the
-masked assignments are each a unit of work.
-
-\item For a \code{FORALL} statement or construct, the evaluation of the mask expression,
-expressions occurring in the specification of the iteration space, and the masked
-assignments are each a unit of work.
-
-\item For an \code{atomic} construct, the atomic operation on the storage location designated as
-\plc{x} is a unit of work.
-
+\item For a \code{WHERE} statement or construct, the evaluation of the mask 
+      expression and the masked assignments are each a unit of work.
+\item For a \code{FORALL} statement or construct, the evaluation of the mask 
+      expression, expressions occurring in the specification of the iteration 
+      space, and the masked assignments are each a unit of work.
+\item For an \code{atomic} construct, the atomic operation on the storage 
+      location designated as \plc{x} is a unit of work.
 \item For a \code{critical} construct, the construct is a single unit of work.
-
-\item For a \code{parallel} construct, the construct is a unit of work with respect to the
-\code{workshare} construct. The statements contained in the \code{parallel} construct are
-executed by a new thread team.
-
-\item If none of the rules above apply to a portion of a statement in the structured block,
-then that portion is a unit of work.
+\item For a \code{parallel} construct, the construct is a unit of work with 
+      respect to the \code{workshare} construct. The statements contained in 
+      the \code{parallel} construct are executed by a new thread team.
+\item If none of the rules above apply to a portion of a statement in the 
+      structured block, then that portion is a unit of work.
 \end{itemize}
 
-The transformational array intrinsic functions are \code{MATMUL}, \code{DOT_PRODUCT}, \code{SUM},
-\code{PRODUCT}, \code{MAXVAL}, \code{MINVAL}, \code{COUNT},
+The transformational array intrinsic functions are \code{MATMUL}, \code{DOT_PRODUCT},
+\code{SUM}, \code{PRODUCT}, \code{MAXVAL}, \code{MINVAL}, \code{COUNT},
 \code{ANY}, \code{ALL}, \code{SPREAD}, \code{PACK}, \code{UNPACK},
-\code{RESHAPE}, \code{TRANSPOSE}, \code{EOSHIFT}, \code{CSHIFT}, \code{MINLOC}, and \code{MAXLOC}.
+\code{RESHAPE}, \code{TRANSPOSE}, \code{EOSHIFT}, \code{CSHIFT}, 
+\code{MINLOC}, and \code{MAXLOC}.
 
 It is unspecified how the units of work are assigned to the threads executing a
 \code{workshare} region.
 
-If an array expression in the block references the value, association status, or allocation
-status of private variables, the value of the expression is undefined, unless the same
-value would be computed by every thread.
+If an array expression in the block references the value, association status, or 
+allocation status of private variables, the value of the expression is undefined, 
+unless the same value would be computed by every thread.
 
-If an array assignment, a scalar assignment, a masked array assignment, or a \code{FORALL}
-assignment assigns to a private variable in the block, the result is unspecified.
+If an array assignment, a scalar assignment, a masked array assignment, or a 
+\code{FORALL} assignment assigns to a private variable in the block, the result 
+is unspecified.
 
-The \code{workshare} directive causes the sharing of work to occur only in the \code{workshare}
-construct, and not in the remainder of the \code{workshare} region.
+The \code{workshare} directive causes the sharing of work to occur only in the 
+\code{workshare} construct, and not in the remainder of the \code{workshare} region.
 
-%\tools
 \omptWorksharing{workshare}{ompt_work_workshare}
 
 \begin{samepage}
@@ -505,11 +486,10 @@ construct, and not in the remainder of the \code{workshare} region.
 The following restrictions apply to the \code{workshare} construct:
 
 \begin{itemize}
-\item All array assignments, scalar assignments, and masked array assignments must be
-intrinsic assignments.
-
-\item The construct must not contain any user defined function calls unless the function is
-\code{ELEMENTAL}.
+\item All array assignments, scalar assignments, and masked array assignments 
+      must be intrinsic assignments.
+\item The construct must not contain any user defined function calls unless 
+      the function is \code{ELEMENTAL}.
 \end{itemize}
 \end{samepage}
 
