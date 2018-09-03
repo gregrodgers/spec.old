@@ -158,6 +158,18 @@ structure returned by \code{ompt_start_tool}.
 
 This section describes the signatures of tool callback functions that an OMPT
 tool might register and that are called during runtime of an OpenMP program.
+In addition, an implementation might choose to provide a trace of events per device.
+Along with the callbacks, in the following standard trace records are defined.
+For the trace records, tool data arguments are replaced by an id, which must 
+be initialized by the OpenMP implementation.
+Each of \plc{parallel_id}, \plc{task_id}, and \plc{thread_id} must be a unique per target region.
+Tool implementations of callbacks are not required to be \emph{async signal safe}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt_data_t}, see \specref{sec:ompt_data_t}.
+\item \code{ompt_id_t}, see \specref{sec:ompt_id_t}.
+\end{itemize}
 
 \subsubsubsection{\hcode{ompt_callback_thread_begin_t}}
 \index{ompt_callback_thread_begin_t@{\code{ompt_callback_thread_begin_t}}}
@@ -281,6 +293,8 @@ indicates the number of threads or teams requested by the user.
 The argument \plc{flag} indicates whether the code for the
 parallel region is inlined into the application or invoked by the
 runtime and also whether the region is a parallel or teams region.
+Values for \plc{flag} are a disjunction of elements in the enum
+\code{ompt_parallel_flag_t}.
 
 \codeptrdesc
 
@@ -404,7 +418,6 @@ The binding of argument \plc{task_data} is the encountering task.
 \index{ompt_callback_task_create_t@{\code{ompt_callback_task_create_t}}}
 \label{sec:ompt_callback_task_create_t}
 \format
-
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_task_create_t) (
@@ -420,7 +433,6 @@ typedef void (*ompt_callback_task_create_t) (
 
 
 \record
-
 \begin{ccppspecific}
 \begin{omptRecord}
 typedef struct ompt_record_task_create_t {
@@ -449,10 +461,10 @@ task.
 
 The argument \plc{flag} indicates the kind of the task: initial,
 explicit or target.
-Values for \plc{flag} are composed by or-ing elements of enum
+Values for \plc{flag} are a disjunction of elements in the enum
 \code{ompt_task_flag_t}.
 
-The argument \plc{has_dependences} indicates whether created
+The argument \plc{has_dependences} indicates whether the created
 task has dependences.
 
 \codeptrdesc
@@ -668,7 +680,7 @@ this argument is 0.
 
 The argument \plc{index} indicates the thread number or team number 
 of the calling thread, within the team or league executing the 
-parallel or teams region to which the implicit region binds.
+parallel or teams region to which the implicit task region binds.
 
 \crossreferences
 \begin{itemize}
@@ -1000,6 +1012,8 @@ typedef struct ompt_record_flush_t {
 
 \argdesc
 
+The binding of argument \plc{thread_data} is the executing thread.
+
 \codeptrdesc
 
 \crossreferences
@@ -1042,6 +1056,12 @@ typedef struct ompt_record_dispatch_t {
 
 
 \argdesc
+
+The binding of argument \plc{parallel_data} is the current
+parallel region.
+
+The binding of argument \plc{task_data} is the implicit task
+executing the parallel region's structured block.
 
 The argument \plc{kind} indicates whether a loop iteration or a
 section is being dispatched.
@@ -1165,16 +1185,16 @@ The argument \plc{offset_in_file} indicates an offset into \plc{filename} at whi
 no offset is provided.
 
 The argument \plc{vma_in_file} indicates an virtual address in \plc{filename} at which the code can be found.
-A value of \plc{ompt_addr_none} indicates that a virtual address in the file is not 
+A value of \code{ompt_addr_none} indicates that a virtual address in the file is not 
 available.
 
 The argument \plc{bytes} indicates the size of the device code object in bytes.
 
 The argument \plc{host_addr} indicates where a copy of the device code is available in host memory.
-A value of \plc{ompt_addr_none} indicates that a host code address is not available.
+A value of \code{ompt_addr_none} indicates that a host code address is not available.
 
 The argument \plc{device_addr} indicates where the device code has been loaded in device memory.
-A value of \plc{ompt_addr_none} indicates that a device code address is not available.
+A value of \code{ompt_addr_none} indicates that a device code address is not available.
 
 The argument \plc{module_id} is an identifier that is associated with the device code object.
 
@@ -1338,7 +1358,8 @@ typedef struct ompt_record_target_map_t {
 
 
 \descr
-An instance of a \code{target}, \code{target data}, or \code{target enter data} construct may contain one or more \code{map} clauses.
+An instance of a \code{target}, \code{target data}, \code{target enter data}, or 
+\code{target exit data} construct may contain one or more \code{map} clauses.
 An OpenMP implementation may report the set of mappings associated with \code{map} clauses for a construct
 with a single \code{ompt_callback_target_map} callback to report the effect of all mappings or multiple
 \code{ompt_callback_target_map} callbacks with each reporting a subset of the mappings.
@@ -1491,8 +1512,6 @@ disabled until the next invocation of \code{ompt_start_trace}.  This
 will cause the device to drop future trace records until recording is
 restarted.
 
-The buffer request callback is not required to be \emph{async signal safe}.
-
 \argdesc
 
 The argument \plc{device_num} specifies the device.
@@ -1596,7 +1615,7 @@ application by the OpenMP implementation as the return value of the
 
 The argument \plc{command} passes a command from an application
 to a tool.  Standard values for \plc{command} are defined by
-\code{omp_control_tool_t} in \specref{sec:control_tool}.
+\code{omp_control_tool_t} in Section \ref{sec:control_tool}.
 
 The argument \plc{modifier} passes a command modifier from an
 application to a tool.
@@ -1638,7 +1657,7 @@ typedef void (*ompt_callback_cancel_t) (
 
 \argdesc
 
-The argument \plc{task_data} corresponds to the task
+The binding of argument \plc{task_data} is the task
 encountering a \code{cancel} construct, a \code{cancellation point}
 construct, or a construct defined as having an implicit cancellation
 point.
