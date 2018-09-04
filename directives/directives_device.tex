@@ -132,7 +132,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] locator-list})
 use_device_ptr(\plc{ptr-list})
 use_device_addr(\plc{list})
 \end{indentedcodelist}
@@ -154,7 +154,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] locator-list})
 use_device_ptr(\plc{ptr-list})
 use_device_addr(\plc{list})
 \end{indentedcodelist}
@@ -289,7 +289,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ locator-list})
 depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 nowait
 \end{indentedcodelist}
@@ -303,7 +303,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ locator-list})
 depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 nowait
 \end{indentedcodelist}
@@ -412,7 +412,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-expression})
 device(\plc{integer-expression})
-map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ locator-list})
 depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 nowait
 \end{indentedcodelist}
@@ -426,7 +426,7 @@ where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-logical-expression})
 device(\plc{scalar-integer-expression})
-map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ list})
+map(\plc{[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ locator-list})
 depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 nowait
 \end{indentedcodelist}
@@ -526,7 +526,7 @@ device(\plc{[ device-modifier} :\plc{] integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] locator-list})
 is_device_ptr(\plc{list})
 defaultmap(\plc{implicit-behavior[:variable-category]})
 nowait
@@ -566,7 +566,7 @@ device(\plc{[ device-modifier} :\plc{] scalar-integer-expression})
 private(\plc{list})
 firstprivate(\plc{list})
 in_reduction(\plc{reduction-identifier }:\plc{ list})
-map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] list})
+map(\plc{[[map-type-modifier[},\plc{] [map-type-modifier[},\plc{] ...] map-type}:\plc{ ] locator-list})
 is_device_ptr(\plc{list})
 defaultmap(\plc{implicit-behavior[:variable-category]})
 nowait
@@ -655,23 +655,22 @@ Each memory \plc{allocator} specified in the \code{uses_allocators} clause will 
 
 \begin{ccppspecific}
 
-If an array section is a list item in a \code{map} clause and it has a named
-pointer that is a scalar variable with a predetermined data-sharing attribute
-of firstprivate (see \specref{subsubsec:Data-sharing Attribute Rules for
-Variables Referenced in a Construct}) then on entry to the \code{target}
-region:
+If a list item in a \code{map} clause has a base pointer and it is a
+scalar variable with a predetermined data-sharing attribute of firstprivate
+(see \specref{subsubsec:Data-sharing Attribute Rules for Variables Referenced
+in a Construct}), then on entry to the \code{target} region:
 
 \begin{itemize}
 \item If the list item is not a zero-length array section, the corresponding
-private variable is initialized relative to the address of the storage
-location of the corresponding array section in the device data environment
-that is created by the \code{map} clause.
+private variable is initialized such that the corresponding list item in the
+device data environment can be accessed through the pointer in the
+\code{target} region.
 
 \item If the list item is a zero-length array section, the corresponding
-private variable is initialized relative to the address of the
-corresponding storage location in the device data environment. If the
-corresponding storage location is not present in the device data environment,
-the corresponding private variable is initialized to NULL.
+private variable is initialized such that the corresponding storage location
+of the array section can be referenced through the pointer in the \code{target}
+region. If the corresponding storage location is not present in the device
+data environment, the corresponding private variable is initialized to NULL.
 \end{itemize}
 
 \end{ccppspecific}
@@ -853,8 +852,8 @@ depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to([mapper(\plc{mapper-identifier}):]\plc{list})
-from([mapper(\plc{mapper-identifier}):]\plc{list})
+to([mapper(\plc{mapper-identifier}):]\plc{locator-list})
+from([mapper(\plc{mapper-identifier}):]\plc{locator-list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -877,8 +876,8 @@ depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to([mapper(\plc{mapper-identifier}):]\plc{list})
-from([mapper(\plc{mapper-identifier}):]\plc{list})
+to([mapper(\plc{mapper-identifier}):]\plc{locator-list})
+from([mapper(\plc{mapper-identifier}):]\plc{locator-list})
 \end{indentedcodelist}
 \end{fortranspecific}
 
@@ -968,13 +967,6 @@ clause expression evaluates to \plc{false} then no assignments occur.
 \begin{itemize}
 \item A program must not depend on any ordering of the evaluations of the clauses of the
 \code{target}~\code{update} directive, or on any side effects of the evaluations of the clauses.
-
-\begin{ccppspecific}
-
-\item If a list item is an array section or it uses a shape-operator and the type of its base expression
-is a pointer type, the base expression must be an lvalue expression.
-
-\end{ccppspecific}
 
 \item At least one \plc{motion-clause} must be specified.
 

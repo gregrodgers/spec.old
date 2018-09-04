@@ -230,39 +230,36 @@ guarantees provided by the \code{critical} construct. If no
 \code{hint} clause is specified, the effect is as if \code{hint(omp_sync_hint_none)}
 had been specified.
 
-\def\omptMutex#1#2{
 \events
-The \plc{#1-acquire} event occurs in the thread encountering the
-\code{#1} construct on entry to the #1 region before
+The \plc{critical-acquiring} event occurs in the thread encountering the
+\code{critical} construct on entry to the critical region before
 initiating synchronization for the region.
 
-The \plc{#1-acquired} event occurs in the thread encountering the
-\code{#1} construct after entering the region, but before executing the
-structured block of the \code{#1} region.
+The \plc{critical-acquired} event occurs in the thread encountering the
+\code{critical} construct after entering the region, but before executing the
+structured block of the \code{critical} region.
 
-The \plc{#1-release} event occurs in the thread encountering the
-\code{#1} construct after completing any synchronization
-on exit from the \code{#1} region.
+The \plc{critical-released} event occurs in the thread encountering the
+\code{critical} construct after completing any synchronization
+on exit from the \code{critical} region.
 
 \tools
 A thread dispatches a registered \code{ompt_callback_mutex_acquire}
-callback for each occurrence of #2 \plc{#1-acquire} event
+callback for each occurrence of a \plc{critical-acquiring} event
 in that thread.
 This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
 
 A thread dispatches a registered \code{ompt_callback_mutex_acquired}
-callback for each occurrence of #2 \plc{#1-acquired} event
+callback for each occurrence of a \plc{critical-acquired} event
 in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
 
 A thread dispatches a registered \code{ompt_callback_mutex_released}
-callback for each occurrence of #2 \plc{#1-release} event
+callback for each occurrence of a \plc{critical-released} event
 in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
 The callbacks occur in the task encountering
-the #1 construct.  The callbacks should receive \code{ompt_mutex_#1}
+the critical construct.  The callbacks should receive \code{ompt_mutex_critical}
 as their \plc{kind} argument if practical, but a less specific kind is acceptable.
-}
 
-\omptMutex{critical}{a}
 
 \restrictions
 \begin{itemize}
@@ -1276,7 +1273,36 @@ If no \code{hint} clause is specified, the effect is as if \code{hint(omp_sync_h
 
 \needspace{16\baselineskip}\begin{samepage}
 
-\omptMutex{atomic}{an}
+\events
+The \plc{atomic-acquiring} event occurs in the thread encountering the
+\code{atomic} construct on entry to the atomic region before
+initiating synchronization for the region.
+
+The \plc{atomic-acquired} event occurs in the thread encountering the
+\code{atomic} construct after entering the region, but before executing the
+structured block of the \code{atomic} region.
+
+The \plc{atomic-released} event occurs in the thread encountering the
+\code{atomic} construct after completing any synchronization
+on exit from the \code{atomic} region.
+
+\tools
+A thread dispatches a registered \code{ompt_callback_mutex_acquire}
+callback for each occurrence of an \plc{atomic-acquiring} event
+in that thread.
+This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_acquired}
+callback for each occurrence of an \plc{atomic-acquired} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_released}
+callback for each occurrence of an \plc{atomic-released} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+The callbacks occur in the task encountering
+the atomic construct.  The callbacks should receive \code{ompt_mutex_atomic}
+as their \plc{kind} argument if practical, but a less specific kind is acceptable.
+
 
 \restrictions
 
@@ -1824,7 +1850,56 @@ are satisfied before it completes execution of the \code{ordered} region.
 A specific dependence is satisfied when a thread executing the corresponding
 iteration encounters an \code{ordered} construct with a \code{depend(source)} clause.
 
-\omptMutex{ordered}{an}
+\events
+The \plc{ordered-acquiring} event occurs in the task encountering the
+\code{ordered} construct on entry to the ordered region before
+initiating synchronization for the region.
+
+The \plc{ordered-acquired} event occurs in the task encountering the
+\code{ordered} construct after entering the region, but before executing the
+structured block of the \code{ordered} region.
+
+The \plc{ordered-released} event occurs in the task encountering the
+\code{ordered} construct after completing any synchronization
+on exit from the \code{ordered} region.
+
+The \plc{doacross-sink} event occurs in the task encountering a
+\code{ordered} construct for each {\pcode{depend(sink:\plc{vec})}}
+clause after the dependence is fulfilled.
+
+The \plc{doacross-source} event occurs in the task encountering a
+\code{ordered} construct with a {\pcode{depend(source:\plc{vec})}} 
+clause before signaling the dependence to be fulfilled.
+
+
+\tools
+A thread dispatches a registered \code{ompt_callback_mutex_acquire}
+callback for each occurrence of an \plc{ordered-acquiring} event
+in that thread.
+This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_acquired}
+callback for each occurrence of an \plc{ordered-acquired} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_released}
+callback for each occurrence of an \plc{ordered-released} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+The callbacks occur in the task encountering the atomic construct.
+The callbacks should receive \code{ompt_mutex_ordered}
+as their \plc{kind} argument if practical, but a less specific kind is acceptable.
+
+A thread dispatches a registered \code{ompt_callback_dependences}
+callback for each occurrence of an \plc{doacross-sink} or
+\plc{doacross-source} event in that thread.
+This callback has the type signature \code{ompt_callback_dependences_t}.
+For the \plc{doacross-sink} event, all vector entries are listed as 
+\code{ompt_dependence_type_sink} in the deps argument.
+For the \plc{doacross-source} event, all vector entries are listed as 
+\code{ompt_dependence_type_source} in the deps argument.
+
+
+
 
 
 \restrictions
@@ -2134,11 +2209,11 @@ This event occurs in a thread that observes the unfulfilled dependence before it
 
 \tools
 
-A thread dispatches the \code{ompt_callback_task_dependences} callback
+A thread dispatches the \code{ompt_callback_dependences} callback
 for each occurrence of the \plc{task-dependences} event to
 announce its dependences with respect to the list items in the \code{depend} clause.
 This callback has type signature
-\code{ompt_callback_task_dependences_t}.
+\code{ompt_callback_dependences_t}.
 
 A thread dispatches the \code{ompt_callback_task_dependence}
 callback for a \plc{task-dependence} event to report a
@@ -2219,8 +2294,8 @@ type of x\textsubscript{i} without overflow.
 \item \code{ordered} construct, see
 \specref{subsec:ordered Construct}.
 
-\item \code{ompt_callback_task_dependences_t}, see
-\specref{sec:ompt_callback_task_dependences_t}.
+\item \code{ompt_callback_dependences_t}, see
+\specref{sec:ompt_callback_dependences_t}.
 
 \item \code{ompt_callback_task_dependence_t}, see
 \specref{sec:ompt_callback_task_dependence_t}.
