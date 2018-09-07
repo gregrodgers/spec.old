@@ -55,7 +55,7 @@ OpenMP target devices, and controlling a tool from an OpenMP application.
 \subsection{Activating an OMPT Tool}
 \label{sec:ompt-initialization}
 
-There are three steps to activating a tool. First, an OpenMP
+There are three steps to activate a tool. First, an OpenMP
 implementation determines whether a tool should be initialized.  If
 so, the OpenMP implementation invokes the tool's initializer, enabling
 the tool to prepare to monitor the execution on the host. Finally, a
@@ -88,12 +88,12 @@ Immediately before an OpenMP implementation initializes itself, it
 determines whether it should check for the presence of a tool
 interested in using the OMPT interface by examining the \plc{tool-var}
 ICV.  If value of \plc{tool-var} is \plc{disabled}, the OpenMP
-implementation will initialize itself without even checking whether a
+implementation will initialize itself without checking whether a
 tool is present and the functionality of the OMPT interface will be
 unavailable as the program executes.
 
 If the value of \plc{tool-var} is \plc{enabled}, the OpenMP
-implementation will check to see if a tool has provided an
+implementation will check if a tool has provided an
 implementation of \code{ompt_start_tool}.  The OpenMP implementation first
 checks if a tool-provided implementation of \code{ompt_start_tool} is
 available in the address space, either statically-linked into the
@@ -118,7 +118,7 @@ the OpenMP implementation will know
 that a tool expects to use the OMPT interface.
 
 Next, the OpenMP implementation will initialize itself. If a tool
-provided a non-null pointer to an \code{ompt_start_tool_result_t} structure,
+provides a non-null pointer to an \code{ompt_start_tool_result_t} structure,
 the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
 
 \crossreferences
@@ -202,10 +202,8 @@ the OMPT interface. Once a tool has obtained a
 For each runtime entry point in the OMPT interface for the host device,
 Table~\ref{table:ompt-callback-interface-functions} provides the string
 name by which it is known and its associated type signature. Implementations
-can provide additional, implementation-specific names and corresponding
-entry points as long as they don't use names that start with the prefix
-``\code{ompt_}''. These are reserved for future extensions in the
-OpenMP specification.
+can provide additional implementation-specific names and corresponding
+entry points.  Any names that begin with \code{ompt_} are reserved names.
 
 During initialization, a tool should look up each runtime entry point in the
 OMPT interface by name and bind a pointer maintained by the tool
@@ -229,6 +227,7 @@ part of the description of its type signature.
 \item \code{ompt_set_callback_t}, see \specref{sec:ompt_set_callback_t}.
 \item \code{ompt_get_callback_t}, see \specref{sec:ompt_get_callback_t}.
 \item \code{ompt_get_thread_data_t}, see \specref{sec:ompt_get_thread_data_t}.
+\item \code{ompt_get_num_procs_t}, see \specref{sec:ompt_get_num_procs_t}.
 \item \code{ompt_get_num_places_t}, see \specref{sec:ompt_get_num_places_t}.
 \item \code{ompt_get_place_proc_ids_t}, see \specref{sec:ompt_get_place_proc_ids_t}.
 \item \code{ompt_get_place_num_t}, see \specref{sec:ompt_get_place_num_t}.
@@ -240,7 +239,6 @@ part of the description of its type signature.
 \item \code{ompt_get_task_memory_t}, see \specref{sec:ompt_get_task_memory_t}.
 \item \code{ompt_get_target_info_t}, see \specref{sec:ompt_get_target_info_t}.
 \item \code{ompt_get_num_devices_t}, see \specref{sec:ompt_get_num_devices_t}.
-\item \code{ompt_get_num_procs_t}, see \specref{sec:ompt_get_num_procs_t}.
 \item \code{ompt_get_unique_id_t}, see \specref{sec:ompt_get_unique_id_t}.
 \item \code{ompt_finalize_tool_t}, see \specref{sec:ompt_finalize_tool_t}.
 \item \code{ompt_function_lookup_t}, see \specref{sec:ompt_function_lookup_t}.
@@ -427,16 +425,15 @@ A tool may also optionally register an \code{ompt_callback_device_finalize} call
   Implementations
 may provide additional implementation-specific names and corresponding
 entry points as long as they don't use names that start with the prefix
-``\code{ompt_}''. These are reserved for future extensions in the
-OpenMP specification.
+\code{ompt_} which is reserved for the OpenMP specification.
 
   If \plc{lookup} is non-null, the driver for a device will
   provide runtime entry points that enable a tool to control the device's
   interface for collecting traces in its \emph{native} trace format,
   which may be device specific.
-  The kinds of trace records available for a device will typically be
+  The kinds of trace records available for a device are
   implementation-defined.
-  Some devices may also allow a tool to
+  Some devices may allow a tool to
   collect traces of records in a standard format known as OMPT format,
   described in this document. If so, the \plc{lookup} function will
   return values for the runtime entry points
@@ -543,7 +540,7 @@ OpenMP specification.
   the buffer completion callback provided by the tool.
 \item It is legal to shut down an OpenMP implementation while device tracing
 is in progress.
-\item When an OpenMP implementation begins to shut down, the OpenMP implementation will
+\item When an OpenMP implementation begins to shut down, it will
   finalize each target device.  Device finalization occurs in three steps.
   First, the OpenMP implementation halts any tracing in progress for the device. Second,
   the OpenMP implementation flushes all trace records collected for the device and presents them to
@@ -793,10 +790,10 @@ to a user. The \plc{start_time} and \plc{end_time} fields are
 used to place an event in time. The times are relative to the device
 clock. If an event has no associated \plc{start_time} and/or
 \plc{end_time}, its value will be
-\code{ompt_time_none}. The hardware id field,
+\code{ompt_time_none}. The hardware identifier field,
 \plc{hwid},  is used to indicate the location on the device where
 the event occurred. A \plc{hwid} may represent a hardware abstraction
-such as a core or a hardware thread id. The meaning of a \plc{hwid}
+such as a core or a hardware thread identifier. The meaning of a \plc{hwid}
 value for a device is defined by the implementer of the software
 stack for the device. If there is no hardware abstraction associated
 with the record, the value of \plc{hwid}
@@ -861,7 +858,7 @@ This section describes miscellaneous types and enumerations used by the tool int
 \subsubsubsection{\hcode{ompt_callback_t}}
 \label{sec:ompt_callback_t}
 
-Pointers to tool callback functions with many different type
+Pointers to tool callback functions with different type
 signatures are passed to the \code{ompt_set_callback} runtime entry point and
 returned by the \code{ompt_get_callback} runtime entry point. For convenience,
 these runtime entry points expect all type signatures to be cast to
@@ -879,7 +876,7 @@ typedef void (*ompt_callback_t) (void);
 
 \subsubsubsection{\hcode{ompt_id_t}}
 \label{sec:ompt_id_t}
-When tracing asynchronous activity on OpenMP devices, tools need identifiers to correlate target regions and operations initiated by the host with
+When tracing asynchronous activity on devices, tools need identifiers to correlate target regions and operations initiated by the host with
 associated activities on a target device. In addition, tools need identifiers to refer to parallel regions and tasks that execute on a device.
 OpenMP implementations use identifiers of type \code{ompt_id_t} type for each of these 
 purposes.
@@ -1006,7 +1003,7 @@ typedef struct ompt_task_dependence_t {
 
 \descr
 \code{ompt_task_dependence_t} is a structure to hold information
-about a depend clause.
+about a \code{depend} clause.
 The element \plc{variable_addr} points to the storage location of the dependence.
 The element \plc{dependence_type} indicates the type of dependence described.
 
@@ -1084,7 +1081,7 @@ typedef enum ompt_dispatch_t {
 
 \subsubsubsection{\hcode{ompt_sync_region_t}}
 \label{sec:ompt_sync_region_t}
-\code{ompt_sync_region_t} is an enumeration that defines the valid sync region kind values.
+\code{ompt_sync_region_t} is an enumeration that defines the valid synchronization region kind values.
 
 
 \begin{ccppspecific}
@@ -1379,21 +1376,21 @@ typedef enum ompt_cancel_flag_t {
 \end{ccppspecific}
 
 
-\crossreferences
-\begin{itemize}
-\item \code{ompt_cancel_t} data type, see \specref{sec:ompt_callback_cancel_t}.
-\end{itemize}
-
 % ompt_hwid_t
 
 \subsubsubsection{\hcode{ompt_hwid_t}}
 \label{sec:ompt_hwid_t}
 \code{ompt_hwid_t} is an opaque object representing a hardware identifier for a target device.
 \label{sec:ompt_hwid_none}
-\code{ompt_hwid_none} refers to an unknown or unspecified hardware id.
-If there is no \code{hwid} associated with an
-\code{ompt_record_abstract_t}, the value of \code{hwid} shall be
+\code{ompt_hwid_none} refers to an unknown or unspecified hardware identifier.
+If there is no \plc{hwid} associated with an
+\code{ompt_record_abstract_t}, the value of \plc{hwid} shall be
 \code{ompt_hwid_none}.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt_record_abstract_t} data type, see \specref{sec:ompt_record_abstract_t}.
+\end{itemize}
 
 
 \begin{ccppspecific}
