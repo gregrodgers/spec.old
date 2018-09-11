@@ -2624,7 +2624,7 @@ data-sharing attribute, \code{map} or \code{is_device_ptr} clauses:
 
 \begin{ccppspecific}
 
-\item A variable that is of type pointer is treated as if it is the named
+\item A variable that is of type pointer is treated as if it is the base
     pointer of a zero-length array section that appeared as a list item in a
     \code{map} clause.  
 
@@ -2753,13 +2753,23 @@ construct is encountered then:
 
 \end{itemize}
 
-\begin{fortranspecific}
-If a list item in a \code{map} clause has the POINTER attribute and if
-the association status of the list item is associated, then it is
-treated as if the pointer target is a list item in the clause.
-\end{fortranspecific}
+%If a structure is implicitly mapped and any part of the structure is
+%explicitly mapped, only the corresponding storage for those explicitly
+%mapped parts are accessible in the device data environment.
+%
+%If a structure that is not present in the device data environment is
+%implicitly mapped by a construct and any part of the structure is
+%explicitly mapped by the same construct, only the corresponding
+%storage for those explicitly mapped parts are accessible in the device
+%data environment as a result of the mapping of the structure.
+%
+If a structure or array that is not present in the device data
+environment is implicitly mapped by a construct and any part of the
+structure or array is explicitly mapped by the same construct, only
+the corresponding storage for those explicitly mapped parts are
+accessible in the device data environment as a result of the mapping
+of the structure or array.
 
-\begin{ccppspecific}
 If \plc{item}\textsubscript{1} is a list item in a \code{map} clause, and
 \plc{item}\textsubscript{2} is another list item in a \code{map} clause on the
 same construct that has a base pointer that is, or is part of,
@@ -2781,7 +2791,7 @@ on \plc{item}\textsubscript{1}.
 
 \end{itemize}
 
-
+\begin{ccppspecific}
 If a list item in a \code{map} clause has a base pointer, and a pointer
 variable is present in the device data environment that corresponds to the
 base pointer when the effect of the \code{map} clause occurs, then if the corresponding
@@ -2803,6 +2813,31 @@ must share storage.
 \end{enumerate}
 
 \end{ccppspecific}
+
+\begin{fortranspecific}
+%If a list item is a derived type component that is not a pointer and
+%it has a base pointer, the base pointer is treated as if it is a list
+%item in the clause.
+If a list item is not a pointer and it has a base pointer, the base
+pointer is treated as if it is a list item in the clause.
+
+If a list item has the \code{POINTER} attribute and if the association
+status of the list item is associated, then it is treated as if the
+pointer target is a list item in the clause.
+%The corresponding pointer is associated with the corresponding pointer
+%target in the device data environment.  The corresponding pointer
+%becomes an attached pointer unless it was associated with the
+%corresponding pointer target prior to a task encountering the
+%construct associated with the \code{map} clause.
+The corresponding pointer becomes associated with the corresponding
+pointer target in the device data environment if either the
+corresponding pointer or the corresponding pointer target is created
+by a \code{map} clause on the construct.  The associated corresponding
+pointer becomes an attached pointer unless it was associated with the
+corresponding pointer target prior to a task encountering the
+construct associated with the \code{map} clause.
+
+\end{fortranspecific}
 
 \begin{cppspecific}
 If a \plc{lambda} is mapped explicitly or implicitly, variables
@@ -3014,12 +3049,13 @@ original storage unless they are the same lvalue expression or array section.
 
 \item If a list item is an array section, it must specify contiguous storage.
 
-\item If more than one list item of the \code{map} clauses on the same
-construct have the same containing array or base pointers that share original
-storage, and if any of the list items do not have corresponding list items
-that are present in the device data environment prior to a task encountering
-the construct, then the list items must refer to the same array elements of
-either the containing array or the implicit array of the base pointers.
+\item If multiple list items are explicitly mapped on the same
+construct and have the same containing array or have base pointers that share
+original storage, and if any of the list items do not have corresponding list
+items that are present in the device data environment prior to a task
+encountering the construct, then the list items must refer to the same array
+elements of either the containing array or the implicit array of the base
+pointers.
 
 \item If any part of the original storage of a list item with an
 explicit data-mapping attribute has corresponding storage in the device data

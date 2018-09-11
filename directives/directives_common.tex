@@ -158,11 +158,43 @@ is subject to the restrictions specified in \specref{sec:Array Sections}
 and in each of the sections describing clauses and directives for which
 the \plc{list} or \plc{extended-list} appears.
 
+Some executable directives include a structured block. A structured block:
+\begin{itemize}
+\item may contain infinite loops where the point of exit is never reached; 
+
+\item may halt due to an IEEE exception;
+
+\begin{ccppspecific}
+\item may contain calls to \code{exit()}, \code{_Exit()}, \code{quick_exit()}, 
+      \code{abort()} or functions with a \code{_Noreturn} specifier (in C) or 
+      a \code{noreturn} attribute (in C/C++); 
+  
+\item may be an expression statement, iteration statement, selection statement,
+      or try block, provided that the corresponding compound statement obtained 
+      by enclosing it in \tcode{\{} and \tcode{\}} would be a structured block; and
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\item may contain \code{STOP} statements.
+\end{fortranspecific}
+\end{itemize}
+
+\restrictions
+Restrictions to structured blocks are as follows:
+
+\begin{itemize}
+\item Entry to a structured block must not be the result of a branch.
+
+\item The point of exit cannot be a branch out of the structured block.
+
+\begin{ccppspecific}
+\item The point of entry to a structured block must not be a call to \code{setjmp()}.
+
+\item \code{longjmp()} and \code{throw()} must not violate the entry/exit criteria.
+\end{ccppspecific}
+\end{itemize}
 
 
-%\pagebreak
-% Force the blue floater bar down, and force the subsection header up, to
-% bring the blue bar closer to the header:
 
 \begin{fortranspecific}
 
@@ -615,9 +647,6 @@ The following ICVs store values that affect the operation of \code{parallel} reg
 for encountered \code{parallel} regions. There is one copy of this ICV per data
 environment.
 
-\item \plc{nest-var} - controls whether nested parallelism is enabled for encountered \code{parallel}
-regions. There is one copy of this ICV per data environment. The \plc{nest-var} ICV has been deprecated.
-
 \item \plc{nthreads-var} - controls the number of threads requested for encountered \code{parallel}
 regions. There is one copy of this ICV per data environment.
 
@@ -627,11 +656,11 @@ contention group. There is one copy of this ICV per data environment.
 \item \plc{max-active-levels-var} - controls the maximum number of nested active \code{parallel}
 regions. There is one copy of this ICV per device.
 
-\item \plc{place-partition-var} -- controls the place partition available to the execution
+\item \plc{place-partition-var} - controls the place partition available to the execution
 environment for encountered \code{parallel} regions. There is one copy of this ICV per
 implicit task.
 
-\item \plc{active-levels-var} - the number of nested, active parallel regions enclosing the current
+\item \plc{active-levels-var} - the number of nested active parallel regions enclosing the current
 task such that all of the \code{parallel} regions are enclosed by the outermost initial task
 region on the current device. There is one copy of this ICV per data environment.
 
@@ -744,7 +773,6 @@ environment variables, and initial values.
 \tablecaption{ICV Initial Values\label{tab:ICV Initial Values}}
 \begin{supertabular}{p{1.4in} p{1.8in} p{1.5in}}
 {\splc{dyn-var}} & {\scode{OMP_DYNAMIC}} & See description below\\
-{\splc{nest-var}} & {\scode{OMP_NESTED}} & Implementation defined\\
 {\splc{nthreads-var}} & {\scode{OMP_NUM_THREADS}} & Implementation defined\\
 {\splc{run-sched-var}} & {\scode{OMP_SCHEDULE}} & Implementation defined\\
 {\splc{def-sched-var}} & (none) & Implementation defined\\
@@ -752,7 +780,7 @@ environment variables, and initial values.
 {\splc{stacksize-var}} & {\scode{OMP_STACKSIZE}} & Implementation defined\\
 {\splc{wait-policy-var}} & {\scode{OMP_WAIT_POLICY}} & Implementation defined\\
 {\splc{thread-limit-var}} & {\scode{OMP_THREAD_LIMIT}} & Implementation defined\\
-{\splc{max-active-levels-var}} & {\scode{OMP_MAX_ACTIVE_LEVELS}} & See description below\\
+{\splc{max-active-levels-var}} & {\scode{OMP_MAX_ACTIVE_LEVELS}}, {\scode{OMP_NESTED}} & See description below\\
 {\splc{active-levels-var}} & (none) & {\splc{zero}}\\
 {\splc{levels-var}} & (none) & {\splc{zero}}\\
 {\splc{place-partition-var}} & {\scode{OMP_PLACES}} & Implementation defined\\
@@ -771,19 +799,22 @@ environment variables, and initial values.
 \linenumbers
 
 \descr
+
 \begin{itemize}
 \item Each device has its own ICVs.
+
+\item The initial value of \plc{dyn-var} is implementation defined if the implementation supports
+dynamic adjustment of the number of threads; otherwise, the initial value is \plc{false}.
 
 \item The value of the \plc{nthreads-var} ICV is a list.
 
 \item The value of the \plc{bind-var} ICV is a list.
 
-\item The initial value of \plc{dyn-var} is implementation defined if the implementation supports
-dynamic adjustment of the number of threads; otherwise, the initial value is \plc{false}.
-
-\item The initial value of \plc{max-active-levels-var} is the number of levels of parallelism that
-the implementation supports. See the definition of \emph{supporting n levels of parallelism}
-in \specref{subsec:Implementation Terminology} for further details.
+\item The initial value of \plc{max-active-levels-var} is the number of active
+    levels of parallelism that the implementation supports if
+    \code{OMP_NUM_THREADS} or \code{OMP_PROC_BIND} is set to a comma-separated
+    list of more than one value. Otherwise, the initial value of
+    \plc{max-active-levels-var} is implementation defined.
 \end{itemize}
 
 The host and target device ICVs are initialized before any OpenMP API construct or
@@ -872,8 +903,6 @@ through OpenMP API routines.
 \begin{supertabular}{ p{1.2in} p{2.0in} p{1.5in}}
 {\splc{dyn-var}} & {\scode{omp_set_dynamic()}} & {\scode{omp_get_dynamic()}}\\
 
-{\splc{nest-var}} & {\scode{omp_set_nested()}} & {\scode{omp_get_nested()}}\\
-
 {\splc{nthreads-var}} & {\scode{omp_set_num_threads()}} & {\scode{omp_get_max_threads()}}\\
 
 {\splc{run-sched-var}} & {\scode{omp_set_schedule()}} & {\scode{omp_get_schedule()}}\\
@@ -888,7 +917,7 @@ through OpenMP API routines.
 
 {\splc{thread-limit-var}} & {\scode{thread_limit}} clause & {\scode{omp_get_thread_limit()}}\\
 
-{\splc{max-active-levels-var}} & {\scode{omp_set_max_active_levels()}} & {\scode{omp_get_max_active_levels()}}\\
+{\splc{max-active-levels-var}} & {\scode{omp_set_max_active_levels()}}, {\scode{omp_set_nested()}} & {\scode{omp_get_max_active_levels()}}\\
 
 {\splc{active-levels-var}} & (none) & {\scode{omp_get_active_level()}}\\
 
@@ -956,6 +985,8 @@ Detailed values in the \plc{place-partition-var} ICV are retrieved using the run
 
 \item \code{omp_get_thread_limit} routine, see \specref{subsec:omp_get_thread_limit}.
 
+\item \code{omp_get_supported_active_levels}, see \specref{subsec:omp_get_supported_active_levels}.
+
 \item \code{omp_set_max_active_levels} routine, see \specref{subsec:omp_set_max_active_levels}.
 
 \item \code{omp_get_max_active_levels} routine, see \specref{subsec:omp_get_max_active_levels}.
@@ -1021,7 +1052,6 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 \tablecaption{Scopes of ICVs\label{tab:Scopes of ICVs}}
 \begin{supertabular}{p{1.5in} p{2.5in}}
 {\splc{dyn-var}} & data environment\\
-{\splc{nest-var}} & data environment\\
 {\splc{nthreads-var}} & data environment\\
 {\splc{run-sched-var}} & data environment\\
 {\splc{def-sched-var}} & device\\
@@ -1128,7 +1158,6 @@ among construct clauses and ICVs.
 \tablecaption{ICV Override Relationships\label{tab:ICV Override Relationships}}
 \begin{supertabular}{ p{1.3in} p{2.0in}}
 {\splc{dyn-var}} & (none)\\
-{\splc{nest-var}} & (none)\\
 {\splc{nthreads-var}} & {\scode{num_threads}}\\
 {\splc{run-sched-var}} & {\scode{schedule}}\\
 {\splc{def-sched-var}} & {\scode{schedule}}\\
@@ -1325,7 +1354,7 @@ therefore is not contiguous.
 
 Assume \code{b} is declared to be a pointer to a 2-dimensional array with
 dimension sizes 10 and 10. The sixth example refers to all elements of the
-2-dimensional array to which the pointer \code{b[10]} points. The seventh
+2-dimensional array given by \code{b[10]}. The seventh
 example is a zero-length array section.
 
 Assume \code{c} is declared to be a 3-dimensional array with dimension sizes
@@ -1432,7 +1461,10 @@ where:
 \item \plc{iterator-type} is a type specifier.
 \end{fortranspecific}
 
-\item \plc{range-specification} is of the form \plc{begin}\code{:}\plc{end[}\code{:}\plc{step]} where \plc{begin} and \plc{end} expressions for which their types can be converted to the \plc{iterator-type} type and \plc{step} is an integral expression.
+\item \plc{range-specification} is of the form 
+\plc{begin}\code{:}\plc{end[}\code{:}\plc{step]}, where \plc{begin} and 
+\plc{end} are expressions for which their types can be converted to 
+\plc{iterator-type} and \plc{step} is an integral expression.
 
 \begin{ccppspecific}
 \item In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is of \code{int} type.
@@ -1450,19 +1482,45 @@ An iterator only exists in the context of the clause on which it appears. An ite
 The use of a variable in an expression that appears in the \plc{range-specification} causes an implicit reference to the variable in all enclosing constructs.
 
 \begin{ccppspecific}
-The values of the iterator are the set of values $i_{0}$...$i_{N-1}$ where $i_{0}=(\plc{iterator-type})begin$, $i_{j}=(\plc{iterator-type})(i_{j-1} + step)$ and
+The values of the iterator are the set of values $i_{0}$...$i_{N-1}$ where:
 \begin{itemize}
-\item $i_{0} < (\plc{iterator-type})end$ and $i_{N-1} < (\plc{iterator-type})end$ and $(\plc{iterator-type})(i_{N-1} + step) >= (\plc{iterator-type})end$ if $step > 0$.
-\item $i_{0} > (\plc{iterator-type})end$ and $i_{N-1} > (\plc{iterator-type})end$ and $(\plc{iterator-type})(i_{N-1} + step) <= (\plc{iterator-type})end$ if $step < 0$.
+\item $i_{0}$~$=$~$(\plc{iterator-type})$~$begin$, 
+\item $i_{j}$~$=$~$(\plc{iterator-type})$~$(i_{j-1}$~$+$~$step)$, and
+\item  if $step$~$>$~$0$,
+\begin{itemize}
+\item $i_{0}$~$<$~$(\plc{iterator-type})$~$end$,
+\item $i_{N-1}$~$<$~$(\plc{iterator-type})$~$end$, and 
+\item $(\plc{iterator-type})$~$(i_{N-1}$~$+$~$step)$~$\geq$~$(\plc{iterator-type})$~$end$;
+\end{itemize}
+\item if $step$~$<$~$0$,
+\begin{itemize}
+\item $i_{0}$~$>$~$(\plc{iterator-type})$~$end$,
+\item $i_{N-1}$~$>$~$(\plc{iterator-type})$~$end$, and 
+\item $(\plc{iterator-type})$~$(i_{N-1}$~$+$~$step)$~$\leq$~$(\plc{iterator-type})$~$end$.
+\end{itemize}
 \end{itemize}
 \end{ccppspecific}
+
 \begin{fortranspecific}
-The values of the iterator are the set of values $i_{1}$...$i_{N}$ where $i_{1}=begin$,  $i_{j}=i_{j-1} + step$ and
+The values of the iterator are the set of values $i_{1}$...$i_{N}$ where:
 \begin{itemize}
-\item $i_{1} <= end$ and $i_{N} <= end$ and $i_{N} + step > end$ if $step > 0$.
-\item $i_{1} >= end$ and $i_{N} >= end$ and $i_{N} + step < end$ if $step < 0$.
+\item $i_{1}$~$=$~$begin$,  
+\item $i_{j}$~$=$~$i_{j-1}$~$+$~$step$, and
+\item if $step$~$>$~$0$.
+\begin{itemize}
+\item $i_{1}$~$\leq$~$end$,
+\item $i_{N}$~$\leq$~$end$, and 
+\item $i_{N}$~$+$~$step$~$>$~$end$;
+\end{itemize}
+\item if $step$~$<$~$0$,
+\begin{itemize}
+\item $i_{1}$~$\geq$~$end$,
+\item $i_{N}$~$\geq$~$end$, and 
+\item $i_{N}$~$+$~$step$~$<$~$end$.
+\end{itemize}
 \end{itemize}
 \end{fortranspecific}
+
 The set of of values will be empty if no possible value complies with the conditions above.
 
  For those clauses that contain expressions containing iterator identifiers, the
@@ -1470,7 +1528,9 @@ effect is as if the list item is instantiated within the clause for each
 value of the iterator in the set defined above, substituting each occurrence of
 the iterator identifier in the expression with the iterator value. If the set of values of the iterator is empty then the effect is as if the clause was not specified.
 
-The behavior is unspecified if $i_{j} + step$ cannot be represented in \plc{iterator-type} in any of the $i_{j} + step$ computations for any $0 <= j < N$.
+The behavior is unspecified if $i_{j}$~$+$~$step$ cannot be represented in 
+\plc{iterator-type} in any of the $i_{j}$~$+$~$step$ computations for any 
+$0$~$\leq$~$j$~$<$~$N$.
 
 \restrictions
 
