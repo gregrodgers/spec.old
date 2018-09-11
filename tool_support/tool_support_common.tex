@@ -340,7 +340,7 @@ Return code abbreviation                      & N &S/P& A \\\hline
 {\scode{ompt_callback_device_unload}}         &   &   & * \\
 {\scode{ompt_callback_sync_region_wait}}     & * & * & * \\
 {\scode{ompt_callback_mutex_released}}        & * & * & * \\
-{\scode{ompt_callback_task_dependences}}      & * & * & * \\
+{\scode{ompt_callback_dependences}}          & * & * & * \\
 {\scode{ompt_callback_task_dependence}}       & * & * & * \\
 {\scode{ompt_callback_work}}                   & * & * & * \\
 {\scode{ompt_callback_master}}                 & * & * & * \\
@@ -656,7 +656,7 @@ typedef enum ompt_callbacks_t {
   ompt_callback_device_unload            = 15,
   ompt_callback_sync_region_wait         = 16,
   ompt_callback_mutex_released           = 17,
-  ompt_callback_task_dependences         = 18,
+  ompt_callback_dependences              = 18,
   ompt_callback_task_dependence          = 19,
   ompt_callback_work                     = 20,
   ompt_callback_master                   = 21,
@@ -818,7 +818,7 @@ typedef struct ompt_record_ompt_t {
     ompt_record_parallel_begin_t \plc{parallel_begin};
     ompt_record_parallel_end_t \plc{parallel_end};
     ompt_record_task_create_t \plc{task_create};
-    ompt_record_task_dependences_t \plc{task_deps};
+    ompt_record_dependences_t \plc{deps};
     ompt_record_task_dependence_t \plc{task_dep};
     ompt_record_task_schedule_t \plc{task_sched};
     ompt_record_implicit_t \plc{implicit};
@@ -987,33 +987,37 @@ typedef uint64_t ompt_buffer_cursor_t;
 
 
 
-% ompt_task_dependence_t
+% ompt_dependence_t
 
-\subsubsubsection{\hcode{ompt_task_dependence_t}}
-\label{sec:ompt_task_dependence_t}
-\code{ompt_task_dependence_t} is a task dependence.
+\subsubsubsection{\hcode{ompt_dependence_t}}
+\label{sec:ompt_dependence_t}
+\code{ompt_dependence_t} is a task dependence.
 
 
 \begin{ccppspecific}
 \begin{omptOther}
-typedef struct ompt_task_dependence_t {
-  void *\plc{variable_addr};
-  ompt_task_dependence_type_t \plc{dependence_type};
-} ompt_task_dependence_t;
+typedef struct ompt_dependence_t {
+  ompt_data_t \plc{variable};
+  ompt_dependence_type_t \plc{dependence_type};
+} ompt_dependence_t;
 \end{omptOther}
 \end{ccppspecific}
 
 
 \descr
-\code{ompt_task_dependence_t} is a structure to hold information
-about a \code{depend} clause.
-The element \plc{variable_addr} points to the storage location of the dependence.
+\code{ompt_dependence_t} is a structure to hold information
+about a depend clause.
+For task dependences, the element \plc{variable} points to the storage location of the 
+dependence. 
+For doacross dependences, the element \plc{variable} contains the value of a vector 
+element, describing 
+the dependence.
 The element \plc{dependence_type} indicates the type of dependence described.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_task_dependence_type_t}, see
-\specref{sec:ompt_task_dependence_type_t}.
+\item \code{ompt_dependence_type_t}, see
+\specref{sec:ompt_dependence_type_t}.
 \end{itemize}
 
 
@@ -1335,21 +1339,24 @@ typedef enum ompt_target_map_flag_t {
 
 
 
-% ompt_task_dependence_type_t
+% ompt_dependence_type_t
 
-\subsubsubsection{\hcode{ompt_task_dependence_type_t}}
-\label{sec:ompt_task_dependence_type_t}
-\code{ompt_task_dependence_type_t} is an enumeration that defines the valid task dependence type values.
+\subsubsubsection{\hcode{ompt_dependence_type_t}}
+\label{sec:ompt_dependence_type_t}
+\code{ompt_dependence_type_t} is an enumeration that defines the valid task dependence 
+type values.
 
 
 \begin{ccppspecific}
 \begin{omptEnum}
-typedef enum ompt_task_dependence_type_t {
-  ompt_task_dependence_type_in              = 1,
-  ompt_task_dependence_type_out             = 2,
-  ompt_task_dependence_type_inout           = 3,
-  ompt_task_dependence_type_mutexinoutset   = 4
-} ompt_task_dependence_type_t;
+typedef enum ompt_dependence_type_t {
+  ompt_dependence_type_in              = 1,
+  ompt_dependence_type_out             = 2,
+  ompt_dependence_type_inout           = 3,
+  ompt_dependence_type_mutexinoutset   = 4,
+  ompt_dependence_type_source          = 5,
+  ompt_dependence_type_sink            = 6
+} ompt_dependence_type_t;
 \end{omptEnum}
 \end{ccppspecific}
 
