@@ -202,39 +202,36 @@ guarantees provided by the \code{critical} construct. If no
 \code{hint} clause is specified, the effect is as if \code{hint(omp_sync_hint_none)}
 had been specified.
 
-\def\omptMutex#1#2{
 \events
-The \plc{#1-acquire} event occurs in the thread encountering the
-\code{#1} construct on entry to the #1 region before
+The \plc{critical-acquiring} event occurs in the thread encountering the
+\code{critical} construct on entry to the critical region before
 initiating synchronization for the region.
 
-The \plc{#1-acquired} event occurs in the thread encountering the
-\code{#1} construct after entering the region, but before executing the
-structured block of the \code{#1} region.
+The \plc{critical-acquired} event occurs in the thread encountering the
+\code{critical} construct after entering the region, but before executing the
+structured block of the \code{critical} region.
 
-The \plc{#1-release} event occurs in the thread encountering the
-\code{#1} construct after completing any synchronization
-on exit from the \code{#1} region.
+The \plc{critical-released} event occurs in the thread encountering the
+\code{critical} construct after completing any synchronization
+on exit from the \code{critical} region.
 
 \tools
 A thread dispatches a registered \code{ompt_callback_mutex_acquire}
-callback for each occurrence of #2 \plc{#1-acquire} event
+callback for each occurrence of a \plc{critical-acquiring} event
 in that thread.
 This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
 
 A thread dispatches a registered \code{ompt_callback_mutex_acquired}
-callback for each occurrence of #2 \plc{#1-acquired} event
+callback for each occurrence of a \plc{critical-acquired} event
 in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
 
 A thread dispatches a registered \code{ompt_callback_mutex_released}
-callback for each occurrence of #2 \plc{#1-release} event
+callback for each occurrence of a \plc{critical-released} event
 in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
 The callbacks occur in the task encountering
-the #1 construct.  The callbacks should receive \code{ompt_mutex_#1}
+the critical construct.  The callbacks should receive \code{ompt_mutex_critical}
 as their \plc{kind} argument if practical, but a less specific kind is acceptable.
-}
 
-\omptMutex{critical}{a}
 
 \restrictions
 \begin{itemize}
@@ -580,7 +577,7 @@ The syntax of the \code{taskwait} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
+depend(\plc{[depend-modifier},\plc{]dependence-type }:\plc{ locator-list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -594,7 +591,7 @@ The syntax of the \code{taskwait} construct is as follows:
 where \plc{clause} is one of the following:
 
 \begin{indentedcodelist}
-depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
+depend(\plc{[depend-modifier},\plc{]dependence-type }:\plc{ locator-list})
 \end{indentedcodelist}
 
 \end{fortranspecific}
@@ -653,8 +650,13 @@ as its \plc{endpoint} argument, as appropriate.
 
 \restrictions
 
-The \code{mutexinoutset} \plc{dependence-type} may not appear in a
+\begin{itemize}
+ \item The \code{mutexinoutset} \plc{dependence-type} may not appear in a
 \code{depend} clause on a \code{taskwait} construct.
+ \item If the \plc{dependence-type} of a \code{depend} clause is \code{depobj}, then the dependence
+ objects cannot represent dependences of the 
+ \code{mutexinoutset} dependence type.
+\end{itemize}
 
 \crossreferences
 \begin{itemize}
@@ -1248,7 +1250,36 @@ If no \code{hint} clause is specified, the effect is as if \code{hint(omp_sync_h
 
 \needspace{16\baselineskip}\begin{samepage}
 
-\omptMutex{atomic}{an}
+\events
+The \plc{atomic-acquiring} event occurs in the thread encountering the
+\code{atomic} construct on entry to the atomic region before
+initiating synchronization for the region.
+
+The \plc{atomic-acquired} event occurs in the thread encountering the
+\code{atomic} construct after entering the region, but before executing the
+structured block of the \code{atomic} region.
+
+The \plc{atomic-released} event occurs in the thread encountering the
+\code{atomic} construct after completing any synchronization
+on exit from the \code{atomic} region.
+
+\tools
+A thread dispatches a registered \code{ompt_callback_mutex_acquire}
+callback for each occurrence of an \plc{atomic-acquiring} event
+in that thread.
+This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_acquired}
+callback for each occurrence of an \plc{atomic-acquired} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_released}
+callback for each occurrence of an \plc{atomic-released} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+The callbacks occur in the task encountering
+the atomic construct.  The callbacks should receive \code{ompt_mutex_atomic}
+as their \plc{kind} argument if practical, but a less specific kind is acceptable.
+
 
 \restrictions
 
@@ -1796,7 +1827,56 @@ are satisfied before it completes execution of the \code{ordered} region.
 A specific dependence is satisfied when a thread executing the corresponding
 iteration encounters an \code{ordered} construct with a \code{depend(source)} clause.
 
-\omptMutex{ordered}{an}
+\events
+The \plc{ordered-acquiring} event occurs in the task encountering the
+\code{ordered} construct on entry to the ordered region before
+initiating synchronization for the region.
+
+The \plc{ordered-acquired} event occurs in the task encountering the
+\code{ordered} construct after entering the region, but before executing the
+structured block of the \code{ordered} region.
+
+The \plc{ordered-released} event occurs in the task encountering the
+\code{ordered} construct after completing any synchronization
+on exit from the \code{ordered} region.
+
+The \plc{doacross-sink} event occurs in the task encountering a
+\code{ordered} construct for each {\pcode{depend(sink:\plc{vec})}}
+clause after the dependence is fulfilled.
+
+The \plc{doacross-source} event occurs in the task encountering a
+\code{ordered} construct with a {\pcode{depend(source:\plc{vec})}} 
+clause before signaling the dependence to be fulfilled.
+
+
+\tools
+A thread dispatches a registered \code{ompt_callback_mutex_acquire}
+callback for each occurrence of an \plc{ordered-acquiring} event
+in that thread.
+This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_acquired}
+callback for each occurrence of an \plc{ordered-acquired} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+
+A thread dispatches a registered \code{ompt_callback_mutex_released}
+callback for each occurrence of an \plc{ordered-released} event
+in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+The callbacks occur in the task encountering the atomic construct.
+The callbacks should receive \code{ompt_mutex_ordered}
+as their \plc{kind} argument if practical, but a less specific kind is acceptable.
+
+A thread dispatches a registered \code{ompt_callback_dependences}
+callback for each occurrence of an \plc{doacross-sink} or
+\plc{doacross-source} event in that thread.
+This callback has the type signature \code{ompt_callback_dependences_t}.
+For the \plc{doacross-sink} event, all vector entries are listed as 
+\code{ompt_dependence_type_sink} in the \plc{deps} argument.
+For the \plc{doacross-source} event, all vector entries are listed as 
+\code{ompt_dependence_type_source} in the \plc{deps} argument.
+
+
+
 
 
 \restrictions
@@ -1951,8 +2031,7 @@ A \code{depobj} construct with a \code{update} clause present changes the depend
 
 \restrictions
 \begin{itemize}
- \item A \code{depend} clause on a \code{depobj} construct must not have \code{source} or \code{sink} as \plc{dependence-type}.
- \item A \code{depend} clause on a \code{depobj} construct must specify the \plc{dependence-type}.
+ \item A \code{depend} clause on a \code{depobj} construct must not have \code{source}, \code{sink} or \code{depobj} as \plc{dependence-type}.
  \item A \code{depend} clause on a \code{depobj} construct can only specify one locator.
  \item The \plc{depobj} of a \code{depobj} construct with the \code{depend} clause present must be in the uninitialized state.
  \item The \plc{depobj} of a \code{depobj} construct with the \code{destroy} clause present must be in the initialized state.
@@ -1976,7 +2055,7 @@ constraints establish dependences only between sibling tasks or between loop ite
 The syntax of the \code{depend} clause is as follows:
 
 \begin{ompSyntax}
-depend(\plc{[depend-modifier}:\plc{][dependence-type }:\plc{] locator-list})
+depend(\plc{[depend-modifier},\plc{]dependence-type }:\plc{ locator-list})
 \end{ompSyntax}
 
 where \plc{dependence-type} is one of the following:
@@ -1985,6 +2064,7 @@ in
 out
 inout
 mutexinoutset
+depobj
 \end{indentedcodelist}
 
 where \plc{depend-modifier} is one of the following:
@@ -2025,7 +2105,11 @@ constant non-negative integer.
 
 \descr
 Task dependences are derived from the \plc{dependence-type} of a \code{depend} clause and its list
-items when \plc{dependence-type} is \code{in}, \code{out}, \code{inout}, or \code{mutexinoutset}. When the \code{depend} clause has no \plc{dependence-type} specified, the task dependences are derived from the \code{depend} clause specified in the \code{depobj} constructs that initalized the depend objects specified on the \code{depend} clause as if the \code{depend} clauses of the \code{depobj} constructs were specified in the current construct. 
+items when \plc{dependence-type} is \code{in}, \code{out}, \code{inout}, or \code{mutexinoutset}. 
+When the \plc{dependence-type} is \code{depobj}, the task dependences are 
+derived from the dependences represented by the depend objects specified in the \code{depend} 
+clause as if the \code{depend} clauses of the \code{depobj} constructs were specified in 
+the current construct. 
 
 For the \code{in} \plc{dependence-type}, if the storage location of at least one
 of the list items is the same as the storage location of a list item appearing
@@ -2104,11 +2188,11 @@ This event occurs in a thread that observes the unfulfilled dependence before it
 
 \tools
 
-A thread dispatches the \code{ompt_callback_task_dependences} callback
+A thread dispatches the \code{ompt_callback_dependences} callback
 for each occurrence of the \plc{task-dependences} event to
 announce its dependences with respect to the list items in the \code{depend} clause.
 This callback has type signature
-\code{ompt_callback_task_dependences_t}.
+\code{ompt_callback_dependences_t}.
 
 A thread dispatches the \code{ompt_callback_task_dependence}
 callback for a \plc{task-dependence} event to report a
@@ -2124,17 +2208,17 @@ Restrictions to the \code{depend} clause are as follows:
 identical storage locations or disjoint storage locations.
 
 \item List items used in \code{depend} clauses cannot be zero-length array sections.
-\item Array sections cannot be specified in \code{depend} clauses with no \plc{dependence-type} specified.
-\item List items used in \code{depend} clauses with no \plc{dependence-type} specified must be depend objects in the initialized state.
+\item Array sections cannot be specified in \code{depend} clauses with the \code{depobj} dependence type.
+\item List items used in \code{depend} clauses with the \code{depobj} dependence type must be depend objects in the initialized state.
 
 \begin{ccppspecific}
-\item List items used in \code{depend} clauses with no \plc{dependence-type} specified must be expressions of the \code{omp_depend_t} type.
+\item List items used in \code{depend} clauses with the \code{depobj} depedence type must be expressions of the \code{omp_depend_t} type.
 \item List items used in \code{depend} clauses with the \code{in}, \code{out}, \code{inout} or \code{mutexinoutset} dependence types cannot be expressions of the \code{omp_depend_t} type.
 \end{ccppspecific}
 
 \begin{fortranspecific}
 \item A common block name cannot appear in a \code{depend} clause.
-\item List items used in \code{depend} clauses with no \plc{dependence-type} specified must be integer expressions of the \code{omp_depend_kind} \plc{kind}.
+\item List items used in \code{depend} clauses with the \code{depobj} dependence type must be integer expressions of the \code{omp_depend_kind} \plc{kind}.
 %\item List items used in \code{depend} clauses with the \code{in}, \code{out}, \code{inout} or \code{mutexinoutset} dependence types cannot be integer expressions of the \code{omp_depobj_kind} \plc{kind}.
 \end{fortranspecific}
 
@@ -2189,8 +2273,8 @@ type of x\textsubscript{i} without overflow.
 \item \code{ordered} construct, see
 \specref{subsec:ordered Construct}.
 
-\item \code{ompt_callback_task_dependences_t}, see
-\specref{sec:ompt_callback_task_dependences_t}.
+\item \code{ompt_callback_dependences_t}, see
+\specref{sec:ompt_callback_dependences_t}.
 
 \item \code{ompt_callback_task_dependence_t}, see
 \specref{sec:ompt_callback_task_dependence_t}.
