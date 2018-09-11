@@ -47,7 +47,9 @@
 \label{sec:ompt-overview}
 
 The OMPT interface defines mechanisms for initializing a tool,
-exploring the details of an OpenMP implementation, examining OpenMP state
+assessing implementation-dependent details of an OpenMP implementation
+(such as supported states and mutual exclusion implementations),
+examining OpenMP state
 associated with an OpenMP thread, interpreting an OpenMP thread's call stack,
 receiving notification about OpenMP \emph{events}, tracing activity on
 OpenMP target devices, and controlling a tool from an OpenMP application.
@@ -119,7 +121,7 @@ that a tool expects to use the OMPT interface.
 
 Next, the OpenMP implementation will initialize itself. If a tool
 provides a non-null pointer to an \code{ompt_start_tool_result_t} structure,
-the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
+the OpenMP runtime will initialize the OMPT interface for use by a tool.
 
 \crossreferences
 \begin{itemize}
@@ -291,9 +293,7 @@ callbacks may fail with a return code of \code{ompt_set_error}.
 
 All callbacks registered with \code{ompt_set_callback} or returned
 by \code{ompt_get_callback} use the dummy type signature
-\code{ompt_callback_t}.  While this is a compromise, it is better
-than providing unique runtime entry points with a precise type signature to
-set and get the callback for each unique runtime entry point type signature.
+\code{ompt_callback_t}.
 
 Table~\ref{table:valid_rc} indicates the return codes permissible
 when trying to register various callbacks. For callbacks where the only registration return code
@@ -374,7 +374,7 @@ as an argument to identify which endpoint the callback invocation reflects.
 Second, when a whole class of events is amenable to uniform treatment, only a
 single callback is provided for a family of events, for example,  an
 \code{ompt_callback_sync_region_wait} callback is used for multiple
-kinds of synchronization regions, i.e., barrier, taskwait, and taskgroup
+kinds of synchronization regions, such as barrier, taskwait, and taskgroup
 regions. Some events involve both kinds of collapsing: the aforementioned
 \code{ompt_callback_sync_region_wait} represents
 a callback that will be invoked at each endpoint for different kinds
@@ -431,11 +431,15 @@ entry points as long as they don't use names that start with the prefix
   provide runtime entry points that enable a tool to control the device's
   interface for collecting traces in its \emph{native} trace format,
   which may be device specific.
+
   The kinds of trace records available for a device are
   implementation-defined.
   Some devices may allow a tool to
-  collect traces of records in a standard format known as OMPT format,
-  described in this document. If so, the \plc{lookup} function will
+  collect traces of records in a standard format known as OMPT trace
+  records. Each OMPT trace record serves as a substitute for an OMPT
+  callback that cannot be made on a device. The fields in each trace
+  record type are defined in the description of the callback that the
+  record represents.  If so, the \plc{lookup} function will
   return values for the runtime entry points
   \code{ompt_set_trace_ompt} and \code{ompt_get_record_ompt}, which support
   collecting and decoding OMPT traces.
