@@ -183,35 +183,42 @@ reference to the variable in all enclosing constructs.
 When a \code{final} clause is present on a \code{task} construct and the 
 \code{final} clause expression evaluates to \plc{true}, the generated task 
 will be a final task. All \code{task} constructs encountered during execution 
-of a final task will generate final and included tasks. The use of a variable in a \code{final} clause expression of a \code{task} construct causes an
-implicit reference to the variable in all enclosing constructs. Encountering a \code{task} construct with the \code{detach} clause
-during the execution of a final task results in unspecified behavior.
+of a final task will generate final and included tasks. The use of a variable 
+in a \code{final} clause expression of a \code{task} construct causes an
+implicit reference to the variable in all enclosing constructs. Encountering 
+a \code{task} construct with the \code{detach} clause during the execution 
+of a final task results in unspecified behavior.
 
-The \code{if} clause expression and the \code{final} clause expression are evaluated in the context
-outside of the \code{task} construct.
+The \code{if} clause expression and the \code{final} clause expression are 
+evaluated in the context outside of the \code{task} construct.
 
-A thread that encounters a task scheduling point within the \code{task} region may
-temporarily suspend the \code{task} region. By default, a task is tied and its suspended \code{task}
-region can only be resumed by the thread that started its execution. If the \code{untied}
-clause is present on a \code{task} construct, any thread in the team can resume the \code{task}
-region after a suspension. The \code{untied} clause is ignored if a \code{final} clause is present
-on the same \code{task} construct and the \code{final} clause expression evaluates to \plc{true}, or if a
-task is an included task.
+A thread that encounters a task scheduling point within the \code{task} region 
+may temporarily suspend the \code{task} region. By default, a task is tied and 
+its suspended \code{task} region can only be resumed by the thread that started 
+its execution. If the \code{untied} clause is present on a \code{task} construct, 
+any thread in the team can resume the \code{task} region after a suspension. The 
+\code{untied} clause is ignored if a \code{final} clause is present on the same 
+\code{task} construct and the \code{final} clause expression evaluates to 
+\plc{true}, or if a task is an included task.
 
-The \code{task} construct includes a task scheduling point in the task region of its generating
-task, immediately following the generation of the explicit task. Each explicit \code{task}
-region includes a task scheduling point at the end of its associated \plc{structured-block}.
+The \code{task} construct includes a task scheduling point in the task region of 
+its generating task, immediately following the generation of the explicit task. 
+Each explicit \code{task} region includes a task scheduling point at the end of 
+its associated \plc{structured-block}.
 
-When the \code{mergeable} clause is present on a \code{task} construct, the generated task is a \plc{mergeable task}.
+When the \code{mergeable} clause is present on a \code{task} construct, the 
+generated task is a \plc{mergeable task}.
 
-The \code{priority} clause is a hint for the priority of the generated task. The \plc{priority-value} is a
-non-negative integer expression that provides a hint for task execution order. Among all
-tasks ready to be executed, higher priority tasks (those with a higher numerical value in the
-\code{priority} clause expression) are recommended to execute before lower priority ones. The default
-\plc{priority-value} when no \code{priority} clause is specified is zero (the lowest priority). If a value is
-specified in the \code{priority} clause that is higher than the \plc{max-task-priority-var} ICV then the
-implementation will use the value of that ICV. A program that relies on task execution order
-being determined by this \plc{priority-value} may have unspecified behavior.
+The \code{priority} clause is a hint for the priority of the generated task. The 
+\plc{priority-value} is a non-negative integer expression that provides a hint for 
+task execution order. Among all tasks ready to be executed, higher priority tasks 
+(those with a higher numerical value in the \code{priority} clause expression) are 
+recommended to execute before lower priority ones. The default \plc{priority-value} 
+when no \code{priority} clause is specified is zero (the lowest priority). If a 
+value is specified in the \code{priority} clause that is higher than the 
+\plc{max-task-priority-var} ICV then the implementation will use the value of 
+that ICV. A program that relies on task execution order being determined by this 
+\plc{priority-value} may have unspecified behavior.
 
 The \code{affinity} clause is a hint to indicate data affinity of the generated
 task. The task is recommended to execute closely to the location of the list items. 
@@ -221,77 +228,84 @@ being determined by this list may have unspecified behavior.
 The list items that appear in the \code{affinity} clause may reference iterators
 defined by an \plc{iterators-definition} appearing in the same clause.
 The list items that appear in the \code{affinity} clause may include array sections.
+
 \begin{ccppspecific}
 The list items that appear in the \code{affinity} clause may use shape-operators.
 \end{ccppspecific}
 
-If a list item appears in an \code{affinity} clause then data affinity refers to the original list item.
+If a list item appears in an \code{affinity} clause then data affinity refers to 
+the original list item.
 
 \begin{note}
-When storage is shared by an explicit \code{task} region, the
-programmer must ensure, by adding proper synchronization, that the storage does not
-reach the end of its lifetime before the explicit \code{task} region completes its execution.
+When storage is shared by an explicit \code{task} region, the programmer must 
+ensure, by adding proper synchronization, that the storage does not reach the 
+end of its lifetime before the explicit \code{task} region completes its execution.
 \end{note}
 
 \events
 
 The \plc{task-create} event occurs when a thread encounters a construct
-that causes a new task to be created.
-The event occurs after the task is initialized but before
-it begins execution or is deferred.
+that causes a new task to be created. The event occurs after the task is 
+initialized but before it begins execution or is deferred.
 
 \tools
 
-A thread dispatches a registered \code{ompt_callback_task_create}
-callback for each occurrence of a \plc{task-create} event
-in the context of the encountering task.
-This callback has the type signature    \code{ompt_callback_task_create_t}.
-In the dispatched callback,             \code{(}\plc{flag} \code{& ompt_task_explicit)} always evaluates to \plc{true}.
-If the task is an undeferred task, then \code{(}\plc{flag} \code{& ompt_task_undeferred)} evaluates to \plc{true}.
-If the task is a final task,            \code{(}\plc{flag} \code{& ompt_task_final)} evaluates to \plc{true}.
-If the task is an untied task,          \code{(}\plc{flag} \code{& ompt_task_untied)} evaluates to \plc{true}.
-If the task is a mergeable task,        \code{(}\plc{flag} \code{& ompt_task_mergeable)} evaluates to \plc{true}.
-If the task is a merged task,           \code{(}\plc{flag} \code{& ompt_task_merged)} evaluates to \plc{true}.
+A thread dispatches a registered \code{ompt_callback_task_create} callback 
+for each occurrence of a \plc{task-create} event in the context of the 
+encountering task. This callback has the type signature    
+\code{ompt_callback_task_create_t}. In the dispatched callback, 
+\code{(}\plc{flag} \code{& ompt_task_explicit)} always evaluates to \plc{true}.
+If the task is an undeferred task, then 
+\code{(}\plc{flag}~\code{& ompt_task_undeferred)} evaluates to \plc{true}.
+If the task is a final task, \code{(}\plc{flag}~\code{& ompt_task_final)} 
+evaluates to \plc{true}. If the task is an untied task, 
+\code{(}\plc{flag}~\code{& ompt_task_untied)} evaluates to \plc{true}.
+If the task is a mergeable task, \code{(}\plc{flag}~\code{& ompt_task_mergeable)} 
+evaluates to \plc{true}. If the task is a merged task,           
+\code{(}\plc{flag}~\code{& ompt_task_merged)} evaluates to \plc{true}.
 
 \restrictions
 Restrictions to the \code{task} construct are as follows:
 
 \begin{itemize}
 \item A program that branches into or out of a \code{task} region is non-conforming.
-
-\item A program must not depend on any ordering of the evaluations of the clauses of the
-\code{task} directive, or on any side effects of the evaluations of the clauses.
-
+\item A program must not depend on any ordering of the evaluations of the clauses 
+      of the \code{task} directive, or on any side effects of the evaluations of 
+      the clauses.
 \item At most one \code{if} clause can appear on the directive.
-
 \item At most one \code{final} clause can appear on the directive.
-
 \item At most one \code{priority} clause can appear on the directive.
-
 \item At most one \code{detach} clause can appear on the directive.
-
-\item If a \code{detach} clause appears on the directive, then a \code{mergeable} clause cannot appear on the same directive.
+\item If a \code{detach} clause appears on the directive, then a \code{mergeable} 
+      clause cannot appear on the same directive.
 
 \begin{ccppspecific}
-\item A throw executed inside a \code{task} region must cause execution to resume within the
-same \code{task} region, and the same thread that threw the exception must catch it.
+\item A throw executed inside a \code{task} region must cause execution to resume 
+      within the same \code{task} region, and the same thread that threw the 
+      exception must catch it.
 \end{ccppspecific}
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
 \item Task scheduling constraints, see \specref{subsec:Task Scheduling}.
+
 \item \code{if} clause, see \specref{sec:if Clause}.
+
 \item \code{default} clause, see \specref{subsubsec:default clause}.
+
 \item \code{in\_reduction} clause, see \specref{subsubsec:in_reduction clause}.
+
 \item \code{depend} clause, see \specref{subsec:depend Clause}.
+
 \item \code{allocate} clause, see \specref{subsec:allocate Clause}.
+
 \item Data-sharing attribute clauses, \specref{subsec:Data-Sharing Attribute Clauses}.
+
 \item \code{omp_fulfill_event}, see \specref{subsec:omp_fulfill_event}.
+
 \item \code{ompt_callback_task_create_t}, see
 \specref{sec:ompt_callback_task_create_t}.
-%\item \code{ompt_callback_task_schedule_t}, see
-%\specref{sec:ompt_callback_task_schedule_t}.
 \end{itemize}
 
 
