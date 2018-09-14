@@ -88,7 +88,9 @@ after the thread waits for a significant amount of time.
 The following sections describe the classes of states and the states in each class.
 \subsubsubsection{Work States}
 An OpenMP implementation reports a thread in a work state
-when the thread is performing serial work, parallel work, or a reduction.
+when the thread is 
+%performing serial work, parallel work, or a reduction.
+executing outside of an explicit parallel region, inside an explicit parallel region, or a reduction.
 
 \begin{description}
 
@@ -117,6 +119,9 @@ when the thread is performing serial work, parallel work, or a reduction.
 An OpenMP implementation reports that a thread is in a barrier wait state
 when the thread is awaiting completion of a barrier.
 
+A thread may enter a barrier wait state
+early, when the thread encounters a barrier, or late, when the
+thread begins to wait at a barrier. 
 
 \begin{description}
 
@@ -124,25 +129,26 @@ when the thread is awaiting completion of a barrier.
 
   \sloppy
   The thread is waiting at either an implicit or explicit barrier.
-  A thread may enter this state
-  early, when the thread encounters a barrier, or late, when the
-  thread begins to wait at the barrier. An implementation may never report a thread in this state; instead, a thread may have its state reported
+%  A thread may enter this state
+%  early, when the thread encounters a barrier, or late, when the
+%  thread begins to wait at the barrier. 
+  An implementation may never report a thread in this state; instead, a thread may have its state reported
   as \code{omp_state_wait_barrier_implicit}  or \code{omp_state_wait_barrier_explicit}, as appropriate.
 
   \item \code{omp_state_wait_barrier_implicit}
 
   \sloppy
   The thread is waiting at an implicit barrier in a parallel region.
-  A  thread may enter this state
-  early, when the thread encounters a barrier, or late, when the
-  thread begins to wait at the barrier.
+%  A  thread may enter this state
+%  early, when the thread encounters a barrier, or late, when the
+%  thread begins to wait at the barrier.
   An OpenMP implementation may report \code{omp_state_wait_barrier}
   for implicit barriers.
 
   \item \code{omp_state_wait_barrier_implicit_parallel}
 
-  The description of when a thread reports a state associated with an implicit barrier
-  is described for state \code{omp_state_wait_barrier_implicit}.
+%  The description of when a thread reports a state associated with an implicit barrier
+%  is described for state \code{omp_state_wait_barrier_implicit}.
   An OpenMP implementation may report \code{omp_state_wait_barrier_implicit_parallel}
   for an implicit barrier that occurs at the end of a parallel region.
   As explained in Section~\ref{sec:ompt_callback_sync_region_t},
@@ -152,17 +158,17 @@ when the thread is awaiting completion of a barrier.
 
   \item \code{omp_state_wait_barrier_implicit_workshare}
 
-  The description of when a thread reports a state associated with an implicit barrier
-  is described for state \code{omp_state_wait_barrier_implicit}.
+%  The description of when a thread reports a state associated with an implicit barrier
+%  is described for state \code{omp_state_wait_barrier_implicit}.
   An OpenMP implementation may report \code{omp_state_wait_barrier_implicit_parallel}
   for an implicit barrier that occurs at the end of a worksharing construct.
 
   \item \code{omp_state_wait_barrier_explicit}
 
   The thread is waiting at an explicit barrier  in a parallel region.
-  A thread may enter this state
-  early, when the thread encounters a barrier, or late, when the
-  thread begins to wait at the barrier.
+%  A thread may enter this state
+%  early, when the thread encounters a barrier, or late, when the
+%  thread begins to wait at the barrier.
   An implementation may report \code{omp_state_wait_barrier}
   for explicit barriers.
 
@@ -171,30 +177,38 @@ when the thread is awaiting completion of a barrier.
 
 \subsubsubsection{Task Wait States}
 
+A thread may enter a task wait state early, when the thread encounters a
+\code{taskwait} construct or the end of a \code{taskgroup} construct, or late,
+when the thread begins to wait for an uncompleted task.
+
 \begin{description}
 
 \item \code{omp_state_wait_taskwait}
 
-  The thread is waiting at a taskwait construct. A
-  thread may enter this state early, when the
-  thread encounters a taskwait construct, or late, when the thread
-  begins to wait for an uncompleted task.
+  The thread is waiting at a taskwait construct. 
+%  A
+%  thread may enter this state early, when the
+%  thread encounters a taskwait construct, or late, when the thread
+%  begins to wait for an uncompleted task.
 
 \item \code{omp_state_wait_taskgroup}
 
-  The thread is waiting at the end of a taskgroup construct. A
-  thread may enter this state early, when the
-  thread encounters the end of a taskgroup construct, or late, when the thread
-  begins to wait for an uncompleted task.
+  The thread is waiting at the end of a taskgroup construct. 
+%  A
+%  thread may enter this state early, when the
+%  thread encounters the end of a taskgroup construct, or late, when the thread
+%  begins to wait for an uncompleted task.
 
 \end{description}
 
 
 \subsubsubsection{Mutex Wait States}
 
-OpenMP provides several mechanisms that enforce mutual exclusion:
-locks as well as critical, atomic, and ordered sections.  This
-grouping contains all states used to indicate that a thread is
+%OpenMP provides several mechanisms that enforce mutual exclusion:
+%locks as well as critical, atomic, and ordered sections.  
+%This grouping contains all states used 
+The following states are used
+to indicate that a thread is
 awaiting exclusive access to a lock, critical section, variable,
 or ordered section.
 
@@ -207,46 +221,55 @@ associated with mutual exclusion in the runtime when various
 mechanisms for mutual exclusion rely on a common implementation,
 for example, locks.
 
+A thread may enter a mutex wait state early, when a thread encounters a lock
+acquisition or a region that requires mutual exclusion, or late, when the
+thread begins to wait.
+
 % Section~\ref{sec:wait-identifier} describes how each thread maintains a wait identifier to identify what a thread is awaiting. Before a thread enters any state indicating that it is awaiting mutual exclusion, the OpenMP runtime will update the thread's wait identifier to indicate what the thread is awaiting.
 
 \begin{description}
 
 \item \code{omp_state_wait_mutex}
 
-  The thread is waiting for a mutex of an unspecified type. A
-  thread may enter this state early, when a thread encounters a lock acquisition or a region that requires mutual exclusion, or late, when the thread begins to wait.
+  The thread is waiting for a mutex of an unspecified type. 
+%  A
+%  thread may enter this state early, when a thread encounters a lock acquisition or a region that requires mutual exclusion, or late, when the thread begins to wait.
 
 \item \code{omp_state_wait_lock}
 
-  The thread is waiting for a  lock  or nest lock. A
-  thread may enter this state early, when a thread
-  encounters a lock \code{set} routine, or late, when the thread
-  begins to wait for a lock.
+  The thread is waiting for a  lock  or nest lock. 
+%  A
+%  thread may enter this state early, when a thread
+%  encounters a lock \code{set} routine, or late, when the thread
+%  begins to wait for a lock.
 
 \item \code{omp_state_wait_critical}
 
-  The thread is waiting to enter a critical region. A
-  thread may enter this state early, when the
-  thread encounters a critical construct, or late, when the thread
-  begins to wait to enter the critical region.
+  The thread is waiting to enter a critical region. 
+%  A
+%  thread may enter this state early, when the
+%  thread encounters a critical construct, or late, when the thread
+%  begins to wait to enter the critical region.
 
 
 \item \code{omp_state_wait_atomic}
 
-  The thread is waiting to enter an atomic region. A
-  thread may enter this state early, when the thread
-  encounters an atomic construct, or late, when the thread begins
-  to wait to enter the atomic region.
+  The thread is waiting to enter an atomic region. 
+%  A
+%  thread may enter this state early, when the thread
+%  encounters an atomic construct, or late, when the thread begins
+%  to wait to enter the atomic region.
   An implementation may opt not to report
   this state when using atomic hardware instructions that support non-blocking atomic implementations.
 
 
 \item \code{omp_state_wait_ordered}
 
-  The thread is waiting to enter an ordered region. A
-  thread may enter this state early, when the thread encounters
-  an ordered construct, or late, when the thread begins
-  to wait to enter the ordered region.
+  The thread is waiting to enter an ordered region. 
+%  A
+%  thread may enter this state early, when the thread encounters
+%  an ordered construct, or late, when the thread begins
+%  to wait to enter the ordered region.
 
 \end{description}
 
@@ -286,8 +309,10 @@ for example, locks.
   executing within an OpenMP runtime, except while waiting indefinitely
   at a synchronization point.
 %  e.g., while preparing to execute a parallel, task, or worksharing construct.
-  An OpenMP implementation report a thread's state as a work state for
-  some or all of the time the thread spends in executing in the OpenMP runtime.
+
+%  What does the following sentence mean with regards to the surrounding context? (E. Stotzer)
+%  An OpenMP implementation report a thread's state as a work state for
+%  some or all of the time the thread spends in executing in the OpenMP runtime.
 
 \item \code{omp_state_undefined}
 
