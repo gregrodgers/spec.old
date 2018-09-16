@@ -320,46 +320,8 @@ beyond the barrier.
 The \code{barrier} region includes an implicit task scheduling point in the current 
 task region.
 
-\def\omptSyncRegion#1{
 \events
-The \plc{#1-begin} event occurs in each thread that encounters the
-\code{#1} construct on entry to the \code{#1} region.
 
-The \plc{#1-wait-begin} event occurs when a task begins an interval 
-of active or passive waiting in a \code{#1} region.
-
-The \plc{#1-wait-end} event occurs when a task ends an interval of 
-active or passive waiting and resumes execution in a \code{#1} region.
-
-The \plc{#1-end} event occurs in each thread that encounters the
-\code{#1} construct after the #1 synchronization on exit from the
-\code{#1} region.
-
-\tools
-A thread dispatches a registered \code{ompt_callback_sync_region}
-callback with \code{ompt_sync_region_#1} as its \plc{kind} argument 
-and \code{ompt_scope_begin} as its \plc{endpoint} argument for each 
-occurrence of a \plc{#1-begin} event in the task that encounters
-the #1 construct. Similarly, a thread dispatches a registered 
-\code{ompt_callback_sync_region} callback with \code{ompt_sync_region_#1} 
-as its \plc{kind} argument and \code{ompt_scope_end} as its \plc{endpoint} 
-argument for each  occurrence of a \plc{#1-end} event in the task that 
-encounters the #1 construct. These callbacks occur in the task that 
-encounters the #1 construct and have the type signature 
-\code{ompt_callback_sync_region_t}.
-
-A thread dispatches a registered \code{ompt_callback_sync_region_wait} callback
-with \code{ompt_sync_region_#1} as its \plc{kind} argument and 
-\code{ompt_scope_begin} as its \plc{endpoint} argument for each occurrence of 
-a \plc{#1-wait-begin} event. Similarly, a thread dispatches a registered 
-\code{ompt_callback_sync_region_wait} callback with \code{ompt_sync_region_#1} 
-as its \plc{kind} argument and \code{ompt_scope_end} as its \plc{endpoint} argument
-for each occurrence of a \plc{#1-wait-end} event. These callbacks occur in the
-context of the task that encountered the \code{#1} construct and have type signature 
-\code{ompt_callback_sync_region_t}.
-}
-
-\events
 The \plc{explicit-barrier-begin} event occurs in each thread that encounters the
 \code{barrier} construct on entry to the \code{barrier} region.
 
@@ -397,13 +359,13 @@ A thread dispatches a registered \code{ompt_callback_sync_region_wait} callback
 with \code{ompt_sync_region_barrier_explicit} --- or \code{ompt_sync_region_barrier}, 
 if the implementation cannot make a distinction --- as its \plc{kind} argument and
 \code{ompt_scope_begin} as its \plc{endpoint} argument for each occurrence of 
-a \plc{barrier-wait-begin} event. Similarly, a thread dispatches a registered 
-\code{ompt_callback_sync_region_wait} callback with 
+an \plc{explicit-barrier-wait-begin} event. Similarly, a thread dispatches a 
+registered \code{ompt_callback_sync_region_wait} callback with 
 \code{ompt_sync_region_barrier_explicit} --- or \code{ompt_sync_region_barrier}, 
 if the implementation cannot make a distinction --- as its \plc{kind} argument and
-\code{ompt_scope_end} as its \plc{endpoint} argument for each occurrence of a 
-\plc{barrier-wait-end} event. These callbacks occur in the context of the task 
-that encountered the \code{barrier} construct and have type signature 
+\code{ompt_scope_end} as its \plc{endpoint} argument for each occurrence of an 
+\plc{explicit-barrier-wait-end} event. These callbacks occur in the context of 
+the task that encountered the \code{barrier} construct and have type signature 
 \code{ompt_callback_sync_region_t}.
 
 A thread dispatches a registered \code{ompt_callback_cancel} callback with 
@@ -440,52 +402,69 @@ The following restrictions apply to the \code{barrier} construct:
 
 
 
-
 \subsection{Implicit Barriers}
 \index{implicit barrier}
 \index{barrier, implicit}
 \label{subsec:implict-barrier}
 
-Implicit tasks in a parallel region synchronize with one another using
-implicit barriers at the end of worksharing constructs and at the end
-of the \code{parallel} region according to the premises defined with
-the individual constructs. This section describes the OMPT events and
-tool callbacks associated with implicit barriers.
-
+This section describes the OMPT events and tool callbacks associated 
+with implicit barriers, which occur at the end of various regions as
+defined in the description of the constructs to which they correspond.
 Implicit barriers are task scheduling points. For a description of
 task sheduling points, associated events, and tool callbacks, see
 \specref{subsec:Task Scheduling}.
 
 \events
 
-A \plc{cancellation} event occurs if cancellation is activated at an
-implicit cancellation point in an implicit barrier region.
-
 The \plc{implicit-barrier-begin} event occurs in each implicit task
-at the beginning of an implicit barrier.
+at the beginning of an implicit barrier region.
 
 The \plc{implicit-barrier-wait-begin} event occurs when a task begins an interval of
-active or passive waiting while executing in an implicit barrier region.
+active or passive waiting in an implicit barrier region.
 
 The \plc{implicit-barrier-wait-end} event occurs when a task ends an interval of
 active or waiting and resumes execution of an implicit barrier region.
 
-The \plc{implicit-barrier-end} event occurs in each implicit task
-at the end of an implicit barrier.
+The \plc{implicit-barrier-end} event occurs in each implicit task after the
+barrier synchronization on exit from an implicit barrier region.
+
+A \plc{cancellation} event occurs if cancellation is activated at an
+implicit cancellation point in an implicit barrier region.
 
 \tools
 
 A thread dispatches a registered \code{ompt_callback_sync_region}
-callback for each occurrence of a \plc{implicit-barrier-begin} and
-\plc{implicit-barrier-end} event in that thread.  The callback occurs
-in the implicit task executing in a parallel region.
-This callback has the type signature
-\code{ompt_callback_sync_region_t}.  The callback receives
-\code{ompt_sync_region_barrier_implicit} --- or
+callback with \code{ompt_sync_region_barrier_implicit} --- or
 \code{ompt_sync_region_barrier}, if the implementation cannot make a
-distinction --- as its \plc{kind} argument and
-\code{ompt_scope_begin} or \code{ompt_scope_end} as its
-\plc{endpoint} argument, as appropriate.
+distinction --- as its \plc{kind} argument and \code{ompt_scope_begin} 
+as its \plc{endpoint} argument for each occurrence of an \plc{implicit-barrier-begin} 
+event in that thread. Similarly, a thread dispatches a registered 
+\code{ompt_callback_sync_region} callback with 
+\code{ompt_sync_region_barrier_implicit} --- or \code{ompt_sync_region_barrier}, 
+if the implementation cannot make a distinction --- as its \plc{kind} argument 
+and \code{ompt_scope_end} as its \plc{endpoint} argument for each  occurrence 
+of an \plc{implicit-barrier-end} event in that thread. These callbacks occur in 
+the implicit task that executes the parallel region and have the type signature 
+\code{ompt_callback_sync_region_t}.
+
+A thread dispatches a registered \code{ompt_callback_sync_region_wait} callback
+with \code{ompt_sync_region_barrier_implicit} --- or \code{ompt_sync_region_barrier}, 
+if the implementation cannot make a distinction --- as its \plc{kind} argument and
+\code{ompt_scope_begin} as its \plc{endpoint} argument for each occurrence of 
+a \plc{implicit-barrier-wait-begin} event. Similarly, a thread dispatches a registered 
+\code{ompt_callback_sync_region_wait} callback with 
+\code{ompt_sync_region_barrier_explicit} --- or \code{ompt_sync_region_barrier}, 
+if the implementation cannot make a distinction --- as its \plc{kind} argument and
+\code{ompt_scope_end} as its \plc{endpoint} argument for each occurrence of an 
+\plc{implicit-barrier-wait-end} event. These callbacks occur in the context of 
+the task that encountered the \code{barrier} construct and have type signature 
+\code{ompt_callback_sync_region_t}.
+
+A thread dispatches a registered \code{ompt_callback_cancel} callback with 
+\code{ompt_cancel_detected} as its \plc{flags} argument for each occurrence 
+of a \plc{cancellation} event in that thread. The callback occurs in the 
+context of the encountering task. The callback has type signature
+\code{ompt_callback_cancel_t}. 
 
 A thread dispatches a registered \code{ompt_callback_cancel}
 callback for each occurrence of a \plc{cancellation} event in that thread.
