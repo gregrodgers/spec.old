@@ -246,66 +246,57 @@ in a construct, are determined as follows:
 
 \begin{ccppspecific}
 \begin{itemize}
-\item Variables with static storage duration that are declared in called routines in the region
-are shared.
-
-\item File-scope or namespace-scope variables referenced in called routines in the region
-are shared unless they appear in a \code{threadprivate} directive.
-
+\item Variables with static storage duration that are declared in called routines 
+      in the region are shared.
+\item File-scope or namespace-scope variables referenced in called routines in the 
+      region are shared unless they appear in a \code{threadprivate} directive.
 \item Objects with dynamic storage duration are shared.
-
-\item Static data members are shared unless they appear in a \code{threadprivate} directive.
-
-\item In C++, formal arguments of called routines in the region that are passed by reference have the same data-sharing attributes as the associated actual arguments.
-
+\item Static data members are shared unless they appear in a \code{threadprivate} 
+      directive.
+\item In C++, formal arguments of called routines in the region that are passed
+      by reference have the same data-sharing attributes as the associated actual 
+      arguments.
 \item Other variables declared in called routines in the region are private.
 \end{itemize}
 \end{ccppspecific}
-%
+
 \begin{fortranspecific}
 \begin{itemize}
-\item Local variables declared in called routines in the region and that have the \code{save}
-attribute, or that are data initialized, are shared unless they appear in a
-\code{threadprivate} directive.
-
-\item Variables belonging to common blocks, or accessed by host or use association, and referenced in called routines in the region are shared unless they appear in a \code{threadprivate} directive.
-
+\item Local variables declared in called routines in the region and that have the 
+      \code{save} attribute, or that are data initialized, are shared unless they 
+      appear in a \code{threadprivate} directive.
+\item Variables belonging to common blocks, or accessed by host or use association, 
+      and referenced in called routines in the region are shared unless they appear 
+      in a \code{threadprivate} directive.
 \item Dummy arguments of called routines in the region that have the
-    \code{VALUE} attribute are private.
-
+      \code{VALUE} attribute are private.
 \item Dummy arguments of called routines in the region that do not have the
-    \code{VALUE} attribute are private if the associated actual argument is not
-    shared.
-
+      \code{VALUE} attribute are private if the associated actual argument is not 
+      shared.
 \item Dummy arguments of called routines in the region that do not have the
-\code{VALUE} attribute are shared if the actual argument is shared and it
-is a scalar variable, structure, an array that is not a pointer or
-assumed-shape array, or a simply contiguous array section.  Otherwise, the
-data-sharing attribute of the dummy argument is implementation-defined if
-the associated actual argument is shared.
-
-\item Cray pointees have the same data-sharing attribute as the storage with which their Cray pointers are associated.
-
-\item Implied-do indices, \code{forall} indices, and other local variables declared in called
-routines in the region are private.
+      \code{VALUE} attribute are shared if the actual argument is shared and 
+      it is a scalar variable, structure, an array that is not a pointer or
+      assumed-shape array, or a simply contiguous array section.  Otherwise, the
+      data-sharing attribute of the dummy argument is implementation-defined if
+      the associated actual argument is shared.
+\item Cray pointees have the same data-sharing attribute as the storage with 
+      which their Cray pointers are associated.
+\item Implied-do indices, \code{forall} indices, and other local variables 
+      declared in called routines in the region are private.
 \end{itemize}
 \end{fortranspecific}
-%
-%
-%
-%
-%
-%
-%
-%
-%
+
+
+
 \subsection{\hcode{threadprivate} Directive}
 \index{threadprivate@{\code{threadprivate}}}
 \index{directives!threadprivate@{\code{threadprivate}}}
 \label{subsec:threadprivate Directive}
 \summary
-The \code{threadprivate} directive specifies that variables are replicated, with each thread
-having its own copy. The \code{threadprivate} directive is a declarative directive.
+The \code{threadprivate} directive specifies that variables are replicated, with 
+each thread having its own copy. The \code{threadprivate} directive is a declarative 
+directive.
+
 \syntax
 \begin{ccppspecific}
 The syntax of the \code{threadprivate} directive is as follows:
@@ -317,7 +308,7 @@ The syntax of the \code{threadprivate} directive is as follows:
 where \plc{list} is a comma-separated list of file-scope, namespace-scope, or static
 block-scope variables that do not have incomplete types.
 \end{ccppspecific}
-%
+
 \begin{fortranspecific}
 The syntax of the \code{threadprivate} directive is as follows:
 
@@ -330,207 +321,197 @@ Common block names must appear between slashes.
 \end{fortranspecific}
 
 \descr
-Each copy of a threadprivate variable is initialized once, in the manner specified by the
-program, but at an unspecified point in the program prior to the first reference to that
-copy. The storage of all copies of a threadprivate variable is freed according to how
-static variables are handled in the base language, but at an unspecified point in the
-program.
+Each copy of a threadprivate variable is initialized once, in the manner specified 
+by the program, but at an unspecified point in the program prior to the first 
+reference to that copy. The storage of all copies of a threadprivate variable is 
+freed according to how static variables are handled in the base language, but at 
+an unspecified point in the program.
 
-A program in which a thread references another thread's copy of a threadprivate variable
-is non-conforming.
+A program in which a thread references another thread's copy of a threadprivate 
+variable is non-conforming.
 
-The content of a threadprivate variable can change across a task scheduling point if the
-executing thread switches to another task that modifies the variable. For more details on
-task scheduling, see
-\specref{sec:Execution Model} and
+The content of a threadprivate variable can change across a task scheduling point 
+if the executing thread switches to another task that modifies the variable. For 
+more details on task scheduling, see \specref{sec:Execution Model} and
 \specref{sec:Tasking Constructs}.
 
 In \code{parallel} regions, references by the master thread will be to the copy of the
 variable in the thread that encountered the \code{parallel} region.
 
-During a sequential part references will be to the initial thread's copy of the variable.
-The values of data in the initial thread's copy of a threadprivate variable are guaranteed
-to persist between any two consecutive references to the variable in the program.
+During a sequential part references will be to the initial thread's copy of the 
+variable. The values of data in the initial thread's copy of a threadprivate 
+variable are guaranteed to persist between any two consecutive references to 
+the variable in the program.
 
 The values of data in the threadprivate variables of non-initial threads
 are guaranteed to persist between two consecutive active \code{parallel}
 regions only if all of the following conditions hold:
 
-\begin{itemize}  % L0 vvvvvvvvvvvvvvvvvvvvvvvvv
-\item Neither \code{parallel} region is nested inside another explicit \code{parallel} region.
-
+\begin{itemize} 
+\item Neither \code{parallel} region is nested inside another explicit 
+      \code{parallel} region.
 \item The number of threads used to execute both \code{parallel} regions is the same.
+\item The thread affinity policies used to execute both \code{parallel} 
+      regions are the same.
+\item The value of the \plc{dyn-var} internal control variable in the 
+      enclosing task region is \plc{false} at entry to both \code{parallel} regions.
+\item Neither the \code{omp_pause_resource} nor \code{omp_pause_resource_all} 
+      routine is called.
+\end{itemize}
 
-\item The thread affinity policies used to execute both \code{parallel} regions are the same.
-
-\item The value of the \plc{dyn-var} internal control variable in the enclosing task region is \plc{false}
-at entry to both \code{parallel} regions.
-
-\item Neither the \code{omp_pause_resource} nor \code{omp_pause_resource_all} routine is called.
-
-\end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^^^^
-
-If these conditions all hold, and if a threadprivate variable is referenced in both regions,
-then threads with the same thread number in their respective regions will reference the
-same copy of that variable.
+If these conditions all hold, and if a threadprivate variable is referenced in 
+both regions, then threads with the same thread number in their respective 
+regions will reference the same copy of that variable.
 
 \begin{ccppspecific}
-If the above conditions hold, the storage duration, lifetime, and value of a thread's copy
-of a threadprivate variable that does not appear in any \code{copyin} clause on the second
-region will be retained. Otherwise, the storage duration, lifetime, and value of a thread's
-copy of the variable in the second region is unspecified.
+If the above conditions hold, the storage duration, lifetime, and value of a 
+thread's copy of a threadprivate variable that does not appear in any 
+\code{copyin} clause on the second region will be retained. Otherwise, the 
+storage duration, lifetime, and value of a thread's copy of the variable in 
+the second region is unspecified.
 
-If the value of a variable referenced in an explicit initializer of a threadprivate variable
-is modified prior to the first reference to any instance of the threadprivate variable, then
-the behavior is unspecified.
+If the value of a variable referenced in an explicit initializer of a 
+threadprivate variable is modified prior to the first reference to any 
+instance of the threadprivate variable, then the behavior is unspecified.
 \end{ccppspecific}
-%
-\begin{cppspecific}
-The order in which any constructors for different threadprivate variables of class type
-are called is unspecified. The order in which any destructors for different threadprivate
-variables of class type are called is unspecified.
-\end{cppspecific}
-%
-\begin{fortranspecific}
-A variable is affected by a \code{copyin} clause if the variable appears in the \code{copyin} clause
-or it is in a common block that appears in the \code{copyin} clause.
 
-If the above conditions hold, the definition, association, or allocation status of a thread's
-copy of a threadprivate variable or a variable in a threadprivate common
-block, that is not affected by any \code{copyin} clause that appears on the second region, will
-be retained. Otherwise, the definition and association status of a thread's copy of the
-variable in the second region are undefined, and the allocation status of an allocatable
-variable will be implementation defined.
+\begin{cppspecific}
+The order in which any constructors for different threadprivate variables 
+of class type are called is unspecified. The order in which any destructors 
+for different threadprivate variables of class type are called is unspecified.
+\end{cppspecific}
+
+\begin{fortranspecific}
+A variable is affected by a \code{copyin} clause if the variable appears in 
+the \code{copyin} clause or it is in a common block that appears in the 
+\code{copyin} clause.
+
+If the above conditions hold, the definition, association, or allocation 
+status of a thread's copy of a threadprivate variable or a variable in a 
+threadprivate common block, that is not affected by any \code{copyin} clause 
+that appears on the second region, will be retained. Otherwise, the definition 
+and association status of a thread's copy of the variable in the second region 
+are undefined, and the allocation status of an allocatable variable will be 
+implementation defined.
 
 If a threadprivate variable or a variable in a threadprivate common block is
-not affected by any \code{copyin} clause that appears on the first \code{parallel} region in which
-it is referenced, the thread's copy of the variable inherits the
-declared type parameter and the default parameter values from the
-original variable.  The variable or any subobject of the variable is initially defined or
+not affected by any \code{copyin} clause that appears on the first \code{parallel} 
+region in which it is referenced, the thread's copy of the variable inherits the
+declared type parameter and the default parameter values from the original variable.  
+The variable or any subobject of the variable is initially defined or
 undefined according to the following rules:
 
-\begin{itemize} % L0 vvvvvvvvvvvvvvvvvvvvvv
-\item If it has the \code{ALLOCATABLE} attribute, each copy created will have an initial
-allocation status of unallocated.
-
+\begin{itemize}
+\item If it has the \code{ALLOCATABLE} attribute, each copy created will have 
+      an initial allocation status of unallocated.
 \item If it has the \code{POINTER} attribute:
-\begin{itemize} % L1 vvvvvvvvvvvvvvvvvvvvvv
-\item if it has an initial association status of disassociated, either through explicit
-initialization or default initialization, each copy created will have an association
-status of disassociated;
+
+\begin{itemize}
+\item if it has an initial association status of disassociated, either through 
+      explicit initialization or default initialization, each copy created will 
+      have an association status of disassociated;
 \item otherwise, each copy created will have an association status of undefined.
-\end{itemize} % l1 ^^^^^^^^^^^^^^^^^^^^
+\end{itemize}
 
+\item If it does not have either the \code{POINTER} or the \code{ALLOCATABLE} 
+      attribute:
 
-\item If it does not have either the \code{POINTER} or the \code{ALLOCATABLE} attribute:
-
-\begin{samepage}\begin{itemize} %L1 vvvvvvvvvvvvvvv
+begin{samepage}
+\begin{itemize}
 \item if it is initially defined, either through explicit initialization or default
-initialization, each copy created is so defined;
-
+      initialization, each copy created is so defined;
 \item otherwise, each copy created is undefined.
-\end{itemize} % L1 ^^^^^^^^^^^^^^^^^
+\end{itemize}
 \end{samepage}
-
-\end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^^
+\end{itemize}
 \end{fortranspecific}
 
 \restrictions
 The restrictions to the \code{threadprivate} directive are as follows:
 
-\begin{itemize} % L0 vvvvvvvvvvvvvvv
-\item A threadprivate variable must not appear in any clause except the \code{copyin},
-\code{copyprivate}, \code{schedule}, \code{num_threads}, \code{thread_limit}, and \code{if} clauses.
-
-\item A program in which an untied task accesses threadprivate storage is non-conforming.
+\begin{itemize}
+\item A threadprivate variable must not appear in any clause except the 
+      \code{copyin}, \code{copyprivate}, \code{schedule}, \code{num_threads}, 
+      \code{thread_limit}, and \code{if} clauses.
+\item A program in which an untied task accesses threadprivate storage is 
+      non-conforming.
 
 \begin{ccppspecific}
-\item A variable that is part of another variable (as an array or structure element) cannot
-appear in a \code{threadprivate} clause unless it is a static data member of a C++
-class.
-
-\item A \code{threadprivate} directive for file-scope variables must appear outside any
-definition or declaration, and must lexically precede all references to any of the
-variables in its list.
-
-\item A \code{threadprivate} directive for namespace-scope variables must appear outside
-any definition or declaration other than the namespace definition itself, and must
-lexically precede all references to any of the variables in its list.
-
-\item Each variable in the list of a \code{threadprivate} directive at file, namespace, or class
-scope must refer to a variable declaration at file, namespace, or class scope that
-lexically precedes the directive.
-
-\item A \code{threadprivate} directive for static block-scope variables must appear in the
-scope of the variable and not in a nested scope. The directive must lexically precede
-all references to any of the variables in its list.
-
-\item Each variable in the list of a \code{threadprivate} directive in block scope must refer to
-a variable declaration in the same scope that lexically precedes the directive. The
-variable declaration must use the static storage-class specifier.
-
-\item If a variable is specified in a \code{threadprivate} directive in one translation unit, it
-must be specified in a \code{threadprivate} directive in every translation unit in which
-it is declared.
-
+\item A variable that is part of another variable (as an array or structure 
+      element) cannot appear in a \code{threadprivate} clause unless it is a 
+      static data member of a C++ class.
+\item A \code{threadprivate} directive for file-scope variables must appear 
+      outside any definition or declaration, and must lexically precede all 
+      references to any of the variables in its list.
+\item A \code{threadprivate} directive for namespace-scope variables must 
+      appear outside any definition or declaration other than the namespace 
+      definition itself, and must lexically precede all references to any of 
+      the variables in its list.
+\item Each variable in the list of a \code{threadprivate} directive at file, 
+      namespace, or class scope must refer to a variable declaration at file, 
+      namespace, or class scope that lexically precedes the directive.
+\item A \code{threadprivate} directive for static block-scope variables must 
+      appear in the scope of the variable and not in a nested scope. The 
+      directive must lexically precede all references to any of the variables 
+      in its list.
+\item Each variable in the list of a \code{threadprivate} directive in block 
+      scope must refer to a variable declaration in the same scope that lexically 
+      precedes the directive. The variable declaration must use the static 
+      storage-class specifier.
+\item If a variable is specified in a \code{threadprivate} directive in one 
+      translation unit, it must be specified in a \code{threadprivate} directive 
+      in every translation unit in which it is declared.
 \item The address of a threadprivate variable is not an address constant.
 \end{ccppspecific}
-%
+
 \begin{cppspecific}
-\item A \code{threadprivate} directive for static class member variables must appear in the
-class definition, in the same scope in which the member variables are declared, and
-must lexically precede all references to any of the variables in its list.
-
+\item A \code{threadprivate} directive for static class member variables must 
+      appear in the class definition, in the same scope in which the member 
+      variables are declared, and must lexically precede all references to 
+      any of the variables in its list.
 \item A threadprivate variable must not have an incomplete type or a reference type.
-
 \item A threadprivate variable with class type must have:
 
-\begin{itemize} % L1 vvvvvvvvvvvvvv
-\item an accessible, unambiguous default constructor in case of default initialization
-without a given initializer;
-
+\begin{itemize}
+\item an accessible, unambiguous default constructor in case of default 
+      initialization without a given initializer;
 \item an accessible, unambiguous constructor accepting the given argument in case of
-direct initialization;
-
-\item an accessible, unambiguous copy constructor in case of copy initialization with an
-explicit initializer
-\end{itemize} % L1 ^^^^^^^^^^^^^
+      direct initialization;
+\item an accessible, unambiguous copy constructor in case of copy initialization 
+      with an explicit initializer
+\end{itemize}
 \end{cppspecific}
-%
-\end{itemize} % L0 ^^^^^^^^^^^^^^
-%
+\end{itemize}
+
 \begin{fortranspecific}
-\begin{itemize} % L0 vvvvvvvvvvvvvvv
-\item A variable that is part of another variable (as an array, structure element or type parameter inquiry) cannot
-appear in a \code{threadprivate} clause.
-
-\item The \code{threadprivate} directive must appear in the declaration section of a scoping
-unit in which the common block or variable is declared. Although variables in
-common blocks can be accessed by use association or host association, common
-block names cannot. This means that a common block name specified in a
-\code{threadprivate} directive must be declared to be a common block in the same
-scoping unit in which the \code{threadprivate} directive appears.
-
-\item If a \code{threadprivate} directive specifying a common block name appears in one
-program unit, then such a directive must also appear in every other program unit that
-contains a \code{COMMON} statement specifying the same name. It must appear after the last
-such \code{COMMON} statement in the program unit.
-
+\begin{itemize}
+\item A variable that is part of another variable (as an array, structure element 
+      or type parameter inquiry) cannot appear in a \code{threadprivate} clause.
+\item The \code{threadprivate} directive must appear in the declaration section 
+      of a scoping unit in which the common block or variable is declared. Although 
+      variables in common blocks can be accessed by use association or host 
+      association, common block names cannot. This means that a common block name 
+      specified in a \code{threadprivate} directive must be declared to be a common 
+      block in the same scoping unit in which the \code{threadprivate} directive 
+      appears.
+\item If a \code{threadprivate} directive specifying a common block name appears 
+      in one program unit, then such a directive must also appear in every other 
+      program unit that contains a \code{COMMON} statement specifying the same 
+      name. It must appear after the last such \code{COMMON} statement in the 
+      program unit.
 \item If a threadprivate variable or a threadprivate common block is declared
-with the \code{BIND} attribute, the corresponding C entities must also be specified in a
-\code{threadprivate} directive in the C program.
-
+      with the \code{BIND} attribute, the corresponding C entities must also be 
+      specified in a \code{threadprivate} directive in the C program.
 \item A blank common block cannot appear in a \code{threadprivate} directive.
-
-\item A variable can only appear in a \code{threadprivate} directive in the scope in which it
-is declared. It must not be an element of a common block or appear in an
-\code{EQUIVALENCE} statement.
-
-\item A variable that appears in a \code{threadprivate} directive must be declared in the
-scope of a module or have the \code{SAVE} attribute, either explicitly or implicitly.
-\end{itemize} % L0 ^^^^^^^^^^^^^^^^^^^
+\item A variable can only appear in a \code{threadprivate} directive in the 
+      scope in which it is declared. It must not be an element of a common block 
+      or appear in an \code{EQUIVALENCE} statement.
+\item A variable that appears in a \code{threadprivate} directive must be declared 
+      in the scope of a module or have the \code{SAVE} attribute, either explicitly 
+      or implicitly.
+\end{itemize}
 \end{fortranspecific}
-%
+
 \crossreferences
 \begin{itemize}
 \item \plc{dyn-var} ICV, see
