@@ -423,11 +423,6 @@ iteration count of any loop that is associated with the
 worksharing-loop construct is zero and that loop does not enclose the
 intervening code, the behavior is unspecified.
 
-The iteration count for each associated loop is computed before entry to the
-outermost loop. If execution of any associated loop changes any of the values
-used to compute any of the iteration counts except for the explicitly allowed use 
-of \plc{var-outer} in \emph{canonical loop form}, then the behavior is unspecified.
-
 The integer type (or kind, for Fortran) used to compute the iteration count
 for the collapsed loop is implementation defined.
 
@@ -646,7 +641,7 @@ The \plc{ws-loop-end} event occurs after a worksharing-loop region finishes
 execution but before resuming execution of the encountering task.
 
 The \plc{ws-loop-iteration-begin} event occurs once for each iteration of a
-parallel loop before the iteration is executed by an implicit task.
+worksharing loop before the iteration is executed by an implicit task.
 
 \tools
 
@@ -914,11 +909,6 @@ most once per iteration of the innermost loop associated with the
 construct.  If the iteration count of any loop that is associated with 
 the \code{simd} construct is zero and that loop does not enclose the 
 intervening code, the behavior is unspecified.
-
-The iteration count for each associated loop is computed before entry to the
-outermost loop. If execution of any associated loop changes any of the values
-used to compute any of the iteration counts except for the explicitly allowed use 
-of \plc{var-outer} in \emph{canonical loop form}, then the behavior is unspecified.
 
 The integer type (or kind, for Fortran) used to compute the iteration 
 count for the collapsed loop is implementation defined.
@@ -1428,11 +1418,6 @@ the construct.  If the iteration count of any loop that is associated
 with the \code{distribute} construct is zero and that loop does not 
 enclose the intervening code, the behavior is unspecified.
 
-The iteration count for each associated loop is computed before entry 
-to the outermost loop. If execution of any associated loop changes any 
-of the values used to compute any of the iteration counts, then the 
-behavior is unspecified.
-
 The integer type (or kind, for Fortran) used to compute the iteration 
 count for the collapsed loop is implementation defined.
 
@@ -1491,7 +1476,7 @@ Restrictions to the \code{distribute} construct are as follows:
 \item \code{teams} construct, see
 \specref{sec:teams Construct}
 
-\item workshring-loop construct, see
+\item worksharing-loop construct, see
 \specref{subsec:Worksharing-Loop Construct}.
 
 \item \code{ompt_work_distribute}, see \specref{sec:ompt_work_t}.
@@ -1684,7 +1669,7 @@ The syntax of the distribute parallel worksharing-loop SIMD construct is as foll
 \end{ompcPragma}
 
 where \plc{clause} can be any of the clauses accepted by the \code{distribute} 
-or parallel loop SIMD directives with identical meanings and restrictions
+or parallel worksharing-loop SIMD directives with identical meanings and restrictions.
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -1697,7 +1682,7 @@ The syntax of the distribute parallel worksharing-loop SIMD construct is as foll
 \end{ompfPragma}
 
 where \plc{clause} can be any of the clauses accepted by the \code{distribute} 
-or parallel loop SIMD directives with identical meanings and restrictions.
+or parallel worksharing-loop SIMD directives with identical meanings and restrictions.
 
 If an \code{end}~\code{distribute}~\code{parallel}~\code{do}~\code{simd} directive 
 is not specified, an \code{end}~\code{distribute} \code{parallel} \code{do}~\code{simd}
@@ -1829,20 +1814,21 @@ have \plc{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 \binding
 
 If the \code{bind} clause is present on the construct, the binding region is
-determined by \plc{binding}. Specifically, if \plc{binding} is \code{teams} 
-then the binding region is the innermost enclosing teams region, which may
-be an implicit teams region; if \plc{binding} is \code{parallel} then the 
-binding region is the innermost enclosing parallel region, which may be an
-implicit parallel region; and if \plc{binding} is \code{thread} then the 
-binding region is not defined. Otherwise, if the \code{loop} construct is 
-closely nested inside a \code{teams} or \code{parallel} construct, the binding 
-region is the corresponding \code{teams} or \code{parallel} region. If none 
-of those conditions hold, the binding region is not defined.
+determined by \plc{binding}. Specifically, if \plc{binding} is \code{teams}
+and there exists an innermost enclosing \code{teams} region then the binding
+region is that \code{teams} region; if \plc{binding} is \code{parallel} then
+the binding region is the innermost enclosing parallel region, which may be an
+implicit parallel region; and if \plc{binding} is \code{thread} then the
+binding region is not defined. If the \code{bind} clause is not present on the
+construct and the \code{loop} construct is closely nested inside a
+\code{teams} or \code{parallel} construct, the binding region is the
+corresponding \code{teams} or \code{parallel} region. If none of those
+conditions hold, the binding region is not defined.
 
-If the binding region is a teams region, then the binding thread set is
-the set of master threads that are executing that region. If the binding region 
-is a parallel region, then the binding thread set is the team of threads
-executing that region. If the binding region is not defined, then the binding 
+If the binding region is a \code{teams} region, then the binding thread set is
+the set of master threads that are executing that region. If the binding region
+is a parallel region, then the binding thread set is the team of threads that
+are executing that region. If the binding region is not defined, then the binding
 thread set is the encountering thread.
 
 \descr
@@ -1889,12 +1875,12 @@ the \code{order(concurrent)} clause appeared on the construct.
 The set of threads that may execute the iterations of the \code{loop} region is 
 the binding thread set. Each iteration is executed by one thread from this set.
 
-If the \code{loop} region binds to a teams region, the threads in the
+If the \code{loop} region binds to a \code{teams} region, the threads in the
 binding thread set may continue execution after the \code{loop} region without
 waiting for all iterations of the associated loop(s) to complete. The
-iterations are guaranteed to complete before the end of the teams region. 
+iterations are guaranteed to complete before the end of the \code{teams} region.
 
-If the \code{loop} region does not bind to a teams region, all
+If the \code{loop} region does not bind to a \code{teams} region, all
 iterations of the associated loop(s) must complete before the encountering
 thread(s) continue execution after the \code{loop} region.
 
@@ -1908,9 +1894,15 @@ Restrictions to the \code{loop} construct are as follows:
 \item If a \code{loop} construct is not nested inside another OpenMP
       construct and it appears in a procedure called from the program, the
       \code{bind} clause must be present.
-\item If a \code{loop} region binds to a \code{teams} or \code{parallel}
+\item If a \code{loop} region binds to a \code{teams} or parallel
       region, it must be encountered by all threads in the binding thread set
       or by none of them.
+\item If the \code{bind} clause is present and \plc{binding} is \code{teams},
+      the \code{loop} region corresponding to the \code{loop} construct must be
+      strictly nested inside a \code{teams} region.
+\item If the \code{bind} clause is present and \plc{binding} is \code{parallel},
+      the behavior is unspecified if the \code{loop} region corresponding to a
+      \code{loop} construct is closely nested inside a \code{simd} region.
 \item The only constructs that may be nested inside a \code{loop} region
       are the \code{loop} construct, the \code{parallel} construct, the
       \code{simd} construct, and combined constructs for which the first
