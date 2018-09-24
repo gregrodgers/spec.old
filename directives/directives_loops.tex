@@ -322,7 +322,13 @@ The following restrictions also apply:
     %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
 \end{itemize}
 
+\crossreferences
+\begin{itemize}
+\item \code{lastprivate} clause, see \specref{subsubsec:lastprivate clause}.
+\item \code{linear} clause, see \specref{subsubsec:linear clause}.
+\item \code{simd} construct, see \specref{subsubsec:simd Construct}.
 
+\end{itemize}
 
 \subsection{Worksharing-Loop Construct}
 \label{subsec:Worksharing-Loop Construct}
@@ -491,6 +497,8 @@ not specified, the effect is as if the \code{monotonic} modifier
 is specified. Otherwise, unless the \code{monotonic} modifier is
 specified, the effect is as if the \code{nonmonotonic} modifier
 is specified.
+If a \code{schedule} clause specifies a modifier then that modifier overrides
+any modifier that is specified in the \plc{run-sched-var} ICV.
 
 The \code{ordered} clause with the parameter may also be used to specify
 how many loops are associated with the worksharing-loop construct. The parameter of
@@ -634,7 +642,6 @@ in any order and the behavior of an application that depends on any execution or
 \linenumbers
 \medskip
 
-% \omptWorksharingEvents{loop}
 \events
 
 The \plc{ws-loop-begin} event occurs after an implicit task encounters a
@@ -647,7 +654,17 @@ execution but before resuming execution of the encountering task.
 The \plc{ws-loop-iteration-begin} event occurs before an implicit task
 executes each iteration of a parallel loop.
 
-\omptWorksharingTools{ws-loop}{work_loop}
+\tools
+
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and \code{work_loop} 
+as its \plc{wstype} argument for each occurrence of a \plc{ws-loop-begin} 
+event in that thread. Similarly, a thread dispatches a registered 
+\code{ompt_callback_work} callback with \code{ompt_scope_end} as its 
+\plc{endpoint} argument and \code{work_loop} as its \plc{wstype} argument 
+for each occurrence of a \plc{ws-loop-end} event in that thread. The callbacks
+ occur in the context of the implicit task. The callbacks have type 
+signature \code{ompt_callback_work_t}.
 
 A thread dispatches a registered \code{ompt_callback_dispatch}
 callback for each occurrence of a \plc{ws-loop-iteration-begin} 
@@ -1465,8 +1482,26 @@ chunks is unspecified in this case.
 
 When no \code{dist_schedule} clause is specified, the schedule is implementation defined.
 
-%\tools
-\omptWorksharing{distribute}{ompt_work_distribute}
+\events
+
+The \plc{distribute-begin} event occurs after an implicit task encounters a
+\code{distribute} construct but before the task starts to execute the structured
+block of the \code{distribute} region.
+
+The \plc{distribute-end} event occurs after an implicit task finishes execution of 
+a \code{distribute} region but before it resumes execution of the enclosing context.
+
+\tools
+
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and 
+\code{ompt_work_distribute} as its \plc{wstype} argument for each occurrence 
+of a \plc{distribute-begin} event in that thread. Similarly, a thread dispatches 
+a registered \code{ompt_callback_work} callback with \code{ompt_scope_end} as 
+its \plc{endpoint} argument and \code{ompt_work_distribute} as its \plc{wstype} 
+argument for each occurrence of a \plc{distribute-end} event in that thread.
+The callbacks occur in the context of the implicit task. The callbacks have 
+type signature \code{ompt_callback_work_t}.
 
 \restrictions
 Restrictions to the \code{distribute} construct are as follows:
@@ -1561,7 +1596,8 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \begin{itemize}
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
 
-\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+\item A list item may not appear in a \code{linear} clause unless it is a
+loop iteration variable of a loop that is associated with the construct.
 
 \item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
@@ -1746,7 +1782,8 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \begin{itemize}
 \item The restrictions for the \code{distribute} and parallel worksharing-loop SIMD constructs apply.
 \item No \code{ordered} clause can be specified.
-\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+\item A list item may not appear in a \code{linear} clause unless it is a
+loop iteration variable of a loop that is associated with the construct.
 \item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
 
@@ -1793,6 +1830,7 @@ bind(\plc{binding})
 collapse(\plc{n})
 order(concurrent)
 private(\plc{list})
+lastprivate(\plc{list})
 reduction(\plc{[}default ,\plc{]reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 The \code{loop} directive places restrictions on the structure of all associated \plc{for-loops}.
@@ -1817,6 +1855,7 @@ bind(\plc{binding})
 collapse(\plc{n})
 order(concurrent)
 private(\plc{list})
+lastprivate(\plc{list})
 reduction(\plc{[}default ,\plc{]reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 \end{samepage}
@@ -1840,7 +1879,7 @@ Where \plc{binding} is one of the following:
 % Loop induction variables for the associated loop(s) are private by default.
 
 %If a \code{private} or \code{firstprivate} clause appears on the
-%\code{concurrent} construct and the iterations of the associated loops are
+%\code{loop} construct and the iterations of the associated loops are
 %executed concurrently, then a private copy of the listed variables must be
 %created for each thread team, thread, or SIMD lane that executes the
 %iterations.
@@ -1867,13 +1906,13 @@ executing that region. If the \code{loop} region does not have a binding
 region, then the binding thread set is the encountering thread.
 
 
-% If the \code{concurrent} construct is closely nested inside a \code{teams} construct,
+% If the \code{loop} construct is closely nested inside a \code{teams} construct,
 % the binding thread set of the region is the set of master threads that executes
 % the \code{teams} region and the region's binding region is the \code{teams} region. If the
-% \code{concurrent} construct is closely nested inside a \code{parallel} construct, the
+% \code{loop} construct is closely nested inside a \code{parallel} construct, the
 % binding thread set of the region is the current thread team and the region's
 % binding region is the \code{parallel} region. Otherwise, the binding thread set for a
-% \code{concurrent} region is the encountering thread and the binding region is the
+% \code{loop} region is the encountering thread and the binding region is the
 % current task region.
 
 \descr
@@ -1918,12 +1957,12 @@ associated loop has the value that it would have if the set of the associated
 loop(s) were executed sequentially. 
 
 %The \code{levels} clause may be used to specify how many loops are associated
-%with the \code{concurrent} construct. The parameter of the \code{levels}
+%with the \code{loop} construct. The parameter of the \code{levels}
 %clause must be a constant positive integer expression. If a \code{levels}
 %clause is present then for the next N nested loops all iterations of the loops
 %may be executed concurrently with any other iteration in the combined
 %iteration space of the associated loops in any order. If no \code{levels}
-%clause appears on the construct, the \code{concurrent} directive applies to
+%clause appears on the construct, the \code{loop} directive applies to
 %only the loop that immediately follows the directive.
 
 Each logical iteration is executed once per instance of the \code{loop}
@@ -1950,17 +1989,17 @@ iterations of the associated loop(s) must complete before the encountering
 thread(s) continue execution after the \code{loop} region.
 
 
-% An implementation may choose to treat an \code{concurrent} construct as a
-% \code{distribute}, Loop, and/or SIMD construct if it would be conforming for a
+% An implementation may choose to treat an \code{loop} construct as a
+% \code{distribute}, worksharing-loop, and/or SIMD construct if it would be conforming for a
 % programmer to have explicitly specified the selected construct. If the
-% implementation chooses to treat an \code{concurrent} construct as one of these
+% implementation chooses to treat a \code{loop} construct as one of these
 % constructs then the default data sharing and binding will be as-if the
 % programmer had specified the implicitly-added construct. A conforming
 % implementation may also choose to execute the iterations of the associated loop
 % concurrently in ways not represented by these constructs.
 
 
-% A \code{concurrent} construct may be nested within other OpenMP regions, but does
+% A \code{loop} construct may be nested within other OpenMP regions, but does
 % not increase the nesting level, as defined in [add crossref]. \feedback{[Should we
 % restrict the nesting to only particular constructs for the first
 % implementation?]}
@@ -1992,6 +2031,10 @@ Restrictions to the \code{loop} construct are as follows:
     are the \code{loop} construct, the \code{parallel} construct, the
     \code{simd} construct, and combined constructs for which the first
     construct is a \code{parallel} construct.
+
+  \item A list item may not appear in a \code{lastprivate} clause unless it
+    is a loop iteration variable of a loop that is associated with the
+    construct.
 
 %JLARKIN Moved to directives_nesting.tex
 %    \item Only the following directives may be nested within an
@@ -2229,3 +2272,4 @@ Restrictions to the \code{scan} directive are as follows:
 
 \item \code{reduction} clause, see \specref{subsubsec:reduction clause}.
 \end{itemize}
+
