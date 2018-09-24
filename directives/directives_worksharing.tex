@@ -48,20 +48,22 @@
 \index{worksharing constructs}
 \index{constructs!worksharing}
 \index{worksharing!constructs}
-A worksharing construct distributes the execution of the corresponding region among the
-members of the team that encounters it. Threads execute portions of the region in the
-context of the implicit tasks each one is executing. If the team consists of only one
-thread then the worksharing region is not executed in parallel.
+A worksharing construct distributes the execution of the corresponding region among 
+the members of the team that encounters it. Threads execute portions of the region 
+in the context of the implicit tasks that each one is executing. If the team consists 
+of only one thread then the worksharing region is not executed in parallel.
 
-A worksharing region has no barrier on entry; however, an implied barrier exists at the
-end of the worksharing region, unless a \code{nowait} clause is specified. If a \code{nowait}
-clause is present, an implementation may omit the barrier at the end of the worksharing
-region. In this case, threads that finish early may proceed straight to the instructions
-following the worksharing region without waiting for the other members of the team to
-finish the worksharing region, and without performing a flush operation.
+A worksharing region has no barrier on entry; however, an implied barrier exists at 
+the end of the worksharing region, unless a \code{nowait} clause is specified. If a 
+\code{nowait} clause is present, an implementation may omit the barrier at the end 
+of the worksharing region. In this case, threads that finish early may proceed 
+straight to the instructions that follow the worksharing region without waiting for 
+the other members of the team to finish the worksharing region, and without 
+performing a flush operation.
 
-The OpenMP API defines the worksharing constructs that are described
-in this section.  The worksharing-loop construct is described in \specref{subsec:Worksharing-Loop Construct}.
+The OpenMP API defines the worksharing constructs that are described in this section
+as well as the worksharing-loop construct, which is described in 
+\specref{subsec:Worksharing-Loop Construct}.
 
 \begin{samepage}
 \restrictions
@@ -73,17 +75,9 @@ all, unless cancellation has been requested for the innermost enclosing parallel
 region.
 
 \item The sequence of worksharing regions and \code{barrier} regions encountered must be the
-same for every thread in a team
+same for every thread in a team.
 \end{itemize}
 \end{samepage}
-
-
-
-
-
-
-
-
 
 
 
@@ -92,10 +86,10 @@ same for every thread in a team
 \index{sections@{\code{sections}}}
 \index{constructs!sections@{\code{sections}}}
 \summary
-The \code{sections} construct is a non-iterative worksharing construct that contains a set of
-structured blocks that are to be distributed among and executed by the threads in a team.
-Each structured block is executed once by one of the threads in the team in the context
-of its implicit task.
+The \code{sections} construct is a non-iterative worksharing construct that 
+contains a set of structured blocks that are to be distributed among and 
+executed by the threads in a team. Each structured block is executed once by 
+one of the threads in the team in the context of its implicit task.
 
 \syntax
 \begin{ccppspecific}
@@ -119,9 +113,9 @@ where \plc{clause} is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[reduction-modifier },\plc{] reduction-identifier }:\plc{ list})
+allocate(\plc{[allocator }:\plc{] list})
 nowait
-allocate(\plc{[allocator: ]}\plc{list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -147,37 +141,54 @@ where \plc{clause} is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
-allocate(\plc{[allocator: ]}\plc{list})
+reduction(\plc{[reduction-modifier },\plc{] reduction-identifier }:\plc{ list})
+allocate(\plc{[allocator }:\plc{] list})
 \end{indentedcodelist}
 \end{samepage}
 \end{fortranspecific}
 
 \binding
-The binding thread set for a \code{sections} region is the current team. A \code{sections}
-region binds to the innermost enclosing \code{parallel} region. Only the threads of the team
-executing the binding \code{parallel} region participate in the execution of the structured
-blocks and the implied barrier of the \code{sections} region if the barrier is not eliminated
-by a \code{nowait} clause.
+The binding thread set for a \code{sections} region is the current team. A 
+\code{sections} region binds to the innermost enclosing \code{parallel} region. 
+Only the threads of the team that executes the binding \code{parallel} region 
+participate in the execution of the structured blocks and the implied barrier 
+of the \code{sections} region if the barrier is not eliminated by a 
+\code{nowait} clause.
 
 \descr
-Each structured block in the \code{sections} construct is preceded by a \code{section} directive
-except possibly the first block, for which a preceding \code{section} directive is optional.
+Each structured block in the \code{sections} construct is preceded by a 
+\code{section} directive except possibly the first block, for which a preceding 
+\code{section} directive is optional.
 
 The method of scheduling the structured blocks among the threads in the team is
 implementation defined.
 
-There is an implicit barrier at the end of a \code{sections} construct unless a \code{nowait}
-clause is specified.
+There is an implicit barrier at the end of a \code{sections} construct unless a 
+\code{nowait} clause is specified.
 
-%\tools
+\events
 
-\omptWorksharingEvents{sections}
+The \plc{section-begin} event occurs after an implicit task encounters a
+\code{sections} construct but before the task executes any 
+structured block of the \code{sections} region.
+
+The \plc{sections-end} event occurs after an implicit task finishes execution 
+of a \code{sections} region but before it resumes execution of the enclosing context.
 
 The \plc{section-begin} event occurs before an implicit task starts
-executing a structured block in the \code{sections} construct.
+to execute a structured block in the \code{sections} construct for
+each of those structured blocks that the task executes.
 
-\omptWorksharingTools{sections}{ompt_work_sections}
+\tools
+
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and \code{ompt_work_sections} 
+as its \plc{wstype} argument for each occurrence of a \plc{section-begin} event 
+in that thread. Similarly, a thread dispatches a registered \code{ompt_callback_work}
+callback with \code{ompt_scope_end} as its \plc{endpoint} argument and 
+\code{ompt_work_sections} as its \plc{wstype} argument for each occurrence of 
+a \plc{sections-end} event in that thread. The callbacks occur in the context 
+of the implicit task. The callbacks have type signature \code{ompt_callback_work_t}.
 
 A thread dispatches a registered \code{ompt_callback_dispatch}
 callback for each occurrence of a \plc{section-begin} 
@@ -189,25 +200,26 @@ context of the implicit task.  The callback has type signature
 Restrictions to the \code{sections} construct are as follows:
 
 \begin{itemize}
-\item Orphaned \code{section} directives are prohibited. That is, the \code{section} directives must
-appear within the \code{sections} construct and must not be encountered elsewhere in the
-\code{sections} region.
-
+\item Orphaned \code{section} directives are prohibited. That is, the 
+      \code{section} directives must appear within the \code{sections} 
+      construct and must not be encountered elsewhere in the \code{sections} region.
 \item The code enclosed in a \code{sections} construct must be a structured block.
-
 \item Only a single \code{nowait} clause can appear on a \code{sections} directive.
 
 \begin{cppspecific}
-\item A throw executed inside a \code{sections} region must cause execution to resume within
-the same section of the \code{sections} region, and the same thread that threw the
-exception must catch it.
+\item A throw executed inside a \code{sections} region must cause execution to 
+      resume within the same section of the \code{sections} region, and the same 
+      thread that threw the exception must catch it.
 \end{cppspecific}
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item \code{private}, \code{firstprivate}, \code{lastprivate}, and \code{reduction} clauses, see
-\specref{subsec:Data-Sharing Attribute Clauses}.
+\item \code{allocate} clause, see
+\specref{subsec:allocate Clause}.
+
+\item \code{private}, \code{firstprivate}, \code{lastprivate}, and 
+\code{reduction} clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
 
 \item \code{ompt_scope_begin} and \code{ompt_scope_end}, see
   \specref{sec:ompt_scope_endpoint_t}.
@@ -224,22 +236,16 @@ exception must catch it.
 
 
 
-
-
-
-
-
-
-
 \subsection{\hcode{single} Construct}
 \index{single@{\code{single}}}
 \index{constructs!single@{\code{single}}}
 \label{subsec:single Construct}
 \summary
-The \code{single} construct specifies that the associated structured block is executed by only
-one of the threads in the team (not necessarily the master thread), in the context of its
-implicit task. The other threads in the team, which do not execute the block, wait at an
-implicit barrier at the end of the \code{single} construct unless a \code{nowait} clause is specified.
+The \code{single} construct specifies that the associated structured block is 
+executed by only one of the threads in the team (not necessarily the master 
+thread), in the context of its implicit task. The other threads in the team, 
+which do not execute the block, wait at an implicit barrier at the end of the 
+\code{single} construct unless a \code{nowait} clause is specified.
 
 \syntax
 \begin{ccppspecific}
@@ -257,8 +263,8 @@ where \plc{clause} is one of the following:
 private(\plc{list})
 firstprivate(\plc{list})
 copyprivate(\plc{list})
+allocate(\plc{[allocator }:\plc{] list})
 nowait
-allocate(\plc{[allocator: ]}\plc{list})
 \end{indentedcodelist}
 \end{samepage}
 \end{ccppspecific}
@@ -277,7 +283,7 @@ where \plc{clause} is one of the following:
 \begin{indentedcodelist}
 private(\plc{list})
 firstprivate(\plc{list})
-allocate(\plc{[allocator: ]}\plc{list})
+allocate(\plc{[allocator }:\plc{] list})
 \end{indentedcodelist}
 
 and \plc{end_clause} is one of the following:
@@ -289,56 +295,62 @@ nowait
 \end{fortranspecific}
 
 \binding
-The binding thread set for a \code{single} region is the current team. A \code{single} region
-binds to the innermost enclosing \code{parallel} region. Only the threads of the team
-executing the binding \code{parallel} region participate in the execution of the structured
-block and the implied barrier of the \code{single} region if the barrier is not eliminated by a
+The binding thread set for a \code{single} region is the current team. 
+A \code{single} region binds to the innermost enclosing \code{parallel} 
+region. Only the threads of the team that executes the binding \code{parallel} 
+region participate in the execution of the structured block and the implied 
+barrier of the \code{single} region if the barrier is not eliminated by a
 \code{nowait} clause.
 
 \descr
-Only one of the encountering threads will execute the structured block associated with the \code{single}
-construct. The method of choosing a thread to execute the structured block each time the team encounters the construct
-is implementation defined. There is an implicit barrier at the end of the \code{single} construct unless a
-\code{nowait} clause is specified.
+Only one of the encountering threads will execute the structured block 
+associated with the \code{single} construct. The method of choosing a thread 
+to execute the structured block each time the team encounters the construct
+is implementation defined. There is an implicit barrier at the end of the 
+\code{single} construct unless a \code{nowait} clause is specified.
 
 \events
 
 The \plc{single-begin} event occurs after an \code{implicit task} encounters a
-\code{single} construct but before the task starts the execution of the structured
+\code{single} construct but before the task starts to execute the structured
 block of the \code{single} region.
 
-The \plc{single-end} event occurs after a \code{single} region finishes execution of the structured block
-but before resuming execution of the encountering implicit task.
-
+The \plc{single-end} event occurs after an implicit task finishes execution of 
+a \code{single} region but before it resumes execution of the enclosing region.
 
 \tools
 
-A thread dispatches a registered \code{ompt_callback_work}
-callback for each occurrence of \plc{single-begin} and
-\plc{single-end} events in that thread. The callback has type signature
-\code{ompt_callback_work_t}. The callback receives
-\code{ompt_scope_begin} or \code{ompt_scope_end}
-as its \plc{endpoint} argument, as appropriate, and
-\code{ompt_work_single_executor} or \code{ompt_work_single_other}
-as its \plc{wstype} argument.
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument for each 
+occurrence of a \plc{single-begin} event  in that thread. Similarly, a 
+thread dispatches a registered \code{ompt_callback_work} callback  with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument for each occurrence 
+of a \plc{single-end} event in that thread. For each of these callbacks,
+the \plc{wstype} argument is \code{ompt_work_single_executor} if the thread
+executes the structured block associated with the \code{single} region;
+otherwise, the \plc{wstype} argument is  \code{ompt_work_single_other}.
+The callback has type signature \code{ompt_callback_work_t}.
 
 \restrictions
 Restrictions to the \code{single} construct are as follows:
 
 \begin{itemize}
 \item The \code{copyprivate} clause must not be used with the \code{nowait} clause.
-
 \item At most one \code{nowait} clause can appear on a \code{single} construct.
 
 \begin{cppspecific}
-\item A throw executed inside a \code{single} region must cause execution to resume within the
-same \code{single} region, and the same thread that threw the exception must catch it.
+\item A throw executed inside a \code{single} region must cause execution to 
+      resume within the same \code{single} region, and the same thread that 
+      threw the exception must catch it.
 \end{cppspecific}
 \end{itemize}
 
 
 \crossreferences
 \begin{itemize}
+\item \code{allocate} clause, see
+\specref{subsec:allocate Clause}.
+
 \item \code{private} and \code{firstprivate} clauses, see
 \specref{subsec:Data-Sharing Attribute Clauses}.
 
@@ -358,21 +370,6 @@ same \code{single} region, and the same thread that threw the exception must cat
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-% Here we need to force the blue marker lower, and force the subsection header higher
-% in order to reduce the space between the marker and the header, per Richard:
-%\begin{samepage}
-
 \begin{fortranspecific}
 
 \subsection{\hcode{workshare} Construct}
@@ -380,12 +377,11 @@ same \code{single} region, and the same thread that threw the exception must cat
 \index{constructs!workshare@{\code{workshare}}}
 \label{subsec:workshare Construct}
 \summary
-The \code{workshare} construct divides the execution of the enclosed structured block into
-separate units of work, and causes the threads of the team to share the work such that
-each unit is executed only once by one thread, in the context of its implicit task.
-%\end{samepage}
+The \code{workshare} construct divides the execution of the enclosed structured 
+block into separate units of work, and causes the threads of the team to share 
+the work such that each unit is executed only once by one thread, in the context 
+of its implicit task.
 
-%\begin{samepage}
 \syntax
 The syntax of the \code{workshare} construct is as follows:
 
@@ -394,130 +390,141 @@ The syntax of the \code{workshare} construct is as follows:
     \plc{structured-block}
 !$omp end workshare \plc{[}nowait\plc{]}
 \end{ompfPragma}
-%\end{samepage}
-
-The enclosed structured block must consist of only the following:
-
-\begin{itemize}
-\item array assignments
-
-\item scalar assignments
-
-\item \code{FORALL} statements
-
-\item \code{FORALL} constructs
-
-\item \code{WHERE} statements
-
-\item \code{WHERE} constructs
-
-\item \code{atomic} constructs
-
-\item \code{critical} constructs
-
-\item \code{parallel} constructs
-\end{itemize}
-
-Statements contained in any enclosed \code{critical} construct are also subject to these
-restrictions. Statements in any enclosed \code{parallel} construct are not restricted.
 
 \binding
-The binding thread set for a \code{workshare} region is the current team. A \code{workshare}
-region binds to the innermost enclosing \code{parallel} region. Only the threads of the team
-executing the binding \code{parallel} region participate in the execution of the units of
-work and the implied barrier of the \code{workshare} region if the barrier is not eliminated
+The binding thread set for a \code{workshare} region is the current team. 
+A \code{workshare} region binds to the innermost enclosing \code{parallel} 
+region. Only the threads of the team that executes the binding \code{parallel} 
+region participate in the execution of the units of work and the implied 
+barrier of the \code{workshare} region if the barrier is not eliminated
 by a \code{nowait} clause.
 
 \descr
-There is an implicit barrier at the end of a \code{workshare} construct unless a \code{nowait}
-clause is specified.
+There is an implicit barrier at the end of a \code{workshare} construct 
+unless a \code{nowait} clause is specified.
 
-An implementation of the \code{workshare} construct must insert any synchronization that is
-required to maintain standard Fortran semantics. For example, the effects of one
-statement within the structured block must appear to occur before the execution of
-succeeding statements, and the evaluation of the right hand side of an assignment must
-appear to complete prior to the effects of assigning to the left hand side.
+An implementation of the \code{workshare} construct must insert any synchronization 
+that is required to maintain standard Fortran semantics. For example, the effects 
+of one statement within the structured block must appear to occur before the 
+execution of succeeding statements, and the evaluation of the right hand side of 
+an assignment must appear to complete prior to the effects of assigning to the left 
+hand side. 
 
-The statements in the \code{workshare} construct are divided into units of work as follows:
+The statements in the \code{workshare} construct are divided into units of work 
+as follows:
 
 \begin{itemize}
-\item For array expressions within each statement, including transformational array
-intrinsic functions that compute scalar values from arrays:
+\item For array expressions within each statement, including transformational 
+      array intrinsic functions that compute scalar values from arrays:
 
-\begin{itemize} % nested level
-\item Evaluation of each element of the array expression, including any references to
-\code{ELEMENTAL} functions, is a unit of work.
-
-\item Evaluation of transformational array intrinsic functions may be freely subdivided
-into any number of units of work.
+\begin{itemize}
+\item Evaluation of each element of the array expression, including any 
+      references to \code{ELEMENTAL} functions, is a unit of work.
+\item Evaluation of transformational array intrinsic functions may be freely
+      subdivided into any number of units of work.
 \end{itemize}
 
-\item For an array assignment statement, the assignment of each element is a unit of work.
-
+\item For an array assignment statement, the assignment of each element is 
+      a unit of work.
 \item For a scalar assignment statement, the assignment operation is a unit of work.
-
-\item For a \code{WHERE} statement or construct, the evaluation of the mask expression and the
-masked assignments are each a unit of work.
-
-\item For a \code{FORALL} statement or construct, the evaluation of the mask expression,
-expressions occurring in the specification of the iteration space, and the masked
-assignments are each a unit of work
-
-\item For an \code{atomic} construct, the atomic operation on the storage location designated as
-\plc{x} is a unit of work.
-
+\item For a \code{WHERE} statement or construct, the evaluation of the mask 
+      expression and the masked assignments are each a unit of work.
+\item For a \code{FORALL} statement or construct, the evaluation of the mask 
+      expression, expressions occurring in the specification of the iteration 
+      space, and the masked assignments are each a unit of work.
+\item For an \code{atomic} construct, the atomic operation on the storage 
+      location designated as \plc{x} is a unit of work.
 \item For a \code{critical} construct, the construct is a single unit of work.
-
-\item For a \code{parallel} construct, the construct is a unit of work with respect to the
-\code{workshare} construct. The statements contained in the \code{parallel} construct are
-executed by a new thread team.
-
-\item If none of the rules above apply to a portion of a statement in the structured block,
-then that portion is a unit of work.
+\item For a \code{parallel} construct, the construct is a unit of work with 
+      respect to the \code{workshare} construct. The statements contained in 
+      the \code{parallel} construct are executed by a new thread team.
+\item If none of the rules above apply to a portion of a statement in the 
+      structured block, then that portion is a unit of work.
 \end{itemize}
 
-The transformational array intrinsic functions are \code{MATMUL}, \code{DOT_PRODUCT}, \code{SUM},
-\code{PRODUCT}, \code{MAXVAL}, \code{MINVAL}, \code{COUNT},
+The transformational array intrinsic functions are \code{MATMUL}, \code{DOT_PRODUCT},
+\code{SUM}, \code{PRODUCT}, \code{MAXVAL}, \code{MINVAL}, \code{COUNT},
 \code{ANY}, \code{ALL}, \code{SPREAD}, \code{PACK}, \code{UNPACK},
-\code{RESHAPE}, \code{TRANSPOSE}, \code{EOSHIFT}, \code{CSHIFT}, \code{MINLOC}, and \code{MAXLOC}.
+\code{RESHAPE}, \code{TRANSPOSE}, \code{EOSHIFT}, \code{CSHIFT}, 
+\code{MINLOC}, and \code{MAXLOC}.
 
 It is unspecified how the units of work are assigned to the threads executing a
 \code{workshare} region.
 
-If an array expression in the block references the value, association status, or allocation
-status of private variables, the value of the expression is undefined, unless the same
-value would be computed by every thread.
+If an array expression in the block references the value, association status, or 
+allocation status of private variables, the value of the expression is undefined, 
+unless the same value would be computed by every thread.
 
-If an array assignment, a scalar assignment, a masked array assignment, or a \code{FORALL}
-assignment assigns to a private variable in the block, the result is unspecified.
+If an array assignment, a scalar assignment, a masked array assignment, or a 
+\code{FORALL} assignment assigns to a private variable in the block, the result 
+is unspecified.
 
-The \code{workshare} directive causes the sharing of work to occur only in the \code{workshare}
-construct, and not in the remainder of the \code{workshare} region.
+The \code{workshare} directive causes the sharing of work to occur only in the 
+\code{workshare} construct, and not in the remainder of the \code{workshare} region.
 
-%\tools
-\omptWorksharing{workshare}{ompt_work_workshare}
+\events
 
-\begin{samepage}
+The \plc{workshare-begin} event occurs after an implicit task encounters a
+\code{workshare} construct but before the task starts to execute the structured
+block of the \code{workshare} region.
+
+The \plc{workshare-end} event occurs after an implicit task finishes execution of 
+a \code{workshare} region but before it resumes execution of the enclosing context.
+
+\tools
+
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and \code{ompt_work_workshare} 
+as its \plc{wstype} argument for each occurrence of a \plc{workshare-begin} event 
+in that thread. Similarly, a thread dispatches a registered \code{ompt_callback_work}
+callback with \code{ompt_scope_end} as its \plc{endpoint} argument and 
+\code{ompt_work_workshare} as its \plc{wstype} argument for each occurrence 
+of a \plc{workshare-end} event in that thread. The callbacks occur in the context 
+of the implicit task. The callbacks have type signature \code{ompt_callback_work_t}.
+
 \restrictions
 The following restrictions apply to the \code{workshare} construct:
 
 \begin{itemize}
-\item All array assignments, scalar assignments, and masked array assignments must be
-intrinsic assignments.
+\item The only OpenMP constructs that may be closely nested inside a \code{workshare}
+      construct are the \code{atomic}, \code{critical}, and \code{parallel} constructs.
+\item Base language statements that are encountered inside a \code{workshare} construct
+      but that are not enclosed within a \code{parallel} construct that is nested
+      inside the \code{workshare} construct must consist of only the following: 
 
-\item The construct must not contain any user defined function calls unless the function is
-\code{ELEMENTAL}.
+\begin{itemize}
+\item array assignments
+\item scalar assignments
+\item \code{FORALL} statements
+\item \code{FORALL} constructs
+\item \code{WHERE} statements
+\item \code{WHERE} constructs
 \end{itemize}
-\end{samepage}
+
+\item All array assignments, scalar assignments, and masked array assignments 
+      that are encountered inside a \code{workshare} construct but are not nested
+      inside a \code{parallel} construct that is nested inside the \code{workshare}
+      construct must be intrinsic assignments.
+\item The construct must not contain any user defined function calls unless the 
+      function is \code{ELEMENTAL} or the function call is contained inside a 
+      \code{parallel} construct that is nested inside the \code{workshare} construct.
+\end{itemize}
 
 \crossreferences
 \begin{itemize}
+\item \code{parallel} construct, see \specref{sec:parallel Construct}.
+
+\item \code{critical} construct, see \specref{subsec:critical Construct}.
+
+\item \code{atomic} construct, see \specref{subsec:atomic Construct}.
+
 \item \code{ompt_scope_begin} and \code{ompt_scope_end}, see
-  \specref{sec:ompt_scope_endpoint_t}.
+\specref{sec:ompt_scope_endpoint_t}.
+
 \item \code{ompt_work_workshare}, see \specref{sec:ompt_work_t}.
+
 \item \code{ompt_callback_work_t}, see
 \specref{sec:ompt_callback_work_t}.
 \end{itemize}
 
-%\filbreak
 \end{fortranspecific}
