@@ -644,21 +644,31 @@ breaklines=true,
 \newlength{\sbhadj}                         % vertical adjustment for aligning arrows with the line
 \newlength{\sbns}\setlength{\sbns}{8\baselineskip}       % arg for \needspace for downward arrows
 
+
 % \notelinewitharrows is a helper command that makes a black Note marker:
 %     arg 1 = 1 or -1 for up or down arrows
 %     arg 2 = solid or dashed or loosely dashed, etc.
 \newcommand{\notelinewitharrows}[2]{%
+  \ifcsname notebox@#1#2\endcsname
+  \else
+    \expandafter\newsavebox\csname notebox@#1#2\endcsname
+    \expandafter\savebox\csname notebox@#1#2\endcsname{
+      \begin{minipage}{\textwidth}
+        \begin{tikzpicture}%
+            \setlength{\sblen}{.99\linewidth}%
+            \setlength{\sbht}{#1\sbsz}\setlength{\sbht}{1.4\sbht}%
+            \setlength{\sbhadj}{#1\sblw}\setlength{\sbhadj}{0.25\sbhadj}%
+            \filldraw (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);
+            \draw[line width=\sblw, #2] (2\sbsz - \sblw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);
+            \filldraw (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);
+        \end{tikzpicture}
+      \end{minipage}
+  }
+  \fi
   \vskip 0pt % noindent, but works in itemize; \needspace{0.1\baselineskip} might cause a page break
   \ifdim#1\sbsz=-1\sbsz \VSPb \else \penalty 10000 \fi %
   \vbox{%
-    \begin{tikzpicture}%
-        \setlength{\sblen}{.99\linewidth}%
-        \setlength{\sbht}{#1\sbsz}\setlength{\sbht}{1.4\sbht}%
-        \setlength{\sbhadj}{#1\sblw}\setlength{\sbhadj}{0.25\sbhadj}%
-        \filldraw (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);
-        \draw[line width=\sblw, #2] (2\sbsz - \sblw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);
-        \filldraw (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);
-    \end{tikzpicture}
+    \expandafter\usebox\csname notebox@#1#2\endcsname
   }
   \ifdim#1\sbsz=1\sbsz \penalty -100 \VSPa \fi %
 }
@@ -668,21 +678,30 @@ breaklines=true,
 % arg 2 = solid or dashed or loosely dashed, etc.
 % arg 3 = text
 \newcommand{\linewitharrows}[3]{%
+  \ifcsname ompbox@#1#2#3\endcsname
+  \else
+    \expandafter\newsavebox\csname ompbox@#1#2#3\endcsname
+    \expandafter\savebox\csname ompbox@#1#2#3\endcsname{
+      \settowidth{\sbtw}{\large \textsf{\textup{xxxx#3}}}
+      \begin{minipage}{\textwidth}
+        \begin{tikzpicture}[overlay]%
+          \setlength{\sblen}{.99\linewidth}%
+          \setlength{\sbht}{#1\sbsz}\setlength{\sbht}{1.4\sbht}%
+          \setlength{\sbhadj}{#1\sblw}\setlength{\sbhadj}{0.25\sbhadj}%
+          \filldraw[color=blue!40] (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);%
+          \draw[line width=\sblw, color=blue!40, #2] (2\sbsz - \sblw, \sbhadj) -- (0.5\sblen - 0.5\sbtw, \sbhadj);%
+          \draw[line width=\sblw, color=blue!40, #2] (0.5\sblen + 0.5\sbtw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);%
+          \filldraw[color=blue!40] (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);%
+          \node[color=blue!90] at (0.5\sblen, 0) {\large \textsf{\textup{#3}}};%
+        \end{tikzpicture}
+      \end{minipage}
+    }
+  \fi
   \vskip 0pt % noindent, but works in itemize; \needspace{0.1\baselineskip} might cause a page break
   \ifdim#1\sbsz=-1\sbsz \VSPb \else \penalty 10000 \fi %
-  \settowidth{\sbtw}{\large \textsf{\textup{xxxx#3}}}
   \vbox to 12pt {%  %% TODO: we may want to determine the font size automatically
     \vfill%
-    \begin{tikzpicture}[overlay]%
-        \setlength{\sblen}{.99\linewidth}%
-        \setlength{\sbht}{#1\sbsz}\setlength{\sbht}{1.4\sbht}%
-        \setlength{\sbhadj}{#1\sblw}\setlength{\sbhadj}{0.25\sbhadj}%
-        \filldraw[color=blue!40] (\sblen, 0) -- (\sblen - \sbsz, \sbht) -- (\sblen - 2\sbsz, 0) -- (\sblen, 0);%
-        \draw[line width=\sblw, color=blue!40, #2] (2\sbsz - \sblw, \sbhadj) -- (0.5\sblen - 0.5\sbtw, \sbhadj);%
-        \draw[line width=\sblw, color=blue!40, #2] (0.5\sblen + 0.5\sbtw, \sbhadj) -- (\sblen - 2\sbsz + \sblw, \sbhadj);%
-        \filldraw[color=blue!40] (0, 0) -- (\sbsz, \sbht) -- (0 + 2\sbsz, 0) -- (0, 0);%
-        \node[color=blue!90] at (0.5\sblen, 0) {\large \textsf{\textup{#3}}};%
-    \end{tikzpicture}
+    \expandafter\usebox\csname ompbox@#1#2#3\endcsname
   }
   \ifdim#1\sbsz=1\sbsz \penalty -100 \VSPa \fi %
 }
