@@ -322,7 +322,13 @@ The following restrictions also apply:
     %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
 \end{itemize}
 
+\crossreferences
+\begin{itemize}
+\item \code{lastprivate} clause, see \specref{subsubsec:lastprivate clause}.
+\item \code{linear} clause, see \specref{subsubsec:linear clause}.
+\item \code{simd} construct, see \specref{subsubsec:simd Construct}.
 
+\end{itemize}
 
 \subsection{Worksharing-Loop Construct}
 \label{subsec:Worksharing-Loop Construct}
@@ -636,7 +642,6 @@ in any order and the behavior of an application that depends on any execution or
 \linenumbers
 \medskip
 
-% \omptWorksharingEvents{loop}
 \events
 
 The \plc{ws-loop-begin} event occurs after an implicit task encounters a
@@ -649,7 +654,17 @@ execution but before resuming execution of the encountering task.
 The \plc{ws-loop-iteration-begin} event occurs before an implicit task
 executes each iteration of a parallel loop.
 
-\omptWorksharingTools{ws-loop}{work_loop}
+\tools
+
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and \code{work_loop} 
+as its \plc{wstype} argument for each occurrence of a \plc{ws-loop-begin} 
+event in that thread. Similarly, a thread dispatches a registered 
+\code{ompt_callback_work} callback with \code{ompt_scope_end} as its 
+\plc{endpoint} argument and \code{work_loop} as its \plc{wstype} argument 
+for each occurrence of a \plc{ws-loop-end} event in that thread. The callbacks
+ occur in the context of the implicit task. The callbacks have type 
+signature \code{ompt_callback_work_t}.
 
 A thread dispatches a registered \code{ompt_callback_dispatch}
 callback for each occurrence of a \plc{ws-loop-iteration-begin} 
@@ -858,7 +873,7 @@ aligned(\plc{list[ }:\plc{ alignment]})
 nontemporal(\plc{list})
 private(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[ reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 order(concurrent)
 \end{indentedcodelist}
@@ -887,7 +902,7 @@ aligned(\plc{list[ }:\plc{ alignment]})
 nontemporal(\plc{list})
 private(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[ reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 order(concurrent)
 \end{indentedcodelist}
@@ -1467,8 +1482,26 @@ chunks is unspecified in this case.
 
 When no \code{dist_schedule} clause is specified, the schedule is implementation defined.
 
-%\tools
-\omptWorksharing{distribute}{ompt_work_distribute}
+\events
+
+The \plc{distribute-begin} event occurs after an implicit task encounters a
+\code{distribute} construct but before the task starts to execute the structured
+block of the \code{distribute} region.
+
+The \plc{distribute-end} event occurs after an implicit task finishes execution of 
+a \code{distribute} region but before it resumes execution of the enclosing context.
+
+\tools
+
+A thread dispatches a registered \code{ompt_callback_work} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and 
+\code{ompt_work_distribute} as its \plc{wstype} argument for each occurrence 
+of a \plc{distribute-begin} event in that thread. Similarly, a thread dispatches 
+a registered \code{ompt_callback_work} callback with \code{ompt_scope_end} as 
+its \plc{endpoint} argument and \code{ompt_work_distribute} as its \plc{wstype} 
+argument for each occurrence of a \plc{distribute-end} event in that thread.
+The callbacks occur in the context of the implicit task. The callbacks have 
+type signature \code{ompt_callback_work_t}.
 
 \restrictions
 Restrictions to the \code{distribute} construct are as follows:
@@ -1702,7 +1735,7 @@ of multiple teams. The distribute parallel worksharing-loop SIMD construct is a 
 The syntax of the distribute parallel worksharing-loop SIMD construct is as follows:
 
 \begin{ompcPragma}
-#pragma omp distribute parallel for simd \plc{\}
+#pragma omp distribute parallel for simd \
             \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{ompcPragma}
@@ -1795,7 +1828,7 @@ bind(\plc{binding})
 collapse(\plc{n})
 order(concurrent)
 private(\plc{list})
-reduction(\plc{reduction-identifier }:\plc{ list})
+reduction(\plc{[}default ,\plc{]reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 The \code{loop} directive places restrictions on the structure of all associated \plc{for-loops}.
 Specifically, all associated \plc{for-loops} must have \emph{canonical loop form} (see
@@ -1819,7 +1852,7 @@ bind(\plc{binding})
 collapse(\plc{n})
 order(concurrent)
 private(\plc{list})
-reduction(\plc{reduction-identifier }:\plc{ list})
+reduction(\plc{[}default ,\plc{]reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 \end{samepage}
 
@@ -2231,3 +2264,4 @@ Restrictions to the \code{scan} directive are as follows:
 
 \item \code{reduction} clause, see \specref{subsubsec:reduction clause}.
 \end{itemize}
+
