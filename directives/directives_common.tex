@@ -790,6 +790,477 @@ c23456789
 
 
 
+\section{Variant Directives}
+\label{sec:Variant Directives}
+\index{variant directives}
+\index{directives!variant directives}
+
+\subsection{OpenMP Context}
+\label{subsec:OpenMP Context}
+
+At any point in a program, an OpenMP context exists that defines traits
+that describe the active OpenMP constructs, the execution devices, and
+functionality supported by the implementation. The traits are grouped into
+trait sets. The following trait sets exist: \plc{construct}, \plc{device} and
+\plc{implementation}.
+
+The \plc{construct} set is composed of the directive names, each being a
+trait, of all enclosing constructs at that point in the program up
+to a \code{target} construct. Combined and composite constructs are added
+to the set as distinct constructs in the same nesting order specified by
+the original construct. The set is ordered by their nesting level in
+increasing order. Specifically, the ordering of the set of constructs is
+$c_{1}$,~\ldots,~$c_{N}$, where $c_{1}$ is the construct at the 
+outermost nesting level and $c_{N}$ is the construct at the innermost
+nesting level. In addition, if the point in the program is not enclosed by
+a \code{target} construct, the following rules are applied in order:
+
+\begin{enumerate}
+\item For functions with a \code{declare simd} directive, the \plc{simd} trait
+      is added to the beginning of the set as $c_{1}$ for the generated SIMD 
+      versions so the total size of the set is increased by 1.
+\item For functions with a \code{declare variant} directive, the selectors 
+      $c_{1}$,~\ldots,~$c_{M}$ of the \code{construct} selector set are added 
+      in the same order to the beginning of the set as $c_{1}$,~\ldots,~$c_{M}$
+       so the total size of the set is increased by $M$.
+\item For functions within a \code{declare target} block, the \plc{target}
+      trait is added to the beginning of the set as $c_{1}$ for the versions of 
+      the function that are generated for \code{target} regions so the total 
+      size of the set is increased by 1.
+\end{enumerate}
+
+The \plc{simd} trait can be further defined with properties that match the
+clauses accepted by the \code{declare}~\code{simd} directive with the same
+name and semantics. The \plc{simd} trait must define at least the
+\plc{simdlen} property and one of  the \plc{inbranch} or \plc{notinbranch} properties.
+
+The \plc{device} set includes traits that define the characteristics of the 
+device being targeted by the compiler at that point in the program. At least 
+the following traits must be defined:
+
+\begin{itemize}
+\item The \plc{kind(kind-name-list)} trait specifies the general kind of the 
+      device. The following \plc{kind-name} values are defined:
+
+\begin{itemize}
+\item \plc{host}, which specifies that the device is the host device;
+\item \plc{nohost}, which specifies that the devices is not the host device; and
+\item the values defined in the ``OpenMP Context Definitions'' document,
+      which is available at \url{http://www.openmp.org/}.
+\end{itemize}
+
+\item The \plc{isa(isa-name-list)} trait specifies the Instruction Set 
+      Architectures supported by the device. The accepted \plc{isa-name} 
+      values are implementation defined.
+\item The \plc{arch(arch-name-list)} trait specifies the architectures 
+     supported by the device. The accepted \plc{arch-name} values are 
+      implementation defined.
+\end{itemize}
+
+The \plc{implementation} set includes traits that describe the functionality 
+supported by the OpenMP implementation at that point in the program. At least 
+the following traits can be defined:
+
+\begin{itemize}
+\item The \plc{vendor(vendor-name)} trait, which specifies the name of the
+      vendor of the implementation. OpenMP defined values for \plc{vendor-name}
+      are defined in the ``OpenMP Context Definitions'' document, which is
+      available at \url{http://www.openmp.org/}.
+\item The \plc{extension(extension-name-list)} trait, which specifies vendor
+      specific extensions to the OpenMP specification. The accepted
+      \plc{extension-name} values are implementation defined.
+\item A trait with a name that is identical to the name of any clause that can be
+      supplied to the \code{requires} directive.
+\end{itemize}
+
+Implementations can define further traits in the \plc{device} and \plc{implementation}
+sets. All implementation defined traits must follow the following syntax:
+
+\begin{ompSyntax}
+\plc{identifier[}(\plc{context-element[}, \plc{context-element[}, \plc{...]]})\plc{]}
+
+\plc{context-element}:
+  \plc{identifier[}(\plc{context-element[}, \plc{context-element[}, \plc{...]]})\plc{]}
+  or
+  \plc{context-value}
+
+\plc{context-value}:
+  \plc{string}
+  or
+  \plc{integer expression}
+\end{ompSyntax}
+
+where \plc{identifier} is a base language identifier.
+
+\subsection{Context Selectors}
+\label{subsec:Context Selectors}
+
+Context selectors are used to define the properties of an OpenMP context that
+a directive or clause can match. OpenMP defines different sets of selectors, 
+each containing different selectors.
+
+The syntax to define a \plc{context-selector-specification} is the following:
+
+\begin{ompSyntax}
+\plc{trait-set-selector[},\plc{trait-set-selector[},\plc{...]]}
+
+\plc{trait-set-selector}:
+   \plc{trait-set-selector-name}={\plc{trait-selector[}, \plc{trait-selector[}, \plc{...]]}}
+
+\plc{trait-selector}:
+   \plc{trait-selector-name[}(\plc{trait-property[}, \plc{trait-property[}, \plc{...]]})\plc{]}
+\end{ompSyntax}
+
+The \code{construct} selector set defines the \plc{construct} traits that should
+be active in the OpenMP context. The following selectors can be defined in the
+\code{construct} set: \code{target}; \code{teams}; \code{parallel}; \code{for}
+(in C/C++); \code{do} (in Fortran); and \code{simd}. The properties of each
+selector are the same properties that are defined for the corresponding trait.
+The \code{construct} selector is an ordered list $c_{1}$,~\ldots,~$c_{N}$.
+
+The \code{device} and \code{implementation} selector sets define the traits that
+should be active in the corresponding trait set of the OpenMP context. The
+same traits defined in the corresponding traits sets can be used as selectors
+with the same properties. The \code{kind} selector of the \code{device}
+selector set can also be set to the value \code{any}, which is as if no
+\code{kind} selector was specified.
+
+The \code{user} selector set defines the \code{condition} selector that provides 
+additional user-defined conditions.
+
+\begin{cspecific}
+The \code{condition(}\plc{boolean-expr}\code{)} selector defines a \plc{constant 
+expression} that must evaluate to true for the selector to be true.
+\end{cspecific}
+
+\begin{cppspecific}
+The \code{condition(}\plc{boolean-expr}\code{)} selector defines a \code{constexpr} 
+expression that must evaluate to true for the selector to be true.
+\end{cppspecific}
+
+\begin{fortranspecific}
+The \code{condition(}\plc{logical-expr}\code{)} selector defines a \plc{constant 
+expression} that must evaluate to true for the selector to be true.
+\end{fortranspecific}
+
+Implementations can allow further selectors to be specified. Implementations can 
+ignore specified selectors that are not those described in this section.
+
+\restrictions
+\begin{itemize}
+\item Each \plc{trait-set-selector-name} can only be specified once.
+\item Each \plc{trait-selector-name} can only be specified once.
+\end{itemize}
+
+
+
+\subsection{Matching and Scoring Context Selectors}
+\label{subsec:Matching and Scoring Context Selectors}
+
+A given context selector is compatible with a given OpenMP context if the
+following conditions are satisfied:
+
+\begin{itemize}
+\item All selectors in the \code{user} set of the context selector are true;
+\item All selectors in the \code{construct}, \code{device} and \code{implementation} 
+      sets of the context selector appear in the corresponding trait set of the 
+      OpenMP context;
+\item For each selector in the context selector, its properties are a subset of 
+      the properties of the corresponding trait of the OpenMP context; and
+\item Selectors in the \code{construct} set of the context selector appear 
+      in the same relative order as their corresponding traits in the 
+      \plc{construct} trait set of the OpenMP context.
+\end{itemize}
+
+Some properties of the \code{simd} selector have special rules to match the 
+properties of the \plc{simd} trait:
+
+\begin{itemize}
+\item The \code{simdlen(}\plc{N}\code{)} property of the selector matches the
+      \plc{simdlen(M)} trait of the OpenMP context if $M \% N$ equals zero; and
+\item The \code{aligned(}\plc{list:N}\code{)} property of the selector matches 
+      the \plc{aligned(list:M)} trait of the OpenMP context if $N \% M$ equals zero.
+\end{itemize}
+
+Among compatible context selectors a score is computed using the following algorithm:
+
+\begin{enumerate}
+\item Each trait that appears in the \plc{construct} trait set in the OpenMP context 
+      is given the value $2^{p-1}$ where $p$ is the position of the construct trait,
+      $c_{p}$, in the set;
+\item The \code{kind}, \code{arch} and \code{isa} selectors are given the
+      values $2^{l}$, $2^{l+1}$ and $2^{l+2}$, respectively, where $l$ is 
+      the number of traits in the \plc{construct} set;
+\item The values given to any additional selectors allowed by the implementation 
+      are implemented defined; 
+\item Other selectors are given a value of zero; and
+\item Context selectors that are a strict subset of another context selector
+      have a score of zero. For other context selectors, the final score is the
+      sum of the values of all specified selectors plus $1$. If the traits
+      that correspond to the \code{construct} selectors appear multiple times 
+      in the OpenMP context, the highest valued subset of traits that contains 
+      all selectors in the same order are used.
+\end{enumerate}
+
+
+
+\subsection{\hcode{declare}~\hcode{variant} Directive}
+\index{declare variant@{\code{declare variant}}}
+\index{directives!declare variant@{\code{declare variant}}}
+\label{subsec:declare variant Directive}
+\summary
+The \code{declare}~\code{variant} directive declares a function to be a
+specialized variant of another function and specifies the context in which it
+should be used.
+
+\syntax
+\begin{ccppspecific}
+\begin{samepage}
+The syntax of the \code{declare}~\code{variant} directive is as follows:
+
+\begin{ompcPragma}
+#pragma omp declare variant(\plc{base-func-name}) \plc{clause new-line}
+   \plc{function definition or declaration}
+\end{ompcPragma}
+\end{samepage}
+
+\begin{samepage}
+where \plc{clause} is one of the following{}:
+
+\begin{indentedcodelist}
+match(\plc{context-selector-specification})
+\end{indentedcodelist}
+\end{samepage}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of the \code{declare variant} directive is as follows:
+
+\begin{ompfPragma}
+!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) \plc{clause}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
+
+where \plc{clause} is one of the following{}:
+
+\begin{indentedcodelist}
+match(\plc{context-selector-specification})
+\end{indentedcodelist}
+\end{fortranspecific}
+
+\descr
+
+The use of a \code{declare}~\code{variant} directive declares the function to
+be a function variant of the \plc{base-func-name} or \plc{base-proc-name}
+function. The context selector in the \code{match} clause is associated 
+with the variant.
+
+The OpenMP context for a call to a given base function is defined according 
+to Section~\ref{subsec:OpenMP Context}. If the context selector that is 
+associated with a declared function variant is compatible with the OpenMP 
+context of a call to a base function according to the matching rules defined in
+Section~\ref{subsec:Matching and Scoring Context Selectors} then a call to
+the variant is a candidate to replace the base function call. For any call
+to the base function for which candidate variants exist, the variant with 
+the highest score is selected from all compatible variants. If multiple 
+variants have the highest score, the selected variant is implementation 
+defined. If a compatible variant exists, the call to the base function is 
+replaced with a call to the selected variant. If no compatible variants 
+exist then the call to the base function is not changed.
+
+Multiple variants may be specified for the same base function.
+
+Any differences that the specific OpenMP context requires in the prototype 
+of the variant from the base function prototype are implementation defined.
+
+\restrictions
+Restrictions to the \code{declare variant} directive are as follows:
+
+\begin{itemize}
+\item If the function definition or a declaration of the function in the same
+      compilation unit has a \code{declare}~\code{variant} directive, then 
+      calling the variant function directly in an OpenMP context that is 
+      different than the one specified by the \code{construct} set of the 
+      context selector is non-conforming.
+
+\begin{ccppspecific}
+\item If the function has any declarations, then the \code{declare}~\code{variant} 
+      directives for any declarations that have one must be equivalent. If the 
+      function definition has a \code{declare}~\code{variant} it must also be 
+      equivalent. Otherwise, the result is unspecified.
+\end{ccppspecific}
+
+\begin{cppspecific}
+\item \plc{base-func-name} should not designate an overloaded function name. 
+      Otherwise, \plc{base-func-name} must be a function declaration without 
+      the return type.
+\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
+      cannot be a template function.
+\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
+      cannot be a virtual function.
+\end{cppspecific}
+
+\begin{fortranspecific}
+\item \plc{proc-name} must not be a generic name, procedure pointer or entry name.
+\item If \plc{proc-name} is omitted, the \code{declare}~\code{variant} directive 
+      must appear in the specification part of a subroutine subprogram or a 
+      function subprogram.
+\item Any \code{declare}~\code{variant} directive must appear in the specification 
+      part of a subroutine, subprogram, function subprogram or interface body to 
+      which it applies.
+\item If a \code{declare}~\code{variant} directive is specified in an interface 
+      block for a procedure, it must match a \code{declare}~\code{variant} 
+      directive in the definition of the procedure.
+\item If a procedure is declared via a procedure declaration statement, the 
+      procedure \plc{proc-name} should appear in the same specification.
+\item If a \code{declare}~\code{variant} directive is specified for a procedure 
+      name with an explicit interface and a \code{declare}~\code{variant}
+      directive is also specified for the definition of the procedure, the two
+      \code{declare}~\code{variant} directives must match. Otherwise the result 
+      is unspecified.
+\end{fortranspecific}
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item OpenMP Context Specification, see \specref{subsec:OpenMP Context}.
+
+\item Context Selectors, see \specref{subsec:Context Selectors}.
+\end{itemize}
+
+
+
+\subsection{Metadirectives}
+\index{metadirective}
+\index{directives!metadirective@{\code{metadirective}}}
+\label{subsec:Metadirective Meta-Directive}
+\summary
+A metadirective is a directive that can specify multiple directive variants
+of which one may be conditionally selected to replace the metadirective based
+on the enclosing OpenMP context.
+
+\syntax
+\begin{ccppspecific}
+The syntax of a metadirective takes one of the
+following forms:
+\begin{ompcPragma}
+#pragma omp metadirective \plc{[clause[ [},\plc{] clause] ... ] new-line}
+\end{ompcPragma}
+or
+\begin{ompcPragma}
+#pragma omp begin metadirective \plc{[clause[ [},\plc{] clause] ... ] new-line}
+    \plc{stmt(s)}
+#pragma omp end metadirective
+\end{ompcPragma}
+
+
+\begin{samepage}
+where \plc{clause} is one of the following:
+\begin{indentedcodelist}
+when(\plc{context-selector-specification}: \plc{[directive-variant]})
+default(\plc{directive-variant})
+\end{indentedcodelist}
+\end{samepage}
+
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The syntax of a metadirective takes one of the following forms:
+
+\begin{ompfPragma}
+!$omp metadirective \plc{[clause[ [},\plc{] clause] ... ]}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
+
+or
+
+\begin{ompfPragma}
+!$omp begin metadirective \plc{[clause[ [},\plc{] clause] ... ]}
+    \plc{stmt(s)}
+!$omp end metadirective
+\end{ompfPragma}
+
+\begin{samepage}
+where \plc{clause} is one of the following:
+
+\begin{indentedcodelist}
+when(\plc{context-selector-specification}: \plc{[directive-variant]})
+default(\plc{directive-variant})
+\end{indentedcodelist}
+\end{samepage}
+
+\end{fortranspecific}
+
+In the \code{when} clause, \plc{context-selector-specification} specifies a context
+selector (see Section~\ref{subsec:Context Selectors}).
+
+
+In the \code{when} and \code{default} clauses, \plc{directive-variant}
+has the following form and specifies a directive variant that specifies an OpenMP
+directive with clauses that apply to it.
+
+\begin{indentedcodelist}
+\plc{ directive-name [clause[ [},\plc{] clause] ... ]}
+\end{indentedcodelist}
+
+\descr
+
+A metadirective is a directive that behaves as if it is either ignored or
+replaced by the directive variant specified in one of the \code{when} or
+\code{default} clauses that appears on the metadirective.
+
+The OpenMP context for a given metadirective is defined according to
+Section~\ref{subsec:OpenMP Context}.  For each \code{when} clause that appears
+on a metadirective, the specified directive variant, if present, is a candidate
+to replace the metadirective if the corresponding context selector is compatible
+with the OpenMP context according to the matching rules defined in
+Section~\ref{subsec:Matching and Scoring Context Selectors}.  If only one
+compatible context selector specified by a \code{when} clause has the highest
+score and it specifies a directive variant, the directive variant will replace
+the metadirective. If more than one \code{when} clause specifies a compatible
+context selector that has the highest computed score and at least one specifies
+a directive variant, the first directive variant specified in the lexical order
+of those \code{when} clauses will replace the metadirective.
+
+If no context selector from any \code{when} clause is compatible with the
+OpenMP context and a \code{default} clause is present, the directive variant
+specified in the \code{default} clause will replace the metadirective.
+
+If a directive variant is not selected to replace a metadirective according
+to the above rules, the metadirective has no effect on the execution of the
+program.
+
+The \code{begin}~\code{metadirective} directive behaves identically to the
+\code{metadirective} directive, except that the directive syntax for the
+specified directive variants must accept a paired \code{end}~\plc{directive}.
+For any directive variant that is selected to replace the
+\code{begin}~\code{metadirective} directive, the
+\code{end}~\code{metadirective} directive will be implicitly replaced by its
+paired \code{end}~\plc{directive} to demarcate the statements that are
+affected by or are associated with the directive variant. If no directive
+variant is selected to replace the \code{begin}~\code{metadirective}
+directive, its paired \code{end}~\code{metadirective} directive is ignored.
+
+\restrictions
+Restrictions to metadirectives are as follows:
+
+\begin{itemize}
+\item The directive variant appearing in a \code{when} or \code{default}
+      clause must not specify a \code{metadirective},
+      \code{begin}~\code{metadirective}, or \code{end}~\code{metadirective}
+      directive.
+\item The context selector that appears in a \code{when} clause must not
+      specify any properties for the \code{simd} selector.
+\item Any replacement that occurs for a metadirective must not result in a
+      non-conforming OpenMP program.
+\item Any directive variant that is specified by a \code{when} or \code{default}
+      clause on a \code{begin}~\code{metadirective}
+      directive must be an OpenMP directive that has a paired 
+      \code{end}~\plc{directive}, and the \code{begin}~\code{metadirective} 
+      directive must have a paired \code{end}~\code{metadirective} directive.
+\item The \code{default} clause may appear at most once on a metadirective.
+\end{itemize}
+
+
+
 \section{\hcode{requires} Directive}
 \label{sec:requires Directive}
 \index{requires@{\code{requires}}}
@@ -1433,11 +1904,6 @@ in their data environments. Otherwise, the behavior is unspecified.
 
 
 
-
-
-
-
-
 \subsection{ICV Override Relationships}
 \label{subsec:ICV Override Relationships}
 
@@ -1516,472 +1982,4 @@ among construct clauses and ICVs.
 
 \item \code{schedule} clause, see
 \specref{subsubsec:Determining the Schedule of a Worksharing Loop}.
-\end{itemize}
-
-
-
-\section{Variant Directives}
-\label{sec:Variant Directives}
-\index{variant directives}
-\index{directives!variant directives}
-
-\subsection{OpenMP Context}
-\label{subsec:OpenMP Context}
-
-At any point in a program, an OpenMP context exists that defines traits
-that describe the active OpenMP constructs, the execution devices, and
-functionality supported by the implementation. The traits are grouped into
-trait sets. The following trait sets exist: \plc{construct}, \plc{device} and
-\plc{implementation}.
-
-The \plc{construct} set is composed of the directive names, each being a
-trait, of all enclosing constructs at that point in the program up
-to a \code{target} construct. Combined and composite constructs are added
-to the set as distinct constructs in the same nesting order specified by
-the original construct. The set is ordered by their nesting level in
-increasing order. Specifically, the ordering of the set of constructs is
-$c_{1}$,~\ldots,~$c_{N}$, where $c_{1}$ is the construct at the 
-outermost nesting level and $c_{N}$ is the construct at the innermost
-nesting level. In addition, if the point in the program is not enclosed by
-a \code{target} construct, the following rules are applied in order:
-
-\begin{enumerate}
-\item For functions with a \code{declare simd} directive, the \plc{simd} trait
-      is added to the beginning of the set as $c_{1}$ for the generated SIMD 
-      versions so the total size of the set is increased by 1.
-\item For functions with a \code{declare variant} directive, the selectors 
-      $c_{1}$,~\ldots,~$c_{M}$ of the \code{construct} selector set are added 
-      in the same order to the beginning of the set as $c_{1}$,~\ldots,~$c_{M}$
-       so the total size of the set is increased by $M$.
-\item For functions within a \code{declare target} block, the \plc{target}
-      trait is added to the beginning of the set as $c_{1}$ for the versions of 
-      the function that are generated for \code{target} regions so the total 
-      size of the set is increased by 1.
-\end{enumerate}
-
-The \plc{simd} trait can be further defined with properties that match the
-clauses accepted by the \code{declare}~\code{simd} directive with the same
-name and semantics. The \plc{simd} trait must define at least the
-\plc{simdlen} property and one of  the \plc{inbranch} or \plc{notinbranch} properties.
-
-The \plc{device} set includes traits that define the characteristics of the 
-device being targeted by the compiler at that point in the program. At least 
-the following traits must be defined:
-
-\begin{itemize}
-\item The \plc{kind(kind-name-list)} trait specifies the general kind of the 
-      device. The following \plc{kind-name} values are defined:
-\begin{itemize}
-\item \plc{host}, which specifies that the device is the host device;
-\item \plc{nohost}, which specifies that the devices is not the host device; and
-\item the values defined in the ``OpenMP Context Definitions'' document,
-      which is available at \url{http://www.openmp.org/}.
-\end{itemize}
-
-\item The \plc{isa(isa-name-list)} trait specifies the Instruction Set 
-      Architectures supported by the device. The accepted \plc{isa-name} 
-      values are implementation defined.
-\item The \plc{arch(arch-name-list)} trait specifies the architectures 
-     supported by the device. The accepted \plc{arch-name} values are 
-      implementation defined.
-\end{itemize}
-
-The \plc{implementation} set includes traits that describe the functionality 
-supported by the OpenMP implementation at that point in the program. At least 
-the following traits can be defined:
-
-\begin{itemize}
-\item The \plc{vendor(vendor-name)} trait, which specifies the name of the
-      vendor of the implementation. OpenMP defined values for \plc{vendor-name}
-      are defined in the ``OpenMP Context Definitions'' document, which is
-      available at \url{http://www.openmp.org/}.
-\item The \plc{extension(extension-name-list)} trait, which specifies vendor
-      specific extensions to the OpenMP specification. The accepted
-      \plc{extension-name} values are implementation defined.
-\item A trait with a name that is identical to the name of any clause that can be
-      supplied to the \code{requires} directive.
-\end{itemize}
-
-Implementations can define further traits in the \plc{device} and \plc{implementation}
-sets. All implementation defined traits must follow the following syntax:
-
-\begin{ompSyntax}
-\plc{identifier[}(\plc{context-element[}, \plc{context-element[}, \plc{...]]})\plc{]}
-
-\plc{context-element}:
-  \plc{identifier[}(\plc{context-element[}, \plc{context-element[}, \plc{...]]})\plc{]}
-  or
-  \plc{context-value}
-
-\plc{context-value}:
-  \plc{string}
-  or
-  \plc{integer expression}
-\end{ompSyntax}
-
-where \plc{identifier} is a base language identifier.
-
-\subsection{Context Selectors}
-\label{subsec:Context Selectors}
-
-Context selectors are used to define the properties of an OpenMP context that
-a directive or clause can match. OpenMP defines different sets of selectors, 
-each containing different selectors.
-
-The syntax to define a \plc{context-selector-specification} is the following:
-
-\begin{ompSyntax}
-\plc{trait-set-selector[},\plc{trait-set-selector[},\plc{...]]}
-
-\plc{trait-set-selector}:
-   \plc{trait-set-selector-name}={\plc{trait-selector[}, \plc{trait-selector[}, \plc{...]]}}
-
-\plc{trait-selector}:
-   \plc{trait-selector-name[}(\plc{trait-property[}, \plc{trait-property[}, \plc{...]]})\plc{]}
-\end{ompSyntax}
-
-The \code{construct} selector set defines the \plc{construct} traits that should
-be active in the OpenMP context. The following selectors can be defined in the
-\code{construct} set: \code{target}; \code{teams}; \code{parallel}; \code{for}
-(in C/C++); \code{do} (in Fortran); and \code{simd}. The properties of each
-selector are the same properties that are defined for the corresponding trait.
-The \code{construct} selector is an ordered list $c_{1}$,~\ldots,~$c_{N}$.
-
-The \code{device} and \code{implementation} selector sets define the traits that
-should be active in the corresponding trait set of the OpenMP context. The
-same traits defined in the corresponding traits sets can be used as selectors
-with the same properties. The \code{kind} selector of the \code{device}
-selector set can also be set to the value \code{any}, which is as if no
-\code{kind} selector was specified.
-
-The \code{user} selector set defines the \code{condition} selector that provides 
-additional user-defined conditions.
-
-\begin{cspecific}
-The \code{condition(}\plc{boolean-expr}\code{)} selector defines a \plc{constant 
-expression} that must evaluate to true for the selector to be true.
-\end{cspecific}
-
-\begin{cppspecific}
-The \code{condition(}\plc{boolean-expr}\code{)} selector defines a \code{constexpr} 
-expression that must evaluate to true for the selector to be true.
-\end{cppspecific}
-
-\begin{fortranspecific}
-The \code{condition(}\plc{logical-expr}\code{)} selector defines a \plc{constant 
-expression} that must evaluate to true for the selector to be true.
-\end{fortranspecific}
-
-Implementations can allow further selectors to be specified. Implementations can 
-ignore specified selectors that are not those described in this section.
-
-\restrictions
-\begin{itemize}
- \item Each \plc{trait-set-selector-name} can only be specified once.
- \item Each \plc{trait-selector-name} can only be specified once.
-\end{itemize}
-
-\subsection{Matching and Scoring Context Selectors}
-\label{subsec:Matching and Scoring Context Selectors}
-
-A given context selector is compatible with a given OpenMP context if the
-following conditions are satisfied:
-
-\begin{itemize}
-\item All selectors in the \code{user} set of the context selector are true;
-\item All selectors in the \code{construct}, \code{device} and \code{implementation} 
-      sets of the context selector appear in the corresponding trait set of the 
-      OpenMP context;
-\item For each selector in the context selector, its properties are a subset of 
-      the properties of the corresponding trait of the OpenMP context; and
-\item Selectors in the \code{construct} set of the context selector appear 
-      in the same relative order as their corresponding traits in the 
-      \plc{construct} trait set of the OpenMP context.
-\end{itemize}
-
-Some properties of the \code{simd} selector have special rules to match the 
-properties of the \plc{simd} trait:
-
-\begin{itemize}
-\item The \code{simdlen(}\plc{N}\code{)} property of the selector matches the
-      \plc{simdlen(M)} trait of the OpenMP context if $M \% N$ equals zero; and
-\item The \code{aligned(}\plc{list:N}\code{)} property of the selector matches 
-      the \plc{aligned(list:M)} trait of the OpenMP context if $N \% M$ equals zero.
-\end{itemize}
-
-Among compatible context selectors a score is computed using the following algorithm:
-
-\begin{enumerate}
-\item Each trait that appears in the \plc{construct} trait set in the OpenMP context 
-      is given the value $2^{p-1}$ where $p$ is the position of the construct trait,
-      $c_{p}$, in the set;
-\item The \code{kind}, \code{arch} and \code{isa} selectors are given the
-      values $2^{l}$, $2^{l+1}$ and $2^{l+2}$, respectively, where $l$ is 
-      the number of traits in the \plc{construct} set;
-\item The values given to any additional selectors allowed by the implementation 
-      are implemented defined; 
-\item Other selectors are given a value of zero; and
-\item Context selectors that are a strict subset of another context selector
-      have a score of zero. For other context selectors, the final score is the
-      sum of the values of all specified selectors plus $1$. If the traits
-      that correspond to the \code{construct} selectors appear multiple times 
-      in the OpenMP context, the highest valued subset of traits that contains 
-      all selectors in the same order are used.
-\end{enumerate}
-
-\subsection{\hcode{declare}~\hcode{variant} Directive}
-\index{declare variant@{\code{declare variant}}}
-\index{directives!declare variant@{\code{declare variant}}}
-\label{subsec:declare variant Directive}
-\summary
-The \code{declare}~\code{variant} directive declares a function to be a
-specialized variant of another function and specifies the context in which it
-should be used.
-
-\syntax
-\begin{ccppspecific}
-\begin{samepage}
-The syntax of the \code{declare}~\code{variant} directive is as follows:
-
-\begin{ompcPragma}
-#pragma omp declare variant(\plc{base-func-name}) \plc{clause new-line}
-   \plc{function definition or declaration}
-\end{ompcPragma}
-\end{samepage}
-
-\begin{samepage}
-where \plc{clause} is one of the following{}:
-
-\begin{indentedcodelist}
-match(\plc{context-selector-specification})
-\end{indentedcodelist}
-\end{samepage}
-\end{ccppspecific}
-
-\begin{fortranspecific}
-The syntax of the \code{declare variant} directive is as follows:
-
-\begin{ompfPragma}
-!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) \plc{clause}
-\end{ompfPragma}
-
-where \plc{clause} is one of the following{}:
-
-\begin{indentedcodelist}
-match(\plc{context-selector-specification})
-\end{indentedcodelist}
-\end{fortranspecific}
-
-\descr
-
-The use of a \code{declare}~\code{variant} directive declares the function to
-be a function variant of the \plc{base-func-name} or \plc{base-proc-name}
-function. The context selector in the \code{match} clause is associated 
-with the variant.
-
-The OpenMP context for a call to a given base function is defined according 
-to Section~\ref{subsec:OpenMP Context}. If the context selector that is 
-associated with a declared function variant is compatible with the OpenMP 
-context of a call to a base function according to the matching rules defined in
-Section~\ref{subsec:Matching and Scoring Context Selectors} then a call to
-the variant is a candidate to replace the base function call. For any call
-to the base function for which candidate variants exist, the variant with 
-the highest score is selected from all compatible variants. If multiple 
-variants have the highest score, the selected variant is implementation 
-defined. If a compatible variant exists, the call to the base function is 
-replaced with a call to the selected variant. If no compatible variants 
-exist then the call to the base function is not changed.
-
-Multiple variants may be specified for the same base function.
-
-Any differences that the specific OpenMP context requires in the prototype 
-of the variant from the base function prototype are implementation defined.
-
-\restrictions
-Restrictions to the \code{declare variant} directive are as follows:
-
-\begin{itemize}
-\item If the function definition or a declaration of the function in the same
-      compilation unit has a \code{declare}~\code{variant} directive, then 
-      calling the variant function directly in an OpenMP context that is 
-      different than the one specified by the \code{construct} set of the 
-      context selector is non-conforming.
-
-\begin{ccppspecific}
-\item If the function has any declarations, then the \code{declare}~\code{variant} 
-      directives for any declarations that have one must be equivalent. If the 
-      function definition has a \code{declare}~\code{variant} it must also be 
-      equivalent. Otherwise, the result is unspecified.
-\end{ccppspecific}
-
-\begin{cppspecific}
-\item \plc{base-func-name} should not designate an overloaded function name. 
-      Otherwise, \plc{base-func-name} must be a function declaration without 
-      the return type.
-\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
-      cannot be a template function.
-\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
-      cannot be a virtual function.
-\end{cppspecific}
-
-\begin{fortranspecific}
-\item \plc{proc-name} must not be a generic name, procedure pointer or entry name.
-\item If \plc{proc-name} is omitted, the \code{declare}~\code{variant} directive 
-      must appear in the specification part of a subroutine subprogram or a 
-      function subprogram.
-\item Any \code{declare}~\code{variant} directive must appear in the specification 
-      part of a subroutine, subprogram, function subprogram or interface body to 
-      which it applies.
-\item If a \code{declare}~\code{variant} directive is specified in an interface 
-      block for a procedure, it must match a \code{declare}~\code{variant} 
-      directive in the definition of the procedure.
-\item If a procedure is declared via a procedure declaration statement, the 
-      procedure \plc{proc-name} should appear in the same specification.
-\item If a \code{declare}~\code{variant} directive is specified for a procedure 
-      name with an explicit interface and a \code{declare}~\code{variant}
-      directive is also specified for the definition of the procedure, the two
-      \code{declare}~\code{variant} directives must match. Otherwise the result 
-      is unspecified.
-\end{fortranspecific}
-\end{itemize}
-
-\crossreferences
-\begin{itemize}
-\item OpenMP Context Specification, see \specref{subsec:OpenMP Context}.
-\item Context Selectors, see \specref{subsec:Context Selectors}.
-\end{itemize}
-
-
-\subsection{Metadirectives}
-\index{metadirective}
-\index{directives!metadirective@{\code{metadirective}}}
-\label{subsec:Metadirective Meta-Directive}
-\summary
-A metadirective is a directive that can specify multiple directive variants
-of which one may be conditionally selected to replace the metadirective based
-on the enclosing OpenMP context.
-
-\syntax
-\begin{ccppspecific}
-The syntax of a metadirective takes one of the
-following forms:
-\begin{ompcPragma}
-#pragma omp metadirective \plc{[clause[ [},\plc{] clause] ... ] new-line}
-\end{ompcPragma}
-or
-\begin{ompcPragma}
-#pragma omp begin metadirective \plc{[clause[ [},\plc{] clause] ... ] new-line}
-    \plc{stmt(s)}
-#pragma omp end metadirective
-\end{ompcPragma}
-
-
-\begin{samepage}
-where \plc{clause} is one of the following:
-\begin{indentedcodelist}
-when(\plc{context-selector-specification}: \plc{[directive-variant]})
-default(\plc{directive-variant})
-\end{indentedcodelist}
-\end{samepage}
-
-\end{ccppspecific}
-
-\begin{fortranspecific}
-The syntax of a metadirective takes one of the following forms:
-
-\begin{ompfPragma}
-!$omp metadirective \plc{[clause[ [},\plc{] clause] ... ]}
-\end{ompfPragma}
-
-or
-
-\begin{ompfPragma}
-!$omp begin metadirective \plc{[clause[ [},\plc{] clause] ... ]}
-    \plc{stmt(s)}
-!$omp end metadirective
-\end{ompfPragma}
-
-\begin{samepage}
-where \plc{clause} is one of the following:
-
-\begin{indentedcodelist}
-when(\plc{context-selector-specification}: \plc{[directive-variant]})
-default(\plc{directive-variant})
-\end{indentedcodelist}
-\end{samepage}
-
-\end{fortranspecific}
-
-In the \code{when} clause, \plc{context-selector-specification} specifies a context
-selector (see Section~\ref{subsec:Context Selectors}).
-
-
-In the \code{when} and \code{default} clauses, \plc{directive-variant}
-has the following form and specifies a directive variant that specifies an OpenMP
-directive with clauses that apply to it.
-
-\begin{indentedcodelist}
-\plc{ directive-name [clause[ [},\plc{] clause] ... ]}
-\end{indentedcodelist}
-
-\descr
-
-A metadirective is a directive that behaves as if it is either ignored or
-replaced by the directive variant specified in one of the \code{when} or
-\code{default} clauses that appears on the metadirective.
-
-The OpenMP context for a given metadirective is defined according to
-Section~\ref{subsec:OpenMP Context}.  For each \code{when} clause that appears
-on a metadirective, the specified directive variant, if present, is a candidate
-to replace the metadirective if the corresponding context selector is compatible
-with the OpenMP context according to the matching rules defined in
-Section~\ref{subsec:Matching and Scoring Context Selectors}.  If only one
-compatible context selector specified by a \code{when} clause has the highest
-score and it specifies a directive variant, the directive variant will replace
-the metadirective. If more than one \code{when} clause specifies a compatible
-context selector that has the highest computed score and at least one specifies
-a directive variant, the first directive variant specified in the lexical order
-of those \code{when} clauses will replace the metadirective.
-
-If no context selector from any \code{when} clause is compatible with the
-OpenMP context and a \code{default} clause is present, the directive variant
-specified in the \code{default} clause will replace the metadirective.
-
-If a directive variant is not selected to replace a metadirective according
-to the above rules, the metadirective has no effect on the execution of the
-program.
-
-The \code{begin}~\code{metadirective} directive behaves identically to the
-\code{metadirective} directive, except that the directive syntax for the
-specified directive variants must accept a paired \code{end}~\plc{directive}.
-For any directive variant that is selected to replace the
-\code{begin}~\code{metadirective} directive, the
-\code{end}~\code{metadirective} directive will be implicitly replaced by its
-paired \code{end}~\plc{directive} to demarcate the statements that are
-affected by or are associated with the directive variant. If no directive
-variant is selected to replace the \code{begin}~\code{metadirective}
-directive, its paired \code{end}~\code{metadirective} directive is ignored.
-
-\restrictions
-Restrictions to metadirectives are as follows:
-
-\begin{itemize}
-    \item The directive variant appearing in a \code{when} or \code{default}
-        clause must not specify a \code{metadirective},
-        \code{begin}~\code{metadirective}, or \code{end}~\code{metadirective}
-        directive.
-
-    \item The context selector that appears in a \code{when} clause must not
-        specify any properties for the \code{simd} selector.
-
-    \item Any replacement that occurs for a metadirective must not result in a
-        non-conforming OpenMP program.
-
-    \item Any directive variant that is specified by a \code{when} or \code{default}
-        clause on a \code{begin}~\code{metadirective}
-        directive must be an OpenMP directive that has a paired \code{end}~\plc{directive}, and
-        the \code{begin}~\code{metadirective} directive must have a paired
-        \code{end}~\code{metadirective} directive.
-
-    \item The \code{default} clause may appear at most once on a metadirective.
 \end{itemize}
