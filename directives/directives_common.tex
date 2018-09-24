@@ -155,11 +155,10 @@ a \plc{locator list item} is subject to the restrictions specified in
 and directives for which the \plc{list}, the \plc{extended-list}, or the
 \plc{locator-list} appears.
 
-
 Some executable directives include a structured block. A structured block:
+
 \begin{itemize}
 \item may contain infinite loops where the point of exit is never reached; 
-
 \item may halt due to an IEEE exception;
 
 \begin{ccppspecific}
@@ -182,7 +181,6 @@ Restrictions to structured blocks are as follows:
 
 \begin{itemize}
 \item Entry to a structured block must not be the result of a branch.
-
 \item The point of exit cannot be a branch out of the structured block.
 
 \begin{ccppspecific}
@@ -193,14 +191,12 @@ Restrictions to structured blocks are as follows:
 Some executable directives include a structured block. A structured block:
 \begin{itemize}
 \item may contain infinite loops where the point of exit is never reached; 
-
 \item may halt due to an IEEE exception;
 
 \begin{ccppspecific}
 \item may contain calls to \code{exit()}, \code{_Exit()}, \code{quick_exit()}, 
       \code{abort()} or functions with a \code{_Noreturn} specifier (in C) or 
       a \code{noreturn} attribute (in C/C++); 
-  
 \item may be an expression statement, iteration statement, selection statement,
       or try block, provided that the corresponding compound statement obtained 
       by enclosing it in \tcode{\{} and \tcode{\}} would be a structured block; and
@@ -216,19 +212,17 @@ Restrictions to structured blocks are as follows:
 
 \begin{itemize}
 \item Entry to a structured block must not be the result of a branch.
-
 \item The point of exit cannot be a branch out of the structured block.
 
 \begin{ccppspecific}
 \item The point of entry to a structured block must not be a call to \code{setjmp()}.
-
 \item \code{longjmp()} and \code{throw()} must not violate the entry/exit criteria.
 \end{ccppspecific}
 \end{itemize}
 
-
-
 \begin{fortranspecific}
+
+
 
 \subsection{Fixed Source Form Directives}
 \label{subsec:Fixed Source Form Directives}
@@ -238,7 +232,7 @@ The following sentinels are recognized in fixed form source files:
 
 \begin{ompfPragma}
 !$omp \textnormal{|} c$omp \textnormal{|} *$omp
-\end{ompfPragma}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 
 Sentinels must start in column 1 and appear as a single word with no intervening
 characters. Fortran fixed form line length, white space, continuation, and column 
@@ -268,13 +262,6 @@ c$omp paralleldoshared(a,b,c)
 
 
 
-
-
-
-
-
-
-
 \subsection{Free Source Form Directives}
 \label{subsec:Free Source Form Directives}
 \index{free source form directives}
@@ -283,7 +270,7 @@ The following sentinel is recognized in free form source files:
 
 \begin{ompfPragma}
 !$omp
-\end{ompfPragma}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 
 The sentinel can appear in any column as long as it is preceded only by white space. 
 It must appear as a single word with no intervening
@@ -315,15 +302,10 @@ equivalent (the first line represents the position of the first 9 columns):
       !$omp&do shared(a,b,c)
 
 !$omp paralleldo shared(a,b,c)
-\end{ompfPragma}
+\end{ompfPragma} %$ Close off misinterpreted dollar sign/math symbol
 \end{note}
 \bigskip
 \end{fortranspecific}
-
-
-
-
-
 
 
 
@@ -344,18 +326,366 @@ at a point where a base language executable statement is allowed.
 \restrictions
 \begin{ccppspecific}
 \begin{itemize}
-    \item A stand-alone directive may not be used in place of the statement following
-          an \code{if}, \code{while}, \code{do}, \code{switch}, or \code{label}.
+\item A stand-alone directive may not be used in place of the statement following
+      an \code{if}, \code{while}, \code{do}, \code{switch}, or \code{label}.
 \end{itemize}
 \end{ccppspecific}
 
 \begin{fortranspecific}
 \begin{itemize}
-    \item A stand-alone directive may not be used as the action statement in an 
-          \code{if} statement or as the executable statement following a label 
-          if the label is referenced in the program.
+\item A stand-alone directive may not be used as the action statement in an 
+      \code{if} statement or as the executable statement following a label 
+      if the label is referenced in the program.
 \end{itemize}
 \end{fortranspecific}
+
+
+
+\begin{ccppspecific}
+
+\subsection{Array Shaping}
+\label{subsec:Array Shaping}
+\index{array shaping}
+
+If an expression has a type of pointer to \plc{T}, then a shape-operator can be
+used to specify the extent of that pointer. In other words, the
+shape-operator is used to reinterpret, as an n-dimensional array, the region of
+memory to which that expression points.
+
+Formally, the syntax of the shape-operator is as follows:
+\begin{indentedcodelist}
+\plc{ shaped-expression } := ([\plc{s}@\textsubscript{\plc{1}}@\plc{}][\plc{s}@\textsubscript{\plc{2}}@]...[\plc{s}@\textsubscript{\plc{n}}@])\plc{cast-expression}
+\end{indentedcodelist}
+
+The result of applying the shape-operator to an expression is an lvalue
+expression with an n-dimensional array type with dimensions
+\plc{s}\textsubscript{\plc{1}} $\times$ \plc{s}\textsubscript{\plc{2}} \ldots
+$\times$ \plc{s}\textsubscript{\plc{n}} and element type \plc{T}.
+
+The precedence of the shape-operator is the same as a type cast.
+
+Each $\plc{s}_\plc{i}$ is an integral type expression that must 
+evaluate to a positive integer.
+
+\restrictions
+Restrictions to the shape-operator are as follows:
+
+\begin{itemize}
+\item The type \plc{T} must be a complete type.
+\item The shape-operator can appear only in clauses where it is explicitly allowed.
+\item The result of a shape-operator must be a named array of a list item.
+\item The type of the expression upon which a shape-operator is applied must be 
+      a pointer type.
+\begin{cppspecific}
+\item If the type \plc{T} is a reference to a type \plc{T'} then the type will 
+      be considered to be \plc{T'} for all purposes of the designated array.
+\end{cppspecific}
+
+\end{itemize}
+\end{ccppspecific}
+
+
+
+
+
+\section{Array Sections}
+\label{sec:Array Sections}
+\index{array sections}
+
+An array section designates a subset of the elements in an array.
+
+\begin{ccppspecific}
+
+To specify an array section in an OpenMP construct, array subscript expressions are
+extended with the following syntax:
+
+\begin{indentedcodelist}
+[\plc{ lower-bound }:\plc{ length }:\plc{ stride}] \textnormal{or}
+[\plc{ lower-bound }:\plc{ length }:\plc{ }] \textnormal{or}
+[\plc{ lower-bound }:\plc{ length }] \textnormal{or}
+[\plc{ lower-bound }:\plc{ }:\plc{ stride}] \textnormal{or}
+[\plc{ lower-bound }:\plc{ }:\plc{ }] \textnormal{or}
+[\plc{ lower-bound }:\plc{ }] \textnormal{or}
+[ :\plc{ length }:\plc{ stride}] \textnormal{or}
+[ :\plc{ length }:\plc{ }] \textnormal{or}
+[ :\plc{ length }] \textnormal{or}
+[\plc{ }:\plc{ }:\plc{ stride}]
+[\plc{ }:\plc{ }:\plc{ }]
+[\plc{ }:\plc{ }]
+\end{indentedcodelist}
+
+% TODO: consider removing this in future ticket
+The array section must be a subset of the original array.
+
+Array sections are allowed on multidimensional arrays. Base language array subscript
+expressions can be used to specify length-one dimensions of multidimensional array
+sections.
+
+Each of the \plc{lower-bound}, \plc{length} and \plc{stride} expressions
+if specified must be an integral type \plc{expression} of the base language.
+When evaluated they represent a set of integer values as follows:
+
+\{ \plc{lower-bound}, \plc{lower-bound} + \plc{stride}, \plc{lower-bound} + 2 * \plc{stride},... , \plc{lower-bound} + ((\plc{length} - 1) * \plc{stride}) \}
+
+The \plc{length} must evaluate to a non-negative integer.
+
+The \plc{stride} must evaluate to a positive integer.
+
+When the size of the array dimension is not known, the \plc{length} must
+be specified explicitly.
+
+When the \plc{stride} is absent it defaults to 1.
+
+When the \plc{length} is absent it defaults to
+$\blceil(\plc{size} - \plc{lower-bound})/\plc{stride}\brceil$, where \plc{size} is
+the size of the array dimension
+
+When the \plc{lower-bound} is absent it defaults to 0.
+
+The precedence of a subscript operator that uses the array section syntax is
+the same as the precedence of a subscript operator that does not the use the
+array section syntax.
+
+\begin{note}
+The following are examples of array sections:
+
+\begin{indentedcodelist}
+a[0:6]
+a[0:6:1]
+a[1:10]
+a[1:]
+a[:10:2]
+b[10][:][:]
+b[10][:][:0]
+c[42][0:6][:]
+c[42][0:6:2][:]
+c[1:10][42][0:6]
+S.c[:100]
+p->y[:10]
+this->a[:N]
+(p+10)[:N]
+\end{indentedcodelist}
+
+Assume \code{a} is declared to be a 1-dimensional array with dimension size
+11.  The first two examples are equivalent, and the third and fourth
+examples are equivalent. The fifth example specifies a stride of 2 and
+therefore is not contiguous.
+
+Assume \code{b} is declared to be a pointer to a 2-dimensional array with
+dimension sizes 10 and 10. The sixth example refers to all elements of the
+2-dimensional array given by \code{b[10]}. The seventh
+example is a zero-length array section.
+
+Assume \code{c} is declared to be a 3-dimensional array with dimension sizes
+50, 50, and 50.  The eighth example is contiguous, while the ninth and
+tenth examples are not contiguous.
+
+The final four examples show array sections that are formed from
+more general base expressions.
+
+The following are examples that are non-conforming array sections:
+
+\begin{indentedcodelist}
+s[:10].x
+p[:10]->y
+*(xp[:10])
+\end{indentedcodelist}
+
+For all three examples, a base language operator is applied in an undefined
+manner to an array section. The only operator that may be applied to an array
+section is a subscript operator for which the array section appears as the
+postfix expression.
+\end{note}
+\medskip
+\end{ccppspecific}
+
+\begin{fortranspecific}
+Fortran has built-in support for array sections although some
+restrictions apply to their use, as enumerated in the following section.
+\end{fortranspecific}
+
+\restrictions
+Restrictions to array sections are as follows:
+
+\begin{itemize}
+\item An array section can appear only in clauses where it is explicitly allowed.
+
+\item A \plc{stride} expression may not be specified unless otherwise stated.
+
+\begin{ccppspecific}
+
+\item An element of an array section with a non-zero size must have a complete type.
+
+\item The base expression of an array section must have an array or pointer type.
+
+\item If a consecutive sequence of array subscript expressions appears in an
+      array section, and the first subscript expression in the sequence uses the
+      extended array section syntax defined in this section, then only the last
+      subscript expression in the sequence may select array elements that have
+      a pointer type.
+\end{ccppspecific}
+
+\begin{cppspecific}
+\item If the type of the base expression of an array section is a reference to
+      a type \plc{T}, then the type will be considered to be \plc{T} for all 
+      purposes of the array section.
+
+\item An array section cannot be used in an overloaded \code{[]} operator.
+\end{cppspecific}
+
+\begin{fortranspecific}
+
+\item If a stride expression is specified, it must be positive.
+
+\item The upper bound for the last dimension of an assumed-size dummy
+      array must be specified.
+
+\item If a list item is an array section with vector subscripts, the
+      first array element must be the lowest in the array element order of
+      the array section.
+
+\item If a list item is an array section, the last \plc{part-ref} of the list
+      item must have a section subscript list.
+\end{fortranspecific}
+
+
+\end{itemize}
+
+
+
+
+\section{Iterators}
+\index{iterators}
+\label{sec:iterators}
+
+Iterators are identifiers that expand to multiple values in the clause on which 
+they appear.
+
+The syntax of the \code{iterator} modifier is as follows:
+\begin{ompSyntax}
+iterator(\plc{iterators-definition})
+\end{ompSyntax}
+
+where \plc{iterators-definition} is one of the following:
+\begin{indentedcodelist}
+\plc{iterator-specifier [}, \plc{iterators-definition ]}
+\end{indentedcodelist}
+
+where \plc{iterator-specifier} is one of the following:
+\begin{indentedcodelist}
+\plc{[ iterator-type ] } \plc{identifier} = \plc{range-specification}
+\end{indentedcodelist}
+
+where:
+\begin{itemize}
+\item \plc{identifier} is a base language identifier.
+
+\begin{ccppspecific}
+\item \plc{iterator-type} is a type name.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\item \plc{iterator-type} is a type specifier.
+\end{fortranspecific}
+\item \plc{range-specification} is of the form 
+\plc{begin}\code{:}\plc{end[}\code{:}\plc{step]}, where \plc{begin} and 
+\plc{end} are expressions for which their types can be converted to 
+\plc{iterator-type} and \plc{step} is an integral expression.
+\end{itemize}
+
+\begin{ccppspecific}
+In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is of \code{int} type.
+\end{ccppspecific}
+
+\begin{fortranspecific}
+In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is default integer.
+\end{fortranspecific}
+
+In a \plc{range-specification}, if the \plc{step} is not specified its value is
+implicitly defined to be 1.
+
+An iterator only exists in the context of the clause in which it appears. An
+iterator also hides all accessible symbols with the same name in the context of
+the clause.
+
+The use of a variable in an expression that appears in the
+\plc{range-specification} causes an implicit reference to the variable in all
+enclosing constructs.
+
+\begin{ccppspecific}
+The values of the iterator are the set of values $i_{0}$,~\ldots,~$i_{N-1}$ where:
+\begin{itemize}
+\item $i_{0}$~$=$~$(\plc{iterator-type})$~$begin$, 
+\item $i_{j}$~$=$~$(\plc{iterator-type})$~$(i_{j-1}$~$+$~$step)$, and
+\item  if $step$~$>$~$0$,
+\begin{itemize}
+\item $i_{0}$~$<$~$(\plc{iterator-type})$~$end$,
+\item $i_{N-1}$~$<$~$(\plc{iterator-type})$~$end$, and 
+\item $(\plc{iterator-type})$~$(i_{N-1}$~$+$~$step)$~$\geq$~$(\plc{iterator-type})$~$end$;
+\end{itemize}
+\item if $step$~$<$~$0$,
+\begin{itemize}
+\item $i_{0}$~$>$~$(\plc{iterator-type})$~$end$,
+\item $i_{N-1}$~$>$~$(\plc{iterator-type})$~$end$, and 
+\item $(\plc{iterator-type})$~$(i_{N-1}$~$+$~$step)$~$\leq$~$(\plc{iterator-type})$~$end$.
+\end{itemize}
+\end{itemize}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+The values of the iterator are the set of values $i_{1}$,~\ldots,~$i_{N}$ where:
+\begin{itemize}
+\item $i_{1}$~$=$~$begin$,  
+\item $i_{j}$~$=$~$i_{j-1}$~$+$~$step$, and
+\item if $step$~$>$~$0$.
+\begin{itemize}
+\item $i_{1}$~$\leq$~$end$,
+\item $i_{N}$~$\leq$~$end$, and 
+\item $i_{N}$~$+$~$step$~$>$~$end$;
+\end{itemize}
+\item if $step$~$<$~$0$,
+\begin{itemize}
+\item $i_{1}$~$\geq$~$end$,
+\item $i_{N}$~$\geq$~$end$, and 
+\item $i_{N}$~$+$~$step$~$<$~$end$.
+\end{itemize}
+\end{itemize}
+\end{fortranspecific}
+
+The set of of values will be empty if no possible value complies with the 
+conditions above.
+
+For those clauses that contain expressions that contain iterator identifiers, the
+effect is as if the list item is instantiated within the clause for each value
+of the iterator in the set defined above, substituting each occurrence of the
+iterator identifier in the expression with the iterator value. If the set of
+values of the iterator is empty then the effect is as if the clause was not
+specified.
+
+The behavior is unspecified if $i_{j}$~$+$~$step$ cannot be represented in 
+\plc{iterator-type} in any of the $i_{j}$~$+$~$step$ computations for any 
+$0$~$\leq$~$j$~$<$~$N$.
+
+\restrictions
+
+\begin{itemize}
+\item An expression that contains an iterator identifier can only appear in 
+      clauses that explicitly allow expressions that contain iterators.
+\item The \plc{iterator-type} must not declare a new type.
+\begin{ccppspecific}
+\item The \plc{iterator-type} must be an integral or pointer type.
+\item The \plc{iterator-type} must not be \code{const} qualified.
+\end{ccppspecific}
+\begin{fortranspecific}
+\item The \plc{iterator-type} must be an integer type.
+\end{fortranspecific}
+\item If the \plc{step} expression of a \plc{range-specification} equals zero 
+      the behavior is unspecified.
+\item Each iterator identifier can only be defined once in an 
+      \plc{iterators-definition}.
+\item Iterators cannot appear in the \plc{range-specification}.
+\end{itemize}
+
 
 
 \section{Conditional Compilation}
@@ -1270,360 +1600,6 @@ among construct clauses and ICVs.
 \specref{subsubsec:Determining the Schedule of a Worksharing Loop}.
 \end{itemize}
 
-
-
-
-
-
-\begin{ccppspecific}
-
-\section{Array Shaping}
-\label{sec:Array Shaping}
-\index{array shaping}
-
-
-If an expression has a type of pointer to \plc{T}, then a shape-operator can be
-used to specify the extent of that pointer. In other words, the
-shape-operator is used to reinterpret, as an n-dimensional array, the region of
-memory to which that expression points.
-
-Formally, the syntax of the shape-operator is as follows:
-\begin{indentedcodelist}
-\plc{ shaped-expression } := ([\plc{s}@\textsubscript{\plc{1}}@\plc{}][\plc{s}@\textsubscript{\plc{2}}@]...[\plc{s}@\textsubscript{\plc{n}}@])\plc{cast-expression}
-\end{indentedcodelist}
-
-The result of applying the shape-operator to an expression is an lvalue
-expression with an n-dimensional array type with dimensions
-\plc{s}\textsubscript{\plc{1}} $\times$ \plc{s}\textsubscript{\plc{2}} \ldots
-$\times$ \plc{s}\textsubscript{\plc{n}} and element type \plc{T}.
-
-The precedence of the shape-operator is the same as a type cast.
-
-Each $\plc{s}_\plc{i}$ is an integral type expression that must 
-evaluate to a positive integer.
-
-\restrictions
-Restrictions to the shape-operator are as follows:
-
-\begin{itemize}
-\item The type \plc{T} must be a complete type.
-
-\item The shape-operator can appear only in clauses where it is explicitly allowed.
-
-\item The result of a shape-operator must be a named array of a list item.
-
-\item The type of the expression upon which a shape-operator is applied must be 
-      a pointer type.
-
-\begin{cppspecific}
-\item If the type \plc{T} is a reference to a type \plc{T'} then the type will 
-      be considered to be \plc{T'} for all purposes of the designated array.
-\end{cppspecific}
-
-\end{itemize}
-\end{ccppspecific}
-
-
-
-
-
-\section{Array Sections}
-\label{sec:Array Sections}
-\index{array sections}
-
-An array section designates a subset of the elements in an array.
-
-\begin{ccppspecific}
-
-To specify an array section in an OpenMP construct, array subscript expressions are
-extended with the following syntax:
-
-\begin{indentedcodelist}
-[\plc{ lower-bound }:\plc{ length }:\plc{ stride}] \textnormal{or}
-[\plc{ lower-bound }:\plc{ length }:\plc{ }] \textnormal{or}
-[\plc{ lower-bound }:\plc{ length }] \textnormal{or}
-[\plc{ lower-bound }:\plc{ }:\plc{ stride}] \textnormal{or}
-[\plc{ lower-bound }:\plc{ }:\plc{ }] \textnormal{or}
-[\plc{ lower-bound }:\plc{ }] \textnormal{or}
-[ :\plc{ length }:\plc{ stride}] \textnormal{or}
-[ :\plc{ length }:\plc{ }] \textnormal{or}
-[ :\plc{ length }] \textnormal{or}
-[\plc{ }:\plc{ }:\plc{ stride}]
-[\plc{ }:\plc{ }:\plc{ }]
-[\plc{ }:\plc{ }]
-\end{indentedcodelist}
-
-% TODO: consider removing this in future ticket
-The array section must be a subset of the original array.
-
-Array sections are allowed on multidimensional arrays. Base language array subscript
-expressions can be used to specify length-one dimensions of multidimensional array
-sections.
-
-Each of the \plc{lower-bound}, \plc{length} and \plc{stride} expressions
-if specified must be an integral type \plc{expression} of the base language.
-When evaluated they represent a set of integer values as follows:
-
-\{ \plc{lower-bound}, \plc{lower-bound} + \plc{stride}, \plc{lower-bound} + 2 * \plc{stride},... , \plc{lower-bound} + ((\plc{length} - 1) * \plc{stride}) \}
-
-The \plc{length} must evaluate to a non-negative integer.
-
-The \plc{stride} must evaluate to a positive integer.
-
-When the size of the array dimension is not known, the \plc{length} must
-be specified explicitly.
-
-When the \plc{stride} is absent it defaults to 1.
-
-When the \plc{length} is absent it defaults to
-$\blceil(\plc{size} - \plc{lower-bound})/\plc{stride}\brceil$, where \plc{size} is
-the size of the array dimension
-
-When the \plc{lower-bound} is absent it defaults to 0.
-
-The precedence of a subscript operator that uses the array section syntax is
-the same as the precedence of a subscript operator that does not the use the
-array section syntax.
-
-\begin{note}
-The following are examples of array sections:
-
-\begin{indentedcodelist}
-a[0:6]
-a[0:6:1]
-a[1:10]
-a[1:]
-a[:10:2]
-b[10][:][:]
-b[10][:][:0]
-c[42][0:6][:]
-c[42][0:6:2][:]
-c[1:10][42][0:6]
-S.c[:100]
-p->y[:10]
-this->a[:N]
-(p+10)[:N]
-\end{indentedcodelist}
-
-Assume \code{a} is declared to be a 1-dimensional array with dimension size
-11.  The first two examples are equivalent, and the third and fourth
-examples are equivalent. The fifth example specifies a stride of 2 and
-therefore is not contiguous.
-
-Assume \code{b} is declared to be a pointer to a 2-dimensional array with
-dimension sizes 10 and 10. The sixth example refers to all elements of the
-2-dimensional array given by \code{b[10]}. The seventh
-example is a zero-length array section.
-
-Assume \code{c} is declared to be a 3-dimensional array with dimension sizes
-50, 50, and 50.  The eighth example is contiguous, while the ninth and
-tenth examples are not contiguous.
-
-The final four examples show array sections that are formed from
-more general base expressions.
-
-The following are examples that are non-conforming array sections:
-
-\begin{indentedcodelist}
-s[:10].x
-p[:10]->y
-*(xp[:10])
-\end{indentedcodelist}
-
-For all three examples, a base language operator is applied in an undefined
-manner to an array section. The only operator that may be applied to an array
-section is a subscript operator for which the array section appears as the
-postfix expression.
-\end{note}
-\medskip
-\end{ccppspecific}
-
-\begin{fortranspecific}
-Fortran has built-in support for array sections although some
-restrictions apply to their use, as enumerated in the following section.
-\end{fortranspecific}
-
-\restrictions
-Restrictions to array sections are as follows:
-
-\begin{itemize}
-\item An array section can appear only in clauses where it is explicitly allowed.
-
-\item A \plc{stride} expression may not be specified unless otherwise stated.
-
-\begin{ccppspecific}
-
-\item An element of an array section with a non-zero size must have a complete type.
-
-\item The base expression of an array section must have an array or pointer type.
-
-\item If a consecutive sequence of array subscript expressions appears in an
-      array section, and the first subscript expression in the sequence uses the
-      extended array section syntax defined in this section, then only the last
-      subscript expression in the sequence may select array elements that have
-      a pointer type.
-\end{ccppspecific}
-
-\begin{cppspecific}
-\item If the type of the base expression of an array section is a reference to
-      a type \plc{T}, then the type will be considered to be \plc{T} for all 
-      purposes of the array section.
-
-\item An array section cannot be used in an overloaded \code{[]} operator.
-\end{cppspecific}
-
-\begin{fortranspecific}
-
-\item If a stride expression is specified, it must be positive.
-
-\item The upper bound for the last dimension of an assumed-size dummy
-      array must be specified.
-
-\item If a list item is an array section with vector subscripts, the
-      first array element must be the lowest in the array element order of
-      the array section.
-
-\item If a list item is an array section, the last \plc{part-ref} of the list
-      item must have a section subscript list.
-\end{fortranspecific}
-
-
-\end{itemize}
-
-
-
-
-\section{Iterators}
-\index{iterators}
-\label{sec:iterators}
-
-Iterators are identifiers that expand to multiple values in the clause on which 
-they appear.
-
-The syntax of the \code{iterator} modifier is as follows:
-\begin{ompSyntax}
-iterator(\plc{iterators-definition})
-\end{ompSyntax}
-
-where \plc{iterators-definition} is one of the following:
-\begin{indentedcodelist}
-\plc{iterator-specifier [}, \plc{iterators-definition ]}
-\end{indentedcodelist}
-
-where \plc{iterator-specifier} is one of the following:
-\begin{indentedcodelist}
-\plc{[ iterator-type ] } \plc{identifier} = \plc{range-specification}
-\end{indentedcodelist}
-
-where:
-\begin{itemize}
-\item \plc{identifier} is a base language identifier.
-
-\begin{ccppspecific}
-\item \plc{iterator-type} is a type name.
-\end{ccppspecific}
-
-\begin{fortranspecific}
-\item \plc{iterator-type} is a type specifier.
-\end{fortranspecific}
-\item \plc{range-specification} is of the form 
-\plc{begin}\code{:}\plc{end[}\code{:}\plc{step]}, where \plc{begin} and 
-\plc{end} are expressions for which their types can be converted to 
-\plc{iterator-type} and \plc{step} is an integral expression.
-\end{itemize}
-
-\begin{ccppspecific}
-In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is of \code{int} type.
-\end{ccppspecific}
-
-\begin{fortranspecific}
-In an \plc{iterator-specifier}, if the \plc{iterator-type} is not specified then the type of that iterator is default integer.
-\end{fortranspecific}
-
-In a \plc{range-specification}, if the \plc{step} is not specified its value is
-implicitly defined to be 1.
-
-An iterator only exists in the context of the clause in which it appears. An
-iterator also hides all accessible symbols with the same name in the context of
-the clause.
-
-The use of a variable in an expression that appears in the
-\plc{range-specification} causes an implicit reference to the variable in all
-enclosing constructs.
-
-\begin{ccppspecific}
-The values of the iterator are the set of values $i_{0}$,~\ldots,~$i_{N-1}$ where:
-\begin{itemize}
-\item $i_{0}$~$=$~$(\plc{iterator-type})$~$begin$, 
-\item $i_{j}$~$=$~$(\plc{iterator-type})$~$(i_{j-1}$~$+$~$step)$, and
-\item  if $step$~$>$~$0$,
-\begin{itemize}
-\item $i_{0}$~$<$~$(\plc{iterator-type})$~$end$,
-\item $i_{N-1}$~$<$~$(\plc{iterator-type})$~$end$, and 
-\item $(\plc{iterator-type})$~$(i_{N-1}$~$+$~$step)$~$\geq$~$(\plc{iterator-type})$~$end$;
-\end{itemize}
-\item if $step$~$<$~$0$,
-\begin{itemize}
-\item $i_{0}$~$>$~$(\plc{iterator-type})$~$end$,
-\item $i_{N-1}$~$>$~$(\plc{iterator-type})$~$end$, and 
-\item $(\plc{iterator-type})$~$(i_{N-1}$~$+$~$step)$~$\leq$~$(\plc{iterator-type})$~$end$.
-\end{itemize}
-\end{itemize}
-\end{ccppspecific}
-
-\begin{fortranspecific}
-The values of the iterator are the set of values $i_{1}$,~\ldots,~$i_{N}$ where:
-\begin{itemize}
-\item $i_{1}$~$=$~$begin$,  
-\item $i_{j}$~$=$~$i_{j-1}$~$+$~$step$, and
-\item if $step$~$>$~$0$.
-\begin{itemize}
-\item $i_{1}$~$\leq$~$end$,
-\item $i_{N}$~$\leq$~$end$, and 
-\item $i_{N}$~$+$~$step$~$>$~$end$;
-\end{itemize}
-\item if $step$~$<$~$0$,
-\begin{itemize}
-\item $i_{1}$~$\geq$~$end$,
-\item $i_{N}$~$\geq$~$end$, and 
-\item $i_{N}$~$+$~$step$~$<$~$end$.
-\end{itemize}
-\end{itemize}
-\end{fortranspecific}
-
-The set of of values will be empty if no possible value complies with the 
-conditions above.
-
-For those clauses that contain expressions that contain iterator identifiers, the
-effect is as if the list item is instantiated within the clause for each value
-of the iterator in the set defined above, substituting each occurrence of the
-iterator identifier in the expression with the iterator value. If the set of
-values of the iterator is empty then the effect is as if the clause was not
-specified.
-
-The behavior is unspecified if $i_{j}$~$+$~$step$ cannot be represented in 
-\plc{iterator-type} in any of the $i_{j}$~$+$~$step$ computations for any 
-$0$~$\leq$~$j$~$<$~$N$.
-
-\restrictions
-
-\begin{itemize}
-\item An expression that contains an iterator identifier can only appear in 
-      clauses that explicitly allow expressions that contain iterators.
-\item The \plc{iterator-type} must not declare a new type.
-\begin{ccppspecific}
-\item The \plc{iterator-type} must be an integral or pointer type.
-\item The \plc{iterator-type} must not be \code{const} qualified.
-\end{ccppspecific}
-\begin{fortranspecific}
-\item The \plc{iterator-type} must be an integer type.
-\end{fortranspecific}
-\item If the \plc{step} expression of a \plc{range-specification} equals zero 
-      the behavior is unspecified.
-\item Each iterator identifier can only be defined once in an 
-      \plc{iterators-definition}.
-\item Iterators cannot appear in the \plc{range-specification}.
-\end{itemize}
 
 
 \section{Variant Directives}
