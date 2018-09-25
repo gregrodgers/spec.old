@@ -394,35 +394,28 @@ following steps:
       argument; otherwise, the OpenMP implementation passes a pointer 
       to a device-specific runtime entry point with type signature 
       \code{ompt_function_lookup_t} to the device initializer of the tool.
-\item If the device initializer for the tool receives a non-null \plc{lookup} 
-      pointer, the tool may use it to query which runtime entry points in the 
-      tracing interface are available for a target device and bind the function 
-      pointers returned to tool variables. 
+\item If a non-null \plc{lookup} pointer is provided to the device initializer 
+      of the tool, the tool may use it to determine the runtime entry points in 
+      the tracing interface that are available for the device and may bind the 
+      returned function pointers to tool variables. 
       Table~\ref{table:ompt-tracing-interface-functions} indicates the
-      names of the runtime entry points that a target device may provide 
-      for use by a tool. Implementations may provide additional 
-      implementation-specific names and corresponding entry points as long 
-      as they don't use names that start with the prefix \code{ompt_} which 
-      is reserved for the OpenMP specification.
-
-      If \plc{lookup} is non-null, the driver for a device will provide 
-      runtime entry points that enable a tool to control the device's
-      interface for collecting traces in its \emph{native} trace format,
-      which may be device specific. The kinds of trace records available 
-      for a device are implementation-defined. Some devices may allow a 
+      names of runtime entry points that may be available for a device; an
+      implementations may provide additional implementation-defined names and 
+      corresponding entry points. The driver for the device provides the
+      runtime entry points that enable a tool to control the trace collection
+      interface of the device. The \emph{native} trace format that the 
+      interface uses may be device specific and the available kinds of trace 
+      records are implementation-defined. Some devices may allow a 
       tool to collect traces of records in a standard format known as OMPT 
       trace records. Each OMPT trace record serves as a substitute for an 
-      OMPT callback that cannot be made on a device. The fields in each 
+      OMPT callback that cannot be made on the device. The fields in each 
       trace record type are defined in the description of the callback that 
-      the record represents.  If so, the \plc{lookup} function will return 
-      values for the runtime entry points \code{ompt_set_trace_ompt} and 
-      \code{ompt_get_record_ompt}, which support collecting and decoding 
-      OMPT traces. These runtime entry points are not required for all 
-      devices and will only be available for target devices that support
-      collection of standard traces in OMPT format. For some devices, their 
-      native tracing format may be OMPT format. In that case, tracing can 
-      be controlled using either the runtime entry points for native or 
-      OMPT tracing.
+      the record represents. If this type of record is provided then the 
+      \plc{lookup} function returns values for the runtime entry points 
+      \code{ompt_set_trace_ompt} and \code{ompt_get_record_ompt}, which 
+      support collecting and decoding OMPT traces. If the native tracing 
+      format for a device is the OMPT format then tracing can be controlled 
+      using the runtime entry points for native or OMPT tracing.
 
 \begin{table}
 {\small
@@ -527,6 +520,14 @@ following steps:
       with that device. Finally, the OpenMP implementation dispatches any 
       \code{ompt_callback_device_finalize} callback that was previously
       registered by the tool.
+\end{itemize}
+
+\restrictions
+
+Tracing activity on devices has the following restriction:
+\begin{itemize}
+\item Implementation-defined names must not start with the prefix \code{ompt_}, 
+      which is reserved for the OpenMP specification.
 \end{itemize}
 
 \crossreferences
