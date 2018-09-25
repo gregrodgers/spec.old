@@ -372,59 +372,57 @@ events, for example, \code{ompt_callback_sync_region_wait}, use both techniques.
 \label{sec:tracing-device-activity}
 
 A target device may or may not initialize a full OpenMP runtime system.
-Unless it does, it may not be possible to monitor activity
-on a device using a tool interface based on callbacks.
-To accommodate such cases, the OMPT interface defines
-a monitoring interface for tracing activity on target
-devices. Tracing activity on a target device involves the following
-steps:
+Unless it does, it may not be possible to monitor activity on a device 
+using a tool interface based on callbacks. To accommodate such cases, 
+the OMPT interface defines a monitoring interface for tracing activity 
+on target devices. Tracing activity on a target device involves the 
+following steps:
 
 \begin{itemize}
-\item To prepare to trace activity on a target device, a tool must register for an
-  \code{ompt_callback_device_initialize} callback.  A tool may also register for an
-  \code{ompt_callback_device_load} callback to be notified when code is loaded onto a target device or
-an \code{ompt_callback_device_unload} callback to be notified when code is unloaded from a target device.
-A tool may also optionally register an \code{ompt_callback_device_finalize} callback.
+\item To prepare to trace activity on a target device, a tool must 
+      register for an \code{ompt_callback_device_initialize} callback.  
+      A tool may also register for an \code{ompt_callback_device_load} 
+      callback to be notified when code is loaded onto a target device 
+      or an \code{ompt_callback_device_unload} callback to be notified 
+      when code is unloaded from a target device. A tool may also 
+      optionally register an \code{ompt_callback_device_finalize} callback.
 \item When an OpenMP implementation initializes a target device, the
-  OpenMP implementation will dispatch the tool's device initialization
-  callback on the host device. If the OpenMP implementation or target device does not support tracing,
-  the OpenMP implementation will pass a \code{NULL} to the tool's device initializer for its
-  \plc{lookup} argument; otherwise, the OpenMP implementation will pass
-  a pointer to a device-specific runtime entry point with type
-  signature \code{ompt_function_lookup_t} to the tool's device initializer.
-\item If the device initializer for the tool receives a
-  non-null \plc{lookup} pointer, the tool may use it to query
-  which runtime entry points in the tracing interface are available for a target device
-  and bind the function pointers returned to tool variables.
-  Table~\ref{table:ompt-tracing-interface-functions} indicates the
-  names of the runtime entry points that a target device may provide for use
-  by a tool.
-  Implementations
-may provide additional implementation-specific names and corresponding
-entry points as long as they don't use names that start with the prefix
-\code{ompt_} which is reserved for the OpenMP specification.
+      OpenMP implementation will dispatch the tool's device initialization
+      callback on the host device. If the OpenMP implementation or target 
+      device does not support tracing, the OpenMP implementation will pass 
+      a \code{NULL} to the tool's device initializer for its \plc{lookup} 
+      argument; otherwise, the OpenMP implementation will pass a pointer 
+      to a device-specific runtime entry point with type signature 
+      \code{ompt_function_lookup_t} to the tool's device initializer.
+\item If the device initializer for the tool receives a non-null \plc{lookup} 
+      pointer, the tool may use it to query which runtime entry points in the 
+      tracing interface are available for a target device and bind the function 
+      pointers returned to tool variables. 
+      Table~\ref{table:ompt-tracing-interface-functions} indicates the
+      names of the runtime entry points that a target device may provide 
+      for use by a tool. Implementations may provide additional 
+      implementation-specific names and corresponding entry points as long 
+      as they don't use names that start with the prefix \code{ompt_} which 
+      is reserved for the OpenMP specification.
 
-  If \plc{lookup} is non-null, the driver for a device will
-  provide runtime entry points that enable a tool to control the device's
-  interface for collecting traces in its \emph{native} trace format,
-  which may be device specific.
-  The kinds of trace records available for a device are
-  implementation-defined.
-  Some devices may allow a tool to
-  collect traces of records in a standard format known as OMPT trace
-  records. Each OMPT trace record serves as a substitute for an OMPT
-  callback that cannot be made on a device. The fields in each trace
-  record type are defined in the description of the callback that the
-  record represents.  If so, the \plc{lookup} function will
-  return values for the runtime entry points
-  \code{ompt_set_trace_ompt} and \code{ompt_get_record_ompt}, which support
-  collecting and decoding OMPT traces.
-  These runtime entry points are not required for all devices and will only be available for target devices that support
-  collection of standard traces in OMPT format.
-  For some devices, their native
-  tracing format may be OMPT format. In that case, tracing can be
-  controlled using either the runtime entry points for native or OMPT
-  tracing.
+      If \plc{lookup} is non-null, the driver for a device will provide 
+      runtime entry points that enable a tool to control the device's
+      interface for collecting traces in its \emph{native} trace format,
+      which may be device specific. The kinds of trace records available 
+      for a device are implementation-defined. Some devices may allow a 
+      tool to collect traces of records in a standard format known as OMPT 
+      trace records. Each OMPT trace record serves as a substitute for an 
+      OMPT callback that cannot be made on a device. The fields in each 
+      trace record type are defined in the description of the callback that 
+      the record represents.  If so, the \plc{lookup} function will return 
+      values for the runtime entry points \code{ompt_set_trace_ompt} and 
+      \code{ompt_get_record_ompt}, which support collecting and decoding 
+      OMPT traces. These runtime entry points are not required for all 
+      devices and will only be available for target devices that support
+      collection of standard traces in OMPT format. For some devices, their 
+      native tracing format may be OMPT format. In that case, tracing can 
+      be controlled using either the runtime entry points for native or 
+      OMPT tracing.
 
 \begin{table}
 {\small
@@ -450,107 +448,126 @@ entry points as long as they don't use names that start with the prefix
 
 \end{table}
 
-
-\item The tool will use the \code{ompt_set_trace_native}
-  and/or the \code{ompt_set_trace_ompt} runtime entry point to specify what
-  types of events or activities to monitor on the target device.
-  If the \code{ompt_set_trace_native} and/or the
-  \code{ompt_set_trace_ompt} runtime entry point is called outside a device
-  initializer, registration of supported callbacks may fail with a return code of
-  \code{ompt_set_error}.
-\item The tool will initiate tracing on the target device by
-  invoking \code{ompt_start_trace}. Arguments to \code{ompt_start_trace}
-  include two tool callbacks for use by the OpenMP implementation to manage
-  traces associated with the target device: one to allocate
-  a buffer where the target device can deposit trace events and a
-  second to process a buffer of trace events from the target device.
+\item The tool will use the \code{ompt_set_trace_native} and/or the 
+      \code{ompt_set_trace_ompt} runtime entry point to specify what
+      types of events or activities to monitor on the target device.
+      If the \code{ompt_set_trace_native} and/or the \code{ompt_set_trace_ompt} 
+      runtime entry point is called outside a device initializer, 
+      registration of supported callbacks may fail with a return code of
+       \code{ompt_set_error}.
+\item The tool will initiate tracing on the target device by invoking 
+      \code{ompt_start_trace}. Arguments to \code{ompt_start_trace}
+      include two tool callbacks for use by the OpenMP implementation to manage
+      traces associated with the target device: one to allocate
+      a buffer where the target device can deposit trace events and a
+      second to process a buffer of trace events from the target device.
 \item When the target device needs a trace buffer, the OpenMP implementation
-  will invoke the tool-supplied callback function on the host device to request a new buffer.
-\item The OpenMP implementation will monitor the execution of OpenMP constructs on the target device as
-  directed and record a trace of events or activities into a trace
-  buffer. If the device is capable, device trace records will be
-  marked with a \plc{host_op_id}---an identifier used to associate
-  device activities with the target operation initiated on the host
-  that caused these activities.  To correlate activities on the host
-  with activities on a device, a tool can register a
-  \code{ompt_callback_target_submit} callback.
-  Before the host initiates each distinct activity associated with a structured block for a \code{target} construct
-  on a target device, the OpenMP implementation will dispatch the \code{ompt_callback_target_submit} callback
-  on the host in the thread executing the task that encounters the \code{target} construct.
-  Examples of activities that could cause an \code{ompt_callback_target_submit} callback to be dispatched
-  include an explicit data copy between a host and target device or execution of a computation.
-  This callback provides the tool with a pair of identifiers: one that identifies the target region and a second
-  that uniquely identifies an activity associated with that region.
-  These identifiers help the tool correlate activities on the target device with their target region.
+      will invoke the tool-supplied callback function on the host device 
+      to request a new buffer.
+\item The OpenMP implementation will monitor the execution of OpenMP 
+      constructs on the target device as directed and record a trace of 
+      events or activities into a trace buffer. If the device is capable, 
+      device trace records will be marked with a \plc{host_op_id}---an 
+      identifier used to associate device activities with the target 
+      operation initiated on the host that caused these activities. To 
+      correlate activities on the host with activities on a device, a 
+      tool can register a \code{ompt_callback_target_submit} callback.
+      Before the host initiates each distinct activity associated with 
+      a structured block for a \code{target} construct on a target device, 
+      the OpenMP implementation will dispatch the 
+      \code{ompt_callback_target_submit} callback on the host in the 
+      thread executing the task that encounters the \code{target} construct.
+      Examples of activities that could cause an \code{ompt_callback_target_submit} 
+      callback to be dispatched include an explicit data copy between a host 
+      and target device or execution of a computation. This callback provides 
+      the tool with a pair of identifiers: one that identifies the target 
+      region and a second that uniquely identifies an activity associated 
+      with that region. These identifiers help the tool correlate activities 
+      on the target device with their target region.
 \item When appropriate, for example, when a trace buffer fills or needs to be
-  flushed, the OpenMP implementation will invoke the tool-supplied buffer
-  completion callback to process a non-empty sequence of
-  records in a trace buffer associated with the target device.
-
-\item The tool-supplied buffer completion callback may return
-  immediately, ignoring records in the trace buffer, or it may iterate
-  through them using the \code{ompt_advance_buffer_cursor} entry
-  point
-  and inspect each one. A tool may inspect the type of the record at
-  the current cursor position using the \code{ompt_get_record_type}
-  runtime entry point.  A tool may choose to inspect the contents of some or
-  all records in a trace buffer using the \code{ompt_get_record_ompt},
-  \code{ompt_get_record_native}, or
-  \code{ompt_get_record_abstract} runtime entry point.  Presumably, a tool that
-  chooses to use the \code{ompt_get_record_native} runtime entry point to
-  inspect records will have some knowledge about a device's native
-  trace format.  A tool may always use the
-  \code{ompt_get_record_abstract} runtime entry point to inspect a trace
-  record; this runtime entry point will decode the contents of a native trace record
-  and summarize them in a standard format, namely an
-  \code{ompt_record_abstract_t} record.
-  Only a record in OMPT format can be retrieved using the
-  \code{ompt_get_record_ompt} runtime entry point.
+      flushed, the OpenMP implementation will invoke the tool-supplied buffer
+      completion callback to process a non-empty sequence of
+      records in a trace buffer associated with the target device.
+\item The tool-supplied buffer completion callback may return immediately, 
+      ignoring records in the trace buffer, or it may iterate through them 
+      using the \code{ompt_advance_buffer_cursor} entry point and inspect 
+      each one. A tool may inspect the type of the record at the current 
+      cursor position using the \code{ompt_get_record_type} runtime entry 
+      point.  A tool may choose to inspect the contents of some or all records 
+      in a trace buffer using the \code{ompt_get_record_ompt}, 
+      \code{ompt_get_record_native}, or \code{ompt_get_record_abstract} 
+      runtime entry point. Presumably, a tool that chooses to use the 
+      \code{ompt_get_record_native} runtime entry point to inspect records 
+      will have some knowledge about a device's native trace format. A tool 
+      may always use the \code{ompt_get_record_abstract} runtime entry point 
+      to inspect a trace record; this runtime entry point will decode the 
+      contents of a native trace record and summarize them in a standard 
+      format, namely an \code{ompt_record_abstract_t} record. Only a record 
+      in OMPT format can be retrieved using the \code{ompt_get_record_ompt} 
+      runtime entry point.
 \item Once tracing has been started on a device, a tool may pause or resume
-  tracing on the device at any time by invoking
-  \code{ompt_pause_trace} with an appropriate flag value as an
-  argument.
-\item A tool may request that a device flush any pending trace records
-  at any time between device initialization and finalization
-  by invoking the \code{ompt_flush_trace} runtime entry point for the device.
+      tracing on the device at any time by invoking \code{ompt_pause_trace} 
+      with an appropriate flag value as an argument.
+\item A tool may request that a device flush any pending trace records at any 
+      time between device initialization and finalization by invoking the 
+      \code{ompt_flush_trace} runtime entry point for the device.
 \item A tool may start or stop tracing on a device at any time using the
-  \code{ompt_start_trace} or \code{ompt_stop_trace} runtime entry points,
-  respectively. When tracing is stopped on a device, the OpenMP implementation will eventually
-  gather all trace records already collected on the device and present them to the tool using
-  the buffer completion callback provided by the tool.
+      \code{ompt_start_trace} or \code{ompt_stop_trace} runtime entry points,
+      respectively. When tracing is stopped on a device, the OpenMP implementation 
+      will eventually gather all trace records already collected on the device 
+      and present them to the tool using the buffer completion callback provided 
+      by the tool.
 \item It is legal to shut down an OpenMP implementation while device tracing
-is in progress.
-\item When an OpenMP implementation begins to shut down, it will
-  finalize each target device.  Device finalization occurs in three steps.
-  First, the OpenMP implementation halts any tracing in progress for the device. Second,
-  the OpenMP implementation flushes all trace records collected for the device and presents them to
-  the tool using the buffer completion callback associated with that device.
-  Finally, the OpenMP implementation dispatches
-  any \code{ompt_callback_device_finalize} callback that was previously
-  registered by the tool.
-
+      is in progress.
+\item When an OpenMP implementation begins to shut down, it will finalize each 
+      target device.  Device finalization occurs in three steps. First, the OpenMP 
+      implementation halts any tracing in progress for the device. Second, the 
+      OpenMP implementation flushes all trace records collected for the device 
+      and presents them to the tool using the buffer completion callback associated 
+      with that device. Finally, the OpenMP implementation dispatches any 
+      \code{ompt_callback_device_finalize} callback that was previously
+      registered by the tool.
 \end{itemize}
-
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_callback_device_initialize_t}, see \specref{sec:ompt_callback_device_initialize_t}.
-\item \code{ompt_callback_device_finalize_t}, see \specref{sec:ompt_callback_device_finalize_t}.
-\item \code{ompt_get_device_num_procs_t}, see \specref{sec:ompt_get_device_num_procs_t}.
+\item \code{ompt_callback_device_initialize_t}, 
+see \specref{sec:ompt_callback_device_initialize_t}.
+
+\item \code{ompt_callback_device_finalize_t}, 
+see \specref{sec:ompt_callback_device_finalize_t}.
+
+\item \code{ompt_get_device_num_procs_t}, 
+see \specref{sec:ompt_get_device_num_procs_t}.
+
 \item \code{ompt_get_device_time}, see \specref{sec:ompt_get_device_time_t}.
+
 \item \code{ompt_translate_time}, see \specref{sec:ompt_translate_time_t}.
+
 \item\code{ompt_set_trace_ompt}, see \specref{sec:ompt_set_trace_ompt_t}.
+
 \item \code{ompt_set_trace_native}, see \specref{sec:ompt_set_trace_native_t}.
+
 \item \code{ompt_start_trace}, see \specref{sec:ompt_start_trace_t}.
+
 \item \code{ompt_pause_trace}, see \specref{sec:ompt_pause_trace_t}.
+
 \item \code{ompt_flush_trace}, see \specref{sec:ompt_flush_trace_t}.
+
 \item \code{ompt_stop_trace}, see \specref{sec:ompt_stop_trace_t}.
-\item \code{ompt_advance_buffer_cursor}, see \specref{sec:ompt_advance_buffer_cursor_t}.
+
+\item \code{ompt_advance_buffer_cursor}, 
+see \specref{sec:ompt_advance_buffer_cursor_t}.
+
 \item \code{ompt_get_record_type}, see \specref{sec:ompt_get_record_type_t}.
+
 \item \code{ompt_get_record_ompt}, see \specref{sec:ompt_get_record_ompt_t}.
+
 \item \code{ompt_get_record_native}, see \specref{sec:ompt_get_record_native_t}.
+
 \item \code{ompt_get_record_abstract}, see \specref{sec:ompt_get_record_abstract_t}.
 \end{itemize}
+
 
 
 \subsection{Finalizing an OMPT Tool}
