@@ -70,17 +70,17 @@ TEXFILES=openmp.tex \
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 quick:
-	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 debug:
-	pdflatex -synctex=1 -file-line-error openmp.tex
+	pdflatex -shell-escape -synctex=1 -file-line-error openmp.tex
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
