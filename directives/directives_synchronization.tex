@@ -1092,41 +1092,19 @@ is performed on entry to and exit from the atomic operation, ensuring that the
 set of all atomic operations in the program applied to the same location has a
 total completion order.  If the \code{write}, \code{update}, or \code{capture}
 clause is specified and the \code{release}, \code{acq_rel}, or
-\code{seq_cst} clause is specified, the flush on entry to the atomic operation is a
-release flush.  If the \code{read} or \code{capture} clause
+\code{seq_cst} clause is specified then the strong flush on entry to the
+atomic operation is also a release flush.  If the \code{read} or \code{capture} clause
 is specified and the \code{acquire}, \code{acq_rel}, or \code{seq_cst}
-clause is specified, the flush on exit from the atomic operation is an acquire flush.
-Therefore, if \plc{memory-order-clause} is specified and is not
+clause is specified then the strong flush on exit from the atomic operation
+is also an acquire flush.  Therefore, if \plc{memory-order-clause} is specified and is not
 \code{relaxed}, release and/or acquire flush operations are implied and permit
 synchronization between the threads without the use of explicit \code{flush}
 directives.
 
-% \begin{note}
-% As with other implicit flush regions,
-% \specref{subsec:OpenMP Memory Consistency}
-% reduces the
-% ordering that must be enforced. The intent is that, when the analogous operation exists
-% in C++11 or C11, a sequentially consistent \code{atomic} construct has the same semantics as
-% a \code{memory_order_seq_cst} atomic operation in C++11/C11. Similarly, a
-% non-sequentially consistent \code{atomic} construct on which
-% \plc{memory-order-clause} is not present has the same semantics as a
-% \code{memory_order_relaxed} atomic operation in C++11/C11.
-%
-% Unlike non-sequentially consistent \code{atomic} constructs, sequentially consistent \code{atomic}
-% constructs preserve the interleaving (sequentially consistent) behavior of correct,
-% data race free programs. However, they are not designed to replace the \code{flush} directive
-% as a mechanism to enforce ordering for non-sequentially consistent \code{atomic} constructs,
-% and attempts to do so require extreme caution. For example, a sequentially consistent
-% \code{atomic}~\code{write} construct may appear to be reordered with a subsequent
-% non-sequentially consistent \code{atomic}~\code{write} construct that modifies
-% a different variable, since such reordering would not be observable by a
-% correct program if the second write were outside an \code{atomic} directive.
-% \end{note}
-
 For all forms of the \code{atomic} construct, any combination of two or more
 of these \code{atomic} constructs enforces mutually exclusive access to the
 locations designated by \plc{x} among threads in the binding thread set.  To
-avoid race conditions, all accesses of the locations designated by \plc{x}
+avoid data races, all accesses of the locations designated by \plc{x}
 that could potentially occur in parallel must be protected with an
 \code{atomic} construct.
 
@@ -1311,10 +1289,10 @@ results in a strong flush operation with the following behavior. A \code{flush}
 construct without a list, executed on a given thread, operates as if the whole
 thread-visible data state of the program, as defined by the base language, is
 flushed. A \code{flush} construct with a list applies the flush operation to
-the items in the list, and does not return until the operation is complete for
-all specified list items. An implementation may implement a \code{flush} with
-a list by ignoring the list, and treating it the same as a \code{flush}
-without a list.
+the items in the list, and the flush operation does not complete until the
+operation is complete for all specified list items. An implementation may
+implement a \code{flush} with a list by ignoring the list, and treating it the
+same as a \code{flush} without a list.
 
 If no list items are specified, the flush operation has the release and/or
 acquire flush properties:
@@ -1352,10 +1330,12 @@ programmer intends to prevent simultaneous execution of the protected section by
 two threads, but the program does not work properly because it does not enforce the
 proper ordering of the operations on variables \code{a} and \code{b}. Any shared data 
 accessed in the protected section is not guaranteed to be current or consistent during 
-or after the protected section. The atomic notation in the pseudocode in the following 
-two examples indicates that the accesses to \code{a} and \code{b} are \code{ATOMIC} 
-writes and captures. Otherwise both examples would contain data races and 
-automatically result in unspecified behavior.
+or after the protected section. The atomic notation in the pseudocode in
+the following two examples indicates that the accesses to \code{a} and
+\code{b} are atomic write and atomic read operations. Otherwise both examples
+would contain data races and automatically result in unspecified behavior. The
+\plc{flush} operations are strong flushes that are applied to the specified
+flush lists
 
 \parbox{\linewidth}{%
 \begin{spacing}{0.90}\begin{framed}
@@ -1491,6 +1471,20 @@ A \code{flush} region is not implied at the following locations:
 The synchronization behavior of implicit flushes is as follows:
 
 \begin{itemize}
+\item When a thread executes an \code{atomic} region for which the
+      corresponding construct has the \code{release}, \code{acq_rel}, or
+      \code{seq_cst} clause and specifies an atomic operation that starts a
+      given release sequence, the release flush that is performed on entry to
+      the atomic operation synchronizes with an acquire flush that is
+      performed by a different thread and has an associated atomic operation
+      that reads a value written by a modification in the release sequence.
+\item When a thread executes an \code{atomic} region for which the
+      corresponding construct has the \code{acquire}, \code{acq_rel}, or
+      \code{seq_cst} clause and specifies an atomic opereration that reads a
+      value written by a given modification, a release flush that is performed
+      by a different thread and has an associated release sequence that
+      contains that modification synchronizes with the acquire flush that is
+      performed on exit from the atomic operation.
 \item When a thread executes a \code{critical} region that has a given
       name, the behavior is as if the release flush performed on exit from
       the region synchronizes with the acquire flush performed on entry to
@@ -1551,6 +1545,12 @@ The synchronization behavior of implicit flushes is as follows:
       the generating task performs a release flush that synchronizes with
       the acquire flush performed by the thread that begins to execute the
       explicit task.
+\item When an undeferred task completes execution on a given thread that is
+      different from the thread on which its generating task is suspended, the
+      behavior is as if a release flush performed by the thread that
+      completes execution of the undeferred task synchronizes with an acquire
+      flush performed by the thread that resumes execution of the generating
+      task.
 \item When a dependent task with one or more predecessor tasks begins
       execution on a given thread, the behavior is as if each release flush
       performed by a different thread on completion of a predecessor task
@@ -1827,7 +1827,7 @@ are in the \plc{uninitialized} state.
 \index{constructs!depobj@{\code{depobj}}}
 \label{subsubsec:depobj Construct}
 \summary
-The \code{depobj} construct initalizes, updates or destroys an OpenMP depend 
+The \code{depobj} construct initializes, updates or destroys an OpenMP depend 
 object. The \code{depobj} construct is a stand-alone directive.
 
 \syntax
