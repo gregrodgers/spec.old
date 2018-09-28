@@ -269,7 +269,7 @@ typedef void (*ompt_callback_parallel_begin_t) (
   const omp_frame_t *\plc{encountering_task_frame},
   ompt_data_t *\plc{parallel_data},
   unsigned int \plc{requested_parallelism},
-  int \plc{flag},
+  int \plc{flags},
   const void *\plc{codeptr_ra}
 );
 \end{omptCallback}
@@ -282,7 +282,7 @@ typedef struct ompt_record_parallel_begin_t {
   ompt_id_t \plc{encountering_task_id};
   ompt_id_t \plc{parallel_id};
   unsigned int \plc{requested_parallelism};
-  int \plc{flag};
+  int \plc{flags};
   const void *\plc{codeptr_ra};
 } ompt_record_parallel_begin_t;
 \end{omptRecord}
@@ -300,9 +300,9 @@ region that is beginning.
 The \plc{requested_parallelism} argument indicates the number of threads or 
 teams that the user requested.
 
-The \plc{flag} argument indicates whether the code for the region is inlined 
+The \plc{flags} argument indicates whether the code for the region is inlined 
 into the application or invoked by the runtime and also whether the region is 
-a \code{parallel} or \code{teams} region. Valid values for \plc{flag} are a 
+a \code{parallel} or \code{teams} region. Valid values for \plc{flags} are a 
 disjunction of elements in the enum \code{ompt_parallel_flag_t}.
 
 The \plc{codeptr_ra} argument relates the implementation of an OpenMP region 
@@ -342,7 +342,7 @@ that are dispatched when a \code{parallel} or \code{teams} region ends.
 typedef void (*ompt_callback_parallel_end_t) (
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{encountering_task_data},
-  int \plc{flag},
+  int \plc{flags},
   const void *\plc{codeptr_ra}
 );
 \end{omptCallback}
@@ -354,7 +354,7 @@ typedef void (*ompt_callback_parallel_end_t) (
 typedef struct ompt_record_parallel_end_t {
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{encountering_task_id};
-  int \plc{flag};
+  int \plc{flags};
   const void *\plc{codeptr_ra};
 } ompt_record_parallel_end_t;
 \end{omptRecord}
@@ -367,9 +367,10 @@ The binding of the \plc{parallel_data} argument is the \code{parallel} or
 
 The binding of the \plc{encountering_task_data} argument is the encountering task.
 
-The \plc{flag} argument indicates whether the execution of the region is inlined 
+The \plc{flags} argument indicates whether the execution of the region is inlined 
 into the application or invoked by the runtime and also whether it is a 
-\code{parallel} or \code{teams} region.
+\code{parallel} or \code{teams} region. Values for \plc{flags} are a
+disjunction of elements in the enum \code{ompt_parallel_flag_t}.
 
 The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
 to its source code. If a runtime routine implements the region associated with
@@ -396,6 +397,10 @@ see \specref{sec:ompt_parallel_flag_t}.
 \subsubsubsection{\hcode{ompt_callback_master_t}}
 \index{ompt_callback_master_t@{\code{ompt_callback_master_t}}}
 \label{sec:ompt_callback_master_t}
+\summary
+The \code{ompt_callback_master} callback is used to dispatch
+\plc{master-begin} and \plc{master-end} events.
+
 \format
 
 \begin{ccppspecific}
@@ -453,6 +458,10 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_task_create_t}}
 \index{ompt_callback_task_create_t@{\code{ompt_callback_task_create_t}}}
 \label{sec:ompt_callback_task_create_t}
+\summary
+The \code{ompt_callback_task_create} callback is used to dispatch
+\plc{task-create} and \plc{initial-task-create} events.
+
 \format
 \begin{ccppspecific}
 \begin{omptCallback}
@@ -460,7 +469,7 @@ typedef void (*ompt_callback_task_create_t) (
   ompt_data_t *\plc{encountering_task_data},
   const omp_frame_t *\plc{encountering_task_frame},
   ompt_data_t *\plc{new_task_data},
-  int \plc{flag},
+  int \plc{flags},
   int \plc{has_dependences},
   const void *\plc{codeptr_ra}
 );
@@ -474,7 +483,7 @@ typedef void (*ompt_callback_task_create_t) (
 typedef struct ompt_record_task_create_t {
   ompt_id_t \plc{encountering_task_id};
   ompt_id_t \plc{new_task_id};
-  int \plc{flag};
+  int \plc{flags};
   int \plc{has_dependences};
   const void *\plc{codeptr_ra};
 } ompt_record_task_create_t;
@@ -495,9 +504,9 @@ This parameter is \code{NULL} for an initial task.
 The binding of argument \plc{new_task_data} is the created
 task.
 
-The argument \plc{flag} indicates the kind of the task: initial,
+The argument \plc{flags} indicates the kind of the task: initial,
 explicit or target.
-Values for \plc{flag} are a disjunction of elements in the enum
+Values for \plc{flags} are a disjunction of elements in the enum
 \code{ompt_task_flag_t}.
 
 The argument \plc{has_dependences} indicates whether the created
@@ -526,6 +535,9 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_dependences_t}}
 \index{ompt_callback_dependences_t@{\code{ompt_callback_dependences_t}}}
 \label{sec:ompt_callback_dependences_t}
+\subsubsubsection{\hcode{ompt_callback_task_dependences_t}}
+\index{ompt_callback_task_dependences_t@{\code{ompt_callback_task_dependences_t}}}
+\label{sec:ompt_callback_task_dependences_t}
 \format
 
 \begin{ccppspecific}
@@ -579,6 +591,10 @@ The performance monitor interface for tracing activity on target devices will pr
 \subsubsubsection{\hcode{ompt_callback_task_dependence_t}}
 \index{ompt_callback_task_dependence_t@{\code{ompt_callback_task_dependence_t}}}
 \label{sec:ompt_callback_task_dependence_t}
+\summary
+The \code{ompt_callback_task_dependence} callback is used to dispatch
+\plc{task-dependence} events.
+
 \format
 
 \begin{ccppspecific}
@@ -623,6 +639,10 @@ unsatisfied incoming dependence.
 \subsubsubsection{\hcode{ompt_callback_task_schedule_t}}
 \index{ompt_callback_task_schedule_t@{\code{ompt_callback_task_schedule_t}}}
 \label{sec:ompt_callback_task_schedule_t}
+\summary
+The \code{ompt_callback_task_schedule} callback is used to dispatch
+\plc{task-schedule} events.
+
 \format
 
 \begin{ccppspecific}
@@ -676,6 +696,11 @@ This argument will be \code{NULL} if the callback is dispatched for a
 \subsubsubsection{\hcode{ompt_callback_implicit_task_t}}
 \index{ompt_callback_implicit_task_t@{\code{ompt_callback_implicit_task_t}}}
 \label{sec:ompt_callback_implicit_task_t}
+\summary
+The \code{ompt_callback_implicit_task} callback is used to dispatch
+\plc{initial-task-begin}, \plc{initial-task-end}, \plc{implicit-task-begin}
+and \plc{implicit-task-end} events.
+
 \format
 
 \begin{ccppspecific}
@@ -685,7 +710,8 @@ typedef void (*ompt_callback_implicit_task_t) (
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{task_data},
   unsigned int \plc{actual_parallelism},
-  unsigned int \plc{index}
+  unsigned int \plc{index},
+  int \plc{flags}
 );
 \end{omptCallback}
 \end{ccppspecific}
@@ -701,6 +727,7 @@ typedef struct ompt_record_implicit_t {
   ompt_id_t \plc{task_id};
   unsigned int \plc{actual_parallelism};
   unsigned int \plc{index};
+  int \plc{flags};
 } ompt_record_implicit_t;
 \end{omptRecord}
 \end{ccppspecific}
@@ -720,12 +747,19 @@ executing the parallel region's structured block.
 The argument \plc{actual_parallelism} indicates the number of
 threads in the \code{parallel} region, respectively the number of 
 teams in the \code{teams} region.
+For initial tasks, that are not closely nested in a \code{teams} 
+construct, this argument is \code{1}.
 For the \plc{implicit-task-end} and the \plc{initial-task-end} events, 
-this argument is 0.
+this argument is \code{0}.
 
 The argument \plc{index} indicates the thread number or team number 
 of the calling thread, within the team or league executing the 
 parallel or teams region to which the implicit task region binds.
+For initial tasks, that are not created by a teams construct, this 
+argument is \code{1}.
+
+The argument \plc{flags} indicates the kind of the task: initial or
+implicit.
 
 \crossreferences
 \begin{itemize}
@@ -740,6 +774,20 @@ parallel or teams region to which the implicit task region binds.
 \subsubsubsection{\hcode{ompt_callback_sync_region_t}}
 \index{ompt_callback_sync_region_t@{\code{ompt_callback_sync_region_t}}}
 \label{sec:ompt_callback_sync_region_t}
+\summary
+The \code{ompt_callback_sync_region} callback is used to dispatch
+\plc{explicit-barrier-begin}, \plc{explicit-barrier-end},
+\plc{implicit-barrier-begin}, \plc{implicit-barrier-end},
+\plc{taskwait-begin}, \plc{taskwait-end},
+\plc{taskgroup-begin}, \plc{taskgroup-end},
+\plc{reduction-begin} and \plc{reduction-end} events.
+
+The \code{ompt_callback_sync_region_wait} callback is used to dispatch
+\plc{barrier-wait-begin}, \plc{barrier-wait-end},
+\plc{implicit-barrier-wait-begin}, \plc{implicit-barrier-wait-end},
+\plc{taskwait-wait-begin}, \plc{taskwait-wait-end},
+\plc{taskgroup-wait-begin} and \plc{taskgroup-wait-end} events
+
 \format
 
 \begin{ccppspecific}
@@ -813,6 +861,15 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_mutex_acquire_t}}
 \index{ompt_callback_mutex_acquire_t@{\code{ompt_callback_mutex_acquire_t}}}
 \label{sec:ompt_callback_mutex_acquire_t}
+\summary
+The \code{ompt_callback_lock_init} callback is used to dispatch
+\plc{lock-init} and \plc{nest-lock-init} events.
+
+The \code{ompt_callback_mutex_acquire} callback is used to dispatch
+\plc{critical-acquire}, \plc{atomic-acquire}, \plc{ordered-acquire},
+\plc{lock-acquire}, \plc{nest-lock-acquire},
+\plc{lock-test} and \plc{nest-lock-test} events.
+
 \format
 
 \begin{ccppspecific}
@@ -878,6 +935,21 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_mutex_t}}
 \index{ompt_callback_mutex_t@{\code{ompt_callback_mutex_t}}}
 \label{sec:ompt_callback_mutex_t}
+\summary
+The \code{ompt_callback_mutex_acquired} callback is used to dispatch
+\plc{critical-acquired}, \plc{atomic-acquired},
+\plc{ordered-acquired},  \plc{lock-acquired},
+\plc{nest-lock-acquired}, \plc{lock-test-acquired} and
+\plc{nest-lock-test-acquired} events.
+
+The \code{ompt_callback_mutex_released} callback is used to dispatch
+\plc{critical-release}, \plc{atomic-release},
+\plc{ordered-release}, \plc{lock-release} and
+\plc{nest-lock-release} events.
+
+The \code{ompt_callback_lock_destroy} callback is used to dispatch
+\plc{lock-destroy} and \plc{nest-lock-destroy} events.
+
 \format
 
 \begin{ccppspecific}
@@ -931,6 +1003,10 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_nest_lock_t}}
 \index{ompt_callback_nest_lock_t@{\code{ompt_callback_nest_lock_t}}}
 \label{sec:ompt_callback_nest_lock_t}
+\summary
+The \code{ompt_callback_nest_lock} callback is used to dispatch
+\plc{nest-lock-owned} and \plc{nest-lock-held} events.
+
 \format
 
 \begin{ccppspecific}
@@ -984,6 +1060,15 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_work_t}}
 \index{ompt_callback_work_t@{\code{ompt_callback_work_t}}}
 \label{sec:ompt_callback_work_t}
+\summary
+The \code{ompt_callback_work} callback is used to dispatch
+\plc{sections-begin}, \plc{sections-end},
+\plc{single-begin}, \plc{single-end},
+\plc{workshare-begin}, \plc{workshare-end},
+\plc{ws-loop-begin}, \plc{ws-loop-end},
+\plc{distribute-begin}, \plc{distribute-end},
+\plc{taskloop-begin} and \plc{taskloop-end} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1062,6 +1147,10 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_flush_t}}
 \index{ompt_callback_flush_t@{\code{ompt_callback_flush_t}}}
 \label{sec:ompt_callback_flush_t}
+\summary
+The \code{ompt_callback_flush} callback is used to dispatch
+\plc{flush} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1106,8 +1195,13 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 
 
 \subsubsubsection{\hcode{ompt_callback_dispatch_t}}
-\index{ompt_callback_flush_t@{\code{ompt_callback_dispatch_t}}}
+\index{ompt_callback_dispatch_t@{\code{ompt_callback_dispatch_t}}}
 \label{sec:ompt_callback_dispatch_t}
+\summary
+The \code{ompt_callback_dispatch} callback is used to dispatch
+\plc{section-begin}, \plc{taskloop-iteration-begin} and
+\plc{ws-loop-iteration-begin} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1170,6 +1264,14 @@ the return address of the invocation of this callback.
 \subsubsubsection{\hcode{ompt_callback_target_t}}
 \index{ompt_callback_target_t@{\code{ompt_callback_target_t}}}
 \label{sec:ompt_callback_target_t}
+\summary
+The \code{ompt_callback_target} callback is used to dispatch
+\plc{target-data-begin}, \plc{target-data-end},
+\plc{target-enter-data-begin}, \plc{target-enter-data-end},
+\plc{target-exit-begin}, \plc{target-exit-end},
+\plc{target-begin}, \plc{target-end},
+\plc{target-update-begin} and \plc{target-update-end} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1242,6 +1344,9 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \summary
 The OpenMP runtime invokes this callback to notify a tool immediately after loading code onto the specified device.
 
+The \code{ompt_callback_device_load} callback is used to dispatch
+\plc{device-load} events.
+
 \format
 
 
@@ -1293,6 +1398,9 @@ The argument \plc{module_id} is an identifier that is associated with the device
 \summary
 The OpenMP runtime invokes this callback to notify a tool immediately prior to unloading code from the specified device.
 
+The \code{ompt_callback_device_unload} callback is used to dispatch
+\plc{device-unload} events.
+
 \format
 
 
@@ -1317,6 +1425,11 @@ The argument \plc{module_id} is an identifier that is associated with the device
 \subsubsubsection{\hcode{ompt_callback_target_data_op_t}}
 \index{ompt_callback_target_data_op_t@{\code{ompt_callback_target_data_op_t}}}
 \label{sec:ompt_callback_target_data_op_t}
+\summary
+The \code{ompt_callback_device_load} callback is used to dispatch
+\plc{target-data-op}, \plc{target-data-associate}, \plc{target-data-disassociate},
+\plc{target-data-allocation} and \plc{target-data-free} events.
+
 \format
 
 
@@ -1416,6 +1529,10 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \subsubsubsection{\hcode{ompt_callback_target_map_t}}
 \index{ompt_callback_target_map_t@{\code{ompt_callback_target_map_t}}}
 \label{sec:ompt_callback_target_map_t}
+\summary
+The \code{ompt_callback_target_map} callback is used to dispatch
+\plc{target-map} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1502,6 +1619,10 @@ see \specref{sec:ompt_callback_target_data_op_t}.
 \subsubsubsection{\hcode{ompt_callback_target_submit_t}}
 \index{ompt_callback_target_submit_t@{\code{ompt_callback_target_submit_t}}}
 \label{sec:ompt_callback_target_submit_t}
+\summary
+The \code{ompt_callback_target_submit} callback is used to dispatch
+\plc{target-submit} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1690,6 +1811,10 @@ may not delete the buffer.
 \subsubsubsection{\hcode{ompt_callback_control_tool_t}}
 \index{ompt_callback_control_tool_t@{\code{ompt_callback_control_tool_t}}}
 \label{sec:ompt_callback_control_tool_t}
+\summary
+The \code{ompt_callback_control_tool} callback is used to dispatch
+\plc{tool-control} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1746,6 +1871,10 @@ Tool-specific values for \plc{command} must be $\geq$ 64.
 \subsubsubsection{\hcode{ompt_callback_cancel_t}}
 \index{ompt_callback_cancel_t@{\code{ompt_callback_cancel_t}}}
 \label{sec:ompt_callback_cancel_t}
+\summary
+The \code{ompt_callback_cancel} callback is used to dispatch
+\plc{cancellation}, \plc{cancel} and \plc{discarded-task} events.
+
 \format
 
 \begin{ccppspecific}
@@ -1795,6 +1924,9 @@ is impossible or inappropriate,\plc{codeptr_ra} may be \code{NULL}.
 \summary The tool callback with type signature
 \code{ompt_callback_device_initialize_t} initializes a
 tool's tracing interface for a device.
+
+The \code{ompt_callback_device_initialize} callback is used to dispatch
+\plc{device-initialize} events.
 
 \format
 
@@ -1880,6 +2012,9 @@ Section~\ref{sec:tracing-device-activity}.
 \summary The tool callback with type signature
 \code{ompt_callback_device_finalize_t} finalizes a
 tool's tracing interface for a device.
+
+The \code{ompt_callback_device_finalize} callback is used to dispatch
+\plc{device-initialize} events.
 
 \format
 
