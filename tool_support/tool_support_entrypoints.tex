@@ -719,79 +719,70 @@ typedef int (*ompt_get_parallel_info_t) (
 \end{ccppspecific}
 
 \descr
-During execution, an OpenMP program may employ nested parallel
-regions.
-To obtain information about a parallel region,
-a tool uses the runtime entry point known as
-\code{ompt_get_parallel_info}
-with type signature \code{ompt_get_parallel_info_t}.
-This runtime entry point
-can be used to obtain information about the current parallel region,
-if any, and any enclosing parallel regions
-for the current execution context.
-
-The entry point returns 2 if there is a parallel region at the
-specified ancestor level and the information is available,
-1 if there is a parallel region at the specified ancestor level
-but the information is currently unavailable, and 0 otherwise.
+During execution, an OpenMP program may employ nested parallel regions.
+The \code{ompt_get_parallel_info} runtime entry point known, which has
+type signature \code{ompt_get_parallel_info_t}, retrieves information,
+if any, about the current parallel region and any enclosing parallel 
+regions for the current execution context. The entry point returns 2 
+if there is a parallel region at the specified ancestor level and the 
+information is available, 1 if there is a parallel region at the 
+specified ancestor level but the information is currently unavailable, 
+and 0 otherwise.
 
 A tool may use the pointer to a parallel region's data object that it
-obtains from this runtime entry point to inspect or modify the value
-of the data object.  When a parallel region is created, its data
+obtains from this runtime entry point to inspect or to modify the value
+of the data object. When a parallel region is created, its data
 object will be initialized with the value \code{ompt_data_none}.
 
 This runtime entry point is \emph{async signal safe}.
 
+Between a \emph{parallel-begin} event and an \emph{implicit-task-begin} event, 
+a call to \code{ompt_get_parallel_info(0,...)} may return information about 
+the outer parallel team, the new parallel team or an inconsistent state.
+
+If a thread is in the state \code{omp_state_wait_barrier_implicit_parallel}
+then a call to \code{ompt_get_parallel_info} may return a pointer to a copy 
+of the specified parallel region's \plc{parallel_data} rather than a pointer 
+to the data word for the region itself. This convention enables the master 
+thread for a parallel region to free storage for the region immediately after 
+the region ends, yet avoid having some other thread in the region's team potentially 
+reference the region's \plc{parallel_data} object after it has been freed.
+
 \argdesc
+The \plc{ancestor_level} argument specifies the parallel region of 
+interest by its ancestor level. Ancestor level 0 refers to the innermost 
+parallel region; information about enclosing parallel regions may be 
+obtained using larger values for \plc{ancestor_level}.
 
-The argument \plc{ancestor_level} specifies the parallel region
-of interest to a tool by its ancestor level.  Ancestor level 0 refers
-to the innermost parallel region; information about enclosing parallel
-regions may be obtained using larger ancestor levels.
+The \plc{parallel_data} argument returns the parallel data if the 
+argument is not \code{NULL}.
 
-The argument \plc{parallel_data} returns the parallel data
-if the argument is not \code{NULL}.
-
-The argument \plc{team_size} returns the team size if the argument is
-not \code{NULL}.
+The \plc{team_size} argument returns the team size if the argument 
+is not \code{NULL}.
 
 \effect
+If the runtime entry point returns 0 or 1, no argument is modified. 
+Otherwise, \code{ompt_get_parallel_info} has the following effects:
 
-If the runtime entry point returns 0 or 1, no argument is modified. Otherwise,
-the entry point has the effects described below.
-
-If a non-null value was passed for \plc{parallel_data}, the
-value returned in *\plc{parallel_data} is a pointer to a data word
-associated with the parallel region at the specified level.
-
-If a non-null value was passed for \plc{team_size}, the value
-returned in *\plc{team_size} is the number of threads in the team
-associated with the parallel region.
+\begin{itemize}
+\item If a non-null value was passed for \plc{parallel_data}, the value 
+      returned in \plc{parallel_data} is a pointer to a data word that is
+      associated with the parallel region at the specified level.
+\item If a non-null value was passed for \plc{team_size}, the value
+      returned in the integer to which \plc{team_size} point is the 
+      number of threads in the team that is associated with the parallel region.
+\end{itemize}
 
 \constraints
-While argument \plc{ancestor_level} is passed by
-value, all other arguments to the entry point must be pointers
-to variables of the specified types or \code{NULL}.
-
-
-\restrictions
-Between a \emph{parallel-begin} event and an \emph{implicit-task-begin}
-event, a call to \code{ompt_get_parallel_info(0,...)} may return
-information about the outer parallel team, the new parallel team or an
-inconsistent state.
-
-If a thread is in the state \code{omp_state_wait_barrier_implicit_parallel},
-a call to \code{ompt_get_parallel_info}
-may return a pointer to a copy of the specified parallel region's \plc{parallel_data}
-rather than a pointer to the data word for the region itself. This convention enables the master thread
-for a parallel region to free storage for the region immediately after the region ends, yet
-avoid having some other thread in the region's team
-potentially reference the region's \plc{parallel_data} object after it has been freed.
+While argument \plc{ancestor_level} is passed by value, all other arguments 
+to the entry point must be pointers to variables of the specified types or \code{NULL}.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_task_info_t}}
 \label{sec:ompt_get_task_info_t}
