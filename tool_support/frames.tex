@@ -1,17 +1,20 @@
 \subsubsection{Frames}
 \index{frames}
+\subsubsubsection{\code{omp_frame_t}}
 \label{sec:omp_frame_t}
+\summary
+The \code{omp_frame_t} type describes procedure frame information for an OpenMP task.
 
-
+\syntax
 \begin{ccppspecific}
 \begin{ompSyntax}
 typedef struct omp_frame_t {
-  void *\plc{exit_frame};
-  void *\plc{enter_frame};
+  ompt_data_t \plc{exit_frame};
+  ompt_data_t \plc{enter_frame};
+  int \plc{frame_flags};
 } omp_frame_t;
 \end{ompSyntax}
 \end{ccppspecific}
-
 
 \descr
 
@@ -47,14 +50,15 @@ with an \emph{initial task} is \code{NULL}.
 The \plc{enter_frame} field of a task's \code{omp_frame_t} object
 contains the canonical frame address of a task procedure frame that invoked the
 OpenMP runtime causing the current task to suspend and another task to
-execute.
+execute, or the first frame within the runtime as indicated by
+\plc{frame_flags}.
 If a task with frames on the stack has not suspended, the value of
 \plc{enter_frame} for the \code{omp_frame_t} object
 associated with the task may contain \code{NULL}.
 The value of \plc{enter_frame} in a task's \code{omp_frame_t} is
 reset to \code{NULL} just before a suspended task resumes execution.
 
-An \code{omp_frame_t}'s lifetime begins when a task is created
+An \code{omp_frame_t} objects's lifetime begins when a task is created
 and ends when the task is destroyed. Tools should not assume that
 a frame structure remains at a constant location in memory throughout
 a task's lifetime. A pointer to a task's \code{omp_frame_t} object is passed to
@@ -100,10 +104,42 @@ observe a sequence of \code{omp_frame_t} objects for a thread.
 Appendix~\ref{chap:frames} illustrates
 use of \code{omp_frame_t} objects with nested parallelism.
 
-\needspace{6\baselineskip}\begin{note}
+\begin{note}
 A monitoring tool using asynchronous sampling can observe values
 of \plc{exit_frame} and \plc{enter_frame} at inconvenient times.
 Tools must be prepared to observe and handle \code{omp_frame_t}
 objects observed just prior to when their field values will be set or
 cleared.
 \end{note}
+
+
+\subsubsubsection{\code{omp_frame_t}}
+\summary
+The \code{omp_frame_flag_t} enumeration type defines valid frame information
+flags.
+
+\syntax
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum omp_frame_flag_t {
+  omp_frame_exit_runtime        = 0x00001,
+  omp_frame_exit_application    = 0x00002,
+  omp_frame_enter_runtime       = 0x10000,
+  omp frame_enter_application   = 0x20000,
+} omp_frame_flag_t; 
+\end{ompSyntax}
+\end{ccppspecific}
+
+\descr
+The value \code{omp_frame_exit_runtime} of the \code{omp_frame_flag_t} type
+indicates that an exit frame address is a procedure frame in the OpenMP
+runtime implementation.
+The value \code{omp_frame_exit_application} of the \code{omp_frame_flag_t} type
+indicates that an exit frame address is a procedure frame in the OpenMP
+application.
+The value \code{omp_frame_enter_runtime} of the \code{omp_frame_flag_t} type
+indicates that an enter frame address is a procedure frame in the OpenMP
+runtime implementation.
+The value \code{omp_frame_enter_application} of the \code{omp_frame_flag_t} type
+indicates that an enter frame address is a procedure frame in the OpenMP
+application.
