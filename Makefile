@@ -72,19 +72,25 @@ TEXFILES=openmp.tex \
 
 # check for branches names with "ticket_XXX"
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
+# for release do something like:  make OMPVERSION="Version 5.0 Public Comment Draft, July 2018"
+OMPVERSION=Version 5.0 -- git (\\gitAbbrevHash{})
+VERSIONMACRO="\\def\\ompversion{$(OMPVERSION)}\\input{openmp}"
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
+	-bash util/gitinfo/create-githeadinfo.sh
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error -project=openmp $(VERSIONMACRO)
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error -project=openmp $(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error -project=openmp $(VERSIONMACRO)
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 quick:
-	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-bash util/gitinfo/create-githeadinfo.sh
+	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error -project=openmp $(VERSIONMACRO)
 
 debug:
-	pdflatex -shell-escape -synctex=1 -file-line-error openmp.tex
+	-bash util/gitinfo/create-githeadinfo.sh
+	pdflatex -shell-escape -synctex=1 -file-line-error -project=openmp $(VERSIONMACRO)
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
