@@ -3,6 +3,10 @@
 
 all: openmp.pdf
 
+# shortcuts for the most common make targets in use
+full: openmp.pdf
+diff: openmp-diff-abridged.pdf
+
 .PHONY: clean quick all git-diff-all
 
 TEXFILES=openmp.tex \
