@@ -54,7 +54,7 @@ stack of an OpenMP thread, to receive notification about OpenMP
 \emph{events}, to trace activity on OpenMP target devices, and to
 control a tool from an OpenMP application.
 
-\subsection{Activating an OMPT Tool}
+\subsection{Activating a First-Party Tool}
 \label{sec:ompt-initialization}
 
 To activate a tool, an OpenMP implementation first determines whether 
@@ -66,13 +66,28 @@ OpenMP implementation interact to accomplish these tasks.
 
 \input{tool_support/start_tool.tex}
 
-\subsubsection{Determining Whether an OMPT Tool Should be Initialized}
+
+\subsubsection{Determining Whether a First-Party Tool Should be Initialized}
 \label{sec:ompt-check-tool}
 
-A tool indicates that it will use the OMPT interface by providing a non-null 
-pointer to an \code{ompt_start_tool_result_t} structure to an OpenMP implementation 
-as a return value from \code{ompt_start_tool}. A tool can provide a definition 
-of \code{ompt_start_tool} to an OpenMP implementation in three ways:
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=.9\linewidth]{tool_support/ompt_flow_chart.pdf}
+  \caption{Flow chart on activating a first-party tool and the states
+  of the OMPT interface.}
+  \label{fig:ompt_diagram}
+\end{figure}
+
+An OpenMP implementation examines the \plc{tool-var} ICV as one of its first 
+initialization steps. If value of \plc{tool-var} is \plc{disabled}, the 
+initialization continues without a check for the presence of a tool and the 
+functionality of the OMPT interface will be unavailable as the program executes.
+In this case, the OMPT interface state stays \emph{inactive}.
+
+Otherwise, the OMPT interface state turns to \emph{pending} and the OpenMP 
+implementation tries to find and activate a first-party tool.
+A tool can provide a definition of \code{ompt_start_tool} to an OpenMP 
+implementation in three ways:
 
 \begin{itemize}
 \item By statically-linking its definition of \code{ompt_start_tool} into an
@@ -83,11 +98,6 @@ of \code{ompt_start_tool} to an OpenMP implementation in three ways:
       the architecture and operating system used by the application in the
        \plc{tool-libraries-var} ICV.
 \end{itemize}
-
-An OpenMP implementation examines the \plc{tool-var} ICV as one of its first 
-initialization steps. If value of \plc{tool-var} is \plc{disabled}, the 
-initialization continues without a check for the presence of a tool and the 
-functionality of the OMPT interface will be unavailable as the program executes.
 
 If the value of \plc{tool-var} is \plc{enabled}, the OpenMP implementation must 
 check if a tool has provided an implementation of \code{ompt_start_tool}.  The 
@@ -106,22 +116,26 @@ described in detail in Section~\ref{sec:OMP_TOOL_LIBRARIES}, the libraries in
 of \code{ompt_start_tool} that one of the libraries in the list provides.
 
 If the implementation finds a tool-provided definition of \code{ompt_start_tool},
-it invokes that method; if a non-null pointer to an \code{ompt_start_tool_result_t} 
-structure is returned, the OpenMP implementation will make the OMPT interface 
-available as the program executes. In this case, as the OpenMP implementation 
-completes its initialization, it initializes the OMPT interface.
+it invokes that method; if a \code{NULL} pointer is returned, the OMPT interface 
+state stays \emph{pending} and the implementation continues finding another tool; 
+otherwise a non-null pointer to an \code{ompt_start_tool_result_t} 
+structure is returned, the OMPT interface state turns to \emph{active} and the 
+OpenMP implementation will make the OMPT interface available as the program 
+executes.
+In this case, as the OpenMP implementation completes its initialization, it 
+initializes the OMPT interface.
+
+If no tool can be found, the OMPT interface state turns to \emph{inactive}.
 
 \crossreferences
 \begin{itemize}
-\item \plc{tool-libraries-var} and \plc{tool-var} ICVs, 
-see \specref{sec:Internal Control Variables}.
-
-\item \code{ompt_start_tool}, see \specref{sec:ompt_start_tool}.
-
+\item \plc{tool-libraries-var} ICV, see \specref{sec:Internal Control Variables}.
+\item \plc{tool-var} ICV, see \specref{sec:Internal Control Variables}.
 \item \code{ompt_start_tool_result_t}, see \specref{sec:ompt_start_tool_result_t}.
+\item \code{ompt_start_tool}, see \specref{sec:ompt_start_tool}.
 \end{itemize}
 
-\subsubsection{Initializing an OMPT Tool}
+\subsubsection{Initializing a First-Party Tool}
 \index{tool initialization}
 \label{sec:tool-initialize}
 
@@ -144,14 +158,15 @@ the type signatures \code{ompt_enumerate_states_t} and
 \code{ompt_enumerate_mutex_impls_t}, to determine the thread states and the 
 implementations of mutual exclusion that an OpenMP implementation employs.
 
-If a tool initializer returns a non-zero value, the tool is \emph{activated} 
-for the execution; otherwise, it is inactive.
+If a tool initializer returns a non-zero value, the OMPT interface state
+will stay \emph{active} for the execution; otherwise, the OMPT 
+interface state turns to \emph{inactive}.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_start_tool}, see \specref{sec:ompt_start_tool}.
 \item \code{ompt_start_tool_result_t}, see
-\specref{sec:ompt_start_tool_result_t}.
+  \specref{sec:ompt_start_tool_result_t}.
 
 \item \code{ompt_initialize_t}, see \specref{sec:ompt_initialize_t}.
 
@@ -400,7 +415,7 @@ following steps:
       of the tool, the tool may use it to determine the runtime entry points in 
       the tracing interface that are available for the device and may bind the 
       returned function pointers to tool variables. 
-      Table~\ref{table:ompt-tracing-interface-functions} indicates the
+  Table~\ref{table:ompt-tracing-interface-functions} indicates the
       names of runtime entry points that may be available for a device; an
       implementations may provide additional implementation-defined names and 
       corresponding entry points. The driver for the device provides the
@@ -449,7 +464,7 @@ following steps:
       \code{ompt_set_trace_native} and/or the \code{ompt_set_trace_ompt} 
       runtime entry point is called outside a device initializer, 
       registration of supported callbacks may fail with a return code of
-      \code{ompt_set_error}.
+  \code{ompt_set_error}.
 \item The tool initiates tracing on the device by invoking \code{ompt_start_trace}. 
       Arguments to \code{ompt_start_trace} include two tool callbacks through which
       the OpenMP implementation can manage traces associated with the device. One 
@@ -562,13 +577,12 @@ see \specref{sec:ompt_advance_buffer_cursor_t}.
 \end{itemize}
 
 
-
-\subsection{Finalizing an OMPT Tool}
+\subsection{Finalizing a First-Party Tool}
 \label{sec:ompt-finalization}
 
-If \code{ompt_start_tool} returned a non-null pointer when an OpenMP implementation 
-was initialized, the tool finalizer, of type signature \code{ompt_finalize_t}, 
-specified by the \plc{finalize} field in this structure is called when the OpenMP
+If the OMPT interface state is active, the tool finalizer, of type signature \code{ompt_finalize_t}, 
+specified by the \plc{finalize} field in the \code{ompt_start_tool_result_t} 
+structure returned from the \code{ompt_start_tool} function is called when the OpenMP
 implementation shuts down.
 
 \crossreferences
