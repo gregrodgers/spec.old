@@ -107,8 +107,9 @@ typedef int (*ompt_enumerate_states_t) (
 \descr
 An OpenMP implementation may support only a subset of the states defined by
 the \code{omp_state_t} enumeration type. An OpenMP implementation may also
-support implementation-specific states. The \code{ompt_enumerate_states} 
-runtime entry point enables a tool to enumerate the supported thread states.
+support implementation-specific states. The \code{ompt_enumerate_states}
+runtime entry point, which has type signature \code{ompt_enumerate_states_t}, 
+ enables a tool to enumerate the supported thread states.
 
 When a supported thread state is passed as \plc{current_state}, the runtime 
 entry point assigns the next thread state in the enumeration to the variable 
@@ -116,22 +117,24 @@ passed by reference in \plc{next_state} and assigns the name associated with
 that state to the character pointer passed by reference in \plc{next_state_name}.
 
 Whenever one or more states are left in the enumeration, the 
-\code{ompt_enumerate_states} runtime entry point returns $1$. When the last 
-state in the enumeration is passed as \plc{current_state}, the runtime entry 
-point will return $0$, which indicates that the enumeration is complete.
+\code{ompt_enumerate_states} runtime entry point returns $1$. When 
+the last state in the enumeration is passed as \plc{current_state}, 
+\code{ompt_enumerate_states} returns $0$, which indicates that the 
+enumeration is complete.
 
 \argdesc
 The \plc{current_state} argument must be a thread state that the OpenMP 
 implementation supports. To begin enumerating the supported states, a tool 
 should pass \code{omp_state_undefined} as \plc{current_state}. Subsequent
-invocations of the runtime entry point by the tool should pass the value 
-assigned to the variable passed by reference in \plc{next_state} to the previous call.
+invocations of \code{ompt_enumerate_states} should pass the value assigned 
+to the variable passed by reference in \plc{next_state} to the previous call.
 
-The \plc{next_state} argument is a pointer to an integer in which the 
-entry point returns the value of the next state in the enumeration.
+The \plc{next_state} argument is a pointer to an integer in which 
+\code{ompt_enumerate_states} returns the value of the next state in the enumeration.
 
-The \plc{next_state_name} argument is a pointer to a character string pointer 
-through which the entry point returns a string that describes the next state.
+The \plc{next_state_name} argument is a pointer to a character string 
+pointer through which \code{ompt_enumerate_states} returns a string 
+that describes the next state.
 
 \constraints
 Any string returned through the \plc{next_state_name} argument must be 
@@ -166,61 +169,52 @@ typedef int (*ompt_enumerate_mutex_impls_t) (
 \end{omptInquiry}
 \end{ccppspecific}
 
+\descr
+Mutual exclusion for locks, \code{critical} sections, and \code{atomic} 
+regions may be implemented in several ways. The \code{ompt_enumerate_mutex_impls} 
+runtime entry point, which has type signature \code{ompt_enumerate_mutex_impls_t},
+enables a tool to enumerate the supported mutual exclusion implementations.
+The value \code{ompt_mutex_impl_none} is reserved to indicate an invalid 
+mutex implementation.
+
 \code{ompt_mutex_impl_none} is defined as an integer with the value 0.
 
-\descr
-An OpenMP implementation may implement mutual exclusion for locks,
-nest locks, critical sections, and atomic regions in several different
-ways.  The \code{ompt_enumerate_mutex_impls} runtime entry point
-enables a tool to enumerate the
-kinds of mutual exclusion implementations that an OpenMP implementation
-employs.
-The value \code{ompt_mutex_impl_none} is reserved to indicate an invalid
-implementation.
+When a supported mutex implementation is passed as \plc{current_impl}, the 
+runtime entry point assigns the next mutex implementation in the enumeration 
+to the variable passed by reference in \plc{next_impl} and assigns the name 
+associated with that mutex implementation to the character pointer passed by 
+reference in \plc{next_impl_name}.
 
-
-
-When a mutex kind supported by an OpenMP implementation is passed
-as the first argument to the runtime entry point,
-the runtime entry point will assign the next mutex kind in the enumeration to
-the variable passed by reference as the runtime entry point's second argument
-and assign the name associated with the next mutex kind
-to the character pointer passed by reference as the third argument.
-
-Whenever one or more mutex kinds are left in the enumeration,
-the runtime entry point to enumerate mutex implementations will return $1$.
-When the last mutex kind in the enumeration is passed
-as the first argument, the runtime entry point will return $0$
-indicating that the enumeration is complete.
+Whenever one or more mutex implementations are left in the enumeration, the 
+\code{ompt_enumerate_mutex_impls} runtime entry point returns $1$. When the 
+last mutex implementation in the enumeration is passed as \plc{current_impl}, the 
+runtime entry point returns $0$, which indicates that the enumeration is complete.
 
 \argdesc
+The \plc{current_impl} argument must be a mutex implementation that an OpenMP 
+implementation supports. To begin enumerating the supported mutex implementations, 
+a tool should pass \code{ompt_mutex_impl_none} as \plc{current_impl}. 
+Subsequent invocations of \code{ompt_enumerate_mutex_impls} should pass the
+value assigned to the variable passed in \plc{next_impl} to the previous call.
 
-The argument \plc{current_impl} must be a mutex implementation
-kind supported by an OpenMP implementation.  To begin enumerating the
-mutex implementation kinds that an OpenMP implementation supports, a
-tool should pass \code{ompt_mutex_impl_none} as the first
-argument of the enumerate mutex kinds runtime entry point.  Subsequent
-invocations of the runtime entry point by the tool should pass the
-value assigned to the variable passed by reference as the second
-argument to the previous call.
+The \plc{next_impl} argument is a pointer to an integer in which 
+\code{ompt_enumerate_mutex_impls} returns the value of the next mutex 
+implementation in the enumeration.
 
-The argument \plc{next_impl} is a pointer to an integer where
-the entry point will return the value of the next mutex implementation
-in the enumeration.
-
-The argument \plc{next_impl_name} is a pointer to a character
-string pointer, where the entry point will return a string describing
+The \plc{next_impl_name} argument is a pointer to a character string pointer
+in which \code{ompt_enumerate_mutex_impls} returns a string that describes
 the next mutex implementation.
 
 \constraints
-Any string returned through the argument
-\plc{next_impl_name} must be immutable and defined
-for the lifetime of a program execution.
+Any string returned through the \plc{next_impl_name} argument must be 
+immutable and defined for the lifetime of a program execution.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_mutex_t}, see \specref{sec:ompt_mutex_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_set_callback_t}}
 \label{sec:ompt_set_callback_t}
