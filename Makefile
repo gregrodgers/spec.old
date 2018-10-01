@@ -4,9 +4,9 @@
 all: openmp.pdf
 
 # shortcuts for the most common make targets in use
-include Makefile.version
+include version.mk
 full: openmp.pdf 
-release: openmp.pdf 
+release: clean openmp.pdf 
 release: VERSIONMACRO=$(RELEASEMACRO)
 diff: openmp-diff-abridged.pdf
 
