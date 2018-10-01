@@ -53,14 +53,15 @@
 
 \events
 
-The \plc{device-initialize} event occurs in a thread that encounters
-the first \code{target}, \code{target data}, or \code{target enter data} construct associated with a particular target device
-after the thread initiates initialization of OpenMP on the device and the
-device's OpenMP initialization, which may include device-side tool
-initialization, completes.
+The \plc{device-initialize} event occurs in a thread that encounters the first 
+\code{target}, \code{target data}, or \code{target enter data} construct 
+or a device memory routine that 
+is associated with a particular target device after the thread initiates 
+initialization of OpenMP on the device and the device's OpenMP initialization, 
+which may include device-side tool initialization, completes.
 
-The \plc{device-load} event for a code block for a target device occurs in some thread
-before any thread executes code from that code block on that target device.
+The \plc{device-load} event for a code block for a target device occurs in some 
+thread before any thread executes code from that code block on that target device.
 
 The \plc{device-unload} event for a target device occurs in some thread
 whenever a code block is unloaded from the device.
@@ -71,14 +72,12 @@ occurs in some thread before an OpenMP implementation shuts down.
 \tools
 
 A thread dispatches a registered \code{ompt_callback_device_initialize}
-callback for each occurrence of a \plc{device-initialize} event in
-that thread.  This callback has type signature
-\code{ompt_callback_device_initialize_t}.
+callback for each occurrence of a \plc{device-initialize} event in that 
+thread.  This callback has type signature \code{ompt_callback_device_initialize_t}.
 
-A thread dispatches a registered \code{ompt_callback_device_load}
-callback for each occurrence of a \plc{device-load} event in
-that thread.  This callback has type signature
-\code{ompt_callback_device_load_t}.
+A thread dispatches a registered \code{ompt_callback_device_load} callback 
+for each occurrence of a \plc{device-load} event in that thread. This callback 
+has type signature \code{ompt_callback_device_load_t}.
 
 A thread dispatches a registered \code{ompt_callback_device_unload}
 callback for each occurrence of a \plc{device-unload} event in
@@ -99,12 +98,15 @@ dispatched \code{ompt_callback_device_finalize} callback occurs.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_callback_device_initialize_t}, see
-\specref{sec:ompt_callback_device_initialize_t}.
 \item \code{ompt_callback_device_load_t}, see
 \specref{sec:ompt_callback_device_load_t}.
+
 \item \code{ompt_callback_device_unload_t}, see
 \specref{sec:ompt_callback_device_unload_t}.
+
+\item \code{ompt_callback_device_initialize_t}, see
+\specref{sec:ompt_callback_device_initialize_t}.
+
 \item \code{ompt_callback_device_finalize_t}, see
 \specref{sec:ompt_callback_device_finalize_t}.
 \end{itemize}
@@ -115,7 +117,8 @@ dispatched \code{ompt_callback_device_finalize} callback occurs.
 \index{constructs!target data@{\code{target}~\code{data}}}
 \label{subsec:target data Construct}
 \summary
- Map variables to a device data environment for the extent of the region.
+Map variables to a device data environment for the extent of the region.
+
 \syntax
 \begin{ccppspecific}
 The syntax of the \code{target}~\code{data} construct is as follows:
@@ -159,15 +162,20 @@ use_device_ptr(\plc{ptr-list})
 use_device_addr(\plc{list})
 \end{indentedcodelist}
 
-The \code{end}~\code{target}~\code{data} directive denotes the end of the \code{target}~\code{data} construct.
 \end{fortranspecific}
 
 \binding
-The binding task set for a \code{target}~\code{data} region is the generating task. The
-\code{target}~\code{data} region binds to the region of the generating task.
+The binding task set for a \code{target}~\code{data} region is the generating task. 
+The \code{target}~\code{data} region binds to the region of the generating task.
 
 \descr
-When a \code{target}~\code{data} construct is encountered, the encountering task executes the region. If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV. Variables are mapped for the extent of the region, according to any data-mapping attribute clauses, from the data environment of the encountering task to the device data environment. When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
+When a \code{target}~\code{data} construct is encountered, the encountering task
+executes the region. If there is no \code{device} clause, the default device is
+determined by the \plc{default-device-var} ICV. When an \code{if} clause is present 
+and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
+Variables are mapped for the extent of the region, according to any data-mapping 
+attribute clauses, from the data environment of the encountering task to the 
+device data environment.
 
 Pointers that appear in a \code{use_device_ptr} clause are privatized and the
 device pointer to the corresponding list items in the device data environment
@@ -177,7 +185,7 @@ List items that appear in a \code{use_device_addr} clause have the address of
 the corresponding object in the device data environment inside the construct.
 For objects, any reference to the value of the object will be to the
 corresponding object on the device, while references to the address will result
-in a valid device address pointing to that object.  Array sections privatize the
+in a valid device address that points to that object.  Array sections privatize the
 base of the array section and assign the private copy to the address of the
 corresponding array section in the device data environment.  
 
@@ -187,63 +195,52 @@ same construct, the address conversions of \code{use_device_addr} and
 \code{use_device_ptr} clauses will occur as if performed after all variables
 are mapped according to those \code{map} clauses.
 
-\def\omptTargetRegionEvents#1#2#3
-{
-The \plc{#3-begin} event occurs when a thread enters a
-#1 region.
-
-The \plc{#3-end} event occurs when a thread exits a
-#1 region.
-}
-
-\def\omptTargetRegionTools#1#2#3#4
-{
-A thread dispatches a registered \code{ompt_callback_target}
-callback for each occurrence of a \plc{#3-begin} and
-\plc{#3-end} event in that thread in the context of #4.
-The callback has type signature
-\code{ompt_callback_target_t}. The callback receives
-\code{ompt_scope_begin} or \code{ompt_scope_end}
-as its \plc{endpoint} argument, as appropriate, and
-\code{#2} as its \plc{kind} argument.
-}
-
-\def\omptTargetRegion#1#2#3#4
-{
 \events
-\omptTargetRegionEvents{#1}{#2}{#3}
+
+The events associated with entering a target data region are the same events
+as associated with a target enter data construct, described in 
+\specref{subsec:target enter data Construct}. 
+ 
+The events associated with exiting a target data region are the same events
+as associated with a target enter data construct, described in
+\specref{subsec:target exit data Construct}. 
 
 \tools
-\omptTargetRegionTools{#1}{#2}{#3}{#4}
-}
-\omptTargetRegion{\code{target}~\code{data}}{ompt_target_enter_data}{target-data}{the task encountering the construct}
+
+The tool callbacks dispatched when entering a target data region are
+the same as the tool callbacks dispatched when encountering
+a target enter data construct, described in
+\specref{subsec:target enter data Construct}.
+ 
+The tool callbacks dispatched when exiting a target data region are
+the same as the tool callbacks dispatched when encountering
+a target exit data construct, described in
+\specref{subsec:target exit data Construct}.
 
 \restrictions
 \begin{itemize}
-    \item A program must not depend on any ordering of the evaluations of the clauses of the
-    \code{target}~\code{data} directive, or on any side effects of the evaluations of the clauses.
-
-  \item At most one \code{device} clause can appear on the directive. The \code{device} clause expression  
-      must evaluate to a non-negative integer value less than the value
-    of \code{omp_get_num_devices()}.
-
-  \item At most one \code{if} clause can appear on the directive.
-  \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-  \item At least one \code{map}, \code{use_device_addr} or \code{use_device_ptr}
-    clause must appear on the directive.
-
-
-  \item A list item in a \code{use_device_ptr} clause must hold the address of
-    an object that has a corresponding list item in the device data environment.
-  \item A list item in a \code{use_device_addr} clause must have a
-    corresponding list item in the device data environment.
-
-  \item A list item that specifies a given variable may not appear in more than
-	  one \code{use_device_ptr} clause.
-
-  \item A reference to a list item in a \code{use_device_addr} clause must be to
-    the address of the list item.
-
+\item A program must not depend on any ordering of the evaluations of the
+      clauses of the \code{target}~\code{data} directive, except as explicitly
+      stated for \code{map} clauses relative to \code{use_device_ptr} and
+      \code{use_device_addr} clauses, or on any side effects of the evaluations 
+      of the clauses.
+\item At most one \code{device} clause can appear on the directive. The
+      \code{device} clause expression  must evaluate to a non-negative integer
+      value less than the value of \code{omp_get_num_devices()} or to the value of
+      \code{omp_get_initial_device()}.
+\item At most one \code{if} clause can appear on the directive.
+\item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, 
+      \code{tofrom} or \code{alloc}.
+\item At least one \code{map}, \code{use_device_addr} or \code{use_device_ptr}
+      clause must appear on the directive.
+\item A list item in a \code{use_device_ptr} clause must hold the address of
+      an object that has a corresponding list item in the device data environment.
+\item A list item in a \code{use_device_addr} clause must have a
+      corresponding list item in the device data environment.
+\item A list item that specifies a given variable may not appear in more than
+      one \code{use_device_ptr} clause.
+\item A reference to a list item in a \code{use_device_addr} clause must be to
+      the address of the list item.
 \end{itemize}
 
 
@@ -266,20 +263,18 @@ as its \plc{endpoint} argument, as appropriate, and
 
 
 
-
-
-
-
-
-
-
 \subsection{\hcode{target}~\hcode{enter}~\hcode{data} Construct}
 \label{subsec:target enter data Construct}
 \index{constructs!target enter data@{\code{target}~\code{enter}~\code{data}}}
 \index{device data environments}
+
 \summary
-The \code{target}~\code{enter}~\code{data} directive specifies that variables are mapped to a device data environment. The \code{target}~\code{enter}~\code{data} directive is a stand-alone directive.
+The \code{target}~\code{enter}~\code{data} directive specifies that variables 
+are mapped to a device data environment. The \code{target}~\code{enter}~\code{data} 
+directive is a stand-alone directive.
+
 \syntax
+
 \begin{ccppspecific}
 The syntax of the \code{target}~\code{enter}~\code{data} construct is as follows:
 \begin{ompcPragma}
@@ -294,11 +289,12 @@ depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 nowait
 \end{indentedcodelist}
 \end{ccppspecific}
+
 \begin{fortranspecific}
 The syntax of the \code{target}~\code{enter}~\code{data} is as follows:
 \begin{ompfPragma}
 !$omp target enter data \plc{[ clause[ [},\plc{] clause]...]}
-\end{ompfPragma}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target enter data :\plc{] scalar-logical-expression})
@@ -317,53 +313,80 @@ the generating task, which is the \plc{target task} generated by the
 \plc{target task} region.
 
 \descr
-When a \code{target}~\code{enter}~\code{data} construct is encountered, the list items are mapped to the device data environment according to the \code{map} clause semantics.
+When a \code{target}~\code{enter}~\code{data} construct is encountered, the 
+list items are mapped to the device data environment according to the \code{map} 
+clause semantics.
 
-The \code{target}~\code{enter}~\code{data} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target}~\code{enter}~\code{data} region.
+The \code{target}~\code{enter}~\code{data} construct is a task generating 
+construct.  The generated task is a \plc{target task}.  The generated task 
+region encloses the \code{target}~\code{enter}~\code{data} region.
 
-All clauses are evaluated when the \code{target}~\code{enter}~\code{data} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target}~\code{enter}~\code{data} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target}~\code{enter}~\code{data} construct.  A variable that is mapped in the \code{target}~\code{enter}~\code{data} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
+All clauses are evaluated when the \code{target}~\code{enter}~\code{data} 
+construct is encountered.  The data environment of the \plc{target task} 
+is created according to the data-sharing attribute clauses on the 
+\code{target}~\code{enter}~\code{data} construct, per-data environment ICVs, 
+and any default data-sharing attribute rules that apply to the 
+\code{target}~\code{enter}~\code{data} construct.  A variable that is 
+mapped in the \code{target}~\code{enter}~\code{data} construct has a 
+default data-sharing attribute of shared in the data environment of 
+the \plc{target task}.
 
-Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see 
+\specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
-If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
+If the \code{nowait} clause is present, execution of the \plc{target task} 
+may be deferred.  If the \code{nowait} clause is not present, the 
+\plc{target task} is an included task.
 
 If a \code{depend} clause is present, it is associated with the \plc{target task}.
 
-If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
+If no \code{device} clause is present, the default device is determined by the 
+\plc{default-device-var} ICV.
 
-When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
-
-
-%\tools
-\def\omptTarget#1#2#3#4
-{
+When an \code{if} clause is present and the \code{if} clause expression 
+evaluates to \plc{false}, the device is the host.
 
 \events
-Events associated with a \plc{target task} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
 
-\omptTargetRegionEvents{#1}{#2}{#3}
+Events associated with a \plc{target task} are the same as for the \code{task} 
+construct defined in \specref{subsec:task Construct}.
+
+The \plc{target-enter-data-begin} event occurs when a thread enters a
+\code{target}~\code{enter}~\code{data} region.
+
+The \plc{target-enter-data-end} event occurs when a thread exits a
+\code{target}~\code{enter}~\code{data} region.
 
 \tools
-Callbacks associated with events for \plc{target tasks} are the same as for the \code{task} construct defined in \specref{subsec:task Construct}.
+Callbacks associated with events for \plc{target tasks} are the same as 
+for the \code{task} construct defined in \specref{subsec:task Construct};
+\code{(}\plc{flags}~\code{&}~\code{ompt_task_target)} 
+always evaluates to \plc{true} in the dispatched callback.
 
-\omptTargetRegionTools{#1}{#2}{#3}{#4}
-}
-\omptTarget{\code{target}~\code{enter}~\code{data}}{ompt_target_enter_data}{target-enter-data}{the target task on the host}
-
-
+A thread dispatches a registered \code{ompt_callback_target} callback with
+\code{ompt_scope_begin} as its \plc{endpoint} argument and
+\code{ompt_target_enter_data} as its \plc{kind} argument for each occurrence
+of a \plc{target-enter-data-begin} event in that thread in the context of the 
+target task on the host. Similarly, a thread dispatches a registered 
+\code{ompt_callback_target} callback with \code{ompt_scope_end} as its
+\plc{endpoint} argument and \code{ompt_target_enter_data} as its \plc{kind}
+argument for each occurrence of a \plc{target-enter-data-end} event in that thread
+in the context of the target task on the host. These callbacks have
+type signature \code{ompt_callback_target_t}.
 
 \restrictions
 \begin{itemize}
-\item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{enter}~\code{data} directive, or on any side effects of the evaluations of the clauses.
+\item A program must not depend on any ordering of the evaluations of the clauses 
+      of the \code{target}~\code{enter}~\code{data} directive, or on any side 
+      effects of the evaluations of the clauses.
 \item At least one \code{map} clause must appear on the directive.
-
-\item At most one \code{device} clause can appear on the
-  directive. The \code{device} clause expression must evaluate to a
-  non-negative integer value less than the value of
-  \code{omp_get_num_devices()}.
-
+\item At most one \code{device} clause can appear on the directive. The 
+      \code{device} clause expression must evaluate to a non-negative integer 
+      value less than the value of \code{omp_get_num_devices()} or to the 
+      value of \code{omp_get_initial_device()}.
 \item At most one \code{if} clause can appear on the directive.
-\item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{to} or \code{alloc}.
+\item A \plc{map-type} must be specified in all \code{map} clauses and must be 
+      either \code{to} or \code{alloc}.
 \item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
@@ -374,12 +397,12 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 \item \code{task}, see \specref{subsec:task Construct}.
 
 \item \code{task}~\code{scheduling}~\code{constraints},
-      see \specref{subsec:Task Scheduling}.
+see \specref{subsec:Task Scheduling}.
 
 \item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
 
 \item \code{target}~\code{exit}~\code{data},
-      see \specref{subsec:target exit data Construct}.
+see \specref{subsec:target exit data Construct}.
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
@@ -389,10 +412,7 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 
 \item \code{ompt_callback_target_t}, see
 \specref{sec:ompt_callback_target_t}.
-
 \end{itemize}
-
-
 
 
 
@@ -401,7 +421,10 @@ Callbacks associated with events for \plc{target tasks} are the same as for the 
 \index{constructs!target exit data@{\code{target}~\code{exit}~\code{data}}}
 \index{device data environments}
 \summary
-The \code{target}~\code{exit}~\code{data} directive specifies that list items are unmapped from a device data environment. The \code{target}~\code{exit}~\code{data} directive is a stand-alone directive.
+The \code{target}~\code{exit}~\code{data} directive specifies that list items 
+are unmapped from a device data environment. The \code{target}~\code{exit}~\code{data}
+ directive is a stand-alone directive.
+
 \syntax
 \begin{ccppspecific}
 The syntax of the \code{target}~\code{exit}~\code{data} construct is as follows:
@@ -421,7 +444,7 @@ nowait
 The syntax of the \code{target}~\code{exit}~\code{data} is as follows:
 \begin{ompfPragma}
 !$omp target exit data \plc{[ clause[ [},\plc{] clause]...]}
-\end{ompfPragma}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 where clause is one of the following:
 \begin{indentedcodelist}
 if(\plc{[} target exit data :\plc{] scalar-logical-expression})
@@ -440,34 +463,79 @@ the generating task, which is the \plc{target task} generated by the
 \plc{target task} region.
 
 \descr
-When a \code{target}~\code{exit}~\code{data} construct is encountered, the list items in the \code{map} clauses are unmapped from the device data environment according to the \code{map} clause semantics.
+When a \code{target}~\code{exit}~\code{data} construct is encountered, the list 
+items in the \code{map} clauses are unmapped from the device data environment 
+according to the \code{map} clause semantics.
 
-The \code{target}~\code{exit}~\code{data} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target}~\code{exit}~\code{data} region.
+The \code{target}~\code{exit}~\code{data} construct is a task generating construct.  
+The generated task is a \plc{target task}.  The generated task region encloses the 
+\code{target}~\code{exit}~\code{data} region.
 
-All clauses are evaluated when the \code{target}~\code{exit}~\code{data} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target}~\code{exit}~\code{data} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target}~\code{exit}~\code{data} construct.  A variable that is mapped in the \code{target}~\code{exit}~\code{data} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
+All clauses are evaluated when the \code{target}~\code{exit}~\code{data} construct 
+is encountered.  The data environment of the \plc{target task} is created according 
+to the data-sharing attribute clauses on the \code{target}~\code{exit}~\code{data} 
+construct, per-data environment ICVs, and any default data-sharing attribute rules 
+that apply to the \code{target}~\code{exit}~\code{data} construct.  A variable that 
+is mapped in the \code{target}~\code{exit}~\code{data} construct has a default 
+data-sharing attribute of shared in the data environment of the \plc{target task}.
 
-Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see 
+\specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
-If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
+If the \code{nowait} clause is present, execution of the \plc{target task} may be 
+deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an 
+included task.
 
 If a \code{depend} clause is present, it is associated with the \plc{target task}.
 
-If there is no \code{device} clause, the default device is determined by the \plc{default-device-var} ICV.
+If no \code{device} clause is present, the default device is determined by the 
+\plc{default-device-var} ICV.
 
-When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the device is the host.
-%\tools
-\omptTarget{\code{target}~\code{exit}~\code{data}}{ompt_target_exit_data}{target-exit}{the target task on the host}
+When an \code{if} clause is present and the \code{if} clause expression evaluates 
+to \plc{false}, the device is the host.
+
+\events
+
+Events associated with a \plc{target task} are the same as for the \code{task} 
+construct defined in \specref{subsec:task Construct}.
+
+The \plc{target-exit-data-begin} event occurs when a thread enters a
+\code{target}~\code{exit}~\code{data} region.
+
+The \plc{target-exit-data-end} event occurs when a thread exits a
+\code{target}~\code{exit}~\code{data} region.
+
+\tools
+
+Callbacks associated with events for \plc{target tasks} are the same as
+for the \code{task} construct defined in \specref{subsec:task Construct};
+\code{(}\plc{flags}~\code{&}~\code{ompt_task_target)} 
+always evaluates to \plc{true} in the dispatched callback.
+
+A thread dispatches a registered \code{ompt_callback_target} callback with
+\code{ompt_scope_begin} as its \plc{endpoint} argument and
+\code{ompt_target_exit_data} as its \plc{kind} argument for each occurrence
+of a \plc{target-exit-data-begin} event in that thread in the context of the
+target task on the host. Similarly, a thread dispatches a registered
+\code{ompt_callback_target} callback with \code{ompt_scope_end} as its
+\plc{endpoint} argument and \code{ompt_target_exit_data} as its \plc{kind}
+argument for each occurrence of a \plc{target-exit-data-end} event in that thread
+in the context of the target task on the host. These callbacks have
+type signature \code{ompt_callback_target_t}. 
 
 \restrictions
 \begin{itemize}
-\item A program must not depend on any ordering of the evaluations of the clauses of the \code{target}~\code{exit}~\code{data} directive, or on any side effects of the evaluations of the clauses.
+\item A program must not depend on any ordering of the evaluations of the clauses 
+      of the \code{target}~\code{exit}~\code{data} directive, or on any side effects 
+      of the evaluations of the clauses.
 \item At least one \code{map} clause must appear on the directive.
-\item At most one \code{device} clause can appear on the
-  directive.  The \code{device} clause expression must evaluate to a
-  non-negative integer value less than the value of
-  \code{omp_get_num_devices()}.
+\item At most one \code{device} clause can appear on the directive. The 
+      \code{device} clause expression must evaluate to a non-negative integer 
+      value less than the value of \code{omp_get_num_devices()} or to the 
+      value of \code{omp_get_initial_device()}.
 \item At most one \code{if} clause can appear on the directive.
-\item A \plc{map-type} must be specified in all \code{map} clauses and must be either \code{from}, \code{release}, or \code{delete}.
+\item A \plc{map-type} must be specified in all \code{map} clauses and must be 
+      either \code{from}, \code{release}, or \code{delete}.
 \item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
@@ -478,12 +546,12 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \item \code{task}, see \specref{subsec:task Construct}.
 
 \item \code{task}~\code{scheduling}~\code{constraints},
-      see \specref{subsec:Task Scheduling}.
+see \specref{subsec:Task Scheduling}.
 
 \item \code{target}~\code{data}, see \specref{subsec:target data Construct}.
 
 \item \code{target}~\code{enter}~\code{data},
-      see \specref{subsec:target enter data Construct}.
+see \specref{subsec:target enter data Construct}.
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
@@ -498,10 +566,6 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 
 
 
-
-
-%\pagebreak
-
 \subsection{\hcode{target} Construct}
 \index{target@{\code{target}}}
 \index{constructs!target@{\code{target}}}
@@ -509,6 +573,7 @@ When an \code{if} clause is present and the \code{if} clause expression evaluate
 \label{subsec:target Construct}
 \summary
 Map variables to a device data environment and execute the construct on that device.
+
 \syntax
 \begin{ccppspecific}
 The syntax of the \code{target} construct is as follows:
@@ -536,15 +601,15 @@ uses_allocators(\plc{allocator[}(\plc{allocator-traits-array})\plc{]}
 	       \plc{[},\plc{allocator[}(\plc{allocator-traits-array})\plc{] ...]})
 \end{indentedcodelist}
 
-where \plc{device-modifier} is one of the following:
+and where \plc{device-modifier} is one of the following:
 \begin{indentedcodelist}
 ancestor
 device_num
 \end{indentedcodelist}
 
-where \plc{allocator} is an identifier of \code{const omp_allocator_t *} type.
-
-where \plc{allocator-traits-array} is an identifier of \code{const omp_alloctrait_t *} type.
+and where \plc{allocator} is an identifier of \code{const omp_allocator_t *} type
+and \plc{allocator-traits-array} is an identifier of 
+\code{const omp_alloctrait_t *} type.
 \end{ccppspecific}
 
 \begin{samepage}
@@ -582,29 +647,29 @@ ancestor
 device_num
 \end{indentedcodelist}
 
-where \plc{allocator} is an integer expression of \code{omp_allocator_kind} \plc{kind}.
-
-where \plc{allocator-traits-array} is an array of \code{type(omp_alloctrait)} type.
-
-The \code{end}~\code{target} directive denotes the end of the \code{target} construct
+and where \plc{allocator} is an integer expression of \code{omp_allocator_kind} 
+\plc{kind} and \plc{allocator-traits-array} is an array of 
+\code{type(omp_alloctrait)} type.
 \end{fortranspecific}
 
 \end{samepage}
 
 \binding
-The binding task set for a \code{target} region is the
-generating task, which is the \plc{target task} generated
-by the \code{target} construct. The \code{target}
+The binding task set for a \code{target} region is the generating task, which is 
+the \plc{target task} generated by the \code{target} construct. The \code{target}
 region binds to the corresponding \plc{target task} region.
 
 \descr
-The \code{target} construct provides a superset of the functionality
-provided by the \code{target}~\code{data} directive, except for
-the \code{use_device_ptr} clause.
+The \code{target} construct provides a superset of the functionality provided by 
+the \code{target}~\code{data} directive, except for the \code{use_device_ptr} and 
+\code{use_device_addr} clauses.
 
-The functionality added to the \code{target} directive is the inclusion of an executable region to be executed by a device. That is, the \code{target} directive is an executable directive.
+The functionality added to the \code{target} directive is the inclusion of an 
+executable region to be executed by a device. That is, the \code{target} directive 
+is an executable directive.
 
-The \code{target} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target} region.
+The \code{target} construct is a task generating construct.  The generated task is 
+a \plc{target task}.  The generated task region encloses the \code{target} region.
 
 All clauses are evaluated when the \code{target} construct is encountered.
 The data environment of the \plc{target task} is created according to the
@@ -613,32 +678,37 @@ environment ICVs, and any default data-sharing attribute rules that apply to
 the \code{target} construct.  If a variable or part of a variable is mapped by
 the \code{target} construct and does not appear as a list item in an
 \code{in_reduction} clause on the construct, the variable has a default
-data-sharing attribute of shared in the data environment of the \plc{target
-task}.
+data-sharing attribute of shared in the data environment of the \plc{target task}.
 
-Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see 
+\specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
-If a \code{device} clause in which the \code{device_num} \plc{device-modifier} appears is present on the construct, the
-\code{device} clause expression specifies the device number of the target device. If
-\plc{device-modifier} does not appear in the clause, the behavior of the
-clause is as if \plc{device-modifier} is \code{device_num}.
+If a \code{device} clause in which the \code{device_num} \plc{device-modifier} 
+appears is present on the construct, the \code{device} clause expression specifies 
+the device number of the target device. If \plc{device-modifier} does not appear 
+in the clause, the behavior of the clause is as if \plc{device-modifier} is 
+\code{device_num}.
 
-If a \code{device} clause in which the \code{ancestor} \plc{device-modifier} appears is present on the
-\code{target} construct and the \code{device} clause expression evaluates to 1,
-execution of the \code{target} region occurs on the parent device of the
-enclosing \code{target} region.  If the \code{target} construct is not
-encountered in a \code{target} region, the current device is treated as the
-parent device.  The encountering thread waits for completion of the
+If a \code{device} clause in which the \code{ancestor} \plc{device-modifier} 
+appears is present on the \code{target} construct and the \code{device} clause 
+expression evaluates to 1, execution of the \code{target} region occurs on the 
+parent device of the enclosing \code{target} region.  If the \code{target} 
+construct is not encountered in a \code{target} region, the current device is 
+treated as the parent device.  The encountering thread waits for completion of the
 \code{target} region on the parent device before resuming. For any list item
 that appears in a \code{map} clause on the same construct, if the
 corresponding list item exists in the device data environment of the parent
 device, it is treated as if it has a reference count of positive infinity.
 
-If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
+If the \code{nowait} clause is present, execution of the \plc{target task} may be 
+deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an 
+included task.
 
 If a \code{depend} clause is present, it is associated with the \plc{target task}.
 
-When an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}, the \code{target} region is executed by the host device in the host data environment.
+When an \code{if} clause is present and the \code{if} clause expression evaluates 
+to \plc{false}, the \code{target} region is executed by the host device in the host 
+data environment.
 
 The \code{is_device_ptr} clause is used to indicate that a list item is a device
 pointer already in the device data environment and that it should be used
@@ -651,7 +721,13 @@ If a function (C, C++, Fortran) or subroutine (Fortran) is referenced in a
 name had appeared in a \code{to} clause on a \code{declare}~\code{target}
 directive.
 
-Each memory \plc{allocator} specified in the \code{uses_allocators} clause will be made available in the \code{target} region. For each non-predefined allocator that is specified, a new allocator handle will be associated with an allocator that is created with the specified \plc{traits} as if by a call to \code{omp_init_allocator} at the beginning of the \code{target} region. Each non-predefined allocator will be destroyed as if by a call to \code{omp_destroy_allocator} at the end of the \code{target} region.
+Each memory \plc{allocator} specified in the \code{uses_allocators} clause will 
+be made available in the \code{target} region. For each non-predefined allocator 
+that is specified, a new allocator handle will be associated with an allocator 
+that is created with the specified \plc{traits} as if by a call to 
+\code{omp_init_allocator} at the beginning of the \code{target} region. Each 
+non-predefined allocator will be destroyed as if by a call to 
+\code{omp_destroy_allocator} at the end of the \code{target} region.
 
 \begin{ccppspecific}
 
@@ -675,103 +751,129 @@ data environment, the corresponding private variable is initialized to NULL.
 
 \end{ccppspecific}
 
-%\tools
-
 \events
-\omptTargetRegionEvents{\code{target}}{ompt_target}{target}
 
-The \plc{target-submit} event occurs prior to creating an initial task on a target device for a target
-region.
+Events associated with a \plc{target task} are the same as for the \code{task} 
+construct defined in \specref{subsec:task Construct}.
 
-% target task
+Events associated with the \plc{initial task} that executes the \code{target} 
+region are defined in \specref{subsec:Initial Task}.
+
+The \plc{target-begin} event occurs when a thread enters a \code{target} region.
+
+The \plc{target-end} event occurs when a thread exits a \code{target} region.
+
+The \plc{target-submit} event occurs prior to creating an initial task on 
+a target device for a \code{target} region.
+
 \tools
-\omptTargetRegionTools{\code{target}}{ompt_target}{target}{target task on the host}
 
-A thread dispatches a registered \code{ompt_callback_target_submit}
-callback for each occurrence of a \plc{target-submit} event
-in that thread. The callback has type signature
-\code{ompt_callback_target_submit_t}.
+Callbacks associated with events for \plc{target tasks} are the same as
+for the \code{task} construct defined in \specref{subsec:task Construct};
+\code{(}\plc{flags}~\code{&}~\code{ompt_task_target)} 
+always evaluates to \plc{true} in the dispatched callback.
+
+A thread dispatches a registered \code{ompt_callback_target} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and \code{ompt_target} as 
+its \plc{kind} argument for each occurrence of a \plc{target-begin} event in that 
+thread in the context of the target task on the host. Similarly, a thread dispatches 
+a registered \code{ompt_callback_target} callback with \code{ompt_scope_end} as its 
+\plc{endpoint} argument and \code{ompt_target} as its \plc{kind} argument for each 
+occurrence of a \plc{target-end} event in that thread in the context of the target 
+task on the host. These callbacks have type signature \code{ompt_callback_target_t}. 
+
+A thread dispatches a registered \code{ompt_callback_target_submit} callback for 
+each occurrence of a \plc{target-submit} event in that thread. The callback has 
+type signature \code{ompt_callback_target_submit_t}.
 
 \restrictions
 \begin{itemize}
-\item If a \code{target}, \code{target}~\code{update},
-\code{target}~\code{data}, \code{target}~\code{enter}~\code{data}, or
-\code{target}~\code{exit}~\code{data} construct is encountered during
-execution of a \code{target} region, the behavior is unspecified.
-
-\item The result of an \code{omp_set_default_device},
-\code{omp_get_default_device}, or \code{omp_get_num_devices}
-routine called within a \code{target} region is unspecified.
-
-\item The effect of an access to a \code{threadprivate} variable in a target region is
-unspecified.
-
+\item If a \code{target}~\code{update}, \code{target}~\code{data}, 
+      \code{target}~\code{enter}~\code{data}, or 
+      \code{target}~\code{exit}~\code{data} construct is encountered during
+      execution of a \code{target} region, the behavior is unspecified.
+\item The result of an \code{omp_set_default_device}, \code{omp_get_default_device}, 
+      or \code{omp_get_num_devices} routine called within a \code{target} region 
+      is unspecified.
+\item The effect of an access to a \code{threadprivate} variable in a target region 
+      is unspecified.
 \item If a list item in a \code{map} clause is a structure element, any other
-element of that structure that is referenced in the \code{target} construct
-must also appear as a list item in a \code{map} clause.
-
-\item A variable referenced in a \code{target} region but not the \code{target} construct that is not
-declared in the \code{target} region must appear in a \code{declare}~\code{target} directive.
-
-\item At most one \code{defaultmap} clause for each category can appear on the directive.
-
+      element of that structure that is referenced in the \code{target} construct
+      must also appear as a list item in a \code{map} clause.
+\item A variable referenced in a \code{target} region but not the \code{target} 
+      construct that is not declared in the \code{target} region must appear in 
+      a \code{declare}~\code{target} directive.
+\item At most one \code{defaultmap} clause for each category can appear on the 
+      directive.
 \item At most one \code{nowait} clause can appear on the directive.
+\item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, 
+      \code{tofrom} or \code{alloc}.
+\item A list item that appears in an \code{is_device_ptr} clause must be a valid 
+      device pointer in the device data environment.
+\item At most one \code{device} clause can appear on the directive. The \code{device} 
+      clause expression must evaluate to a non-negative integer value less than the 
+      value of \code{omp_get_num_devices()} or to the value of 
+      \code{omp_get_initial_device()}.
+\item If a \code{device} clause in which the \code{ancestor} \plc{device-modifier} 
+      appears is present on the construct, then the following restrictions apply:
 
-\item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, \code{tofrom} or \code{alloc}.
-
-\item A list item that appears in an \code{is_device_ptr} clause must be a valid device pointer in the device data environment.
-
-\item At most one \code{device} clause can appear on the directive.  The
-    \code{device} clause expression 
-must evaluate to a non-negative integer value less than the value of \code{omp_get_num_devices()}.
-
-\item If a \code{device} clause in which the \code{ancestor} \plc{device-modifier} appears is present
-    on the construct, then the following restrictions apply:
 \begin{itemize}
-   \item A \code{requires} directive with the \code{reverse_offload}
-       clause must be specified.
-   \item The \code{device} clause expression must evaluate to 1.
-   \item Only the \code{device}, \code{firstprivate}, \code{private},
-       \code{defaultmap}, and \code{map} clauses may appear on the construct.
-   \item No OpenMP constructs or calls to OpenMP API runtime routines are allowed
-       inside the corresponding \code{target} region.
+\item A \code{requires} directive with the \code{reverse_offload} clause must 
+      be specified;
+\item The \code{device} clause expression must evaluate to 1;
+\item Only the \code{device}, \code{firstprivate}, \code{private},
+      \code{defaultmap}, and \code{map} clauses may appear on the construct.
+\item No OpenMP constructs or calls to OpenMP API runtime routines are allowed
+      inside the corresponding \code{target} region.
 \end{itemize}
 
-\item Memory allocators that do not appear in a \code{uses_allocators} clause cannot appear as an allocator in an \code{allocate} clause or be used in the \code{target} region unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit.
-
-\item Memory allocators that appear in a \code{uses_allocators} clause cannot appear in other data-sharing attribute clauses or data-mapping attribute clauses in the same construct.
-
-\item Predefined allocators appearing in a \code{uses_allocators} clause cannot have \plc{traits} specified.
-
-\item Non-predefined allocators appearing in a \code{uses_allocators} clause must have \plc{traits} specified.
-
-\item Arrays containing allocators traits that appear in a \code{uses_allocators} clause must be constant arrays, have constant values and be defined in the same scope as the construct in which the clause appears. 
-
-\item Any IEEE floating-point exception status flag, halting mode, or rounding mode set prior to a \code{target} region is unspecified in the region.
-
-\item Any IEEE floating-point exception status flag, halting mode, or rounding mode set in a \code{target} region is unspecified upon exiting the region.
+\item Memory allocators that do not appear in a \code{uses_allocators} clause 
+      cannot appear as an allocator in an \code{allocate} clause or be used in 
+      the \code{target} region unless a \code{requires} directive with the 
+      \code{dynamic_allocators} clause is present in the same compilation unit.
+\item Memory allocators that appear in a \code{uses_allocators} clause cannot 
+      appear in other data-sharing attribute clauses or data-mapping attribute 
+      clauses in the same construct.
+\item Predefined allocators appearing in a \code{uses_allocators} clause cannot 
+      have \plc{traits} specified.
+\item Non-predefined allocators appearing in a \code{uses_allocators} clause must 
+      have \plc{traits} specified.
+\item Arrays that contain allocators traits that appear in a \code{uses_allocators} 
+      clause must be constant arrays, have constant values and be defined in the 
+      same scope as the construct in which the clause appears. 
+\item Any IEEE floating-point exception status flag, halting mode, or rounding mode 
+      set prior to a \code{target} region is unspecified in the region.
+\item Any IEEE floating-point exception status flag, halting mode, or rounding mode 
+      set in a \code{target} region is unspecified upon exiting the region.
 
 \begin{ccppspecific}
 \item An attached pointer may not be modified in a \code{target} region.
 \end{ccppspecific}
 
 \begin{cspecific}
-\item A list item that appears in an \code{is_device_ptr} clause must have a type of pointer or array.
+\item A list item that appears in an \code{is_device_ptr} clause must have a type 
+      of pointer or array.
 \end{cspecific}
 
 \begin{cppspecific}
 \item A list item that appears in an \code{is_device_ptr} clause must have a type
-  of pointer, array, reference to pointer or reference to array.
-\item The effect of invoking a virtual member function of an object on a device other than the device on which the object was constructed is implementation defined.
-\item A throw executed inside a \code{target} region must cause execution to resume within the
-same \code{target} region, and the same thread that threw the exception must catch it.
+      of pointer, array, reference to pointer or reference to array.
+\item The effect of invoking a virtual member function of an object on a device 
+      other than the device on which the object was constructed is implementation 
+      defined.
+\item A throw executed inside a \code{target} region must cause execution to resume 
+      within the same \code{target} region, and the same thread that threw the 
+      exception must catch it.
 \end{cppspecific}
 
 \begin{fortranspecific}
-\item A list item that appears in an \code{is_device_ptr} clause
-  must be a dummy argument that does not have the \code{ALLOCATABLE},
-  \code{POINTER} or \code{VALUE} attribute.
-\item If a list item in a \code{map} clause is an array section, and the array section is derived from a variable with a \code{POINTER} or \code{ALLOCATABLE} attribute then the behavior is unspecified if the corresponding list item's variable is modified in the region.
+\item A list item that appears in an \code{is_device_ptr} clause must be a dummy 
+      argument that does not have the \code{ALLOCATABLE}, \code{POINTER} or 
+      \code{VALUE} attribute.
+\item If a list item in a \code{map} clause is an array section, and the array 
+      section is derived from a variable with a \code{POINTER} or \code{ALLOCATABLE} 
+      attribute then the behavior is unspecified if the corresponding list item's 
+      variable is modified in the region.
 \end{fortranspecific}
 \end{itemize}
 
@@ -801,11 +903,14 @@ same \code{target} region, and the same thread that threw the exception must cat
 
 \item \code{omp_get_num_devices} routine, see \specref{subsec:omp_get_num_devices}.
 
-\item \code{omp_set_default_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
+\item \code{omp_alloctrait_t} and \code{omp_alloctrait} types, 
+see \specref{subsec:Memory Management Types}.
 
-\item \code{omp_get_default_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+\item \code{omp_set_default_allocator} routine, see 
+\specref{subsec:omp_set_default_allocator}.
 
-\item \code{omp_alloctrait_t} and \code{omp_alloctrait} types, see \specref{subsec:Memory Management Types}.
+\item \code{omp_get_default_allocator} routine, see 
+\specref{subsec:omp_get_default_allocator}.
 
 \item \code{ompt_callback_target_t}, see
 \specref{sec:ompt_callback_target_t}.
@@ -817,21 +922,16 @@ same \code{target} region, and the same thread that threw the exception must cat
 
 
 
-
-
-
-
-
 \subsection{\hcode{target}~\hcode{update} Construct}
 \index{target update@{\code{target}~\code{update}}}
 \index{constructs!target update@{\code{target}~\code{update}}}
 \index{device constructs!target update@{\code{target}~\code{update}}}
 \label{subsec:target update Construct}
 \summary
-The \code{target}~\code{update} directive makes the corresponding list items in the device data
-environment consistent with their original list items, according to the specified motion
-clauses. The \code{target}~\code{update} construct is a stand-alone directive.
-
+The \code{target}~\code{update} directive makes the corresponding list items in 
+the device data environment consistent with their original list items, according 
+to the specified motion clauses. The \code{target}~\code{update} construct is a 
+stand-alone directive.
 
 \syntax
 \begin{ccppspecific}
@@ -862,7 +962,7 @@ The syntax of the \code{target}~\code{update} construct is as follows:
 
 \begin{ompfPragma}
 !$omp target update \plc{clause[ [ [},\plc{] clause] ... ]}
-\end{ompfPragma}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 
 where \plc{clause} is either \plc{motion-clause} or one of the following:
 
@@ -881,7 +981,6 @@ from([mapper(\plc{mapper-identifier}):]\plc{locator-list})
 \end{indentedcodelist}
 \end{fortranspecific}
 
-
 \binding
 The binding task set for a \code{target}~\code{update} region is the
 generating task, which is the \plc{target task} generated
@@ -889,51 +988,49 @@ by the \code{target}~\code{update} construct. The \code{target}~\code{update}
 region binds to the corresponding \plc{target task} region.
 
 \descr
-For each list item in a \code{to} or \code{from} clause there is a corresponding list item and an
-original list item. If the corresponding list item is not present in the device data environment then no assignment occurs to or from the original list item. Otherwise, each corresponding list item in the
-device data environment has an original list item in the current task's data
-environment.  If a \code{mapper()} modifier appears in a \code{to} clause, each list item is
-replaced with the list items that the given mapper specifies are to be mapped
+For each list item in a \code{to} or \code{from} clause there is a corresponding 
+list item and an original list item. If the corresponding list item is not present 
+in the device data environment then no assignment occurs to or from the original 
+list item. Otherwise, each corresponding list item in the device data environment 
+has an original list item in the current task's data environment.  If a 
+\code{mapper()} modifier appears in a \code{to} clause, each list item is replaced 
+with the list items that the given mapper specifies are to be mapped
 with a \code{to} or \code{tofrom} map-type. If a \code{mapper()} modifier
 appears in a \code{from} clause, each list item is replaced with the list items
 that the given mapper specifies are to be mapped with a \code{from} or
 \code{tofrom} map-type.
 
-For each list item in a \code{from} or a \code{to} clause: \begin{itemize}
+For each list item in a \code{from} or a \code{to} clause: 
 
-    \item For each part of the list item that is an attached pointer:  \begin{itemize}
+\begin{itemize}
+\item For each part of the list item that is an attached pointer:  
 
-        \item On exit from the region that part of the original list item will
-        have the value it had on entry to the region;
+\begin{itemize}
+\item On exit from the region that part of the original list item will
+      have the value it had on entry to the region;
+\item On exit from the region that part of the corresponding list item will
+      have the value it had on entry to the region;
+\end{itemize}
 
-        \item On exit from the region that part of the corresponding list item will
-        have the value it had on entry to the region;
+\item For each part of the list item that is not an attached pointer: 
 
-   \end{itemize}
+\begin{itemize}
+\item If the clause is \code{from}, the value of that part of the corresponding 
+      list item is assigned to that part of the original list item;
+\item If the clause is \code{to}, the value of that part of the original list 
+      item is assigned to that part of the corresponding list item.
+\end{itemize}
 
-    \item For each part of the list item that is not an attached pointer: \begin{itemize}
+\item To avoid data races: 
 
-        \item If the clause is \code{from}, the value of that part of the
-        corresponding list item is assigned to that part of the original list
-       item;
-
-        \item If the clause is \code{to}, the value of that part of the
-        original list item is assigned to that part of the corresponding list
-        item.
-
-   \end{itemize}
-
-   \item To avoid race conditions: \begin{itemize}
-
-        \item Concurrent reads or updates of any part
-        of the original list item must be synchronized with the update of the
-        original list item that occurs as a result of the \code{from} clause;
-
-        \item Concurrent reads or updates of any part
-        of the corresponding list item must be synchronized with the update of the
-        corresponding list item that occurs as a result of the \code{to} clause.
-
-   \end{itemize}
+\begin{itemize}
+\item Concurrent reads or updates of any part of the original list item must be 
+      synchronized with the update of the original list item that occurs as a 
+      result of the \code{from} clause;
+\item Concurrent reads or updates of any part of the corresponding list item must 
+      be synchronized with the update of the corresponding list item that occurs 
+      as a result of the \code{to} clause.
+\end{itemize}
 
 \end{itemize}
 
@@ -946,41 +1043,76 @@ use shape-operators.
 The list items that appear in the \code{to} or \code{from} clauses may
 include array sections with \plc{stride} expressions.
 
-The \code{target}~\code{update} construct is a task generating construct.  The generated task is a \plc{target task}.  The generated task region encloses the \code{target}~\code{update} region.
+The \code{target}~\code{update} construct is a task generating construct.  
+The generated task is a \plc{target task}.  The generated task region encloses 
+the \code{target}~\code{update} region.
 
-All clauses are evaluated when the \code{target}~\code{update} construct is encountered.  The data environment of the \plc{target task} is created according to the data-sharing attribute clauses on the \code{target}~\code{update} construct, per-data environment ICVs, and any default data-sharing attribute rules that apply to the \code{target}~\code{update} construct.  A variable that is mapped in the \code{target}~\code{update} construct has a default data-sharing attribute of shared in the data environment of the \plc{target task}.
+All clauses are evaluated when the \code{target}~\code{update} construct is 
+encountered.  The data environment of the \plc{target task} is created according 
+to the data-sharing attribute clauses on the \code{target}~\code{update} construct, 
+per-data environment ICVs, and any default data-sharing attribute rules that apply 
+to the \code{target}~\code{update} construct.  A variable that is mapped in the 
+\code{target}~\code{update} construct has a default data-sharing attribute of 
+shared in the data environment of the \plc{target task}.
 
-Assignment operations associated with mapping a variable (see \specref{subsec:map Clause}) occur when the \plc{target task} executes.
+Assignment operations associated with mapping a variable (see 
+\specref{subsec:map Clause}) occur when the \plc{target task} executes.
 
-If the \code{nowait} clause is present, execution of the \plc{target task} may be deferred.  If the \code{nowait} clause is not present, the \plc{target task} is an included task.
+If the \code{nowait} clause is present, execution of the \plc{target task} may 
+be deferred.  If the \code{nowait} clause is not present, the \plc{target task} 
+is an included task.
 
 If a \code{depend} clause is present, it is associated with the \plc{target task}.
 
-The device is specified in the \code{device} clause. If there is no \code{device} clause, the device
-is determined by the \plc{default-device-var} ICV. When an \code{if} clause is present and the \code{if}
-clause expression evaluates to \plc{false} then no assignments occur.
+The device is specified in the \code{device} clause. If there is no \code{device} 
+clause, the device is determined by the \plc{default-device-var} ICV. When an 
+\code{if} clause is present and the \code{if} clause expression evaluates to 
+\plc{false} then no assignments occur.
 
-%\tools
-\omptTarget{\code{target}~\code{update}}{ompt_target_update}{target-update}{the target task on the host}
+\events
+
+Events associated with a \plc{target task} are the same as for the \code{task} 
+construct defined in \specref{subsec:task Construct}.
+
+The \plc{target-update-begin} event occurs when a thread enters a
+\code{target}~\code{update} region.
+
+The \plc{target-update-end} event occurs when a thread exits a
+\code{target}~\code{update} region.
+
+\tools
+
+Callbacks associated with events for \plc{target tasks} are the same as
+for the \code{task} construct defined in \specref{subsec:task Construct};
+\code{(}\plc{flags}~\code{&}~\code{ompt_task_target)} 
+always evaluates to \plc{true} in the dispatched callback.
+
+A thread dispatches a registered \code{ompt_callback_target} callback with 
+\code{ompt_scope_begin} as its \plc{endpoint} argument and 
+\code{ompt_target_update} as its \plc{kind} argument for each occurrence 
+of a \plc{target-update-begin} event in that thread in the context of the 
+target task on the host. Similarly, a thread dispatches a registered 
+\code{ompt_callback_target} callback with \code{ompt_scope_end} as its 
+\plc{endpoint} argument and \code{ompt_target_update} as its \plc{kind} 
+argument for each occurrence of a \plc{target-update-end} event in that thread 
+in the context of the target task on the host. These callbacks have 
+type signature \code{ompt_callback_target_t}. 
+
+
 
 \restrictions
 \begin{itemize}
-\item A program must not depend on any ordering of the evaluations of the clauses of the
-\code{target}~\code{update} directive, or on any side effects of the evaluations of the clauses.
-
+\item A program must not depend on any ordering of the evaluations of the 
+      clauses of the \code{target}~\code{update} directive, or on any side 
+      effects of the evaluations of the clauses.
 \item At least one \plc{motion-clause} must be specified.
-
 \item A list item can only appear in a \code{to} or \code{from} clause, but not both.
-
 \item A list item in a \code{to} or \code{from} clause must have a mappable type.
-
 \item At most one \code{device} clause can appear on the directive. The
-    \code{device} clause expression
-      must evaluate to a non-negative integer value less than the value
-      of \code{omp_get_num_devices()}.
-
+      \code{device} clause expression must evaluate to a non-negative integer 
+      value less than the value of \code{omp_get_num_devices()} or to the value of 
+      \code{omp_get_initial_device()}.
 \item At most one \code{if} clause can appear on the directive.
-
 \item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
@@ -1013,16 +1145,7 @@ clause expression evaluates to \plc{false} then no assignments occur.
 
 \item \code{ompt_callback_target_t}, see
 \specref{sec:ompt_callback_target_t}.
-
-
 \end{itemize}
-
-
-
-
-
-
-
 
 
 
@@ -1104,49 +1227,42 @@ device executions through a \code{link} clause.
 If an \plc{extended-list} is present with no clause then the \code{to}
 clause is assumed.
 
-The \code{implements} clause specifies that an alternate version of a procedure should be
-used.
+The \code{implements} clause specifies that an alternate version of a 
+procedure should be used.
 
 The \code{device_type} clause specifies if a version of the procedure should be made
-available on host, device or both. If \code{host} is specified only host version
-of the procedure is made available.  If \code{nohost} is specified then only device
+available on host, device or both. If \code{host} is specified only a host version
+of the procedure is made available.  If \code{nohost} is specified then only a device
 version of the procedure is made available.  If \code{any} is specified then both
-device and host version of the procedure is made available.
+device and host versions of the procedure are made available.
 
 \begin{ccppspecific}
-If a function is treated as if it appeared as a list item in a \code{to} clause
-on a \code{declare}~\code{target} directive in the same translation unit in
-which the definition of the function occurs then a device-specific version of
-the function is created.
+If a function appears in a \code{to} clause in the same translation unit in which 
+the definition of the function occurs then a device-specific version of the function 
+is created.
 
-If a variable is treated as if it appeared as a list item in a \code{to} clause
-on a \code{declare}~\code{target} directive in the same translation unit in
-which the definition of the variable occurs then the original list item is
-allocated a corresponding list item in the device data environment of all
-devices.
+If a variable appears in a \code{to} clause in the same translation unit in which 
+the definition of the variable occurs then the original list item is allocated a 
+corresponding list item in the device data environment of all devices.
 
 All calls in \code{target} constructs to the function in the \code{implements} clause
 are replaced by the function following the \code{declare} \code{target} constructs.
 \end{ccppspecific}
 
 \begin{fortranspecific}
-If an internal procedure is treated as if it appeared as a
-list item in a \code{to} clause on a \code{declare}~\code{target} directive
+If an internal procedure appears in a \code{to} clause
 then a device-specific version of the procedure is created.
 
-If a variable that is host associated is treated as if it appeared as a
-list item in a \code{to} clause on a \code{declare}~\code{target} directive
+If a variable that is host associated appears in a \code{to} clause
 then the original list item is allocated a corresponding list item in the
 device data environment of all devices.
 
-
-
 All calls in \code{target} constructs to the procedure in the \code{implements}
-clause are replaced by the procedure in which \code{declare} \code{target} construct appeared.
+clause are replaced by the procedure in which \code{declare} \code{target} 
+construct appeared.
 \end{fortranspecific}
 
-If a variable is treated as if it appeared as a list item in a \code{to}
-clause on a \code{declare}~\code{target} directive then the corresponding list
+If a variable appears in a \code{to} clause then the corresponding list
 item in the device data environment of each device is initialized once, in the
 manner specified by the program, but at an unspecified point in the program
 prior to the first reference to that list item.  The list item is never removed
@@ -1155,22 +1271,22 @@ positive infinity.
 
 Including list items in a \code{link} clause supports compilation of
 functions called in a \code{target} region that refer to the list
-items.  They are not mapped by the \code{declare}~\code{target}
+items.  The list items are not mapped by the \code{declare}~\code{target}
 directive.  Instead, they are mapped according to the data mapping
-rules described in \specref{subsec:Data-Mapping Attribute Rules, Clauses, and Directives}.
+rules described in 
+\specref{subsec:Data-Mapping Attribute Rules, Clauses, and Directives}.
 
 \begin{ccppspecific}
-If a function is referenced in a function that is treated as if it appeared as
-a list item in a \code{to} clause on a \code{declare}~\code{target} directive
-then the name of the referenced function is treated as if it had appeared in a
-\code{to} clause on a \code{declare}~\code{target} directive.
+If a function is referenced in a function that appears as a list item in a \code{to}
+clause on a \code{declare}~\code{target} directive then the name of the referenced 
+function is treated as if it had appeared in a \code{to} clause on a declare target 
+directive.
 
-If a variable with static storage duration or a function (except
-\plc{lambda} for C++) is referenced in the
-initializer expression list of a variable with static storage duration that is
-treated as if it appeared as a list item in a \code{to} clause on a
-\code{declare}~\code{target} directive then the name of the referenced variable
-or function is treated as if it had appeared in a \code{to} clause on a
+If a variable with static storage duration or a function (except \plc{lambda}
+for C++) is referenced in the initializer expression list of a variable with
+static storage duration that appears as a list item in a \code{to} clause on a 
+\code{declare}~\code{target} directive then the name of the referenced variable 
+or function is treated as if it had appeared in a \code{to} clause on a 
 \code{declare}~\code{target} directive.
 
 The form of the \code{declare}~\code{target} directive that has no clauses
@@ -1193,19 +1309,20 @@ list determines which versions are made available.
 \end{ccppspecific}
 
 \begin{fortranspecific}
-If a procedure is referenced in a procedure that is treated as if it appeared
-as a list item in a \code{to} clause on a \code{declare}~\code{target}
-directive then the name of the procedure is treated as if it had appeared in a
-\code{to} clause on a \code{declare}~\code{target} directive.
+If a procedure is referenced in a procedure that appears as a list item in a \code{to}
+clause on a \code{declare}~\code{target} directive then the name of the procedure is 
+treated as if it had appeared in a \code{to} clause on a \code{declare}~\code{target}
+directive.
 
 If a \code{declare}~\code{target} does not have any clauses then an implicit
 \plc{extended-list} to an implicit \code{to} clause of one item is formed from
 the name of the enclosing subroutine subprogram, function subprogram or
 interface body to which it applies.
 
-If a \code{declare}~\code{target} directive has an \code{implements} or \code{device_type} clause
-then any enclosed internal procedures cannot contain any \code{declare}~\code{target} directives.
-The enclosing \code{device_type} clause implicitly applies to internal procedures.
+If a \code{declare}~\code{target} directive has an \code{implements} or 
+\code{device_type} clause then any enclosed internal procedures cannot contain 
+any \code{declare}~\code{target} directives. The enclosing \code{device_type} 
+clause implicitly applies to internal procedures. 
 \end{fortranspecific}
 
 
@@ -1213,29 +1330,25 @@ The enclosing \code{device_type} clause implicitly applies to internal procedure
 \begin{itemize}
 \item A threadprivate variable cannot appear in a
       \code{declare}~\code{target} directive.
-
 \item A variable declared in a \code{declare}~\code{target} directive
       must have a mappable type.
-
-\item The same list item must not appear multiple times in clauses on the same directive.
-
+\item The same list item must not appear multiple times in clauses on 
+      the same directive.
 \item The same list item must not explicitly appear in both a \code{to} clause on one
-\code{declare}~\code{target} directive and a \code{link} clause on
-another \code{declare}~\code{target} directive.
-
-\item The \code{implements} clause can only appear with \code{device_type} clause.
-
+      \code{declare}~\code{target} directive and a \code{link} clause on
+      another \code{declare}~\code{target} directive.
+\item A \code{device_type} clause must be specified if an \code{implements} clause 
+      is specified. 
 \end{itemize}
 
 \begin{cppspecific}
 \begin{itemize}
 \item The function names of overloaded functions or template functions
-may only be specified within an implicit \plc{extended-list}.
-
+      may only be specified within an implicit \plc{extended-list}.
 \item If a \plc{lambda declaration and definition} appears between a
-\code{declare target} directive and the matching \code{end declare target} directive, all the variables that are captured by the
-\plc{lambda} expression must also be variables that are treated as
-if they appear in a \code{to} clause.
+      \code{declare target} directive and the matching \code{end declare target}
+      directive, all variables that are captured by the \plc{lambda} expression
+      must also appear in a \code{to} clause.
 \end{itemize}
 \end{cppspecific}
 
@@ -1243,63 +1356,55 @@ if they appear in a \code{to} clause.
 \begin{itemize}
 \item If a list item is a procedure name, it must not be a generic name,
       procedure pointer or entry name.
-
 \item Any \code{declare}~\code{target} directive with clauses must appear
       in a specification part of a subroutine subprogram, function subprogram,
       program or module.
-
 \item Any \code{declare}~\code{target} directive without clauses must appear
       in a specification part of a subroutine subprogram, function subprogram
       or interface body to which it applies.
-
 \item If a \code{declare}~\code{target} directive is specified in an
       interface block for a procedure, it must match a
       \code{declare}~\code{target} directive in the definition of the
       procedure.
-
 \item If an external procedure is a type-bound procedure of a derived
       type and a \code{declare}~\code{target} directive is specified in
       the definition of the external procedure, such a directive must
       appear in the interface block that is accessible to the derived
       type definition.
-
 \item If any procedure is declared via a procedure declaration statement
       that is not in the type-bound procedure part of a derived-type
       definition, any \code{declare}~\code{target} with the procedure
       name must appear in the same specification part.
-
 \item A variable that is part of another variable (as an array, structure
       element or type parameter inquiry) cannot appear in a
       \code{declare}~\code{target} directive.
-
 \item The \code{declare}~\code{target} directive must appear in the
       declaration section of a scoping unit in which the common block
-      or variable is declared. Although variables in common blocks can
-      be accessed by use association or host association, common block
-      names cannot. This means that a common block name specified in a
-      \code{declare}~\code{target} directive must be declared to be a
-      common block in the same scoping unit in which the
-      \code{declare}~\code{target} directive appears.
-
-\item If a \code{declare}~\code{target} directive specifying a common
+      or variable is declared.
+\item If a \code{declare}~\code{target} directive that specifies a common
       block name appears in one program unit, then such a directive must
       also appear in every other program unit that contains a \code{COMMON}
-      statement specifying the same name. It must appear after the last
-      such \code{COMMON} statement in the program unit.
-
+      statement that specifies the same name, after the last such \code{COMMON} 
+      statement in the program unit.
 \item If a list item is declared with the \code{BIND} attribute, the
       corresponding C entities must also be specified in a
       \code{declare}~\code{target} directive in the C program.
-
 \item A blank common block cannot appear in a \code{declare}~\code{target}
       directive.
-
 \item A variable can only appear in a \code{declare}~\code{target} directive
       in the scope in which it is declared. It must not be an element of a
       common block or appear in an \code{EQUIVALENCE} statement.
-
 \item A variable that appears in a \code{declare}~\code{target} directive
       must be declared in the Fortran scope of a module or have the
       \code{SAVE} attribute, either explicitly or implicitly.
 \end{itemize}
 \end{fortranspecific}
+
+\crossreferences
+\begin{itemize}
+\item \code{target}~\code{data} construct, see
+\specref{subsec:target data Construct}.
+
+\item \code{target} construct, see
+\specref{subsec:target Construct}.
+\end{itemize}
