@@ -2791,16 +2791,24 @@ sub postprocess {
     # add basicstyle color{blue} to added lstinline commands
     # finally add the comment to the ones not having an optional argument before
     ###s/\\DIFaddlstinline(?!\[)/\\lstinline\n[basicstyle=\\color{blue}]$AUXCMD\n/g;
-    s/(%DIF < )([^\n]*?\n)/"${1}" . escape_command(${2}, "plc", "@\\DIFdel{", "}@")/esg;
-    s/(%DIF > )([^\n]*?\n)/"${1}" . escape_command(${2}, "plc", "@\\DIFadd{", "}@")/esg;
+    s/(%DIF < )([^\n]*?\n)/"${1}" . escape_command(${2}, "(?:plc|textnormal|textsubscript|textsl)", "@\\DIFdel{", "}@")/esg;
+    s/(%DIF > )([^\n]*?\n)/"${1}" . escape_command(${2}, "(?:plc|textnormal|textsubscript|textsl)", "@\\DIFadd{", "}@")/esg;
+    s/}\\glossarydef(start|end)/}\n\\glossarydef\1\n/g;
+    s/\\\\\s+\\DIFaddend\s+\\end\{supertabular\}/\\DIFaddend \\\\\n\\end{supertabular}/gm;
 
   return;
   }
 }
 
+sub escape_special {
+  my ($text) = @_;
+  $text =~ s/\\/\\\\ /g;
+  return $text;
+}  
+
 sub escape_command {
   my ($text, $command, $prefix, $suffix) = @_;
-  $text =~ s/(\\$command\{.*?\})/"${prefix}${1}${suffix}"/esg;
+  $text =~ s/(\\$command)(\{$pat_n\})/"${prefix}${1}". escape_special(${2}) ."${suffix}"/esg;
   return $text;
 }
 
