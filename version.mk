@@ -5,7 +5,7 @@ OMPVERSION=Version 5.0
 DOCVERSION=Public Comment Draft
 DOCDATE=July 2018
 
-GITREV=$(shell git rev-parse --short HEAD)
+GITREV=$(shell git rev-parse --short HEAD 2>/dev/null || echo out of git tree)
 
 # these are the macros used to actually build the spec
 VERSIONMACRO="\\def\\ompversion{$(OMPVERSION) -- GIT rev $(GITREV)}\\input{openmp}"
