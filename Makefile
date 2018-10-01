@@ -79,7 +79,6 @@ DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" |
 include Makefile.version
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-bash util/gitinfo/create-githeadinfo.sh
 	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
 	-makeindex -s openmp-index.ist openmp.idx
 	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
@@ -87,11 +86,9 @@ openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png 
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 quick:
-	-bash util/gitinfo/create-githeadinfo.sh
 	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error -project=openmp $(VERSIONMACRO)
 
 debug:
-	-bash util/gitinfo/create-githeadinfo.sh
 	pdflatex -shell-escape -synctex=1 -file-line-error -project=openmp $(VERSIONMACRO)
 
 clean:
