@@ -74,8 +74,8 @@ default(shared \textnormal{|} none)
 private(\plc{list})
 firstprivate(\plc{list})
 shared(\plc{list})
-reduction(\plc{reduction-identifier }:\plc{ list})
-allocate(\plc{[allocator: ]}\plc{list})
+reduction(\plc{[}default ,\plc{] reduction-identifier }:\plc{ list})
+allocate(\plc{[allocator }:\plc{] list})
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -98,11 +98,10 @@ default(shared \textnormal{|} firstprivate \textnormal{|} private \textnormal{|}
 private(\plc{list})
 firstprivate(\plc{list})
 shared(\plc{list})
-reduction(\plc{reduction-identifier }:\plc{ list})
-allocate(\plc{[allocator: ]}\plc{list})
+reduction(\plc{[}default ,\plc{] reduction-identifier }:\plc{ list})
+allocate(\plc{[allocator }:\plc{] list})
 \end{indentedcodelist}
 
-The \code{end}~\code{teams} directive denotes the end of the \code{teams} construct.
 \end{fortranspecific}
 
 \begin{samepage}
@@ -115,94 +114,97 @@ When a thread encounters a \code{teams} construct, a league of teams is
 created. Each team is an initial team, and the initial thread in each team
 executes the \code{teams} region.
 
-The number of teams created is implementation defined, but is less than or equal to the
-value specified in the \code{num_teams} clause.
-A thread may obtain the number of initial teams created by the construct by a call to the \code{omp_get_num_teams} routine.
+The number of teams created is implementation defined, but is less than or 
+equal to the value specified in the \code{num_teams} clause. A thread may 
+obtain the number of initial teams created by the construct by a call to 
+the \code{omp_get_num_teams} routine.
 
 \end{samepage}
 
-The maximum number of threads participating in the contention group that each team
-initiates is implementation defined, but is less than or equal to the value specified in the
-\code{thread_limit} clause.
+The maximum number of threads participating in the contention group that 
+each team initiates is implementation defined, but is less than or equal 
+to the value specified in the \code{thread_limit} clause.
 
 On a combined or composite construct that includes \code{target} and
 \code{teams} constructs, the expressions in \code{num_teams} and
 \code{thread_limit} clauses are evaluated on the host device on
 entry to the \code{target} construct.
 
-Once the teams are created, the number of initial teams remains constant for the duration of the
-\code{teams} region.
+Once the teams are created, the number of initial teams remains constant 
+for the duration of the \code{teams} region.
 
 Within a \code{teams} region, initial team numbers uniquely identify each
-initial team. Initial team numbers are
-consecutive whole numbers ranging from zero to one less than the number of
-initial teams. A
-thread may obtain its own initial team number by a call to the \code{omp_get_team_num} library
-routine.
-The policy for assigning the initial threads to places is implementation defined.
-The \code{team} construct sets the \plc{place-partition-var} and \plc{default-device-var} ICVs for each initial thread to an implementation-defined value.
+initial team. Initial team numbers are consecutive whole numbers ranging 
+from zero to one less than the number of initial teams. A thread may obtain 
+its own initial team number by a call to the \code{omp_get_team_num} library
+routine. The policy for assigning the initial threads to places is 
+implementation defined. The \code{teams} construct sets the 
+\plc{place-partition-var} and \plc{default-device-var} ICVs for each initial 
+thread to an implementation-defined value.
 
-After the teams have completed execution of the \code{teams} region, the encountering task
-resumes execution of the enclosing task region.
+After the teams have completed execution of the \code{teams} region, the 
+encountering task resumes execution of the enclosing task region.
 
 \events
 
-The \plc{teams-begin} event occurs in a thread encountering a
+The \plc{teams-begin} event occurs in a thread that encounters a
 \code{teams} construct before any initial task is created for the
 corresponding \code{teams} region.
 
 Upon creation of each initial task, an \plc{initial-task-begin} event
-occurs in the thread executing the initial task after the initial
+occurs in the thread that executes the initial task after the initial
 task is fully initialized but before the thread begins to execute the
 structured block of the \code{teams} construct.
 
-If the \code{teams} region creates a thread, a \plc{thread-begin}
-event occurs as the first event in the context of the new thread
-prior to the \plc{initial-task-begin}.
+If the \code{teams} region creates a native thread, a \plc{native-thread-begin}
+event occurs as the first event in the context of the new thread prior to the 
+\plc{initial-task-begin} event.
 
 When a thread finishes an initial task, an \plc{initial-task-end}
 event occurs in the thread.
 
-The \plc{teams-end} event occurs in the thread encountering the
-\code{teams} construct after the thread
-executes its \plc{initial-task-end} event
-but before resuming execution of the encountering task.
+The \plc{teams-end} event occurs in the thread that encounters the
+\code{teams} construct after the thread executes its \plc{initial-task-end} 
+event but before it resumes execution of the encountering task.
 
-If a thread is destroyed at the end of a \code{teams} region, a
-\plc{thread-end} event occurs in the thread as the last
-event prior to the thread's destruction.
+If a native thread is destroyed at the end of a \code{teams} region, a
+\plc{native-thread-end} event occurs in the thread as the last event prior 
+to destruction of the thread.
 
 \tools
 
 A thread dispatches a registered \code{ompt_callback_parallel_begin}
 callback for each occurrence of a \plc{teams-begin} event in that
-thread.  The callback occurs in the task encountering
-the \code{parallel} construct.  This callback has the type signature
-\code{ompt_callback_parallel_begin_t}.
+thread.  The callback occurs in the task that encounters the 
+\code{teams} construct.  This callback has the type signature
+\code{ompt_callback_parallel_begin_t}. In the dispatched callback, 
+\code{(flags}~\code{&}~\code{ompt_parallel_league)} evaluates to \plc{true}.
 
 A thread dispatches a registered \code{ompt_callback_implicit_task}
-callback for each occurrence of a \plc{initial-task-begin} and
-\plc{initial-task-end} event in that thread. The callback occurs in the
-context of the initial task.  The callback has type signature
-\code{ompt_callback_implicit_task_t}. The callback receives
-\code{ompt_scope_begin} or \code{ompt_scope_end}
-as its \plc{endpoint} argument, as appropriate.
+callback with \code{ompt_scope_begin} as its \plc{endpoint} argument
+for each occurrence of an \plc{initial-task-begin} in that thread.
+Similarly, a thread dispatches a registered \code{ompt_callback_implicit_task}
+callback with \code{ompt_scope_end} as its \plc{endpoint} argument
+for each occurence of an \plc{initial-task-end} event in that thread. 
+The callbacks occur in the context of the initial task and have type 
+signature \code{ompt_callback_implicit_task_t}. In the dispatched
+callback, \code{(flags}~\code{&}~\code{ompt_task_initial)} always evaluates to
+\plc{true}.
 
 A thread dispatches a registered \code{ompt_callback_parallel_end}
 callback for each occurrence of a \plc{teams-end} event in that
-thread.  The callback occurs in the task encountering
+thread.  The callback occurs in the task that encounters
 the \code{teams} construct.  This callback has the type signature
 \code{ompt_callback_parallel_end_t}.
 
 A thread dispatches a registered \code{ompt_callback_thread_begin}
-callback for the \plc{thread-begin} event in that thread.
-The callback occurs in the
-context of the thread.  The callback has type signature
-\code{ompt_callback_thread_begin_t}.
+callback for the \plc{native-thread-begin} event in that thread.
+The callback occurs in the context of the thread.  The callback 
+has type signature \code{ompt_callback_thread_begin_t}.
 
 A thread dispatches a registered \code{ompt_callback_thread_end}
-callback for the \plc{thread-end} event in that thread.
-The callback occurs in the context of the thread.  The callback has type signature
+callback for the \plc{native-thread-end} event in that thread. The callback 
+occurs in the context of the thread.  The callback has type signature
 \code{ompt_callback_thread_end_t}.
 
 \restrictions
@@ -210,26 +212,23 @@ Restrictions to the \code{teams} construct are as follows:
 
 \begin{itemize}
 \item A program that branches into or out of a \code{teams} region is non-conforming.
-
-\item A program must not depend on any ordering of the evaluations of the clauses of the
-\code{teams} directive, or on any side effects of the evaluation of the clauses.
-
+\item A program must not depend on any ordering of the evaluations of the clauses 
+      of the \code{teams} directive, or on any side effects of the evaluation of 
+      the clauses.
 \item At most one \code{thread_limit} clause can appear on the directive. The
-\code{thread_limit} expression must evaluate to a positive integer value.
-
-\item At most one \code{num_teams} clause can appear on the directive. The \code{num_teams}
-expression must evaluate to a positive integer value.
-
-\item A \code{teams} region can only be strictly nested within the implicit parallel region or a \code{target} region.
-If a \code{teams} construct is nested within a \code{target} construct,
-that \code{target} construct must contain no statements, declarations or
-directives outside of the \code{teams} construct.
-
-\item \code{distribute}, \code{distribute simd}, distribute parallel worksharing-loop,
-distribute parallel worksharing-loop SIMD, \code{parallel} regions, including any
-\code{parallel} regions arising from combined constructs, \code{omp_get_num_teams()} regions, and \code{omp_get_team_num()} are the only OpenMP regions
-that may be strictly nested inside the \code{teams} region.
-
+      \code{thread_limit} expression must evaluate to a positive integer value.
+\item At most one \code{num_teams} clause can appear on the directive. The 
+      \code{num_teams} expression must evaluate to a positive integer value.
+\item A \code{teams} region can only be strictly nested within the implicit 
+      parallel region or a \code{target} region. If a \code{teams} construct 
+      is nested within a \code{target} construct, that \code{target} construct 
+      must contain no statements, declarations or directives outside of the 
+      \code{teams} construct. \item \code{distribute}, \code{distribute simd}, 
+      distribute parallel worksharing-loop, distribute parallel worksharing-loop 
+      SIMD, \code{parallel} regions, including any \code{parallel} regions arising 
+      from combined constructs, \code{omp_get_num_teams()} regions, and 
+      \code{omp_get_team_num()} regions are the only OpenMP regions that may be 
+      strictly nested inside the \code{teams} region.
 \end{itemize}
 
 \crossreferences
@@ -241,10 +240,12 @@ that may be strictly nested inside the \code{teams} region.
 
 \item \code{distribute simd} construct, see \specref{subsec:distribute simd Construct}.
 
+\item \code{allocate} clause, see
+\specref{subsec:allocate Clause}.
+
 \item \code{target} construct, see \specref{subsec:target Construct}.
 
-\item Data-sharing attribute clauses, see
-\specref{subsec:Data-Sharing Attribute Clauses}.
+\item \code{default}, \code{shared}, \code{private}, \code{firstprivate}, and \code{reduction} clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
 
 \item \code{omp_get_num_teams} routine, see
 \specref{subsec:omp_get_num_teams}.
