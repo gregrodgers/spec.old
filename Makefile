@@ -3,6 +3,10 @@
 
 all: openmp.pdf
 
+# shortcuts for the most common make targets in use
+full: openmp.pdf
+diff: openmp-diff-abridged.pdf
+
 .PHONY: clean quick all git-diff-all
 
 TEXFILES=openmp.tex \
@@ -70,17 +74,17 @@ TEXFILES=openmp.tex \
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 quick:
-	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error openmp.tex
 
 debug:
-	pdflatex -synctex=1 -file-line-error openmp.tex
+	pdflatex -shell-escape -synctex=1 -file-line-error openmp.tex
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
@@ -138,9 +142,11 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png) $(wildcard *.aux) openmp.pdf
 	mkdir -p $@/appendices
+	mkdir -p $@/tool_support
 	cp -f $^ "$@/" || true
 	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 	cp -f appendices/ompd_diagram.pdf "$@/appendices"
+	cp -f tool_support/ompt_flow_chart.pdf "$@/tool_support"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
