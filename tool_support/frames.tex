@@ -10,8 +10,8 @@ The \code{omp_frame_t} type describes procedure frame information for an OpenMP 
 \begin{ompSyntax}
 typedef struct omp_frame_t {
   ompt_data_t \plc{exit_frame};
-  int \plc{exit_frame_flags};
   ompt_data_t \plc{enter_frame};
+  int \plc{exit_frame_flags};
   int \plc{enter_frame_flags};
 } omp_frame_t;
 \end{ompSyntax}
@@ -23,14 +23,14 @@ Each \code{omp_frame_t} object is associated with the task to which the procedur
 Each non-merged initial, implicit, explicit, or target task with one or more frames on
 the stack of a native thread has an associated \code{omp_frame_t} object.
 
-The \plc{exit_frame} field of a \code{omp_frame_t} object contains
+The \plc{exit_frame} field of an \code{omp_frame_t} object contains
 information to identify the first procedure frame executing the 
 task region.
 The \plc{exit_frame} for the \code{omp_frame_t} object associated with 
 the \emph{initial task} that is not nested inside any OpenMP construct 
 is \code{NULL}.
 
-The \plc{enter_frame} field of a \code{omp_frame_t} object contains
+The \plc{enter_frame} field of an \code{omp_frame_t} object contains
 information to identify the latest still active procedure frame 
 executing the task region before entering the OpenMP runtime 
 implementation or before executing a different task.
@@ -39,11 +39,12 @@ If a task with frames on the stack has not suspended, the value of
 associated with the task may contain \code{NULL}.
 
 For \plc{exit_frame} the \plc{exit_frame_flags} and for \plc{enter_frame} 
-the \plc{enter_frame_flags} field indicates whether the provided frame
-information points to a runtime or an application frame address;
-the \plc{flags} fields also specifies the kind of information that is 
+the \plc{enter_frame_flags} field respectively indicates whether 
+the provided frame information points to a runtime or an 
+application frame address;
+the same fields also specify the kind of information that is 
 provided to identify the respective frame; 
-the \plc{flags} fields is a disjunction of values in the
+these fields are a disjunction of values in the
 \code{omp_frame_flag_t} enumeration type.
 
 The lifetime of an \code{omp_frame_t} begins when a task is created
@@ -56,6 +57,9 @@ can also be retrieved by a tool at any time, including in a signal
 handler, by invoking the
 \code{ompt_get_task_info} runtime entry point (described in
 Section~\ref{sec:ompt_get_task_info}).
+A pointer to an \code{omp_frame_t} object that a tool retrieved
+is valid as long as the tool does not pass back control to the OpenMP
+implementation.
 
 
 %
@@ -111,8 +115,8 @@ flags.
 \begin{ccppspecific}
 \begin{ompSyntax}
 typedef enum omp_frame_flag_t {
-  omp_frame_runtime        = 0x0,
-  omp_frame_application    = 0x1,
+  omp_frame_runtime        = 0x00,
+  omp_frame_application    = 0x01,
   omp_frame_cfa            = 0x10,
   omp_frame_stackpointer   = 0x20
 } omp_frame_flag_t; 
@@ -126,6 +130,9 @@ runtime implementation.
 The value \code{omp_frame_application} of the \code{omp_frame_flag_t} type
 indicates that an exit frame address is a procedure frame in the OpenMP
 application.
+
+Higher number bits indicate the kind of information provided which is unique
+for the particular frame pointer.
 The value \code{omp_frame_cfa} of the \code{omp_frame_flag_t} type
 indicates that a frame address is specifying a canonical frame address.
 The value \code{omp_frame_stackpointer} of the \code{omp_frame_flag_t} type
