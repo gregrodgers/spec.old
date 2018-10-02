@@ -3,6 +3,13 @@
 
 all: openmp.pdf
 
+# shortcuts for the most common make targets in use
+include version.mk
+full: openmp.pdf 
+release: clean openmp.pdf 
+release: VERSIONMACRO=$(RELEASEMACRO)
+diff: openmp-diff-abridged.pdf
+
 .PHONY: clean quick all git-diff-all
 
 TEXFILES=openmp.tex \
@@ -68,19 +75,20 @@ TEXFILES=openmp.tex \
 
 # check for branches names with "ticket_XXX"
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
+# for release do something like:  make OMPVERSION="Version 5.0 Public Comment Draft, July 2018"
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -synctex=1 -interaction=batchmode -draftmode -file-line-error openmp.tex
-	-pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error $(VERSIONMACRO)
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 quick:
-	pdflatex -synctex=1 -interaction=batchmode -file-line-error openmp.tex
+	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error -project=openmp $(VERSIONMACRO)
 
 debug:
-	pdflatex -synctex=1 -file-line-error openmp.tex
+	pdflatex -shell-escape -synctex=1 -file-line-error -project=openmp $(VERSIONMACRO)
 
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
@@ -119,7 +127,7 @@ DIFF_FROM:=master
 DIFF_TYPE:=UNDERLINE
 
 COMMON_DIFF_OPTS:=--math-markup=whole  \
-                  --append-safecmd=plc,code,hcode,scode,pcode,splc,glossaryterm \
+                  --append-safecmd=plc,code,hcode,scode,pcode,splc \
                   --append-textcmd=subsubsubsection
                   #,binding,comments,constraints,crossreferences,descr,argdesc,effect,format,restrictions,summary,syntax,events,tools,record
 #                  --exclude-textcmd=chapter,section,subsection,subsubsection,vcode
@@ -128,9 +136,9 @@ COMMON_DIFF_OPTS:=--math-markup=whole  \
 #                  --append-textcmd=plc,code,glossaryterm \
 #                  --exclude-textcmd=section,subsection,subsubsection,vcode
 
-VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} -c latexdiff.cfg --flatten --type="${DIFF_TYPE}" --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}  --subtype=ZLABEL --graphics-markup=none
+VC_DIFF_OPTS:=${COMMON_DIFF_OPTS} --force -c latexdiff.cfg --flatten --type="${DIFF_TYPE}" --git --pdf  ${VC_DIFF_FROM} ${VC_DIFF_TO}  --subtype=ZLABEL --graphics-markup=none
 
-VC_DIFF_MINIMAL_OPTS:= --only-changes
+VC_DIFF_MINIMAL_OPTS:= --only-changes --force
 
 git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
@@ -138,9 +146,11 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png) $(wildcard *.aux) openmp.pdf
 	mkdir -p $@/appendices
+	mkdir -p $@/tool_support
 	cp -f $^ "$@/" || true
 	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 	cp -f appendices/ompd_diagram.pdf "$@/appendices"
+	cp -f tool_support/ompt_flow_chart.pdf "$@/tool_support"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex

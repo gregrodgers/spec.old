@@ -52,7 +52,7 @@ associated with an OpenMP thread, interpreting an OpenMP thread's call stack,
 receiving notification about OpenMP \emph{events}, tracing activity on
 OpenMP target devices, and controlling a tool from an OpenMP application.
 
-\subsection{Activating an OMPT Tool}
+\subsection{Activating a First-Party Tool}
 \label{sec:ompt-initialization}
 
 There are three steps to activating a tool. First, an OpenMP
@@ -63,37 +63,50 @@ tool may arrange to monitor computation that execute
 on target devices. This section explains how the tool and an
 OpenMP implementation interact to accomplish these tasks.
 
-\subsubsection{Determining Whether an OMPT Tool Should be Initialized}
+
+
+\subsubsection{Determining Whether a First-Party Tool Should be Initialized}
 \label{sec:ompt-check-tool}
 
-A tool indicates its interest in using the OMPT interface
-by providing a non-\code{NULL} pointer to an
-\code{ompt_start_tool_result_t}
-structure to an OpenMP implementation as a return value from
-\code{ompt_start_tool}. There are three ways
-that a tool can provide a definition of \code{ompt_start_tool} to an
-OpenMP implementation:
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=.9\linewidth]{tool_support/ompt_flow_chart.pdf}
+  \caption{Flow chart on activating a first-party tool and the states
+  of the OMPT interface.}
+  \label{fig:ompt_diagram}
+\end{figure}
+
+Immediately before an OpenMP implementation initializes itself, it
+determines whether it should check for the presence of a tool
+interested in using the OMPT interface by examining the \plc{tool-var}
+ICV.  If the value of \plc{tool-var} is \plc{disabled}, the OpenMP
+implementation will initialize itself without checking whether a
+tool is present and the functionality of the OMPT interface will be
+unavailable as the program executes.
+In this case, the OMPT interface stays \emph{inactive}.
+
+Otherwise, the OMPT interface turns to \emph{pending} and the OpenMP 
+implementation tries to find and activate a first-party tool.
+There are three ways that a tool can provide this function:
 
 \begin{itemize}
 \item statically-linking the tool's definition of \code{ompt_start_tool}
   into an OpenMP application,
 \item introducing a dynamically-linked library that includes the tool's definition
   of \code{ompt_start_tool} into the application's address space, or
-\item providing the name of a dynamically-linked library appropriate
-  for the architecture and operating system used by the application
-  in the \plc{tool-libraries-var} ICV.
+\item providing the name of a dynamically-loadable library in the 
+  \plc{tool-libraries-var} ICV; the library includes
+  the tool's definition of \code{ompt_start_tool} and is appropriate
+  for the architecture and operating system used by the application.
 \end{itemize}
 
-Immediately before an OpenMP implementation initializes itself, it
-determines whether it should check for the presence of a tool
-interested in using the OMPT interface by examining the \plc{tool-var}
-ICV.  If value of \plc{tool-var} is \plc{disabled}, the OpenMP
-implementation will initialize itself without even checking whether a
-tool is present and the functionality of the OMPT interface will be
-unavailable as the program executes.
+%A tool indicates its interest in using the OMPT interface
+%by providing a non-null pointer to an
+%\code{ompt_start_tool_result_t}
+%structure to an OpenMP implementation as a return value from
+%\code{ompt_start_tool}. 
 
-If the value of \plc{tool-var} is \plc{enabled}, the OpenMP
-implementation will check to see if a tool has provided an
+The OpenMP implementation will check to see if a tool has provided an
 implementation of \code{ompt_start_tool}.  The OpenMP implementation first
 checks if a tool-provided implementation of \code{ompt_start_tool} is
 available in the address space, either statically-linked into the
@@ -113,13 +126,19 @@ in the list.
 
 If a tool-provided definition of \code{ompt_start_tool} is found using
 either method, the OpenMP implementation will invoke it; if it returns
-a non-\code{NULL} pointer to an \code{ompt_start_tool_result_t} structure,
-the OpenMP implementation will know
-that a tool expects to use the OMPT interface.
+a non-null pointer to an \code{ompt_start_tool_result_t} structure,
+the OMPT interface turns to \emph{active} and can be used by the tool later; 
+otherwise the OMPT interface stays \emph{pending} and the implementation 
+continues finding another tool.
 
-Next, the OpenMP implementation will initialize itself. If a tool
-provided a non-\code{NULL} pointer to an \code{ompt_start_tool_result_t} structure,
-the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
+If no tool can be found, the OMPT interface turns to \emph{inactive}.
+
+Next, the OpenMP implementation will initialize itself. 
+If the OMPT interface is \emph{active}, the OpenMP implementation will 
+prepare itself for use of the OMPT interface by a tool; 
+when the OpenMP implementation is ready to accept calls from the 
+first-party tool, it continues with invoking the tool initialization 
+as described in the following section.
 
 \crossreferences
 \begin{itemize}
@@ -129,14 +148,14 @@ the OpenMP runtime will prepare itself for use of the OMPT interface by a tool.
 \item \code{ompt_start_tool}, see \specref{sec:ompt_start_tool}.
 \end{itemize}
 
-\subsubsection{Initializing an OMPT Tool}
+\subsubsection{Initializing a First-Party Tool}
 \index{tool initialization}
 \label{sec:tool-initialize}
 
-If a tool-provided implementation of \code{ompt_start_tool} returns a
-non-\code{NULL} pointer to an \code{ompt_start_tool_result_t} structure,
-the OpenMP implementation will invoke the tool initializer specified
-in this structure prior to the occurrence of any OpenMP \emph{event}.
+If the OMPT interface is active, the OpenMP implementation will invoke 
+the tool initializer specified in the \code{ompt_start_tool_result_t} 
+structure returned from the \code{ompt_start_tool} function
+prior to the occurrence of any OpenMP \emph{event}.
 
 A tool's initializer, described in \specref{sec:ompt_initialize_t}
 uses its argument \plc{lookup} to look up pointers
@@ -159,9 +178,9 @@ implementation employs.
 
 %The descriptions of the enumeration runtime entry point type signatures show how to use them to determine what thread states and mutual exclusion mechanisms an OpenMP implementation supports.
 
-If a tool initializer returns a non-zero value, the tool will be
-\emph{activated} for the execution; otherwise, the tool will be
-inactive.
+If a tool initializer returns a non-zero value, the OMPT interface 
+will stay \emph{active} for the execution; otherwise, the OMPT 
+interface turns to \emph{inactive}.
 
 \crossreferences
 \begin{itemize}
@@ -341,7 +360,7 @@ Return code abbreviation                      & N &S/P& A \\\hline
 {\scode{ompt_callback_device_unload}}         &   &   & * \\
 {\scode{ompt_callback_sync_region_wait}}     & * & * & * \\
 {\scode{ompt_callback_mutex_released}}        & * & * & * \\
-{\scode{ompt_callback_task_dependences}}      & * & * & * \\
+{\scode{ompt_callback_dependences}}          & * & * & * \\
 {\scode{ompt_callback_task_dependence}}       & * & * & * \\
 {\scode{ompt_callback_work}}                   & * & * & * \\
 {\scode{ompt_callback_master}}                 & * & * & * \\
@@ -417,7 +436,7 @@ A tool may also optionally register an \code{ompt_callback_device_finalize} call
   a pointer to a device-specific runtime entry point with type
   signature \code{ompt_function_lookup_t} to the tool's device initializer.
 \item If the device initializer for the tool receives a
-  non-\code{NULL} \plc{lookup} pointer, the tool may use it to query
+  non-null \plc{lookup} pointer, the tool may use it to query
   which runtime entry points in the tracing interface are available for a target device
   and bind the function pointers returned to tool variables.
   Table~\ref{table:ompt-tracing-interface-functions} indicates the
@@ -429,7 +448,7 @@ entry points as long as they don't use names that start with the prefix
 ``\code{ompt_}''. Theses are reserved for future extensions in the
 OpenMP specification.
 
-  If \plc{lookup} is non-\code{NULL}, the driver for a device will
+  If \plc{lookup} is non-null, the driver for a device will
   provide runtime entry points that enable a tool to control the device's
   interface for collecting traces in its \emph{native} trace format,
   which may be device specific.
@@ -575,14 +594,13 @@ is in progress.
 \end{itemize}
 
 
-\subsection{Finalizing an OMPT Tool}
+\subsection{Finalizing a First-Party Tool}
 \label{sec:ompt-finalization}
 
-If \code{ompt_start_tool} returned a non-\code{NULL} pointer when an OpenMP
-implementation was initialized, the tool finalizer, of type signature
-\code{ompt_finalize_t}, specified by the
-\plc{finalize} field in this structure will be called as the OpenMP
-implementation shuts down.
+If the OMPT interface is active, the OpenMP implementation will invoke 
+the tool finalizer specified in the \code{ompt_start_tool_result_t} 
+structure returned from the \code{ompt_start_tool} function
+as the OpenMP implementation shuts down.
 
 \crossreferences
 \begin{itemize}
@@ -618,7 +636,7 @@ typedef struct ompt_start_tool_result_t {
 
 The \plc{initialize} and \plc{finalize} callback pointer values in an
 \code{ompt_start_tool_result_t} structure returned by \code{ompt_start_tool} must be
-non-\code{NULL}.
+non-null.
 
 \crossreferences
 \begin{itemize}
@@ -655,7 +673,7 @@ typedef enum ompt_callbacks_t {
   ompt_callback_device_unload            = 15,
   ompt_callback_sync_region_wait         = 16,
   ompt_callback_mutex_released           = 17,
-  ompt_callback_task_dependences         = 18,
+  ompt_callback_dependences              = 18,
   ompt_callback_task_dependence          = 19,
   ompt_callback_work                     = 20,
   ompt_callback_master                   = 21,
@@ -817,7 +835,7 @@ typedef struct ompt_record_ompt_t {
     ompt_record_parallel_begin_t \plc{parallel_begin};
     ompt_record_parallel_end_t \plc{parallel_end};
     ompt_record_task_create_t \plc{task_create};
-    ompt_record_task_dependences_t \plc{task_deps};
+    ompt_record_dependences_t \plc{deps};
     ompt_record_task_dependence_t \plc{task_dep};
     ompt_record_task_schedule_t \plc{task_sched};
     ompt_record_implicit_t \plc{implicit};
@@ -986,33 +1004,37 @@ typedef uint64_t ompt_buffer_cursor_t;
 
 
 
-% ompt_task_dependence_t
+% ompt_dependence_t
 
-\subsubsubsection{\hcode{ompt_task_dependence_t}}
-\label{sec:ompt_task_dependence_t}
-\code{ompt_task_dependence_t} is a task dependence.
+\subsubsubsection{\hcode{ompt_dependence_t}}
+\label{sec:ompt_dependence_t}
+\code{ompt_dependence_t} is a task dependence.
 
 
 \begin{ccppspecific}
 \begin{omptOther}
-typedef struct ompt_task_dependence_t {
-  void *\plc{variable_addr};
-  ompt_task_dependence_type_t \plc{dependence_type};
-} ompt_task_dependence_t;
+typedef struct ompt_dependence_t {
+  ompt_data_t \plc{variable};
+  ompt_dependence_type_t \plc{dependence_type};
+} ompt_dependence_t;
 \end{omptOther}
 \end{ccppspecific}
 
 
 \descr
-\code{ompt_task_dependence_t} is a structure to hold information
+\code{ompt_dependence_t} is a structure to hold information
 about a depend clause.
-The element \plc{variable_addr} points to the storage location of the dependence.
+For task dependences, the element \plc{variable} points to the storage location of the 
+dependence. 
+For doacross dependences, the element \plc{variable} contains the value of a vector 
+element, describing 
+the dependence.
 The element \plc{dependence_type} indicates the type of dependence described.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_task_dependence_type_t}, see
-\specref{sec:ompt_task_dependence_type_t}.
+\item \code{ompt_dependence_type_t}, see
+\specref{sec:ompt_dependence_type_t}.
 \end{itemize}
 
 
@@ -1334,21 +1356,24 @@ typedef enum ompt_target_map_flag_t {
 
 
 
-% ompt_task_dependence_type_t
+% ompt_dependence_type_t
 
-\subsubsubsection{\hcode{ompt_task_dependence_type_t}}
-\label{sec:ompt_task_dependence_type_t}
-\code{ompt_task_dependence_type_t} is an enumeration that defines the valid task dependence type values.
+\subsubsubsection{\hcode{ompt_dependence_type_t}}
+\label{sec:ompt_dependence_type_t}
+\code{ompt_dependence_type_t} is an enumeration that defines the valid task dependence 
+type values.
 
 
 \begin{ccppspecific}
 \begin{omptEnum}
-typedef enum ompt_task_dependence_type_t {
-  ompt_task_dependence_type_in              = 1,
-  ompt_task_dependence_type_out             = 2,
-  ompt_task_dependence_type_inout           = 3,
-  ompt_task_dependence_type_mutexinoutset   = 4
-} ompt_task_dependence_type_t;
+typedef enum ompt_dependence_type_t {
+  ompt_dependence_type_in              = 1,
+  ompt_dependence_type_out             = 2,
+  ompt_dependence_type_inout           = 3,
+  ompt_dependence_type_mutexinoutset   = 4,
+  ompt_dependence_type_source          = 5,
+  ompt_dependence_type_sink            = 6
+} ompt_dependence_type_t;
 \end{omptEnum}
 \end{ccppspecific}
 

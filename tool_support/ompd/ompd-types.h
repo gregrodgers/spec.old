@@ -1,21 +1,19 @@
 /*
 * @@name:	ompd_types.h
 */
-#ifndef __OPMD_TYPES_H
-#define __OPMD_TYPES_H
-#include "omp_types.h"
-#include "ompd.h"
+#ifndef __OMPD_TYPES_H
+#define __OMPD_TYPES_H
 
-#define OMPD_TYPES_VERSION   20170927 /* YYYYMMDD Format */
+#define OMPD_TYPES_VERSION   20180906 /* YYYYMMDD Format */
 
 /* Kinds of device threads  */
-#define OMPD_OSTHREAD_PTHREAD     ((ompd_osthread_kind_t)1)
-#define OMPD_OSTHREAD_LWP         ((ompd_osthread_kind_t)2)
-#define OMPD_OSTHREAD_WINTHREAD   ((ompd_osthread_kind_t)3)
-#define OMPD_OSTHREAD_CUDALOGICAL ((ompd_osthread_kind_t)4)
+#define OMPD_THREAD_ID_PTHREAD      ((ompd_thread_id_t)0)
+#define OMPD_THREAD_ID_LWP          ((ompd_thread_id_t)1)
+#define OMPD_THREAD_ID_WINTHREAD    ((ompd_thread_id_t)2)
+#define OMPD_THREAD_ID_CUDALOGICAL  ((ompd_thread_id_t)3)
 /* The range of non-standard implementation defined values */
-#define OMPD_OSTHREAD_IMPL_LO       ((ompd_osthread_kind_t)1000000)
-#define OMPD_OSTHREAD_IMPL_HI       ((ompd_osthread_kind_t)1100000)
+#define OMPD_THREAD_ID_LO       ((ompd_thread_id_t)1000000)
+#define OMPD_THREAD_ID_HI       ((ompd_thread_id_t)1100000)
 
 /* Target Cuda device-specific thread identification */
 typedef struct ompd_dim3_t {
@@ -29,7 +27,6 @@ typedef struct ompd_cudathread_coord_t {
     ompd_addr_t cudaContext;
     ompd_addr_t warpSize;
     ompd_addr_t gridId;
-    ompd_addr_t kernelId;
     ompd_dim3_t  gridDim;
     ompd_dim3_t  blockDim;
     ompd_dim3_t  blockIdx;
@@ -56,4 +53,11 @@ typedef struct ompd_cudathread_coord_t {
 #define OMPD_SEGMENT_CUDA_PTX_IPARAM         ((ompd_seg_t)13)
 #define OMPD_SEGMENT_CUDA_PTX_OPARAM         ((ompd_seg_t)14)
 #define OMPD_SEGMENT_CUDA_PTX_FRAME          ((ompd_seg_t)15)
+
+/* Kinds of device device address spaces */
+#define OMPD_DEVICE_KIND_HOST     ((ompd_device_t)1)
+#define OMPD_DEVICE_KIND_CUDA     ((ompd_device_t)2)
+/* The range of non-standard implementation defined values */
+#define OMPD_DEVICE_IMPL_LO       ((ompd_device_t)1000000)
+#define OMPD_DEVICE_IMPL_HI       ((ompd_device_t)1100000)
 #endif

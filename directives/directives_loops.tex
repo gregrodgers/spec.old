@@ -42,18 +42,17 @@
 %             This is a \plc{var-name}.
 %
 
+
+
 \section{Loop-Related Directives}
 \label{sec:LoopRelatedConstructs}
 
 \subsection{Canonical Loop Form}
 \label{subsec:Canonical Loop Form}
 \index{canonical loop form}
-\begin{cppspecific}
-A range-based for loop with random access iterator has a \emph{canonical loop form}.
-\end{cppspecific}
 \begin{ccppspecific}
-The loops associated with a loop directive have \emph{canonical loop form} if
-they conform to the following:
+The loops associated with a loop-associated directive have \emph{canonical loop form} 
+if they conform to the following:
 
 \medskip
 \nolinenumbers
@@ -99,10 +98,8 @@ they conform to the following:
     & \hspace{1.5em}A variable of a signed or unsigned integer type.\\
     & \hspace{1.5em}For C++, a variable of a random access iterator type.\\
     & \hspace{1.5em}For C, a variable of a pointer type.\\
-    & If this variable would otherwise be shared, it is implicitly made private in the loop
-    construct. This variable must not be modified during the execution of the {\splc{for-loop}}
-    other than in {\splc{incr-expr}}. Unless the variable is specified {\scode{lastprivate}}
-    or {\scode{linear}} on the loop construct, its value after the loop is unspecified.\\
+    & This variable must not be modified during the execution of the {\splc{for-loop}}
+    other than in {\splc{incr-expr}}. \\
     {\splc{relational-op}} & One of the following:\\
     & {\scode{<}}\\
     & {\scode{<=}}\\
@@ -142,9 +139,9 @@ they conform to the following:
 
 \begin{fortranspecific}
 
-The loops associated with a loop directive have \emph{canonical loop form} if
-each of them is a \plc{do-loop} that is a \plc{do-construct} or an
-\plc{inner-shared-do-construct} as defined by the Fortran standard.If an
+The loops associated with a loop-associated directive have \emph{canonical loop form} 
+if each of them is a \plc{do-loop} that is a \plc{do-construct} or an
+\plc{inner-shared-do-construct} as defined by the Fortran standard. If an
 \code{end}~\code{do} directive follows a \plc{do-construct} in which several
 loop statements share a \code{DO} termination statement, then the directive
 can only be specified for the outermost of these \code{DO} statements.
@@ -161,10 +158,7 @@ The \plc{do-stmt} for any \plc{do-loop} must conform to the following:
 }
 \tablelasttail{\hline}
 \begin{supertabular}{ p{0.8in} p{4.5in}}
-    {\splc{var}} & A variable of integer type. If this variable would
-    otherwise be shared, it is implicitly made private in the loop construct.
-    Unless the variable is specified {\scode{lastprivate}} or {\scode{linear}}
-    on the loop construct, its value after the loop is unspecified.\\
+    {\splc{var}} & A variable of integer type.\\
     & \\
 
     {\splc{lb}} and {\splc{b}} & Expressions of a type compatible with the
@@ -206,99 +200,115 @@ before executing the outermost loop. The computation is performed for each loop 
 integer type. This type is derived from the type of \plc{var} as follows:
 
 \begin{itemize}
-    \item If \plc{var} is of an integer type, then the type is the type of \plc{var}.
+\item If \plc{var} is of an integer type, then the type is the type of \plc{var}.
 \end{itemize}        
+
 \begin{cppspecific}
 \begin{itemize}
-    \item If \plc{var} is of a random access iterator type, then the type is the type that
-    would be used by \plc{std::distance} applied to variables of the type of \plc{var}.
+\item If \plc{var} is of a random access iterator type, then the type is the 
+      type that would be used by \plc{std::distance} applied to variables of 
+      the type of \plc{var}.
 \end{itemize}
 \end{cppspecific}
+
 \begin{cspecific}
 \begin{itemize}
-    \item If \plc{var} is of a pointer type, then the type is \code{ptrdiff_t}.
+\item If \plc{var} is of a pointer type, then the type is \code{ptrdiff_t}.
 \end{itemize}
 \end{cspecific}
 
-The behavior is unspecified if any intermediate result required to compute the iteration
-count cannot be represented in the type determined above.
+The behavior is unspecified if any intermediate result required to compute the 
+iteration count cannot be represented in the type determined above.
 
-There is no implied synchronization during the evaluation of the \plc{lb}, \plc{b}, or \plc{incr}
-expressions. It is unspecified whether, in what order, or how many times any side effects
-within the \plc{lb}, \plc{b}, or \plc{incr} expressions occur.
+There is no implied synchronization during the evaluation of the \plc{lb}, \plc{b}, 
+or \plc{incr} expressions. It is unspecified whether, in what order, or how many 
+times any side effects within the \plc{lb}, \plc{b}, or \plc{incr} expressions occur.
 
 \begin{note}
 Random access iterators are required to support random access to elements in
-constant time. Other iterators are precluded by the restrictions since they can take linear
-time or offer limited functionality. It is therefore advisable to use tasks to parallelize
-those cases.
-
-% The word "Restrictions" seems out of place; was it meant to be a header outside of the Note?
-
-%Restrictions
+constant time. Other iterators are precluded by the restrictions since they can 
+take linear time or offer limited functionality. The use of tasks to parallelize 
+those cases is therefore advisable.
 \end{note}
+
+\begin{cppspecific}
+
+A range-based for loop that is valid in the base language and has a begin value
+that satisfies the random access iterator requirement has \emph{canonical loop form}.
+Range-based for loops are of the following form:
+
+\scode{for (}\splc{range-decl}\scode{: }\splc{range-expr}\scode{) }\splc{structured-block}
+
+
+The \plc{begin-expr} and \plc{end-expr} expressions are derived from
+\plc{range-expr} by the base language and assigned to variables to which this
+specification refers as \code{__begin} and \code{__end} respectively.  Both
+\code{__begin} and \code{__end} are privatized.  For the purpose of the rest of
+the standard \code{__begin} is the iteration variable of the range-for loop.
+
+\end{cppspecific}
 
 \restrictions
 The following restrictions also apply:
 
 \begin{ccppspecific}
 \begin{itemize}
-    \item If \plc{test-expr} is of the form \plc{var} \plc{relational-op}
-    \plc{b} and \plc{relational-op} is < or <= then \plc{incr-expr} must cause \plc{var} to increase on each
-    iteration of the loop. If \plc{test-expr} is of
-    the form \plc{var} \plc{relational-op} \plc{b} and \plc{relational-op}
-    is > or >= then \plc{incr-expr} must cause \plc{var} to decrease on each iteration of the loop.
-
-    \item If \plc{test-expr} is of the form \plc{b} \plc{relational-op}
-    \plc{var} and \plc{relational-op} is < or <= then
-    \plc{incr-expr} must cause \plc{var} to decrease on each iteration of the loop. If \plc{test-expr} is of
-    the form \plc{b} \plc{relational-op} \plc{var} and \plc{relational-op}
-    is > or >= then \plc{incr-expr} must cause \plc{var} to increase on each iteration of the loop.
-
-    \item If \plc{test-expr} is of the form \plc{b} != \plc{var} or
-    \plc{var} != \plc{b} then \plc{incr-expr} must cause \plc{var}
-    either to increase on each iteration of the loop or to decrease on
-    each iteration of the loop.
-
-    \item If \plc{relational-op} is != and \plc{incr-expr} is of the
-    form that has \plc{incr} then \plc{incr} must be a constant expression and
-    evaluate to -1 or 1.
+\item If \plc{test-expr} is of the form \plc{var} \plc{relational-op}
+      \plc{b} and \plc{relational-op} is < or <= then \plc{incr-expr} 
+      must cause \plc{var} to increase on each iteration of the loop. 
+      If \plc{test-expr} is of the form \plc{var} \plc{relational-op} 
+      \plc{b} and \plc{relational-op} is > or >= then \plc{incr-expr} 
+      must cause \plc{var} to decrease on each iteration of the loop.
+\item If \plc{test-expr} is of the form \plc{b} \plc{relational-op}
+      \plc{var} and \plc{relational-op} is < or <= then \plc{incr-expr} 
+      must cause \plc{var} to decrease on each iteration of the loop. 
+      If \plc{test-expr} is of the form \plc{b} \plc{relational-op} 
+      \plc{var} and \plc{relational-op} is > or >= then \plc{incr-expr} 
+      must cause \plc{var} to increase on each iteration of the loop.
+\item If \plc{test-expr} is of the form \plc{b} != \plc{var} or
+      \plc{var} != \plc{b} then \plc{incr-expr} must cause \plc{var}
+      either to increase on each iteration of the loop or to decrease on
+      each iteration of the loop.
+\item If \plc{relational-op} is != and \plc{incr-expr} is of the
+      form that has \plc{incr} then \plc{incr} must be a constant 
+      expression and evaluate to -1 or 1.
 \end{itemize}
 \end{ccppspecific}
 
 \begin{cppspecific}
 \begin{itemize}
-    \item In the \code{simd} construct the only random access iterator types that are
-    allowed for \plc{var} are pointer types.
-
-\item The iteration count of a range-based for loop must be loop invariant
-    with respect to the outermost associated loop.
+\item In the \code{simd} construct the only random access iterator types
+      that are allowed for \plc{var} are pointer types.
+\item The \plc{range-expr} of a range-for loop must be loop invariant
+      with respect to the outermost associated loop, and must not reference
+      iteration variables of any associated loops.
+\item The loops associated with an ordered clause with a parameter may not
+      include range-for loops.
 \end{itemize}
 \end{cppspecific}
 
 \begin{itemize}
-%    \item For any associated loop where \plc{b} or \plc{lb} is not loop invariant with
-%        respect to the outermost loop, the expression \plc{b}-\plc{lb} will
-%        have the form \plc{c}*\plc{var-outer} + {d}, where \plc{c} and \plc{d}
-%        are loop invariant integer expressions. Let \plc{incr-outer} be the
-%        \plc{incr} expression of the outer loop referred to by
-%        \plc{var-outer}.  The value of \plc{c}*\plc{incr-outer} \plc{mod}
-%        \plc{incr} must be 0.
-    \item The \plc{b}, \plc{lb}, and \plc{incr} expressions may not reference
-        \plc{var} of any enclosed associated loop.
+\item The \plc{b}, \plc{lb}, \plc{incr}, and \plc{range-expr} expressions
+      may not reference any \plc{var} or member of the \plc{range-decl} of
+      any enclosed associated loop.
+\item For any associated loop where the \plc{b} or \plc{lb} expression is not loop
+      invariant with respect to the outermost loop, the \plc{var-outer} that
+      appears in the expression may not have a random access iterator type.
+\item For any associated loop where \plc{b} or \plc{lb} is not loop invariant
+      with respect to the outermost loop, the expression $\plc{b}-\plc{lb}$
+      will have the form $\plc{c}*\plc{var-outer}+\plc{d}$, where \plc{c} and
+      \plc{d} are loop invariant integer expressions. Let \plc{incr-outer} be
+      the \plc{incr} expression of the outer loop referred to by \plc{var-outer}.  
+      The value of $\plc{c}*\plc{incr-outer} \mod \plc{incr}$ must be 0.
+\end{itemize}
 
-    \item For any associated loop where the \plc{b} or \plc{lb} expression is not loop
-        invariant with respect to the outermost loop, the \plc{var-outer} that
-        appears in the expression may not have a random access iterator type.
+\crossreferences
+\begin{itemize}
+\item \code{lastprivate} clause, see \specref{subsubsec:lastprivate clause}.
 
-    \item For any associated loop where \plc{b} or \plc{lb} is not loop invariant with
-        respect to the outermost loop, the expression $\plc{b}-\plc{lb}$ will
-        have the form $\plc{c}*\plc{var-outer}+\plc{d}$, where \plc{c} and \plc{d}
-        are loop invariant integer expressions. Let \plc{incr-outer} be the
-        \plc{incr} expression of the outer loop referred to by
-        \plc{var-outer}.  The value of $\plc{c}*\plc{incr-outer} \mod \plc{incr}$ must be 0.
+\item \code{linear} clause, see \specref{subsubsec:linear clause}.
 
-    %\item The \plc{incr} expression may not reference \plc{var} of any of the associated loops.
+\item \code{simd} construct, see \specref{subsubsec:simd Construct}.
 \end{itemize}
 
 
@@ -312,10 +322,11 @@ The following restrictions also apply:
 \index{for@{\code{for}, \emph{C/C++}}}
 \index{constructs!for@{\code{for}, \emph{C/C++}}}
 \summary
-The worksharing-loop construct specifies that the iterations of one or more associated loops will be
-executed in parallel by threads in the team in the context of their implicit tasks. The
-iterations are distributed across threads that already exist in the team executing the
-\code{parallel} region to which the worksharing-loop region binds.
+The worksharing-loop construct specifies that the iterations of one or more 
+associated loops will be executed in parallel by threads in the team in the 
+context of their implicit tasks. The iterations are distributed across threads 
+that already exist in the team that is executing the \code{parallel} region 
+to which the worksharing-loop region binds.
 
 \syntax
 \begin{ccppspecific}
@@ -344,9 +355,9 @@ allocate(\plc{[allocator: ]}\plc{list})
 order(concurrent)
 \end{indentedcodelist}
 
-The \code{for} directive places restrictions on the structure of all associated \plc{for-loops}.
-Specifically, all associated \plc{for-loops} must have \emph{canonical loop form} (see
-\specref{subsec:Canonical Loop Form}).
+The \code{for} directive places restrictions on the structure of all associated 
+\plc{for-loops}. Specifically, all associated \plc{for-loops} must have 
+\emph{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -374,8 +385,8 @@ allocate(\plc{[allocator: ]}\plc{list})
 order(concurrent)
 \end{indentedcodelist}
 
-If an \code{end}~\code{do} directive is not specified, an \code{end}~\code{do} directive is assumed at the end of the
-\plc{do-loops}.
+If an \code{end}~\code{do} directive is not specified, an \code{end}~\code{do} 
+directive is assumed at the end of the \plc{do-loops}.
 
 The \code{do} directive places restrictions on the structure of all
 associated \plc{do-loops}.  Specifically, all associated \plc{do-loops} must
@@ -383,20 +394,20 @@ have \emph{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 
 \end{fortranspecific}
 
-
 \binding
 The binding thread set for a worksharing-loop region is the current team. A
-worksharing-loop region binds to the
-innermost enclosing \code{parallel} region. Only the threads of the team executing the
-binding \code{parallel} region participate in the execution of the loop iterations and the
-implied barrier of the worksharing-loop region if the barrier is not eliminated by a \code{nowait} clause.
+worksharing-loop region binds to the innermost enclosing \code{parallel} region. 
+Only the threads of the team executing the binding \code{parallel} region 
+participate in the execution of the loop iterations and the implied barrier 
+of the worksharing-loop region if the barrier is not eliminated by a 
+\code{nowait} clause.
 
 \descr
-The worksharing-loop construct is associated with a loop nest consisting of one or more loops that
-follow the directive.
+The worksharing-loop construct is associated with a loop nest that consists
+of one or more loops that follow the directive.
 
-There is an implicit barrier at the end of a worksharing-loop construct unless a \code{nowait} clause is
-specified.
+There is an implicit barrier at the end of a worksharing-loop construct 
+unless a \code{nowait} clause is specified.
 
 \index{clauses!collapse@{\code{collapse}}}
 The \code{collapse} clause may be used to specify how many loops are
@@ -418,17 +429,14 @@ number of times that any intervening code between any two associated
 loops will be executed is unspecified but will be at least once per
 iteration of the loop enclosing the intervening code and at most once
 per iteration of the innermost loop associated with the construct. If the
-iteration count of any loop that is associated with the worksharing-loop construct and does not
-enclose the intervening code is zero then the behavior is unspecified.
-
-The iteration count for each associated loop is computed before entry to the
-outermost loop. If execution of any associated loop changes any of the values
-used to compute any of the iteration counts, then the behavior is unspecified.
+iteration count of any loop that is associated with the
+worksharing-loop construct is zero and that loop does not enclose the
+intervening code, the behavior is unspecified.
 
 The integer type (or kind, for Fortran) used to compute the iteration count
 for the collapsed loop is implementation defined.
 
-\index{clauses!schedule@{\code{schedule}}} A worksharing loop has
+\index{clauses!schedule@{\code{schedule}}} A worksharing-loop has
 logical iterations numbered 0,1,...,N-1 where N is the number of loop
 iterations, and the logical numbering denotes the sequence in which
 the iterations would be executed if a set of associated loop(s) were
@@ -448,15 +456,15 @@ evaluation of this expression occur. The use of a variable in a
 \code{schedule} clause expression of a worksharing-loop construct causes an
 implicit reference to the variable in all enclosing constructs.
 
-Different worksharing-loop regions with the same schedule and iteration count, even if
-they occur in the same parallel region, can distribute iterations among
+Different worksharing-loop regions with the same schedule and iteration count, 
+even if they occur in the same parallel region, can distribute iterations among
 threads differently. The only exception is for the \code{static} schedule
 as specified in Table~\ref{tab:Schedule-Values}. Programs that depend
 on which thread executes a particular iteration under any other circumstances
 are non-conforming.
 
-See \specref{subsubsec:Determining the Schedule of a Worksharing Loop}
-for details of how the schedule for a worksharing worksharing-loop is
+See \specref{subsubsec:Determining the Schedule of a Worksharing-Loop}
+for details of how the schedule for a worksharing-loop region is
 determined.
 
 The schedule \plc{kind} can be one of those specified in
@@ -470,6 +478,8 @@ not specified, the effect is as if the \code{monotonic} modifier
 is specified. Otherwise, unless the \code{monotonic} modifier is
 specified, the effect is as if the \code{nonmonotonic} modifier
 is specified.
+If a \code{schedule} clause specifies a modifier then that modifier overrides
+any modifier that is specified in the \plc{run-sched-var} ICV.
 
 The \code{ordered} clause with the parameter may also be used to specify
 how many loops are associated with the worksharing-loop construct. The parameter of
@@ -505,65 +515,71 @@ including concurrently.
 \tablelasttail{\hline}
 \tablecaption{\code{schedule} Clause \plc{kind} Values\label{tab:Schedule-Values}}
 \begin{supertabular}{ p{0.8in} p{4.3in} }
-{\scode{static}} & When {\scode{schedule(static,}\splc{ chunk_size}\scode{)}} is specified, iterations are divided
-into chunks of size {\splc{chunk_size}}, and the chunks are assigned to the threads in
-the team in a round-robin fashion in the order of the thread number.
-Each chunk contains {\splc{chunk_size}} iterations, except for the 
-chunk that contains the sequentially last iteration, which 
-may have fewer iterations.\\
 
- & When no {\splc{chunk_size}} is specified, the iteration space is divided into chunks that
-are approximately equal in size, and at most one chunk is distributed to each
-thread. The size of the chunks is unspecified in this case.\\
+{\scode{static}} & When \splc{kind} is \index{static@{{\scode{static}}}}\scode{static},
+                   iterations are divided into chunks of size
+                   {\splc{chunk_size}}, and the chunks are assigned to the 
+                   threads in the team in a round-robin fashion in the order 
+                   of the thread number. Each chunk contains {\splc{chunk_size}} 
+                   iterations, except for the chunk that contains the sequentially 
+                   last iteration, which may have fewer iterations.\\
 
- & A compliant implementation of the {\scode{static}} schedule must ensure that the
-same assignment of logical iteration numbers to threads will be used in two
-worksharing-loop regions if the following conditions are satisfied: 1) both
-worksharing-loop regions have
-the same number of loop iterations, 2) both worksharing-loop regions have the same value
-of {\splc{chunk_size}} specified, or both worksharing-loop regions have no {\splc{chunk_size}} specified, 3)
-both worksharing-loop regions bind to the same parallel region, and 4) neither loop is
-associated with a SIMD construct. A data dependence between the same
-logical iterations in two such loops is guaranteed to be satisfied allowing safe
-use of the {\scode{nowait}} clause.\\
+                 & When no {\splc{chunk_size}} is specified, the iteration space is 
+                   divided into chunks that are approximately equal in size, and at 
+                   most one chunk is distributed to each thread. The size of the 
+                   chunks is unspecified in this case.\\
 
-\index{dynamic@{{\scode{dynamic}}}}
-{\scode{dynamic}} & When {\scode{schedule(dynamic,}\splc{ chunk_size}\scode{)}} is specified, the iterations are
-distributed to threads in the team in chunks. Each
-thread executes a chunk of iterations, then requests another chunk, until no
-chunks remain to be distributed. \\
+                 & A compliant implementation of the {\scode{static}} schedule must 
+                   ensure that the same assignment of logical iteration numbers to
+                   threads will be used in two worksharing-loop regions if the 
+                   following conditions are satisfied: 1) both worksharing-loop 
+                   regions have the same number of loop iterations, 2) both 
+                   worksharing-loop regions have the same value of {\splc{chunk_size}} 
+                   specified, or both worksharing-loop regions have no 
+                   {\splc{chunk_size}} specified, 3) both worksharing-loop regions 
+                   bind to the same parallel region, and 4) neither loop is
+                   associated with a SIMD construct. A data dependence between the 
+                   same logical iterations in two such loops is guaranteed to be 
+                   satisfied allowing safe use of the {\scode{nowait}} clause.\\
 
- & Each chunk contains {\splc{chunk_size}} iterations, except for the
-chunk that contains the sequentially last iteration, which may have fewer iterations.\\
+{\scode{dynamic}} & When \splc{kind} is \index{dynamic@{{\scode{dynamic}}}}\scode{dynamic},
+                    the iterations are distributed to threads in the team
+                    in chunks. Each thread executes a chunk of iterations, then 
+                    requests another chunk, until no chunks remain to be distributed. \\
 
- & When no {\splc{chunk_size}} is specified, it defaults to 1.\\
+                  & Each chunk contains {\splc{chunk_size}} iterations, except for
+                    the chunk that contains the sequentially last iteration, which 
+                    may have fewer iterations.\\
 
-\index{guided@{{\scode{guided}}}}
-{\scode{guided}} & When {\scode{schedule(guided,}\splc{ chunk_size}\scode{)}} is specified, the iterations are
-assigned to threads in the team in chunks. Each thread executes a
-chunk of iterations, then requests another chunk, until no chunks remain to be assigned.\\
+                  & When no {\splc{chunk_size}} is specified, it defaults to 1.\\
 
- & For a {\splc{chunk_size}} of 1, the size of each chunk is proportional to the
-number of unassigned iterations divided by the number of threads in the team,
-decreasing to 1. For a {\splc{chunk_size}} with value $k$ (greater than 1), the
-size of each chunk is determined in the same way, with the restriction
-that the chunks do not contain fewer than $k$ iterations (except for the
-chunk that contains the sequentially last iteration, which may have fewer
-than $k$ iterations).
-\\
+{\scode{guided}} & When \splc{kind} is \index{guided@{{\scode{guided}}}}\scode{guided},
+                   the iterations are assigned to threads in the team
+                   in chunks. Each thread executes a chunk of iterations, then 
+                   requests another chunk, until no chunks remain to be assigned.\\
 
- & When no {\splc{chunk_size}} is specified, it defaults to 1.\\
+                 & For a {\splc{chunk_size}} of 1, the size of each chunk is 
+                   proportional to the number of unassigned iterations divided by 
+                   the number of threads in the team, decreasing to 1. For a 
+                   {\splc{chunk_size}} with value $k$ (greater than 1), the
+                   size of each chunk is determined in the same way, with the 
+                   restriction that the chunks do not contain fewer than $k$ 
+                   iterations (except for the chunk that contains the sequentially 
+                   last iteration, which may have fewer than $k$ iterations). \\
 
-{\scode{auto}} & When {\scode{schedule(auto)}} is specified, the decision regarding scheduling is
-\index{auto@{{\scode{auto}}}}
-delegated to the compiler and/or runtime system. The programmer gives the
-implementation the freedom to choose any possible mapping of iterations to
-threads in the team.\\
+                 & When no {\splc{chunk_size}} is specified, it defaults to 1.\\
 
-{\scode{runtime}} & When {\scode{schedule(runtime)}} is specified, the decision regarding scheduling
-is deferred until run time, and the schedule and chunk size are taken from the
-{\splc{run-sched-var}} ICV. If the ICV is set to {\scode{auto}}, the schedule is implementation
-defined.\\
+{\scode{auto}} & When \splc{kind} is \index{auto@{{\scode{auto}}}}\scode{auto},
+                 the decision regarding scheduling is delegated to the
+                 compiler and/or runtime system. The programmer gives the
+                 implementation the freedom to choose any possible mapping of
+                 iterations to threads in the team.\\
+
+{\scode{runtime}} & When \splc{kind} is \index{runtime@{{\scode{runtime}}}}\scode{runtime},
+                    the decision regarding scheduling is deferred until run
+                    time, and the schedule and chunk size are taken from the
+                    {\splc{run-sched-var}} ICV. If the ICV is set to
+                    {\scode{auto}}, the schedule is implementation defined.\\
 \end{supertabular}
 
 \linenumbers
@@ -571,17 +587,19 @@ defined.\\
 
 
 \begin{note}
-For a team of $p$ threads and a loop of $n$ iterations, let $\blceil n/p \brceil$ be the integer $q$
-that satisfies $n = p*q - r$, with $0 <= r < p$. One compliant implementation of the \code{static}
-schedule (with no specified \plc{chunk_size}) would behave as though \plc{chunk_size} had been
-specified with value $q$. Another compliant implementation would assign $q$ iterations to
-the first $p-r$ threads, and $q-1$ iterations to the remaining $r$ threads. This illustrates why a
+For a team of $p$ threads and a loop of $n$ iterations, let $\blceil n/p \brceil$ 
+be the integer $q$ that satisfies $n = p*q - r$, with $0 <= r < p$. One compliant 
+implementation of the \code{static} schedule (with no specified \plc{chunk_size}) 
+would behave as though \plc{chunk_size} had been specified with value $q$. Another 
+compliant implementation would assign $q$ iterations to the first $p-r$ threads, 
+and $q-1$ iterations to the remaining $r$ threads. This illustrates why a
 conforming program must not rely on the details of a particular implementation.
 
-A compliant implementation of the \code{guided} schedule with a \plc{chunk_size} value of $k$
-would assign $q = \blceil n/p \brceil$ iterations to the first available thread and set $n$ to the larger of
-$n-q$ and $p*k$. It would then repeat this process until $q$ is greater than or equal to the
-number of remaining iterations, at which time the remaining iterations form the final
+A compliant implementation of the \code{guided} schedule with a \plc{chunk_size} 
+value of $k$ would assign $q = \blceil n/p \brceil$ iterations to the first 
+available thread and set $n$ to the larger of $n-q$ and $p*k$. It would then 
+repeat this process until $q$ is greater than or equal to the number of remaining 
+iterations, at which time the remaining iterations form the final
 chunk. Another compliant implementation could use the same method, except with
 $q = \blceil n/(2p) \brceil$, and set $n$ to the larger of $n-q$ and $2*p*k$.
 \end{note}
@@ -604,29 +622,48 @@ $q = \blceil n/(2p) \brceil$, and set $n$ to the larger of $n-q$ and $2*p*k$.
 \tablecaption{\code{schedule} Clause \plc{modifier} Values\label{tab:Schedule Clause Modifier Values}}
 %% 
 \begin{supertabular}{ p{1in} p{4.1in} }
-{\scode{monotonic}} & When the {\scode{monotonic}} modifier is specified then each thread executes the chunks
-that it is assigned in increasing logical iteration order.\\
-{\scode{nonmonotonic}} & When the {\scode{nonmonotonic}} modifier is specified then chunks are assigned to threads
-in any order and the behavior of an application that depends on any execution order of the chunks is unspecified.\\
-{\scode{simd}} & When the {\scode{simd}} modifier is specified and the loop is associated with a SIMD construct, the {\splc{chunk_size}} for all chunks except the first and last chunks  is  $new\_chunk\_size = \blceil chunk\_size / simd\_width \brceil * simd\_width $ where {\splc{simd_width}} is an implementation-defined value. The first chunk will have at least {\splc{new_chunk_size}} iterations except if it is also the last chunk. The last chunk may have fewer iterations than {\splc{new_chunk_size}}. If the {\scode{simd}} modifier is specified and the loop is not associated  with a SIMD construct, the modifier is ignored.\\
+{\scode{monotonic}} & When the {\scode{monotonic}} modifier is specified then 
+                      each thread executes the chunks that it is assigned in 
+                      increasing logical iteration order.\\
+{\scode{nonmonotonic}} & When the {\scode{nonmonotonic}} modifier is specified 
+                         then chunks are assigned to threads in any order and 
+                         the behavior of an application that depends on any 
+                         execution order of the chunks is unspecified.\\
+{\scode{simd}} & When the {\scode{simd}} modifier is specified and the loop 
+                 is associated with a SIMD construct, the {\splc{chunk_size}} 
+                 for all chunks except the first and last chunks  is  
+                 $new\_chunk\_size = \blceil chunk\_size / simd\_width \brceil * simd\_width $ 
+                 where {\splc{simd_width}} is an implementation-defined value. 
+                 The first chunk will have at least {\splc{new_chunk_size}} 
+                 iterations except if it is also the last chunk. The last 
+                 chunk may have fewer iterations than {\splc{new_chunk_size}}. 
+                 If the {\scode{simd}} modifier is specified and the loop is 
+                 not associated  with a SIMD construct, the modifier is ignored.\\
 \end{supertabular}
 \linenumbers
 \medskip
 
-% \omptWorksharingEvents{loop}
 \events
-
 The \plc{ws-loop-begin} event occurs after an implicit task encounters a
-worksharing-loop construct but before the task starts the execution of the structured
+worksharing-loop construct but before the task starts execution of the structured
 block of the worksharing-loop region.
 
 The \plc{ws-loop-end} event occurs after a worksharing-loop region finishes
 execution but before resuming execution of the encountering task.
 
-The \plc{ws-loop-iteration-begin} event occurs before an implicit task
-executes each iteration of a parallel loop.
+The \plc{ws-loop-iteration-begin} event occurs once for each iteration of a
+worksharing-loop before the iteration is executed by an implicit task.
 
-\omptWorksharingTools{ws-loop}{work_loop}
+\tools
+A thread dispatches a registered \code{ompt_callback_work} callback with
+\code{ompt_scope_begin} as its \plc{endpoint} argument and \code{work_loop}
+as its \plc{wstype} argument for each occurrence of a \plc{ws-loop-begin}
+event in that thread. Similarly, a thread dispatches a registered
+\code{ompt_callback_work} callback with \code{ompt_scope_end} as its
+\plc{endpoint} argument and \code{work_loop} as its \plc{wstype} argument
+for each occurrence of a \plc{ws-loop-end} event in that thread. The callbacks
+occur in the context of the implicit task. The callbacks have type
+signature \code{ompt_callback_work_t}.
 
 A thread dispatches a registered \code{ompt_callback_dispatch}
 callback for each occurrence of a \plc{ws-loop-iteration-begin} 
@@ -638,101 +675,76 @@ context of the implicit task.  The callback has type signature
 Restrictions to the worksharing-loop construct are as follows:
 
 \begin{itemize}
-\item There must be no OpenMP directive in the region between any
-associated loops.
-
+\item No OpenMP directive may appear in the region between any associated loops.
 \item If a \code{collapse} clause is specified, exactly one loop must
-occur in the region at each nesting level up to the number of loops
-specified by the parameter of the \code{collapse} clause.
-
+      occur in the region at each nesting level up to the number of loops
+      specified by the parameter of the \code{collapse} clause.
 \item If the \code{ordered} clause is present, all loops associated
-with the construct must be perfectly nested; that is there must be
-no intervening code between any two loops.
-
+      with the construct must be perfectly nested; that is there must be
+      no intervening code between any two loops.
 \item If a \code{reduction} clause with the \code{inscan} modifier is
-    specified, neither the \code{ordered} nor \code{schedule} clause may appear
-    on the worksharing-loop directive.
-
+      specified, neither the \code{ordered} nor \code{schedule} clause
+      may appear on the worksharing-loop directive.
 \item The values of the loop control expressions of the loops associated with
-  the worksharing-loop construct must be the same for all threads in the team.
-
+      the worksharing-loop construct must be the same for all threads in the team.
 \item Only one \code{schedule} clause can appear on a worksharing-loop directive.
-
-\item The \code{schedule} clause must not appear on the worksharing-loop directive if the
-    associated loop(s) form a non-rectangular loop nest.
-
-\item The \code{ordered} clause must not appear on the worksharing-loop directive if the
-    associated loop(s) form a non-rectangular loop nest.
-
+\item The \code{schedule} clause must not appear on the worksharing-loop
+      directive  if the associated loop(s) form a non-rectangular loop nest.
+\item The \code{ordered} clause must not appear on the worksharing-loop directive 
+      if the associated loop(s) form a non-rectangular loop nest.
 \item Only one \code{collapse} clause can appear on a worksharing-loop directive.
-
-\item \plc{chunk_size} must be a loop invariant integer expression with a positive value.
-
-\item The value of the \plc{chunk_size} expression must be the same for all threads in the team.
-
-\item The value of the \plc{run-sched-var} ICV must be the same for all threads in the team.
-
-\item When \code{schedule(runtime)} or \code{schedule(auto)} is specified, \plc{chunk_size} must
-not be specified.
-
+\item \plc{chunk_size} must be a loop invariant integer expression with a 
+      positive value.
+\item The value of the \plc{chunk_size} expression must be the same for all 
+      threads in the team.
+\item The value of the \plc{run-sched-var} ICV must be the same for all 
+      threads in the team.
+\item When \code{schedule(runtime)} or \code{schedule(auto)} is specified, 
+      \plc{chunk_size} must not be specified.
 \item A \plc{modifier} may not be specified on a \code{linear} clause.
-
 \item Only one \code{ordered} clause can appear on a worksharing-loop directive.
-
-\item The \code{ordered} clause must be present on the worksharing-loop construct if any \code{ordered} region
-ever binds to a worksharing-loop region arising from the worksharing-loop construct.
-
-\item The \code{nonmonotonic} modifier cannot be specified if an \code{ordered} clause is specified.
-
-\item Either the \code{monotonic} modifier or the \code{nonmonotonic} modifier can be specified but not both.
-
+\item The \code{ordered} clause must be present on the worksharing-loop 
+      construct if any \code{ordered} region ever binds to a worksharing-loop 
+      region arising from the worksharing-loop construct.
+\item The \code{nonmonotonic} modifier cannot be specified if an \code{ordered} 
+      clause is specified.
+\item Either the \code{monotonic} modifier or the \code{nonmonotonic} modifier 
+      can be specified but not both.
 \item The loop iteration variable may not appear in a \code{threadprivate} directive.
-
-\item If both the \code{collapse} and \code{ordered} clause with a parameter are specified,
-the parameter of the \code{ordered} clause must be greater than or equal to the parameter of the
-\code{collapse} clause.
-
+\item If both the \code{collapse} and \code{ordered} clause with a parameter 
+      are specified, the parameter of the \code{ordered} clause must be greater 
+      than or equal to the parameter of the \code{collapse} clause.
 \item A \code{linear} clause or an \code{ordered} clause with a parameter can
-    be specified on a worksharing-loop directive but not both.
-
+      be specified on a worksharing-loop directive but not both.
 \item If an \code{order(concurrent)} clause is present, all restrictions from
-  the \code{loop} construct with an \code{order(concurrent)} clause also apply.
-
+      the \code{loop} construct with an \code{order(concurrent)} clause also apply.
 \item If an \code{order(concurrent)} clause is present, an \code{ordered}
-  clause may not appear on the same directive.
-
+      clause may not appear on the same directive.
 \end{itemize}
 
 \begin{ccppspecific}
 \begin{itemize}
 \item The associated \plc{for-loops} must be structured blocks.
-
-\item Only an iteration of the innermost associated loop may be curtailed by a \code{continue}
-statement.
-
+\item Only an iteration of the innermost associated loop may be curtailed 
+      by a \code{continue} statement.
 \item No statement can branch to any associated \code{for} statement.
-
 \item Only one \code{nowait} clause can appear on a \code{for} directive.
-
-\item A throw executed inside a worksharing-loop region must cause execution to resume within the
-same iteration of the worksharing-loop region, and the same thread that threw the exception must
-catch it.
+\item A throw executed inside a worksharing-loop region must cause execution 
+      to resume within the same iteration of the worksharing-loop region, 
+      and the same thread that threw the exception must catch it.
 \end{itemize}
 \end{ccppspecific}
 
 \begin{fortranspecific}
 \begin{itemize}
 \item The associated \plc{do-loops} must be structured blocks.
-
-\item Only an iteration of the innermost associated loop may be curtailed by a \code{CYCLE}
-statement.
-
-\item No statement in the associated loops other than the \code{DO} statements can cause a branch
-out of the loops.
-
+\item Only an iteration of the innermost associated loop may be curtailed 
+      by a \code{CYCLE} statement.
+\item No statement in the associated loops other than the \code{DO} statements 
+      can cause a branch out of the loops.
 \item The \plc{do-loop} iteration variable must be of type integer.
-
-\item The \plc{do-loop} cannot be a \code{DO WHILE} or a \code{DO} loop without loop control.
+\item The \plc{do-loop} cannot be a \code{DO WHILE} or a \code{DO} loop 
+      without loop control.
 \end{itemize}
 \end{fortranspecific}
 
@@ -746,11 +758,12 @@ out of the loops.
 \item \code{depend} clause, see
 \specref{subsec:depend Clause}.
 
-\item \code{private}, \code{firstprivate}, \code{lastprivate}, \code{linear}, and \code{reduction} clauses, see
-\specref{subsec:Data-Sharing Attribute Clauses}.
+\item \code{private}, \code{firstprivate}, \code{lastprivate}, \code{linear}, 
+and \code{reduction} clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
 
 \item \code{ompt_scope_begin} and \code{ompt_scope_end}, see
   \specref{sec:ompt_scope_endpoint_t}.
+
 \item \code{ompt_work_loop}, see \specref{sec:ompt_work_t}.
 
 \item \code{ompt_callback_work_t}, see
@@ -759,9 +772,6 @@ out of the loops.
 \item \code{OMP_SCHEDULE} environment variable, see
 \specref{sec:OMP_SCHEDULE}.
 \end{itemize}
-
-
-
 
 
 
@@ -774,25 +784,27 @@ out of the loops.
 \begin{quote} % to indent the diagram
 \input{directives/worksharing-schedule-loop}
 \end{quote}
-\caption{Determining the \code{schedule} for a Worksharing Loop\label{fig:schedule loop}}
+\caption{Determining the \code{schedule} for a Worksharing-Loop\label{fig:schedule loop}}
 \end{figure}
 
 
-\subsubsection{Determining the Schedule of a Worksharing Loop}
-\label{subsubsec:Determining the Schedule of a Worksharing Loop}
-\index{worksharing!scheduling}
-When execution encounters a worksharing-loop directive, the \code{schedule} clause (if any) on the
-directive, and the \plc{run-sched-var} and \plc{def-sched-var} ICVs are used to determine how loop
-iterations are assigned to threads. See
-\specref{sec:Internal Control Variables}
-for details of how the
-values of the ICVs are determined. If the worksharing-loop directive does not have a \code{schedule}
-clause then the current value of the \mbox{\plc{def-sched-var}} ICV determines the schedule. If the
-worksharing-loop directive has a \code{schedule} clause that specifies the \code{runtime} schedule kind then
-the current value of the \plc{run-sched-var} ICV determines the schedule. Otherwise, the
-value of the \code{schedule} clause determines the schedule. Figure~\ref{fig:schedule loop}
-describes how the schedule for a worksharing loop is determined.
 
+\subsubsection{Determining the Schedule of a Worksharing-Loop}
+\label{subsubsec:Determining the Schedule of a Worksharing-Loop}
+\index{worksharing!scheduling}
+When execution encounters a worksharing-loop directive, the \code{schedule} 
+clause (if any) on the directive, and the \plc{run-sched-var} and 
+\plc{def-sched-var} ICVs are used to determine how loop iterations are 
+assigned to threads. See \specref{sec:Internal Control Variables} for 
+details of how the values of the ICVs are determined. If the worksharing-loop 
+directive does not have a \code{schedule} clause then the current value of 
+the \mbox{\plc{def-sched-var}} ICV determines the schedule. If the 
+worksharing-loop directive has a \code{schedule} clause that specifies 
+the \code{runtime} schedule kind then the current value of the 
+\plc{run-sched-var} ICV determines the schedule. Otherwise, the
+value of the \code{schedule} clause determines the schedule. 
+Figure~\ref{fig:schedule loop} describes how the schedule for a 
+worksharing-loop is determined.
 
 \crossreferences
 \begin{itemize}
@@ -810,9 +822,9 @@ describes how the schedule for a worksharing loop is determined.
 \index{constructs!simd@{\code{simd}}}
 \label{subsubsec:simd Construct}
 \summary
-The \code{simd} construct can be applied to a loop to indicate that the loop can be transformed
-into a SIMD loop (that is, multiple iterations of the loop can be executed concurrently
-using SIMD instructions).
+The \code{simd} construct can be applied to a loop to indicate that the loop 
+can be transformed into a SIMD loop (that is, multiple iterations of the loop 
+can be executed concurrently using SIMD instructions).
 
 \syntax
 The syntax of the \code{simd} construct is as follows:
@@ -835,14 +847,14 @@ aligned(\plc{list[ }:\plc{ alignment]})
 nontemporal(\plc{list})
 private(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[ reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 order(concurrent)
 \end{indentedcodelist}
 
-The \code{simd} directive places restrictions on the structure of the associated \plc{for-loops}.
-Specifically, all associated \plc{for-loops} must have \plc{canonical loop form}
-(\specref{subsec:Canonical Loop Form}).
+The \code{simd} directive places restrictions on the structure of the 
+associated \plc{for-loops}. Specifically, all associated \plc{for-loops} 
+must have \plc{canonical loop form} (\specref{subsec:Canonical Loop Form}).
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -864,13 +876,13 @@ aligned(\plc{list[ }:\plc{ alignment]})
 nontemporal(\plc{list})
 private(\plc{list})
 lastprivate(\plc{[ lastprivate-modifier}:\plc{] list})
-reduction(\plc{[reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
+reduction(\plc{[ reduction-modifier},\plc{]reduction-identifier }:\plc{ list})
 collapse(\plc{n})
 order(concurrent)
 \end{indentedcodelist}
 
-If an \code{end}~\code{simd} directive is not specified, an \code{end}~\code{simd} directive is assumed at the end
-of the \plc{do-loops}.
+If an \code{end}~\code{simd} directive is not specified, an \code{end}~\code{simd} 
+directive is assumed at the end of the \plc{do-loops}.
 
 The \code{simd} directive places restrictions on the structure of all
 associated \plc{do-loops}.  Specifically, all associated \plc{do-loops} must
@@ -878,39 +890,36 @@ have \emph{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 \end{fortranspecific}
 
 \binding
-A \code{simd} region binds to the current task region. The binding thread set of the \code{simd}
-region is the current team.
+A \code{simd} region binds to the current task region. The binding thread set 
+of the \code{simd} region is the current team.
 
 \descr
-The \code{simd} construct enables the execution of multiple iterations of the associated loops
-concurrently by means of SIMD instructions.
+The \code{simd} construct enables the execution of multiple iterations of the 
+associated loops concurrently by means of SIMD instructions.
 
-The \code{collapse} clause may be used to specify how many loops are associated with the
-construct. The parameter of the \code{collapse} clause must be a constant positive integer
-expression. If no \code{collapse} clause is present, the only loop that is associated with the
-\code{simd} construct is the one that immediately follows the directive.
+The \code{collapse} clause may be used to specify how many loops are associated 
+with the construct. The parameter of the \code{collapse} clause must be a constant 
+positive integer expression. If no \code{collapse} clause is present, the only 
+loop that is associated with the \code{simd} construct is the one that immediately 
+follows the directive.
 
-If more than one loop is associated with the \code{simd} construct, then the iterations of all
-associated loops are collapsed into one larger iteration space that is then executed with
-SIMD instructions. The sequential execution of the iterations in all associated loops
-determines the order of the iterations in the collapsed iteration space.
+If more than one loop is associated with the \code{simd} construct, then the 
+iterations of all associated loops are collapsed into one larger iteration space 
+that is then executed with SIMD instructions. The sequential execution of the 
+iterations in all associated loops determines the order of the iterations in 
+the collapsed iteration space.
 
 If more than one loop is associated with the \code{simd} construct
 then the number of times that any intervening code between any two
 associated loops will be executed is unspecified but will be at least
 once per iteration of the loop enclosing the intervening code and at
 most once per iteration of the innermost loop associated with the
-construct.  If the iteration count of any loop that is associated with the \code{simd}
-construct and does not enclose the intervening code is zero then the behavior
-is unspecified.
+construct.  If the iteration count of any loop that is associated with 
+the \code{simd} construct is zero and that loop does not enclose the 
+intervening code, the behavior is unspecified.
 
-
-The iteration count for each associated loop is computed before entry to the outermost
-loop. If execution of any associated loop changes any of the values used to compute any
-of the iteration counts, then the behavior is unspecified.
-
-The integer type (or kind, for Fortran) used to compute the iteration count for the
-collapsed loop is implementation defined.
+The integer type (or kind, for Fortran) used to compute the iteration 
+count for the collapsed loop is implementation defined.
 
 A SIMD loop has logical iterations numbered 0,1,...,N-1 where N is the
 number of loop iterations, and the logical numbering denotes the
@@ -925,18 +934,21 @@ Each set of concurrent iterations is a SIMD chunk.  Lexical forward
 dependencies in the iterations of the original loop must be preserved
 within each SIMD chunk.
 
-The \code{safelen} clause specifies that no two concurrent iterations within a SIMD chunk can have a distance in the logical iteration space that is greater than or equal to the value given in the clause.
-The parameter of the \code{safelen} clause must be a constant positive integer expression.
-The \code{simdlen} clause specifies the preferred number of iterations to be executed concurrently unless an \code{if} clause is present and evaluates to \plc{false}, in which case the preferred number of iterations to be executed concurrently is one.
-The parameter of the \code{simdlen} clause must be a constant positive integer expression.
-
-%\begin{note}
-%The value of the \code{safelen} clause defines the maximum number of logical iterations that can be executed concurrently within a SIMD chunk by a SIMD instruction.
-%\end{note}
+The \code{safelen} clause specifies that no two concurrent iterations 
+within a SIMD chunk can have a distance in the logical iteration space 
+that is greater than or equal to the value given in the clause. The 
+parameter of the \code{safelen} clause must be a constant positive 
+integer expression. The \code{simdlen} clause specifies the preferred 
+number of iterations to be executed concurrently unless an \code{if} 
+clause is present and evaluates to \plc{false}, in which case the 
+preferred number of iterations to be executed concurrently is one.
+The parameter of the \code{simdlen} clause must be a constant positive 
+integer expression.
 
 \begin{ccppspecific}
-The \code{aligned} clause declares that the object to which each list item points is aligned to
-the number of bytes expressed in the optional parameter of the \code{aligned} clause.
+The \code{aligned} clause declares that the object to which each list 
+item points is aligned to the number of bytes expressed in the optional 
+parameter of the \code{aligned} clause.
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -947,82 +959,65 @@ of the \code{aligned} clause.
 
 \end{fortranspecific}
 
-The optional parameter of the \code{aligned} clause, \plc{alignment}, must be a constant positive
-integer expression. If no optional parameter is specified, implementation-defined default
-alignments for SIMD instructions on the target platforms are assumed.
+The optional parameter of the \code{aligned} clause, \plc{alignment}, 
+must be a constant positive integer expression. If no optional parameter 
+is specified, implementation-defined default alignments for SIMD 
+instructions on the target platforms are assumed.
 
-The \code{nontemporal} clause specifies that accesses to the storage locations to which the list items refer have low temporal locality across the iterations in which those storage locations are accessed.
+The \code{nontemporal} clause specifies that accesses to the storage 
+locations to which the list items refer have low temporal locality 
+across the iterations in which those storage locations are accessed.
 
 \restrictions
 \begin{itemize}
-\item There must be no OpenMP directive in the region between any
-associated loops.
-
+\item No OpenMP directive may appear in the region between any associated loops.
 \item If a \code{collapse} clause is specified, exactly one loop must
-occur in the region at each nesting level up to the number of loops
-specified by the parameter of the \code{collapse} clause.
-
-\item If the \code{ordered} clause is present, all loops associated
-with the construct must be perfectly nested; that is there must be
-no intervening code between any two loops.
-
+      occur in the region at each nesting level up to the number of loops
+      specified by the parameter of the \code{collapse} clause.
 \item The associated loops must be structured blocks.
-
 \item A program that branches into or out of a \code{simd} region is non-conforming.
-
 \item Only one \code{collapse} clause can appear on a \code{simd} directive.
-
 \item A \plc{list-item} cannot appear in more than one \code{aligned} clause.
-
 \item A \plc{list-item} cannot appear in more than one \code{nontemporal} clause.
-
 \item Only one \code{safelen} clause can appear on a \code{simd} directive.
-
 \item Only one \code{simdlen} clause can appear on a \code{simd} directive.
-
-\item If both \code{simdlen} and \code{safelen} clauses are specified, the value of the \code{simdlen} parameter must be less than or equal to the value of the \code{safelen} parameter.
-
+\item If both \code{simdlen} and \code{safelen} clauses are specified, the 
+      value of the \code{simdlen} parameter must be less than or equal to 
+      the value of the \code{safelen} parameter.
 \item A \plc{modifier} may not be specified on a \code{linear} clause.
-
 \item The only OpenMP constructs that can be encountered during execution of a
-\code{simd} region are the \code{atomic} construct, the \code{loop}
-construct, the \code{simd} construct and the \code{ordered} construct with
-the \code{simd} clause.
-
+      \code{simd} region are the \code{atomic} construct, the \code{loop}
+      construct, the \code{simd} construct and the \code{ordered} construct with
+      the \code{simd} clause.
 \item If an \code{order(concurrent)} clause is present, all restrictions from
-  the \code{loop} construct with an \code{order(concurrent)} clause also apply.
+      the \code{loop} construct with an \code{order(concurrent)} clause also apply.
 
 \begin{ccppspecific}
-\item The \code{simd} region cannot contain calls to the \code{longjmp} or \code{setjmp} functions.
+\item The \code{simd} region cannot contain calls to the \code{longjmp} or 
+      \code{setjmp} functions.
 \end{ccppspecific}
-\bigskip
 
 \begin{cspecific}
-\item The type of list items appearing in the \code{aligned} clause must be array or pointer.
+\item The type of list items appearing in the \code{aligned} clause must be 
+      array or pointer.
 \end{cspecific}
 
 \begin{cppspecific}
-\item The type of list items appearing in the \code{aligned} clause must be array, pointer,
-reference to array, or reference to pointer.
-
+\item The type of list items appearing in the \code{aligned} clause must be 
+      array, pointer, reference to array, or reference to pointer.
 \item No exception can be raised in the \code{simd} region.
 \end{cppspecific}
 
 \begin{fortranspecific}
 \item The \plc{do-loop} iteration variable must be of type \code{integer}.
-
-\item The \plc{do-loop} cannot be a \code{DO WHILE} or a \code{DO} loop without loop control.
-
-\item If a list item on the \code{aligned} clause has the
-  \code{ALLOCATABLE} attribute, the allocation status must be
-  allocated.
-
-\item If a list item on the \code{aligned} clause has the
-  \code{POINTER} attribute, the association status must be associated.
-
+\item The \plc{do-loop} cannot be a \code{DO WHILE} or a \code{DO} loop without 
+      loop control.
+\item If a list item on the \code{aligned} clause has the \code{ALLOCATABLE} 
+      attribute, the allocation status must be allocated.
+\item If a list item on the \code{aligned} clause has the \code{POINTER} 
+      attribute, the association status must be associated.
 \item If the type of a list item on the \code{aligned} clause is
-  either \code{C_PTR} or Cray pointer, the list item must be defined.
-
+      either \code{C_PTR} or Cray pointer, the list item must be defined.
 \end{fortranspecific}
 \end{itemize}
 
@@ -1032,9 +1027,10 @@ reference to array, or reference to pointer.
 
 \item \code{if} Clause, see \specref{sec:if Clause}.
 
-\item \code{private}, \code{lastprivate}, \code{linear} and \code{reduction} clauses, see
-\specref{subsec:Data-Sharing Attribute Clauses}.
+\item \code{private}, \code{lastprivate}, \code{linear} and \code{reduction} 
+clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
 \end{itemize}
+
 
 
 \begin{samepage}
@@ -1048,7 +1044,8 @@ reference to array, or reference to pointer.
 The worksharing-loop SIMD construct specifies that the iterations of one or
 more associated loops will be distributed across threads that already exist in
 the team and that the iterations executed by each thread can also be executed
-concurrently using SIMD instructions. The worksharing-loop SIMD construct is a composite construct.
+concurrently using SIMD instructions. The worksharing-loop SIMD construct is 
+a composite construct.
 \end{samepage}
 
 \begin{samepage}
@@ -1059,8 +1056,8 @@ concurrently using SIMD instructions. The worksharing-loop SIMD construct is a c
    \plc{for-loops}
 \end{ompcPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{for} or \code{simd} directives with
-identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{for} or 
+\code{simd} directives with identical meanings and restrictions.
 \end{ccppspecific}
 \end{samepage}
 
@@ -1071,35 +1068,38 @@ identical meanings and restrictions.
 \plc{[}!$omp end do simd \plc{[}nowait\plc{] ]}
 \end{ompfPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{simd} or \code{do} directives, with
-identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{simd} or 
+\code{do} directives, with identical meanings and restrictions.
 
-If an \code{end}~\code{do}~\code{simd} directive is not specified, an \code{end}~\code{do}~\code{simd} directive is
-assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{do}~\code{simd} directive is not specified, an 
+\code{end}~\code{do}~\code{simd} directive is assumed at the end of 
+the \plc{do-loops}.
 \end{fortranspecific}
 
 \descr
-The worksharing-loop SIMD construct will first distribute the iterations of the associated loop(s)
-across the implicit tasks of the parallel region in a manner consistent with any clauses
-that apply to the worksharing-loop construct. The resulting chunks of iterations will then be converted
-to a SIMD loop in a manner consistent with any clauses that apply to the \code{simd}
+The worksharing-loop SIMD construct will first distribute the iterations 
+of the associated loop(s) across the implicit tasks of the parallel region 
+in a manner consistent with any clauses that apply to the worksharing-loop
+construct. The resulting chunks of iterations will then be converted to a 
+SIMD loop in a manner consistent with any clauses that apply to the \code{simd}
 construct.
 
 \events
-
 This composite construct generates the same events as the worksharing-loop construct.
 
 \tools
-
-This composite construct dispatches the same callbacks as the worksharing-loop construct.
+This composite construct dispatches the same callbacks as the worksharing-loop 
+construct.
 
 \restrictions
-All restrictions to the worksharing-loop construct and the \code{simd} construct apply to
-the worksharing-loop SIMD construct. In addition, the following restrictions apply:
+All restrictions to the worksharing-loop construct and the \code{simd} construct 
+apply to the worksharing-loop SIMD construct. In addition, the following 
+restrictions apply:
 
 \begin{itemize}
 \item No \code{ordered} clause with a parameter can be specified.
-\item A list item may appear in a \code{linear} or \code{firstprivate} clause but not both.
+\item A list item may appear in a \code{linear} or \code{firstprivate} clause 
+      but not both.
 \end{itemize}
 
 \begin{samepage}
@@ -1113,11 +1113,9 @@ the worksharing-loop SIMD construct. In addition, the following restrictions app
 
 \item Data attribute clauses, see
 \specref{subsec:Data-Sharing Attribute Clauses}.
-
-\item Events and tool callbacks for the worksharing-loop construct, see
-\specref{subsec:Worksharing-Loop Construct}.
 \end{itemize}
 \end{samepage}
+
 
 
 \subsubsection{\hcode{declare}~\hcode{simd} Directive}
@@ -1125,11 +1123,13 @@ the worksharing-loop SIMD construct. In addition, the following restrictions app
 \index{directives!declare simd@{\code{declare}~\code{simd}}}
 \label{subsubsec:declare simd Directive}
 \summary
-The \code{declare}~\code{simd} directive can be applied to a function (C, C++ and Fortran) or a
-subroutine (Fortran) to enable the creation of one or more versions that can process
-multiple arguments using SIMD instructions from a single invocation in a SIMD
-loop. The \code{declare}~\code{simd} directive is a declarative directive. There may be multiple
-\code{declare}~\code{simd} directives for a function (C, C++, Fortran) or subroutine (Fortran).
+The \code{declare}~\code{simd} directive can be applied to a function 
+(C, C++ and Fortran) or a subroutine (Fortran) to enable the creation 
+of one or more versions that can process multiple arguments using SIMD 
+instructions from a single invocation in a SIMD loop. The 
+\code{declare}~\code{simd} directive is a declarative directive. There 
+may be multiple \code{declare}~\code{simd} directives for a function 
+(C, C++, Fortran) or subroutine (Fortran).
 
 \syntax
 The syntax of the \code{declare}~\code{simd} directive is as follows:
@@ -1158,7 +1158,7 @@ notinbranch
 \begin{fortranspecific}
 \begin{ompfPragma}
 !$omp declare simd \plc{[}(\plc{proc-name})\plc{] [clause[ [},\plc{] clause] ... ]}
-\end{ompfPragma}
+\end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 
 where \plc{clause} is one of the following:
 \begin{indentedcodelist}
@@ -1171,17 +1171,15 @@ notinbranch
 \end{indentedcodelist}
 \end{fortranspecific}
 
-
 \descr
 \begin{ccppspecific}
 The use of one or more \code{declare}~\code{simd} directives immediately prior
-to a function declaration or definition enables the
-creation of corresponding SIMD
-versions of the associated function that can be used to process multiple arguments from
-a single invocation in a SIMD loop concurrently.
+to a function declaration or definition enables the creation of corresponding 
+SIMD versions of the associated function that can be used to process multiple 
+arguments from a single invocation in a SIMD loop concurrently.
 
-The expressions appearing in the clauses of each directive are evaluated in the scope of
-the arguments of the function declaration or definition.
+The expressions appearing in the clauses of each directive are evaluated in 
+the scope of the arguments of the function declaration or definition.
 \end{ccppspecific}
 
 \begin{samepage}
@@ -1193,122 +1191,119 @@ single invocation in a SIMD loop concurrently.
 \end{fortranspecific}
 \end{samepage}
 
-If a SIMD version is created, the number of concurrent arguments for the function is
-determined by the \code{simdlen} clause. If the \code{simdlen} clause is used its value
-corresponds to the number of concurrent arguments of the function. The parameter of
-the \code{simdlen} clause must be a constant positive integer expression. Otherwise, the
-number of concurrent arguments for the function is implementation defined.
+If a SIMD version is created, the number of concurrent arguments for the 
+function is determined by the \code{simdlen} clause. If the \code{simdlen} 
+clause is used its value corresponds to the number of concurrent arguments 
+of the function. The parameter of the \code{simdlen} clause must be a constant 
+positive integer expression. Otherwise, the number of concurrent arguments 
+for the function is implementation defined.
 
 \begin{cppspecific}
-The special \plc{this} pointer can be used as if was one of the arguments to the function in any of the \code{linear}, \code{aligned}, or \code{uniform} clauses.
+The special \plc{this} pointer can be used as if it was one of the arguments to 
+the function in any of the \code{linear}, \code{aligned}, or \code{uniform} clauses.
 \end{cppspecific}
 
-The \code{uniform} clause declares one or more arguments to have an invariant value for all
-concurrent invocations of the function in the execution of a single SIMD loop.
+The \code{uniform} clause declares one or more arguments to have an invariant 
+value for all concurrent invocations of the function in the execution of a 
+single SIMD loop.
 
 \begin{samepage}
 \begin{ccppspecific}
-The \code{aligned} clause declares that the object to which each list item points is aligned to
-the number of bytes expressed in the optional parameter of the \code{aligned} clause.
+The \code{aligned} clause declares that the object to which each list item 
+points is aligned to the number of bytes expressed in the optional parameter 
+of the \code{aligned} clause.
 \end{ccppspecific}
 \end{samepage}
 
-\needspace{15\baselineskip}\begin{samepage}
 \begin{fortranspecific}
-The \code{aligned} clause declares that the target of each list item is aligned to the number
-of bytes expressed in the optional parameter of the \code{aligned} clause.
+The \code{aligned} clause declares that the target of each list item is aligned to 
+the number of bytes expressed in the optional parameter of the \code{aligned} clause.
 \end{fortranspecific}
-\end{samepage}
 
-The optional parameter of the \code{aligned} clause, \plc{alignment}, must be a constant positive
-integer expression. If no optional parameter is specified, implementation-defined default
-alignments for SIMD instructions on the target platforms are assumed.
+The optional parameter of the \code{aligned} clause, \plc{alignment}, must be 
+a constant positive integer expression. If no optional parameter is specified, 
+implementation-defined default alignments for SIMD instructions on the target 
+platforms are assumed.
 
-The \code{inbranch} clause specifies that the SIMD version of the function will always be called from inside a
-conditional statement of a SIMD loop. The \code{notinbranch} clause specifies that the
-SIMD version of the function will never be called from inside a conditional statement of a SIMD loop. If
-neither clause is specified, then the SIMD version of the function may or may not be called from inside a
-conditional statement of a SIMD loop.
+The \code{inbranch} clause specifies that the SIMD version of the function will 
+always be called from inside a conditional statement of a SIMD loop. The 
+\code{notinbranch} clause specifies that the SIMD version of the function will 
+never be called from inside a conditional statement of a SIMD loop. If neither 
+clause is specified, then the SIMD version of the function may or may not be 
+called from inside a conditional statement of a SIMD loop.
 
 \restrictions
 \begin{itemize}
 \item Each argument can appear in at most one \code{uniform} or \code{linear} clause.
-
-\item At most one \code{simdlen} clause can appear in a \code{declare}~\code{simd} directive.
-
+\item At most one \code{simdlen} clause can appear in a \code{declare}~\code{simd} 
+      directive.
 \item Either \code{inbranch} or \code{notinbranch} may be specified, but not both.
-
-\item When a \plc{linear-step} expression is specified in a \code{linear} clause it must be
-either a constant integer expression or an integer-typed parameter that is specified in
-a \code{uniform} clause on the directive.
-
+\item When a \plc{linear-step} expression is specified in a \code{linear} clause 
+      it must be either a constant integer expression or an integer-typed parameter 
+      that is specified in a \code{uniform} clause on the directive.
 \item The function or subroutine body must be a structured block.
-
-\item The execution of the function or subroutine, when called from a SIMD loop, cannot result in the execution of an OpenMP construct except for an \code{ordered} construct with the \code{simd} clause or an \code{atomic} construct.
-
-\item The execution of the function or subroutine cannot have any side effects that would
-alter its execution for concurrent iterations of a SIMD chunk.
-
+\item The execution of the function or subroutine, when called from a SIMD loop, 
+      cannot result in the execution of an OpenMP construct except for an 
+      \code{ordered} construct with the \code{simd} clause or an 
+      \code{atomic} construct.
+\item The execution of the function or subroutine cannot have any side effects 
+      that would alter its execution for concurrent iterations of a SIMD chunk.
 \item A program that branches into or out of the function is non-conforming.
 
 \begin{ccppspecific}
-\item If the function has any declarations, then the \code{declare}~\code{simd} construct for any
-declaration that has one must be equivalent to the one specified for the definition.
-Otherwise, the result is unspecified.
-
-\item The function cannot contain calls to the \code{longjmp} or \code{setjmp} functions.
+\item If the function has any declarations, then the \code{declare}~\code{simd} 
+      construct for any declaration that has one must be equivalent to the one 
+      specified for the definition. Otherwise, the result is unspecified.
+\item The function cannot contain calls to the \code{longjmp} or \code{setjmp} 
+      functions. 
 \end{ccppspecific}
 
 \begin{cspecific}
-\item The type of list items appearing in the \code{aligned} clause must be array or pointer.
+\item The type of list items appearing in the \code{aligned} clause must be 
+      array or pointer.
 \end{cspecific}
 
 \begin{cppspecific}
 \item The function cannot contain any calls to \code{throw}.
-
-\item The type of list items appearing in the \code{aligned} clause must be array, pointer,
-reference to array, or reference to pointer.
+\item The type of list items appearing in the \code{aligned} clause must be 
+      array, pointer, reference to array, or reference to pointer.
 \end{cppspecific}
 
 \begin{fortranspecific}
 \item \plc{proc-name} must not be a generic name, procedure pointer or entry name.
-
 \item If \plc{proc-name} is omitted, the \code{declare}~\code{simd}
-  directive must appear in the specification part of a subroutine
-  subprogram or a function subprogram for which creation of the SIMD
-  versions is enabled.
-
-\item Any \code{declare}~\code{simd} directive must appear in the specification part of a subroutine
-subprogram, function subprogram or interface body to which it applies.
-
-\item If a \code{declare}~\code{simd} directive is specified in an interface block for a procedure, it
-must match a \code{declare}~\code{simd} directive in the definition of the procedure.
-
+      directive must appear in the specification part of a subroutine
+      subprogram or a function subprogram for which creation of the SIMD
+      versions is enabled.
+\item Any \code{declare}~\code{simd} directive must appear in the specification 
+      part of a subroutine subprogram, function subprogram or interface body to 
+      which it applies.
+\item If a \code{declare}~\code{simd} directive is specified in an interface block 
+      for a procedure, it must match a \code{declare}~\code{simd} directive in the 
+      definition of the procedure.
 \item If a procedure is declared via a procedure declaration statement, the procedure
-\plc{proc-name} should appear in the same specification.
-
-\item If a \code{declare}~\code{simd} directive is specified for a procedure name with explicit
-interface and a \code{declare}~\code{simd} directive is also specified for the definition of the
-procedure then the two \code{declare}~\code{simd} directives must match. Otherwise the result
-is unspecified.
-
-\item Procedure pointers may not be used to access versions created by the \code{declare}~\code{simd} directive.
-
-\item The type of list items appearing in the \code{aligned} clause must be \code{C_PTR} or Cray
-pointer, or the list item must have the \code{POINTER} or \code{ALLOCATABLE} attribute.
+      \plc{proc-name} should appear in the same specification.
+\item If a \code{declare}~\code{simd} directive is specified for a procedure name 
+      with explicit interface and a \code{declare}~\code{simd} directive is also 
+      specified for the definition of the procedure then the two 
+      \code{declare}~\code{simd} directives must match. Otherwise the result
+      is unspecified.
+\item Procedure pointers may not be used to access versions created by the 
+      \code{declare}~\code{simd} directive.
+\item The type of list items appearing in the \code{aligned} clause must be 
+      \code{C_PTR} or Cray pointer, or the list item must have the \code{POINTER} 
+      or \code{ALLOCATABLE} attribute.
 \end{fortranspecific}
 \end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item \code{reduction} clause, see
-\specref{subsubsec:reduction clause}.
-
 \item \code{linear} clause, see
 \specref{subsubsec:linear clause}.
+
+\item \code{reduction} clause, see
+\specref{subsubsec:reduction clause}.
 \end{itemize}
-
-
 
 
 
@@ -1321,10 +1316,11 @@ pointer, or the list item must have the \code{POINTER} or \code{ALLOCATABLE} att
 \index{device constructs!distribute@{\code{distribute}}}
 \label{subsec:distribute Construct}
 \summary
-The \code{distribute} construct specifies that the iterations of one or more loops will be
-executed by the initial teams in the context of their implicit tasks. The iterations are
-distributed across the initial threads of all initial teams that execute the \code{teams} region to
-which the \code{distribute} region binds.
+The \code{distribute} construct specifies that the iterations of one or 
+more loops will be executed by the initial teams in the context of their 
+implicit tasks. The iterations are distributed across the initial threads 
+of all initial teams that execute the \code{teams} region to which the 
+\code{distribute} region binds.
 
 \syntax
 \begin{ccppspecific}
@@ -1346,10 +1342,11 @@ dist_schedule(\plc{kind[},\plc{ chunk_size]})
 allocate(\plc{[allocator: ]}\plc{list})
 \end{indentedcodelist}
 
-All associated \plc{for-loops} must have the canonical form described in
-\specref{subsec:Canonical Loop Form}.
+The \code{distribute} directive places restrictions on the structure of all
+associated \plc{for-loops}.  Specifically, all associated \plc{for-loops} must
+have \emph{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 \end{ccppspecific}
-\bigskip
+
 
 \begin{fortranspecific}
 The syntax of the \code{distribute} construct is as follows:
@@ -1371,8 +1368,8 @@ dist_schedule(\plc{kind[},\plc{ chunk_size]})
 allocate(\plc{[allocator: ]}\plc{list})
 \end{indentedcodelist}
 
-If an \code{end}~\code{distribute} directive is not specified, an \code{end}~\code{distribute} directive
-is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{distribute} directive is not specified, an 
+\code{end}~\code{distribute} directive is assumed at the end of the \plc{do-loops}.
 
 The \code{distribute} directive places restrictions on the structure of all
 associated \plc{do-loops}.  Specifically, all associated \plc{do-loops} must
@@ -1385,17 +1382,16 @@ have \emph{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 The binding thread set for a \code{distribute} region is the set of initial
 threads executing an enclosing \code{teams} region. A \code{distribute} region
 binds to this \code{teams} region.
-%Only the threads executing the binding \code{teams} region participate in the execution of the loop iterations.
 
 \descr
-The \code{distribute} construct is associated with a loop nest consisting of one or more
-loops that follow the directive.
+The \code{distribute} construct is associated with a loop nest consisting of 
+one or more loops that follow the directive.
 
 There is no implicit barrier at the end of a \code{distribute} construct.
-To avoid data races the original
-list items modified due to \code{lastprivate} or \code{linear} clauses
-should not be accessed between the end of the \code{distribute} construct and the end
-of the \code{teams} region to which the \code{distribute} binds.
+To avoid data races the original list items modified due to \code{lastprivate} 
+or \code{linear} clauses should not be accessed between the end of the 
+\code{distribute} construct and the end of the \code{teams} region to which 
+the \code{distribute} binds.
 
 \end{samepage}
 
@@ -1425,47 +1421,59 @@ construct then the number of times that any intervening code between
 any two associated loops will be executed is unspecified but will be
 at least once per iteration of the loop enclosing the intervening code
 and at most once per iteration of the innermost loop associated with
-the construct.  If the iteration count of any loop that is associated with the
-\code{distribute} construct and does not enclose the intervening code is zero
-then the behavior is unspecified.
+the construct.  If the iteration count of any loop that is associated 
+with the \code{distribute} construct is zero and that loop does not 
+enclose the intervening code, the behavior is unspecified.
 
+The integer type (or kind, for Fortran) used to compute the iteration 
+count for the collapsed loop is implementation defined.
 
-The iteration count for each associated loop is computed before entry to the outermost loop. If execution of any associated loop changes any of the values used to compute any of the iteration counts, then the behavior is unspecified.
+If \code{dist_schedule} is specified, \plc{kind} must be \code{static}. 
+If specified, iterations are divided into chunks of size \plc{chunk_size}, 
+chunks are assigned to the initial teams of the league in a round-robin 
+fashion in the order of the initial team number. When no \plc{chunk_size} 
+is specified, the iteration space is divided into chunks that are 
+approximately equal in size, and at most one chunk is distributed to each 
+initial team of the league. The size of the chunks is unspecified in this case.
 
-The integer type (or kind, for Fortran) used to compute the iteration count for the collapsed loop is implementation defined.
+When no \code{dist_schedule} clause is specified, the schedule is 
+implementation defined.
 
-If \code{dist_schedule} is specified, \plc{kind} must be \code{static}. If specified, iterations are
-divided into chunks of size \plc{chunk_size}, chunks are assigned to the
-initial teams of the league in
-a round-robin fashion in the order of the initial team number. When no \plc{chunk_size} is specified,
-the iteration space is divided into chunks that are approximately equal in size, and at
-most one chunk is distributed to each initial team of the league. The size of the
-chunks is unspecified in this case.
+\events
+The \plc{distribute-begin} event occurs after an implicit task encounters a
+\code{distribute} construct but before the task starts to execute the structured
+block of the \code{distribute} region.
 
-When no \code{dist_schedule} clause is specified, the schedule is implementation defined.
+The \plc{distribute-end} event occurs after an implicit task finishes execution of
+a \code{distribute} region but before it resumes execution of the enclosing context.
 
-%\tools
-\omptWorksharing{distribute}{ompt_work_distribute}
+\tools
+A thread dispatches a registered \code{ompt_callback_work} callback with
+\code{ompt_scope_begin} as its \plc{endpoint} argument and
+\code{ompt_work_distribute} as its \plc{wstype} argument for each occurrence
+of a \plc{distribute-begin} event in that thread. Similarly, a thread dispatches
+a registered \code{ompt_callback_work} callback with \code{ompt_scope_end} as
+its \plc{endpoint} argument and \code{ompt_work_distribute} as its \plc{wstype}
+argument for each occurrence of a \plc{distribute-end} event in that thread.
+The callbacks occur in the context of the implicit task. The callbacks have
+type signature \code{ompt_callback_work_t}.
 
 \restrictions
 Restrictions to the \code{distribute} construct are as follows:
 
 \begin{itemize}
-\item The \code{distribute} construct inherits the restrictions of the worksharing-loop construct.
-
+\item The \code{distribute} construct inherits the restrictions of the 
+      worksharing-loop construct.
 \item Each \code{distribute} region must be encountered by the initial
-threads of all initial teams in a league or by none at all.
-
+      threads of all initial teams in a league or by none at all.
 \item The sequence of the \code{distribute} regions encountered must
-be the same for every initial thread of every initial team in a league.
-
+      be the same for every initial thread of every initial team in a league.
 \item The region corresponding to the \code{distribute} construct must be
-strictly nested inside a \code{teams} region.
-
-\item A list item may appear in a \code{firstprivate} or \code{lastprivate} clause but not both.
-
+      strictly nested inside a \code{teams} region.
+\item A list item may appear in a \code{firstprivate} or \code{lastprivate} 
+      clause but not both.
 \item The \code{dist_schedule} clause must not appear on the \code{distribute}
-    directive if the associated loop(s) form a non-rectangular loop nest.
+      directive if the associated loop(s) form a non-rectangular loop nest.
 \end{itemize}
 
 \crossreferences
@@ -1473,7 +1481,7 @@ strictly nested inside a \code{teams} region.
 \item \code{teams} construct, see
 \specref{sec:teams Construct}
 
-\item workshring-loop construct, see
+\item worksharing-loop construct, see
 \specref{subsec:Worksharing-Loop Construct}.
 
 \item \code{ompt_work_distribute}, see \specref{sec:ompt_work_t}.
@@ -1483,16 +1491,16 @@ strictly nested inside a \code{teams} region.
 
 
 
-
-
 \subsubsection{\hcode{distribute}~\hcode{simd} Construct}
 \index{distribute simd@{\code{distribute}~\code{simd}}}
 \index{constructs!distribute simd@{\code{distribute}~\code{simd}}}
 \index{device constructs!distribute simd@{\code{distribute}~\code{simd}}}
 \label{subsec:distribute simd Construct}
 \summary
-The \code{distribute}~\code{simd} construct specifies a loop that will be distributed across the
-master threads of the \code{teams} region and executed concurrently using SIMD instructions. The \code{distribute}~\code{simd} construct is a composite construct.
+The \code{distribute}~\code{simd} construct specifies a loop that will be 
+distributed across the master threads of the \code{teams} region and executed 
+concurrently using SIMD instructions. The \code{distribute}~\code{simd} 
+construct is a composite construct.
 
 \syntax
 The syntax of the \code{distribute}~\code{simd} construct is as follows:
@@ -1503,8 +1511,8 @@ The syntax of the \code{distribute}~\code{simd} construct is as follows:
    \plc{for-loops}
 \end{ompcPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{distribute} or \code{simd}
-directives with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} 
+or \code{simd} directives with identical meanings and restrictions.
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -1514,19 +1522,20 @@ directives with identical meanings and restrictions.
 \plc{[}!$omp end distribute simd\plc{]}
 \end{ompfPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{distribute} or \code{simd}
-directives with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} 
+or \code{simd} directives with identical meanings and restrictions.
 
-If an \code{end}~\code{distribute}~\code{simd} directive is not specified, an \code{end}~\code{distribute}~\code{simd}
-directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{distribute}~\code{simd} directive is not specified, an 
+\code{end}~\code{distribute}~\code{simd} directive is assumed at the end of 
+the \plc{do-loops}.
 \end{fortranspecific}
 
 \descr
-The \code{distribute}~\code{simd} construct will first distribute the iterations of the associated
-loop(s) according to the semantics of the \code{distribute} construct and any clauses that
-apply to the distribute construct. The resulting chunks of iterations will then be
-converted to a SIMD loop in a manner consistent with any clauses that apply to the
-\code{simd} construct.
+The \code{distribute}~\code{simd} construct will first distribute the iterations 
+of the associated loop(s) according to the semantics of the \code{distribute} 
+construct and any clauses that apply to the distribute construct. The resulting 
+chunks of iterations will then be converted to a SIMD loop in a manner consistent 
+with any clauses that apply to the \code{simd} construct.
 
 \events
 
@@ -1534,14 +1543,14 @@ This composite construct generates the same events as the \code{distribute} cons
 
 \tools
 
-This composite construct dispatches the same callbacks as the \code{distribute} construct.
+This composite construct dispatches the same callbacks as the \code{distribute} 
+construct.
 
 \restrictions
 \begin{itemize}
 \item The restrictions for the \code{distribute} and \code{simd} constructs apply.
-
-\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
-
+\item A list item may not appear in a \code{linear} clause unless it is the
+      loop iteration variable of a loop that is associated with the construct.
 \item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
 
@@ -1555,17 +1564,7 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 
 \item Data attribute clauses, see
 \specref{subsec:Data-Sharing Attribute Clauses}.
-
-\item Events and tool callbacks for the \code{distribute} construct, see
-\specref{subsubsec:simd Construct}.
-
 \end{itemize}
-
-
-
-
-
-
 
 
 
@@ -1577,8 +1576,9 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \index{constructs!distribute parallel do@{\code{distribute}~\code{parallel}~\code{do}}}
 \label{subsec:Distribute Parallel Worksharing-Loop Construct}
 \summary
-The distribute parallel worksharing-loop construct specifies a loop that can be executed in parallel by
-multiple threads that are members of multiple teams. The distribute parallel worksharing-loop construct is a composite construct.
+The distribute parallel worksharing-loop construct specifies a loop that can 
+be executed in parallel by multiple threads that are members of multiple teams. 
+The distribute parallel worksharing-loop construct is a composite construct.
 
 \syntax
 The syntax of the distribute parallel worksharing-loop construct is as follows:
@@ -1603,8 +1603,9 @@ or parallel worksharing-loop directives with identical meanings and restrictions
 where \plc{clause} can be any of the clauses accepted by the \code{distribute} or 
 parallel worksharing-loop directives with identical meanings and restrictions.
 
-If an \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is not specified, an
-\code{end}~\code{distribute}~\code{parallel}~\code{do} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{distribute}~\code{parallel}~\code{do} directive is not 
+specified, an \code{end}~\code{distribute} \code{parallel}~\code{do} directive 
+is assumed at the end of the \plc{do-loops}.
 \end{fortranspecific}
 
 \descr
@@ -1618,25 +1619,22 @@ consistent with any clauses that apply to the parallel worksharing-loop construc
 
 \events
 
-This composite construct generates the same events as the \code{distribute} and parallel worksharing-loop constructs.
+This composite construct generates the same events as the \code{distribute} 
+and parallel worksharing-loop constructs.
 
 \tools
 
-This composite construct dispatches the same callbacks as the \code{distribute} and parallel worksharing-loop constructs.
-
-%% BRONIS: Ugly trick to avoid page starting with end c/C++ sentinel
-
+This composite construct dispatches the same callbacks as the \code{distribute} 
+and parallel worksharing-loop constructs.
 
 \restrictions
 \begin{itemize}
-\item The restrictions for the \code{distribute} and parallel worksharing-loop constructs apply.
+\item The restrictions for the \code{distribute} and parallel worksharing-loop 
+      constructs apply.
 \item No \code{ordered} clause can be specified.
 \item No \code{linear} clause can be specified.
 \item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
-
-%% BRONIS: Another ugly trick to avoid page starting with end c/C++ sentinel
-
 
 \crossreferences
 \begin{itemize}
@@ -1648,17 +1646,7 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 
 \item Data attribute clauses, see
 \specref{subsec:Data-Sharing Attribute Clauses}.
-
-\item Events and tool callbacks for \code{distribute} construct, see
-\specref{subsec:distribute Construct}.
-
-\item Events and tool callbacks for parallel worksharing-loop construct, see
-\specref{subsec:Parallel Worksharing-Loop Construct}.
-
 \end{itemize}
-
-
-
 
 
 
@@ -1670,22 +1658,23 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \index{constructs!distribute parallel do simd@{\code{distribute}~\code{parallel}~\code{do}~\code{simd}}}
 \index{device constructs!distribute parallel worksharing-loop SIMD}
 \summary
-The distribute parallel worksharing-loop SIMD construct specifies a loop that can be executed
-concurrently using SIMD instructions in parallel by multiple threads that are members
-of multiple teams. The distribute parallel worksharing-loop SIMD construct is a composite construct.
+The distribute parallel worksharing-loop SIMD construct specifies a loop that 
+can be executed concurrently using SIMD instructions in parallel by multiple 
+threads that are members of multiple teams. The distribute parallel 
+worksharing-loop SIMD construct is a composite construct.
 
 \syntax
 \begin{ccppspecific}
 The syntax of the distribute parallel worksharing-loop SIMD construct is as follows:
 
 \begin{ompcPragma}
-#pragma omp distribute parallel for simd \plc{\}
+#pragma omp distribute parallel for simd \
             \plc{[clause[ [},\plc{] clause] ... ] newline}
     \plc{for-loops}
 \end{ompcPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
-SIMD directives with identical meanings and restrictions
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} 
+or parallel worksharing-loop SIMD directives with identical meanings and restrictions.
 \end{ccppspecific}
 
 \begin{fortranspecific}
@@ -1697,35 +1686,42 @@ The syntax of the distribute parallel worksharing-loop SIMD construct is as foll
 \plc{[}!$omp end distribute parallel do simd\plc{]}
 \end{ompfPragma}
 
-where \plc{clause} can be any of the clauses accepted by the \code{distribute} or parallel loop
-SIMD directives with identical meanings and restrictions.
+where \plc{clause} can be any of the clauses accepted by the \code{distribute} 
+or parallel worksharing-loop SIMD directives with identical meanings and restrictions.
 
-If an \code{end}~\code{distribute}~\code{parallel}~\code{do}~\code{simd} directive is not specified, an
-\code{end}~\code{distribute}~\code{parallel}~\code{do}~\code{simd} directive is assumed at the end of the \plc{do-loops}.
+If an \code{end}~\code{distribute}~\code{parallel}~\code{do}~\code{simd} directive 
+is not specified, an \code{end}~\code{distribute} \code{parallel} \code{do}~\code{simd}
+directive is assumed at the end of the \plc{do-loops}.
 \end{fortranspecific}
 
 \descr
-The distribute parallel worksharing-loop SIMD construct will first distribute the iterations of the
-associated loop(s) according to the semantics of the \code{distribute} construct and any
-clauses that apply to the \code{distribute} construct. The resulting loops will then be
-distributed across the threads contained within the \code{teams} region to which the
-\code{distribute} construct binds in a manner consistent with any clauses that apply to the
-parallel worksharing-loop construct. The resulting chunks of iterations will then be converted to a
-SIMD loop in a manner consistent with any clauses that apply to the \code{simd} construct.
+The distribute parallel worksharing-loop SIMD construct will first distribute 
+the iterations of the associated loop(s) according to the semantics of the 
+\code{distribute} construct and any clauses that apply to the \code{distribute} 
+construct. The resulting loops will then be distributed across the threads 
+contained within the \code{teams} region to which the \code{distribute} 
+construct binds in a manner consistent with any clauses that apply to the
+parallel worksharing-loop construct. The resulting chunks of iterations 
+will then be converted to a SIMD loop in a manner consistent with any 
+clauses that apply to the \code{simd} construct.
 
 \events
 
-This composite construct generates the same events as the \code{distribute} and parallel worksharing-loop constructs.
+This composite construct generates the same events as the \code{distribute} 
+and parallel worksharing-loop SIMD constructs.
 
 \tools
 
-This composite construct dispatches the same callbacks as the \code{distribute} and parallel loop constructs.
+This composite construct dispatches the same callbacks as the \code{distribute} 
+and parallel worksharing-loop SIMD constructs.
 
 \restrictions
 \begin{itemize}
-\item The restrictions for the \code{distribute} and parallel worksharing-loop SIMD constructs apply.
+\item The restrictions for the \code{distribute} and parallel worksharing-loop 
+      SIMD constructs apply.
 \item No \code{ordered} clause can be specified.
-\item A list item may not appear in a \code{linear} clause, unless it is the loop iteration variable.
+\item A list item may not appear in a \code{linear} clause unless it is the
+      loop iteration variable of a loop that is associated with the construct.
 \item The \code{conditional} modifier may not appear in a \code{lastprivate} clause.
 \end{itemize}
 
@@ -1738,14 +1734,8 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \specref{subsec:Parallel Worksharing-Loop SIMD Construct}.
 
 \item Data attribute clauses, see \specref{subsec:Data-Sharing Attribute Clauses}.
-
-\item Events and tool callbacks for \code{distribute} construct, see
-\specref{subsec:distribute Construct}.
-
-\item Events and tool callbacks for parallel worksharing-loop construct, see
-\specref{subsec:Parallel Worksharing-Loop Construct}.
-
 \end{itemize}
+
 
 
 \subsection{\hcode{loop} Construct}
@@ -1753,10 +1743,11 @@ This composite construct dispatches the same callbacks as the \code{distribute} 
 \index{constructs!loop@{\code{loop}}}
 \label{subsec:loop Construct}
 \summary
-  A \code{loop} construct specifies that the iterations of the associated
-  loops may execute concurrently and permits the encountering thread(s) to
-  execute the loop accordingly.
+A \code{loop} construct specifies that the iterations of the associated
+loops may execute concurrently and permits the encountering thread(s) to
+execute the loop accordingly.
 
+\begin{samepage}
 \syntax
 \begin{ccppspecific}
 The syntax of the \code{loop} construct is as follows:
@@ -1772,12 +1763,22 @@ bind(\plc{binding})
 collapse(\plc{n})
 order(concurrent)
 private(\plc{list})
-reduction(\plc{reduction-identifier }:\plc{ list})
+lastprivate(\plc{list})
+reduction(\plc{[}default ,\plc{]reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
-The \code{loop} directive places restrictions on the structure of all associated \plc{for-loops}.
-Specifically, all associated \plc{for-loops} must have \emph{canonical loop form} (see
-\specref{subsec:Canonical Loop Form}).
+
+where \plc{binding} is one of the following:
+\begin{indentedcodelist}
+  teams
+  parallel
+  thread
+\end{indentedcodelist}
+
+The \code{loop} directive places restrictions on the structure of all associated 
+\plc{for-loops}. Specifically, all associated \plc{for-loops} must have 
+\emph{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
 \end{ccppspecific}
+\end{samepage}
 
 \begin{fortranspecific}
 The syntax of the \code{loop} construct is as follows:
@@ -1796,79 +1797,50 @@ bind(\plc{binding})
 collapse(\plc{n})
 order(concurrent)
 private(\plc{list})
-reduction(\plc{reduction-identifier }:\plc{ list})
+lastprivate(\plc{list})
+reduction(\plc{[}default ,\plc{]reduction-identifier }:\plc{ list})
 \end{indentedcodelist}
 \end{samepage}
 
-If an \code{end}~\code{loop} directive is not specified, an
-  \code{end}~\code{loop} directive is assumed at the end of the
-\plc{do-loops}.
-
-The \code{loop} directive places restrictions on the structure of all
-assocated \plc{do-loops}. Specifically, all assocated \plc{do-loops} must
-have \plc{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
-\end{fortranspecific}
-
-Where \plc{binding} is one of the following:
+where \plc{binding} is one of the following:
 \begin{indentedcodelist}
   teams
   parallel
   thread
 \end{indentedcodelist}
 
-% Loop induction variables for the associated loop(s) are private by default.
+If an \code{end}~\code{loop} directive is not specified, an
+ \code{end}~\code{loop} directive is assumed at the end of the
+\plc{do-loops}.
 
-%If a \code{private} or \code{firstprivate} clause appears on the
-%\code{concurrent} construct and the iterations of the associated loops are
-%executed concurrently, then a private copy of the listed variables must be
-%created for each thread team, thread, or SIMD lane that executes the
-%iterations.
-%
-%If a \code{reduction} clause appears on the \code{concurrent} construct and an
-%implementation executes the iterations of the associated loops concurrently,
-%then it must perform a parallel reduction with respect to the parallel
-%execution units (teams, threads, or SIMD lanes) used to execute the loop
-%iterations. The result of the reduction operation must be available immediately
-%following the end of the associated loops.
+The \code{loop} directive places restrictions on the structure of all
+associated \plc{do-loops}. Specifically, all associated \plc{do-loops} must
+have \plc{canonical loop form} (see \specref{subsec:Canonical Loop Form}).
+\end{fortranspecific}
 
 \binding
-
 If the \code{bind} clause is present on the construct, the binding region is
-determined by \plc{binding}. Otherwise, if the \code{loop} construct is closely
-nested inside a \code{teams} or \code{parallel} construct, the binding region
-is the corresponding \code{teams} or \code{parallel} region. If none of the
-above conditions are true, the \code{loop} region does not have a binding region.
+determined by \plc{binding}. Specifically, if \plc{binding} is \code{teams}
+and there exists an innermost enclosing \code{teams} region then the binding
+region is that \code{teams} region; if \plc{binding} is \code{parallel} then
+the binding region is the innermost enclosing parallel region, which may be an
+implicit parallel region; and if \plc{binding} is \code{thread} then the
+binding region is not defined. If the \code{bind} clause is not present on the
+construct and the \code{loop} construct is closely nested inside a
+\code{teams} or \code{parallel} construct, the binding region is the
+corresponding \code{teams} or \code{parallel} region. If none of those
+conditions hold, the binding region is not defined.
 
 If the binding region is a \code{teams} region, then the binding thread set is
-the set of master threads executing that region. If the binding region is a
-\code{parallel} region, then the binding thread set is the team of threads
-executing that region. If the \code{loop} region does not have a binding
-region, then the binding thread set is the encountering thread.
-
-
-% If the \code{concurrent} construct is closely nested inside a \code{teams} construct,
-% the binding thread set of the region is the set of master threads that executes
-% the \code{teams} region and the region's binding region is the \code{teams} region. If the
-% \code{concurrent} construct is closely nested inside a \code{parallel} construct, the
-% binding thread set of the region is the current thread team and the region's
-% binding region is the \code{parallel} region. Otherwise, the binding thread set for a
-% \code{concurrent} region is the encountering thread and the binding region is the
-% current task region.
+the set of master threads that are executing that region. If the binding region
+is a parallel region, then the binding thread set is the team of threads that
+are executing that region. If the binding region is not defined, then the binding
+thread set is the encountering thread.
 
 \descr
-
-The \code{loop} construct is associated with a loop nest consisting of one or
+The \code{loop} construct is associated with a loop nest that consists of one or
 more loops that follow the directive. The directive asserts that the iterations
 may execute in any order, including concurrently.
-
-If the \code{bind} clause is present then \plc{binding} may be one of
-the following: \code{teams}, \code{parallel}, or \code{thread}. If
-\plc{binding} is \code{teams}, then the innermost enclosing
-\code{teams} region is the binding region.  If \plc{binding} is
-\code{parallel}, then the innermost enclosing \code{parallel} region is the
-binding region. If \plc{binding} is \code{thread}, then the loop does not have
-a binding region and the binding thread set is the encountering thread.
-
 
 The \code{collapse} clause may be used to specify how many loops are associated
 with the \code{loop} construct. The parameter of the \code{collapse} clause
@@ -1885,8 +1857,9 @@ number of times that any intervening code between any two associated
 loops will be executed is unspecified but will be at least once per
 iteration of the loop enclosing the intervening code and at most once
 per iteration of the innermost loop associated with the construct. If the
-iteration count of any loop that is associated with the \code{loop} construct and does not
-enclose the intervening code is zero then the behavior is unspecified.
+iteration count of any loop that is associated with the \code{loop}
+construct is zero and that loop does not
+enclose the intervening code, the behavior is unspecified.
 
 The iteration space of the associated loops correspond to logical
 iterations numbered 0,1,...,N-1 where N is the number of loop iterations, and
@@ -1896,142 +1869,85 @@ beginning of each logical iteration, the loop iteration variable of each
 associated loop has the value that it would have if the set of the associated
 loop(s) were executed sequentially. 
 
-%The \code{levels} clause may be used to specify how many loops are associated
-%with the \code{concurrent} construct. The parameter of the \code{levels}
-%clause must be a constant positive integer expression. If a \code{levels}
-%clause is present then for the next N nested loops all iterations of the loops
-%may be executed concurrently with any other iteration in the combined
-%iteration space of the associated loops in any order. If no \code{levels}
-%clause appears on the construct, the \code{concurrent} directive applies to
-%only the loop that immediately follows the directive.
-
 Each logical iteration is executed once per instance of the \code{loop}
 region that is encountered by the binding thread set.
 
-If the
-\code{order(concurrent)} clause appears on the \code{loop} construct, the
+If the \code{order(concurrent)} clause appears on the \code{loop} construct, the
 iterations of the associated loops may execute in any order, including
 concurrently. If the \code{order} clause is not present, the behavior is as if
 the \code{order(concurrent)} clause appeared on the construct.
 
-The set of threads that may execute the iterations of the \code{loop} region
-is the binding thread set. Each iteration is executed by one thread from this
-set.
+The set of threads that may execute the iterations of the \code{loop} region is 
+the binding thread set. Each iteration is executed by one thread from this set.
 
 If the \code{loop} region binds to a \code{teams} region, the threads in the
 binding thread set may continue execution after the \code{loop} region without
 waiting for all iterations of the associated loop(s) to complete. The
-iterations are guaranteed to complete before the end of the \code{teams}
-region. 
+iterations are guaranteed to complete before the end of the \code{teams} region.
 
 If the \code{loop} region does not bind to a \code{teams} region, all
 iterations of the associated loop(s) must complete before the encountering
 thread(s) continue execution after the \code{loop} region.
 
-
-% An implementation may choose to treat an \code{concurrent} construct as a
-% \code{distribute}, Loop, and/or SIMD construct if it would be conforming for a
-% programmer to have explicitly specified the selected construct. If the
-% implementation chooses to treat an \code{concurrent} construct as one of these
-% constructs then the default data sharing and binding will be as-if the
-% programmer had specified the implicitly-added construct. A conforming
-% implementation may also choose to execute the iterations of the associated loop
-% concurrently in ways not represented by these constructs.
-
-
-% A \code{concurrent} construct may be nested within other OpenMP regions, but does
-% not increase the nesting level, as defined in [add crossref]. \feedback{[Should we
-% restrict the nesting to only particular constructs for the first
-% implementation?]}
-
 \restrictions
 Restrictions to the \code{loop} construct are as follows:
 
 \begin{itemize}
-  \item If the \code{collapse} clause exists there may be no intervening OpenMP
-    directives between the associated loops.
-
-%  \item An implementation may not generate a new league of thread teams
-%    as the result of a \code{loop} construct.
-
-%  \item The \code{seq} and \code{nodep} clauses may not both appear on the
-%      construct.
-
-  \item At most one \code{collapse} clause can appear on a \code{loop} directive.
-
-  \item If a \code{loop} construct is not nested inside another OpenMP
-      construct and it appears in a procedure called from the program, the
+\item If the \code{collapse} clause is specified then there may be no intervening 
+      OpenMP directives between the associated loops.
+\item At most one \code{collapse} clause can appear on a \code{loop} directive.
+\item A list item may not appear in a \code{lastprivate} clause unless it
+      is a loop iteration variable of a loop that is associated with the
+      construct.
+\item If a \code{loop} construct is not nested inside another OpenMP
+      construct and it appears in a procedure called, the
       \code{bind} clause must be present.
-
-  \item If a \code{loop} region binds to a \code{teams} or \code{parallel}
+\item If a \code{loop} region binds to a \code{teams} or parallel
       region, it must be encountered by all threads in the binding thread set
       or by none of them.
-
-  \item The only constructs that may be nested inside a \code{loop} region
-    are the \code{loop} construct, the \code{parallel} construct, the
-    \code{simd} construct, and combined constructs for which the first
-    construct is a \code{parallel} construct.
-
-%JLARKIN Moved to directives_nesting.tex
-%    \item Only the following directives may be nested within an
-%    \code{concurrent}
-%    region: \code{parallel}, \code{distribute}, loop, \code{simd},
-%    \code{concurrent}, and \code{single}.
-%    %JLARKIN we'd like to add back atomic eventually. Is there really a reason
-%    %to restrict MASTER?
-
-  \item A \code{loop} region corresponding to a \code{loop} construct may not
-    contain calls to procedures that contain OpenMP directives. 
-
-%JLARKIN Moved to directives_nesting.tex
-%  \item A \code{concurrent} construct must be closely nested within a
-%    \code{teams}, \code{parallel}, Loop, SIMD, or \code{concurrent} construct.
-%    %JLARKIN in other words, cannot appear by itself in a
-%    % function call because it would be hard for a compiler to know how
-%    % it can parallelize the loop.
-
+\item If the \code{bind} clause is present and \plc{binding} is \code{teams},
+      the \code{loop} region corresponding to the \code{loop} construct must be
+      strictly nested inside a \code{teams} region.
+\item If the \code{bind} clause is present and \plc{binding} is \code{parallel},
+      the behavior is unspecified if the \code{loop} region corresponding to a
+      \code{loop} construct is closely nested inside a \code{simd} region.
+\item The only constructs that may be nested inside a \code{loop} region
+      are the \code{loop} construct, the \code{parallel} construct, the
+      \code{simd} construct, and combined constructs for which the first
+      construct is a \code{parallel} construct.
 \item A \code{loop} region corresponding to a \code{loop} construct may not
-  contain calls to the OpenMP Runtime API.
-
-\item If a threadprivate variable is referenced inside a \code{loop} region, the behavior is unspecified.
-
+      contain calls to procedures that contain OpenMP directives. 
+\item A \code{loop} region corresponding to a \code{loop} construct may not
+      contain calls to the OpenMP Runtime API.
+\item If a threadprivate variable is referenced inside a \code{loop} region, 
+      the behavior is unspecified.
 \end{itemize}
 
 \begin{ccppspecific}
 \begin{itemize}
-
-  \item The associated for-loops must be structured blocks.
-
-  \item No statement can branch to any associated \code{for} statement.
-
+\item The associated \plc{for-loops} must be structured blocks.
+\item No statement can branch to any associated \code{for} statement.
 \end{itemize}
-
 \end{ccppspecific}
 
 \begin{fortranspecific}
 \begin{itemize}
-
-  \item The associated do-loops must be structured blocks.
-
-  \item No statement in the associated loops other than the DO statements can cause
-    a branch out of the loops.
-
-
+\item The associated \plc{do-loops} must be structured blocks.
+\item No statement in the associated loops other than the DO statements can cause
+      a branch out of the loops.
 \end{itemize}
 \end{fortranspecific}
 
 \crossreferences
 \begin{itemize}
-  \item The Worksharing-Loop construct, see \specref{subsec:Worksharing-Loop Construct}.
+\item The \code{single} construct, see \specref{subsec:single Construct}.
 
-  \item \code{distribute} construct, see \specref{subsec:distribute Construct}.
+\item The Worksharing-Loop construct, see \specref{subsec:Worksharing-Loop Construct}.
 
-  \item SIMD directives, see \specref{subsec:SIMD Directives}.
+\item SIMD directives, see \specref{subsec:SIMD Directives}.
 
-  \item The \code{single} construct, see \specref{subsec:single Construct}.
-
+\item \code{distribute} construct, see \specref{subsec:distribute Construct}.
 \end{itemize}
-%% \pagebreak
 
 
 
@@ -2041,17 +1957,17 @@ Restrictions to the \code{loop} construct are as follows:
 \label{subsec:scan Directive}
 
 \summary
-The \code{scan} directive specifies that a scan computation is to be performed over the
-values used on each iteration to update a list item.
+The \code{scan} directive specifies that scan computations update
+the list items on each iteration.
 
-%%%\begin{samepage}
+\begin{samepage}
 \syntax
 \begin{ccppspecific}
 The syntax of the \code{scan} directive is as follows:
 
 \begin{ompcPragma}
-\plc{loop-directive}
-\plc{for-loop-headers(s)}
+\plc{loop-associated-directive}
+\plc{for-loop-headers}
 {
    \plc{structured-block}
    #pragma omp scan \plc{clause} \plc{new-line}
@@ -2065,22 +1981,23 @@ inclusive(\plc{list})
 exclusive(\plc{list})
 \end{indentedcodelist}
 
-and where \plc{loop-directive} is a \code{for}, \code{for}~\code{simd}, or
+and where \plc{loop-associated-directive} is a \code{for}, \code{for}~\code{simd}, or
 \code{simd} directive.
 
 \end{ccppspecific}
+\end{samepage}
 
 \begin{fortranspecific}
 The syntax of the \code{scan} directive is as follows:
 
 \begin{ompfPragma}
-\plc{loop-directive}
-\plc{do-loop-header(s)}
+\plc{loop-associated-directive}
+\plc{do-loop-headers}
    \plc{structured-block}
    !$omp scan \plc{clause}
    \plc{structured-block}
 \plc{do-termination-stmts(s)}
-\textsl{[}\plc{end-loop-directive}\textsl{]}
+\textsl{[}\plc{end-loop-associated-directive}\textsl{]}
 \end{ompfPragma}
 
 where \plc{clause} is one of the following:
@@ -2089,40 +2006,38 @@ inclusive(\plc{list})
 exclusive(\plc{list})
 \end{indentedcodelist}
 
-and where \plc{loop-directive} (\plc{end-loop-directive}) is a \code{do}
-(\code{end}~\code{do}), \code{do}~\code{simd}
-(\code{end}~\code{do}~\code{simd}), or
-\code{simd} (\code{end}~\code{simd}) directive.
-
+and where \plc{loop-associated-directive} (\plc{end-loop-associated-directive}) is 
+a \code{do} (\code{end}~\code{do}), \code{do}~\code{simd} 
+(\code{end}~\code{do}~\code{simd}), or \code{simd} (\code{end}~\code{simd}) directive.
 \end{fortranspecific}
-%%%\end{samepage}
 
 \descr
 The \code{scan} directive may appear in the body of a loop or loop nest
-associated with an enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct, to
-specify that one or more scan computations are to be performed by the loop.
-The directive specifies that either an inclusive scan computation is to be performed
-for each list item that appears in an \code{inclusive} clause on the
-directive, or an exclusive scan computation is to be performed for each list item that
-appears in an \code{exclusive} clause on the directive.  For each list item
-for which a scan computation is specified, statements that lexically precede
-or follow the directive constitute one of two phases for a given logical
-iteration of the loop -- an \textit{input phase} or a \textit{scan phase}. 
+associated with an enclosing worksharing-loop, worksharing-loop SIMD, or 
+\code{simd} construct, to specify that a scan computation updates each list
+item on each loop iteration. The directive specifies that either an inclusive 
+scan computation is to be performed for each list item that appears in an 
+\code{inclusive} clause on the directive, or an exclusive scan computation 
+is to be performed for each list item that appears in an \code{exclusive} 
+clause on the directive.  For each list item for which a scan computation 
+is specified, statements that lexically precede or follow the directive 
+constitute one of two phases for a given logical iteration of the loop -- 
+an \textit{input phase} or a \textit{scan phase}. 
 
 If the list item appears in an \code{inclusive} clause, all statements in the
-structured block that lexically precede the directive constitute the input
-phase and all statements in the structured block that lexically follow the
-directive constitute the scan phase. If the list item appears in an
+structured block that lexically precede the directive constitute the
+\textit{input phase} and all statements in the structured block that lexically follow the
+directive constitute the \textit{scan phase}. If the list item appears in an
 \code{exclusive} clause and the iteration is not the last iteration, all
 statements in the structured block that lexically precede the directive
-constitute the scan phase and all statements in the structured block that
-lexically follow the directive constitute the input phase. If the list item
+constitute the \textit{scan phase} and all statements in the structured block that
+lexically follow the directive constitute the \textit{input phase}. If the list item
 appears in an \code{exclusive} clause and the iteration is the last iteration,
-there is no input phase for the iteration and all statements that lexically
-precede or follow the directive constitute the scan phase for the iteration.
-The input phase contains all computations that update the list item in the
-iteration, and the scan phase ensures that any statement that reads the list
-item will see the result of the scan computation for that iteration.
+the iteration does not have an \textit{input phase} and all statements that lexically
+precede or follow the directive constitute the \textit{scan phase} for the iteration.
+The \textit{input phase} contains all computations that update the list item in the
+iteration, and the \textit{scan phase} ensures that any statement that reads the list
+item uses the result of the scan computation for that iteration.
 
 The result of a scan computation for a given iteration is calculated according
 to the last \textit{generalized prefix sum}
@@ -2144,55 +2059,49 @@ defined for a given binary operator \plc{op} and a sequence of \plc{N} values
     \ldots, \plc{a}\textsubscript{K}), \texttt{PRESUM\textsubscript{last}}(\plc{op}, \plc{a}\textsubscript{L}, \ldots, \plc{a}\textsubscript{N}) ), where $1 \leq \plc{K}+1 = \plc{L} \leq \plc{N}$.
 \end{itemize}
 
-If the operator \plc{op} is not a mathematically associative operation, the result of
-the \texttt{PRESUM\textsubscript{last}} operation is nondeterministic.
-
-At the beginning of the input phase of each iteration, the list item is
+At the beginning of the \textit{input phase} of each iteration, the list item is
 initialized with the initializer value of the \plc{reduction-identifier}
 specified by the \code{reduction} clause on the innermost enclosing construct.
 The \textit{update value} of a list item is, for a given iteration, the value
-of the list item on completion of its input phase. 
+of the list item on completion of its \textit{input phase}.
 
-Let \plc{orig-val} be the value of the original list item on entry to
-enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct. Let \plc{combiner} be the
-combiner for the \plc{reduction-identifier} specified by the \code{reduction}
-clause on the construct. And let \plc{u}\textsubscript{I} be the update value
-of a list item for iteration \plc{I}.  For list items appearing in an
-\code{inclusive} clause on the \code{scan} directive, at the beginning of the
-scan phase for iteration \plc{I} the list item is assigned the result of the
-operation \texttt{PRESUM\textsubscript{last}}( \plc{combiner}, \plc{orig-val},
-\plc{u}\textsubscript{0}, \ldots, \plc{u}\textsubscript{I}).  For list items
-appearing in an \code{exclusive} clause on the \code{scan} directive, at the
-beginning of the scan phase for iteration $\plc{I} = 0$  the list item is
-assigned the value \plc{orig-val}, and at the beginning of the scan phase for
-iteration $\plc{I} > 0$  the list item is assigned the result of the operation
-\texttt{PRESUM\textsubscript{last}}( \plc{combiner}, \plc{orig-val},
-\plc{u}\textsubscript{0}, \ldots, \plc{u}\textsubscript{I-1}).
+Let \plc{orig-val} be the value of the original list item on entry to the
+enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct. 
+Let \plc{combiner} be the combiner for the \plc{reduction-identifier} specified 
+by the \code{reduction} clause on the construct. And let \plc{u}\textsubscript{I} 
+be the update value of a list item for iteration \plc{I}.  For list items 
+appearing in an \code{inclusive} clause on the \code{scan} directive, at the 
+beginning of the \textit{scan phase} for iteration \plc{I} the list item is assigned
+the result of the operation \texttt{PRESUM\textsubscript{last}}( \plc{combiner}, 
+\plc{orig-val}, \plc{u}\textsubscript{0}, \ldots, \plc{u}\textsubscript{I}).  
+For list items appearing in an \code{exclusive} clause on the \code{scan} 
+directive, at the beginning of the \textit{scan phase} for iteration $\plc{I} = 0$
+the list item is assigned the value \plc{orig-val}, and at the beginning of 
+the \textit{scan phase} for iteration $\plc{I} > 0$  the list item is assigned the
+result of the operation \texttt{PRESUM\textsubscript{last}}( \plc{combiner}, 
+\plc{orig-val}, \plc{u}\textsubscript{0}, \ldots, \plc{u}\textsubscript{I-1}).
 
 
 \restrictions
 Restrictions to the \code{scan} directive are as follows:
 
 \begin{itemize}
-
 \item Exactly one \code{scan} directive must appear in the loop body of an
-    enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct on which a
-    \code{reduction} clause with the \code{inscan} modifier is present.
-
+      enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} 
+      construct on which a \code{reduction} clause with the \code{inscan} 
+      modifier is present.
 \item A list item that appears in the \code{inclusive} or \code{exclusive}
-    clause must appear in a \code{reduction} clause with the \code{inscan}
-    modifier on the enclosing worksharing-loop, worksharing-loop SIMD, or \code{simd} construct.
-
+      clause must appear in a \code{reduction} clause with the \code{inscan}
+      modifier on the enclosing worksharing-loop, worksharing-loop SIMD, or 
+      \code{simd} construct.
 \item Cross-iteration dependences across different logical iterations must not
-    exist, except for dependences for the list items specified in an
-    \code{inclusive} or \code{exclusive} clause.
-
+      exist, except for dependences for the list items specified in an
+      \code{inclusive} or \code{exclusive} clause.
 \item Intra-iteration dependences from a statement in the structured block
-    preceding a \code{scan} directive to a statement in the structured block
-    following a \code{scan} directive must not exist, except for dependences
-    for the list items specified in an \code{inclusive} or \code{exclusive}
-    clause.
-
+      preceding a \code{scan} directive to a statement in the structured block
+      following a \code{scan} directive must not exist, except for dependences
+      for the list items specified in an \code{inclusive} or \code{exclusive}
+      clause.
 \end{itemize}
 
 \crossreferences
@@ -2208,3 +2117,4 @@ Restrictions to the \code{scan} directive are as follows:
 
 \item \code{reduction} clause, see \specref{subsubsec:reduction clause}.
 \end{itemize}
+
