@@ -51,7 +51,6 @@ typedef struct {
   omp_uintptr_t value;
 } omp_alloctrait_t;
 
-enum { OMP_NULL_ALLOCATOR = NULL };
 \end{ompEnv}
 \end{ccppspecific}
 
@@ -119,8 +118,6 @@ type omp_alloctrait
   integer(kind=omp_alloctrait_val_kind) value
 end type omp_alloctrait
 
-integer(kind=omp_allocator_kind), &
-        parameter :: omp_null_allocator = 0
 \end{ompfEnum}
 \end{fortranspecific}
 
@@ -134,14 +131,14 @@ The \code{omp_init_allocator} routine initializes an allocator and associates it
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-omp_allocator_t * omp_init_allocator ( const omp_memspace_t *\plc{memspace}, const int \plc{ntraits}, const omp_alloctrait_t \plc{traits}[])
+omp_allocator_handle_t omp_init_allocator ( const omp_memspace_handle_t \plc{memspace}, const int \plc{ntraits}, const omp_alloctrait_t \plc{traits}[])
 \end{ompcFunction}
 \end{ccppspecific}
 \begin{fortranspecific}
 \begin{ompfFunction}
-integer(kind=omp_allocator_kind) &
+integer(kind=omp_allocator_handle_kind) &
 function omp_init_allocator ( \plc{memspace}, \plc{ntraits}, \plc{traits} )
-integer(kind=omp_memspace_kind),intent(in) :: \plc{memspace}
+integer(kind=omp_memspace_handle_kind),intent(in) :: \plc{memspace}
 integer,intent(in) :: \plc{ntraits}
 type(omp_alloctrait),intent(in) :: \plc{traits}(*)
 \end{ompfFunction}
@@ -164,10 +161,10 @@ The effect of executing this routine is not related to any specific region corre
 
 \effect
 
-The \code{omp_init_allocator} routine creates a new allocator that is associated with the \plc{memspace} memory space. 
+The \code{omp_init_allocator} routine creates a new allocator that is associated with the \plc{memspace} memory space and returns a handle to it. 
 The allocations done through the created allocator will behave according to the allocator traits specified in the \plc{traits} argument.  The number of traits in the \plc{traits} argument is specified by the \plc{ntraits} argument. Specifying the same allocator trait more than once results in unspecified behavior. The routine returns a handle for the created allocator. If the special \code{OMP_ATV_DEFAULT} value is used for a given trait, then its value will be the default value specified in Table~\ref{tab:Allocator traits} for that given trait.
 
-If \plc{memspace} is \scode{omp_default_mem_space} and the \scode{traits} argument is an empty set this routine will always return a handle to an allocator. Otherwise if an allocator based on the requirements cannot be created then the special value \scode{OMP_NULL_ALLOCATOR} is returned.
+If \plc{memspace} is \scode{omp_default_mem_space} and the \scode{traits} argument is an empty set this routine will always return a handle to an allocator. Otherwise if an allocator based on the requirements cannot be created then the special \scode{OMP_NULL_ALLOCATOR} handle is returned.
 
 The use of an allocator returned by this routine on a device other than the one on which it was created results in unspecified behavior.
 
@@ -187,19 +184,19 @@ The \code{omp_destroy_allocator} routine releases all resources used by the allo
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-void omp_destroy_allocator ( omp_allocator_t * \plc{allocator});
+void omp_destroy_allocator ( omp_allocator_handle_t \plc{allocator});
 \end{ompcFunction}
 \end{ccppspecific}
 \begin{fortranspecific}
 \begin{ompfSubroutine}
 subroutine omp_destroy_allocator ( \plc{allocator} )
-integer(kind=omp_allocator_kind),intent(in) :: \plc{allocator}
+integer(kind=omp_allocator_handle_kind),intent(in) :: \plc{allocator}
 \end{ompfSubroutine}
 \end{fortranspecific}
 
 \constraints
 
-The \plc{allocator} argument must not be a predefined memory allocator.
+The \plc{allocator} argument must not represent a predefined memory allocator.
 
 Unless a \code{requires} directive with the \code{dynamic_allocators} clause is present in the same compilation unit, using this routine in a \code{target} region results in unspecified behavior.
 
@@ -230,19 +227,19 @@ The \code{omp_set_default_allocator} routine sets the default memory allocator t
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-void omp_set_default_allocator (const omp_allocator_t *\plc{allocator});
+void omp_set_default_allocator (const omp_allocator_handle_t \plc{allocator});
 \end{ompcFunction}
 \end{ccppspecific}
 \begin{fortranspecific}
 \begin{ompfSubroutine}
 subroutine omp_set_default_allocator ( \plc{allocator} )
-integer(kind=omp_allocator_kind),intent(in) :: \plc{allocator}
+integer(kind=omp_allocator_handle_kind),intent(in) :: \plc{allocator}
 \end{ompfSubroutine}
 \end{fortranspecific}
 
 \constraints
 
-The \plc{allocator} argument must point to a valid memory allocator.
+The \plc{allocator} argument must be a valid memory allocator handle.
 
 \binding
 The binding task set for an \code{omp_set_default_allocator} region is the binding implicit task.
@@ -264,17 +261,17 @@ The effect of this routine is to set the value of the \plc{def-allocator-var} IC
 \label{subsec:omp_get_default_allocator}
 
 \summary
-The \code{omp_get_default_allocator} routine returns the memory allocator to be used by allocation calls, \code{allocate} directives and \code{allocate} clauses that do not specify an allocator.
+The \code{omp_get_default_allocator} routine returns a handle to the memory allocator to be used by allocation calls, \code{allocate} directives and \code{allocate} clauses that do not specify an allocator.
 
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-const omp_allocator_t * omp_get_default_allocator (void);
+const omp_allocator_handle_t omp_get_default_allocator (void);
 \end{ompcFunction}
 \end{ccppspecific}
 \begin{fortranspecific}
 \begin{ompfFunction}
-integer(kind=omp_allocator_kind)&
+integer(kind=omp_allocator_handle_kind)&
 function omp_get_default_allocator ()
 \end{ompfFunction}
 \end{fortranspecific}
@@ -309,14 +306,14 @@ The \code{omp_alloc} routine requests a memory allocation from a memory allocato
 \format
 \begin{cspecific}
 \begin{ompcFunction}
-void * omp_alloc (size_t \plc{size}, const omp_allocator_t *\plc{allocator});
+void * omp_alloc (size_t \plc{size}, const omp_allocator_handle_t\plc{allocator});
 \end{ompcFunction}
 \end{cspecific}
 \begin{cppspecific}
 \begin{ompcFunction}
 void * omp_alloc (
   size_t \plc{size},
-  const omp_allocator_t *\plc{allocator}=OMP_NULL_ALLOCATOR
+  const omp_allocator_handle_t \plc{allocator}=OMP_NULL_ALLOCATOR
 );
 \end{ompcFunction}
 \end{cppspecific}
@@ -347,14 +344,14 @@ The \code{omp_free} routine deallocates previously allocated memory.
 
 \begin{cspecific}
 \begin{ompcFunction}
-void omp_free ( void *\plc{ptr}, const omp_allocator_t *\plc{allocator});
+void omp_free ( void *\plc{ptr}, const omp_allocator_handle_t \plc{allocator});
 \end{ompcFunction}
 \end{cspecific}
 \begin{cppspecific}
 \begin{ompcFunction}
 void omp_free (
   void *\plc{ptr},
-  const omp_allocator_t *\plc{allocator}=OMP_NULL_ALLOCATOR
+  const omp_allocator_handle_t \plc{allocator}=OMP_NULL_ALLOCATOR
 );
 \end{ompcFunction}
 \end{cppspecific}
