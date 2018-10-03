@@ -1141,8 +1141,8 @@ Restrictions to metadirectives are as follows:
 \index{directives!declare variant@{\code{declare variant}}}
 \label{subsec:declare variant Directive}
 \summary
-The \code{declare}~\code{variant} directive declares a function to be a
-specialized variant of another function and specifies the context in which it
+The \code{declare}~\code{variant} directive declares specialized variant
+of a base function and specifies the context in which that specialized variant
 should be used.
 
 \syntax
@@ -1151,7 +1151,9 @@ should be used.
 The syntax of the \code{declare}~\code{variant} directive is as follows:
 
 \begin{ompcPragma}
-#pragma omp declare variant(\plc{base-func-name}) \plc{clause new-line}
+#pragma omp declare variant(\plc{variant-func-name}) \plc{clause new-line}
+\plc{[}#pragma omp declare variant(\plc{variant-func-name}) \plc{clause new-line]}
+\plc{[ ... ]}
    \plc{function definition or declaration}
 \end{ompcPragma}
 \end{samepage}
@@ -1163,13 +1165,16 @@ where \plc{clause} is one of the following{}:
 match(\plc{context-selector-specification})
 \end{indentedcodelist}
 \end{samepage}
+
+and where \plc{variant-func-name} is either a base language identifier, or
+for C++ a \plc{template-id}.
 \end{ccppspecific}
 
 \begin{fortranspecific}
 The syntax of the \code{declare variant} directive is as follows:
 
 \begin{ompfPragma}
-!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) \plc{clause}
+!$omp declare variant(\plc{[proc-name}:\plc{]variant-proc-name}) \plc{clause}
 \end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 
 where \plc{clause} is one of the following{}:
@@ -1181,9 +1186,9 @@ match(\plc{context-selector-specification})
 
 \descr
 
-The use of a \code{declare}~\code{variant} directive declares the function to
-be a function variant of the \plc{base-func-name} or \plc{base-proc-name}
-function. The context selector in the \code{match} clause is associated 
+The \code{declare}~\code{variant} directive declares the base function to
+have \plc{variant-func-name} or \plc{variant-proc-name} as a function
+variant. The context selector in the \code{match} clause is associated
 with the variant.
 
 The OpenMP context for a call to a given base function is defined according 
@@ -1199,19 +1204,27 @@ defined. If a compatible variant exists, the call to the base function is
 replaced with a call to the selected variant. If no compatible variants 
 exist then the call to the base function is not changed.
 
-Multiple variants may be specified for the same base function.
+There may be multiple \code{declare}~\code{variant} directives for the same
+base function.
 
 Any differences that the specific OpenMP context requires in the prototype 
 of the variant from the base function prototype are implementation defined.
+
+\begin{cppspecific}
+The declaration of the function variant is determined by base language
+name lookup in the scope at the start of the base function.  If it is an
+overloaded function, the function with appropriate prototype for the
+specific OpenMP context and argument types of the base function is selected
+from the set of candidate functions.
+\end{cppspecific}
 
 \restrictions
 Restrictions to the \code{declare variant} directive are as follows:
 
 \begin{itemize}
-\item If the function definition or a declaration of the function in the same
-      compilation unit has a \code{declare}~\code{variant} directive, then 
-      calling the variant function directly in an OpenMP context that is 
-      different than the one specified by the \code{construct} set of the 
+\item Calling functions mentioned in \code{declare}~\code{variant} directives as
+      function variants directly in an OpenMP context that is different than
+      the one specified by the \code{construct} set of the 
       context selector is non-conforming.
 
 \begin{ccppspecific}
@@ -1222,13 +1235,8 @@ Restrictions to the \code{declare variant} directive are as follows:
 \end{ccppspecific}
 
 \begin{cppspecific}
-\item \plc{base-func-name} should not designate an overloaded function name. 
-      Otherwise, \plc{base-func-name} must be a function declaration without 
-      the return type.
-\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
-      cannot be a template function.
-\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
-      cannot be a virtual function.
+\item The \code{declare}~\code{variant} directive cannot be specified
+      for a virtual function.
 \end{cppspecific}
 
 \begin{fortranspecific}
