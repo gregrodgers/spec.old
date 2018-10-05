@@ -46,58 +46,57 @@
 \subsection{OMPT Runtime Entry Points for Tools}
 \label{sec:entry-points}
 
-The OMPT interface supports two principal sets of runtime entry points for tools. One
-set of runtime entry points enables a tool to register callbacks for OpenMP
-events and to inspect the state of an OpenMP thread while
-executing in a tool callback or a signal handler. The second set of runtime entry points enables a
-tool to trace activities on a device. When directed by the tracing
-interface, an OpenMP implementation will trace activities on a device, collect
-buffers full of trace records, and invoke callbacks on the host to
-process these records.
-Runtime entry points for tools in an OpenMP implementation
-should not be global symbols since tools cannot rely on the visibility
-of such symbols in general.
+OMPT supports two principal sets of runtime entry points for tools. One set of 
+runtime entry points enables a tool to register callbacks for OpenMP events and 
+to inspect the state of an OpenMP thread while executing in a tool callback or 
+a signal handler. The second set of runtime entry points enables a tool to trace 
+activities on a device. When directed by the tracing interface, an OpenMP 
+implementation will trace activities on a device, collect buffers of trace 
+records, and invoke callbacks on the host to process these records. OMPT runtime 
+entry points should not be global symbols since tools cannot rely on the 
+visibility of such symbols.
 
-In addition, the OMPT interface supports
-runtime entry points for two classes of lookup routines. The first
-class of lookup routines contains a single member: a
-routine that returns runtime entry points in the OMPT callback interface.
-The second class of lookup routines includes
-a unique lookup routine for each kind of
-device that can return runtime entry points in a device's OMPT tracing interface.
+OMPT also supports runtime entry points for two classes of lookup routines. The 
+first class of lookup routines contains a single member: a routine that returns 
+runtime entry points in the OMPT callback interface. The second class of lookup 
+routines includes a unique lookup routine for each kind of device that can return 
+runtime entry points in a device's OMPT tracing interface.
+
+The C/C++ header file (omp-tools.h) provides the definitions of
+the types that are specified throughout this subsection.
 
 \restrictions
 
-Calling an OMPT runtime entry point from a signal handler before a
-\plc{thread-begin} or after a \plc{thread-end} event on a thread
-results in unspecified behavior.
+OMPT runtime entry points have the following restrictions:
 
-Calling an OMPT device runtime entry point after a \plc{device-finalize} event
-for that device results in unspecified behavior.
+\begin{itemize}
+\item OMPT runtime entry points must not be called from a signal handler
+      on a native thread before a \plc{native-thread-begin} or after a 
+      \plc{native-thread-end} event.
+\item OMPT device runtime entry points must not be called after a 
+      \plc{device-finalize} event for that device.
+\end{itemize}
+
+
 
 \subsubsection{Entry Points in the OMPT Callback Interface}
 \label{sec:ompt-callback-entry-points}
 
-Entry points in the OMPT callback interface enable a tool to register
-callbacks for OpenMP events and to inspect the state of an OpenMP thread while
-executing in a tool callback or a signal handler.
-A tool obtains pointers to these runtime entry points
-using the lookup function passed to the tool's initializer for the
-callback interface.
+Entry points in the OMPT callback interface enable a tool to register callbacks 
+for OpenMP events and to inspect the state of an OpenMP thread while executing 
+in a tool callback or a signal handler. Pointers to these runtime entry points 
+are obtained through the lookup function that is provided through the OMPT initializer.
 
 \subsubsubsection{\hcode{ompt_enumerate_states_t}}
 \label{sec:ompt_enumerate_states_t}
 \label{sec:ompt_enumerate_states}
 
 \summary
-A runtime entry point known as \code{ompt_enumerate_states}
-with type signature \code{ompt_enumerate_states_t}
-enumerates the thread states supported by an OpenMP
-implementation.
+The \code{ompt_enumerate_states_t} type is the type signature of 
+the \code{ompt_enumerate_states} runtime entry point, which
+enumerates the thread states that an OpenMP implementation supports.
 
 \format
-
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_enumerate_states_t) (
@@ -108,56 +107,51 @@ typedef int (*ompt_enumerate_states_t) (
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \descr
 An OpenMP implementation may support only a subset of the states defined by
-the \code{omp_state_t} enumeration type. In addition, an
-OpenMP implementation may support implementation-specific states.
-The \code{ompt_enumerate_states} runtime entry point enables a tool to
-enumerate the thread states supported by an OpenMP implementation.
+the \code{omp_state_t} enumeration type. An OpenMP implementation may also
+support implementation-specific states. The \code{ompt_enumerate_states}
+runtime entry point, which has type signature \code{ompt_enumerate_states_t}, 
+ enables a tool to enumerate the supported thread states.
 
-When a thread state supported by an OpenMP implementation is passed
-as the first argument to the runtime entry point,
-the runtime entry point will assign the next thread state in the enumeration to
-the variable passed by reference as the runtime entry point's second argument
-and assign the name associated with the next thread state
-to the character pointer passed by reference as the third argument.
+When a supported thread state is passed as \plc{current_state}, the runtime 
+entry point assigns the next thread state in the enumeration to the variable 
+passed by reference in \plc{next_state} and assigns the name associated with 
+that state to the character pointer passed by reference in \plc{next_state_name}.
 
-Whenever one or more states are left in the enumeration,
-the enumerate states runtime entry point will return $1$.
-When the last state in the enumeration is passed
-as the first argument, the runtime entry point will return $0$
-indicating that the enumeration is complete.
-
-
+Whenever one or more states are left in the enumeration, the 
+\code{ompt_enumerate_states} runtime entry point returns $1$. When 
+the last state in the enumeration is passed as \plc{current_state}, 
+\code{ompt_enumerate_states} returns $0$, which indicates that the 
+enumeration is complete.
 
 \argdesc
+The \plc{current_state} argument must be a thread state that the OpenMP 
+implementation supports. To begin enumerating the supported states, a tool 
+should pass \code{omp_state_undefined} as \plc{current_state}. Subsequent
+invocations of \code{ompt_enumerate_states} should pass the value assigned 
+to the variable passed by reference in \plc{next_state} to the previous call.
 
-The argument \plc{current_state} must be a thread state
-supported by the OpenMP implementation.  To begin enumerating the
-states that an OpenMP implementation supports, a tool should pass
-\code{omp_state_undefined} as \plc{current_state}.  Subsequent
-invocations of the runtime entry point by the tool should pass the
-value assigned to the variable passed by reference as the second
-argument to the previous call.
+The value \code{ompt_state_undefined} is reserved to indicate an invalid thread 
+state. \code{ompt_state_undefined} is defined as an integer with the value 0.
 
-The argument \plc{next_state} is a pointer to an integer where
-the entry point will return the value of the next state in the
-enumeration.
+The \plc{next_state} argument is a pointer to an integer in which 
+\code{ompt_enumerate_states} returns the value of the next state in the enumeration.
 
-The argument \plc{next_state_name} is a pointer to a
-character string pointer, where the entry point will return a string
-describing the next state.
+The \plc{next_state_name} argument is a pointer to a character string 
+pointer through which \code{ompt_enumerate_states} returns a string 
+that describes the next state.
 
 \constraints
-Any string returned through the argument
-\plc{next_state_name} must be immutable and defined
-for the lifetime of a program execution.
+Any string returned through the \plc{next_state_name} argument must be 
+immutable and defined for the lifetime of a program execution.
 
 \crossreferences
 \begin{itemize}
 \item \code{omp_state_t}, see \specref{sec:thread-states}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_enumerate_mutex_impls_t}}
 \label{sec:ompt_enumerate_mutex_impls_t}
@@ -165,16 +159,12 @@ for the lifetime of a program execution.
 \label{sec:ompt_mutex_impl_none}
 
 \summary
-
-A runtime entry point known as \code{ompt_enumerate_mutex_impls}
-with type signature \code{ompt_enumerate_mutex_impls_t}
-enumerates the kinds of mutual exclusion implementations that
-an OpenMP implementation employs.
-
+The \code{ompt_enumerate_mutex_impls_t} type is the type signature of 
+the \code{ompt_enumerate_mutex_impls} runtime entry point, which
+enumerates the kinds of mutual exclusion implementations that an OpenMP 
+implementation employs.
 
 \format
-
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_enumerate_mutex_impls_t) (
@@ -185,126 +175,110 @@ typedef int (*ompt_enumerate_mutex_impls_t) (
 \end{omptInquiry}
 \end{ccppspecific}
 
-\code{ompt_mutex_impl_none} is defined as an integer with the value 0.
-
 \descr
-An OpenMP implementation may implement mutual exclusion for locks,
-nest locks, critical sections, and atomic regions in several different
-ways.  The \code{ompt_enumerate_mutex_impls} runtime entry point
-enables a tool to enumerate the
-kinds of mutual exclusion implementations that an OpenMP implementation
-employs.
-The value \code{ompt_mutex_impl_none} is reserved to indicate an invalid
-implementation.
+Mutual exclusion for locks, \code{critical} sections, and \code{atomic} 
+regions may be implemented in several ways. The \code{ompt_enumerate_mutex_impls} 
+runtime entry point, which has type signature \code{ompt_enumerate_mutex_impls_t},
+enables a tool to enumerate the supported mutual exclusion implementations.
 
+When a supported mutex implementation is passed as \plc{current_impl}, the 
+runtime entry point assigns the next mutex implementation in the enumeration 
+to the variable passed by reference in \plc{next_impl} and assigns the name 
+associated with that mutex implementation to the character pointer passed by 
+reference in \plc{next_impl_name}.
 
-
-When a mutex kind supported by an OpenMP implementation is passed
-as the first argument to the runtime entry point,
-the runtime entry point will assign the next mutex kind in the enumeration to
-the variable passed by reference as the runtime entry point's second argument
-and assign the name associated with the next mutex kind
-to the character pointer passed by reference as the third argument.
-
-Whenever one or more mutex kinds are left in the enumeration,
-the runtime entry point to enumerate mutex implementations will return $1$.
-When the last mutex kind in the enumeration is passed
-as the first argument, the runtime entry point will return $0$
-indicating that the enumeration is complete.
+Whenever one or more mutex implementations are left in the enumeration, the 
+\code{ompt_enumerate_mutex_impls} runtime entry point returns $1$. When the 
+last mutex implementation in the enumeration is passed as \plc{current_impl}, the 
+runtime entry point returns $0$, which indicates that the enumeration is complete.
 
 \argdesc
+The \plc{current_impl} argument must be a mutex implementation that an OpenMP 
+implementation supports. To begin enumerating the supported mutex implementations, 
+a tool should pass \code{ompt_mutex_impl_none} as \plc{current_impl}. 
+Subsequent invocations of \code{ompt_enumerate_mutex_impls} should pass the
+value assigned to the variable passed in \plc{next_impl} to the previous call.
 
-The argument \plc{current_impl} must be a mutex implementation
-kind supported by an OpenMP implementation.  To begin enumerating the
-mutex implementation kinds that an OpenMP implementation supports, a
-tool should pass \code{ompt_mutex_impl_none} as the first
-argument of the enumerate mutex kinds runtime entry point.  Subsequent
-invocations of the runtime entry point by the tool should pass the
-value assigned to the variable passed by reference as the second
-argument to the previous call.
+The value \code{ompt_mutex_impl_none} is reserved to indicate an invalid 
+mutex implementation. \code{ompt_mutex_impl_none} is defined as an integer 
+with the value 0.
 
-The argument \plc{next_impl} is a pointer to an integer where
-the entry point will return the value of the next mutex implementation
-in the enumeration.
+The \plc{next_impl} argument is a pointer to an integer in which 
+\code{ompt_enumerate_mutex_impls} returns the value of the next mutex 
+implementation in the enumeration.
 
-The argument \plc{next_impl_name} is a pointer to a character
-string pointer, where the entry point will return a string describing
+The \plc{next_impl_name} argument is a pointer to a character string pointer
+in which \code{ompt_enumerate_mutex_impls} returns a string that describes
 the next mutex implementation.
 
 \constraints
-Any string returned through the argument
-\plc{next_impl_name} must be immutable and defined
-for the lifetime of a program execution.
+Any string returned through the \plc{next_impl_name} argument must be 
+immutable and defined for the lifetime of a program execution.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt_mutex_t}, see \specref{sec:ompt_mutex_t}.
+\end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_set_callback_t}}
 \label{sec:ompt_set_callback_t}
 \label{sec:ompt_set_callback}
 
 \summary
-
-A runtime entry point known as \code{ompt_set_callback}
-with type signature \code{ompt_set_callback_t} registers a
-pointer to a tool callback that an OpenMP implementation will invoke when a host
-OpenMP event occurs.
+The \code{ompt_set_callback_t} type is the type signature of the 
+\code{ompt_set_callback} runtime entry point, which registers a
+pointer to a tool callback that an OpenMP implementation invokes 
+when a host OpenMP event occurs.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef int (*ompt_set_callback_t) (
-  ompt_callbacks_t \plc{which},
+  ompt_callbacks_t \plc{event},
   ompt_callback_t \plc{callback}
 );
 \end{omptCallback}
 \end{ccppspecific}
 
-
 \descr
+OpenMP implementations can use callbacks to indicate the occurrence of events 
+during the execution of an OpenMP program. The \code{ompt_set_callback} runtime
+entry point, which has type signature \code{ompt_set_callback_t}, registers a 
+callback for an OpenMP event on the current device,
 
-OpenMP implementations can inform tools about events that occur during
-the execution of an OpenMP program using callbacks.
-To register a tool callback for an OpenMP event on the current device,
-a tool uses the runtime entry point
-known as \code{ompt_set_callback}
-with type signature \code{ompt_set_callback_t}.
-
-The return value of the \code{ompt_set_callback} runtime entry point may indicate several possible
-outcomes. Callback registration may fail if it is called outside the initializer for the
-callback interface, returning \code{omp_set_error}.
-Otherwise, the return value of \code{ompt_set_callback}
-indicates whether \emph{dispatching} a callback leads to its invocation.
-A return value of \code{ompt_set_never} indicates that the callback
-will never be invoked at runtime.
-A return value of \code{ompt_set_sometimes} indicates that the callback
-will be invoked at runtime for an implementation-defined subset of
-associated event occurrences.
-A return value of \code{ompt_set_sometimes_paired} is similar to
-\code{ompt_set_sometimes}, but provides an additional guarantee for
-callbacks with an \plc{endpoint} parameter. Namely, it guarantees that a callback
-with an \plc{endpoint} value of \code{ompt_scope_begin} is invoked if and only if
-the same callback with \plc{endpoint} value of \code{ompt_scope_end} will
-also be invoked sometime in the future.
-A return value of \code{ompt_set_always} indicates that the callback
-will be always invoked at runtime for associated event occurrences.
+The return value of \code{ompt_set_callback} may indicate several possible 
+outcomes. Callback registration may fail if it is called outside the initializer 
+for the callback interface,which is indicated by the \code{omp_set_error} return 
+value. Otherwise, the return value indicates if \emph{dispatching} a callback 
+event leads to the invocation of the callback. The \code{ompt_set_never} return 
+value indicates that the callback will never be invoked at runtime. The 
+\code{ompt_set_sometimes} return value indicates that the callback will be 
+invoked at runtime for an implementation-defined subset of associated event 
+occurrences. The \code{ompt_set_sometimes_paired} return value indicates the 
+same result as \code{ompt_set_sometimes}, and, in addition, that a callback
+with an \plc{endpoint} value of \code{ompt_scope_begin} will be invoked if 
+and only if the same callback with an \plc{endpoint} value of \code{ompt_scope_end} 
+will also be invoked sometime in the future. The \code{ompt_set_always} return 
+value indicates that the callback will always be invoked when an associated 
+event occurs.
 
 \argdesc
+The \plc{event} argument indicates the event for which the callback is 
+being registered.
 
-The argument \plc{which} indicates the callback being registered.
-
-The argument \plc{callback} is a tool callback function.
-
-A tool may pass a \code{NULL} value for \plc{callback} to disable
-any callback associated with \plc{which}. If disabling was successful,
-\code{ompt_set_always} is returned.
+The \plc{callback} argument is a tool callback function. If \plc{callback}
+is \code{NULL} then callbacks associated with \plc{event} are disabled. If
+callbacks are successfully disabled then \code{ompt_set_always} is returned.
 
 \constraints
-When a tool registers a callback for an event, the type
-signature for the callback must match the type signature appropriate for the
-event.
+When a tool registers a callback for an event, the type signature for the 
+callback must match the type signature appropriate for the event.
 
 \begin{table}
-\caption{Return codes for \code{ompt_set_callback} and
-    \code{ompt_set_trace_ompt}.\label{table:ToolsSupport_set_rc}}
+\caption{Return Codes for \code{ompt_set_callback} and
+    \code{ompt_set_trace_ompt}\label{table:ToolsSupport_set_rc}}
 \begin{omptEnum}
 typedef enum ompt_set_result_t {
   ompt_set_error            = 0,
@@ -314,67 +288,66 @@ typedef enum ompt_set_result_t {
   ompt_set_always           = 4
 } ompt_set_result_t;
 \end{omptEnum}
-
 \end{table}
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callbacks_t} enumeration type, see \specref{sec:ompt_callbacks_t}.
+
 \item \code{ompt_callback_t} type, see \specref{sec:ompt_callback_t}.
+
 \item \code{ompt_get_callback_t} host callback type signature,
 see \specref{sec:ompt_get_callback_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_callback_t}}
 \label{sec:ompt_get_callback_t}
 \label{sec:ompt_get_callback}
 
 \summary
-
-A runtime entry point known as \code{ompt_get_callback}
-with type signature \code{ompt_get_callback_t} retrieves a pointer
-to a tool callback routine (if any)
-that an OpenMP implementation will invoke when an OpenMP event occurs.
+The \code{ompt_get_callback_t} type is the type signature of the 
+\code{ompt_get_callback} runtime entry point, which retrieves a
+pointer to a registered tool callback routine (if any) that an 
+OpenMP implementation invokes when a host OpenMP event occurs.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef int (*ompt_get_callback_t) (
-  ompt_callbacks_t \plc{which},
+  ompt_callbacks_t \plc{event},
   ompt_callback_t *\plc{callback}
 );
 \end{omptCallback}
 \end{ccppspecific}
 
-
 \descr
-A tool uses the runtime entry point known
-as \code{ompt_get_callback}
-with type signature \code{ompt_get_callback_t}
-to obtain a pointer to the tool callback that
-an OpenMP implementation will invoke when a host OpenMP event occurs.
-If a non-\code{NULL} tool callback is registered for the specified event,
-the pointer to the tool callback will be assigned to the variable
-passed by reference as the second argument and the entry
-point will return 1; otherwise, it will return 0. If the entry point
-returns 0, the value of the variable passed by reference as the second
-argument is undefined.
+The \code{ompt_get_callback} runtime entry point, which has type signature 
+\code{ompt_get_callback_t}, retrieves a pointer to the tool callback that
+an OpenMP implementation may invoke when a host OpenMP event occurs. If a 
+non-null tool callback is registered for the specified event, the pointer 
+to the tool callback is assigned to the variable passed by reference in
+\plc{callback} and \code{ompt_get_callback} returns 1; otherwise, it returns 0. 
+If \code{ompt_get_callback} returns 0, the value of the variable passed by 
+reference as \plc{callback} is undefined.
 
 \argdesc
+The \plc{event} argument indicates the event for which the callback would 
+be invoked.
 
-The argument \plc{which} indicates the callback being inspected.
-
-The argument \plc{callback} returns a pointer to the callback being inspected.
+The \plc{callback} argument returns a pointer to the callback associated 
+with \plc{event}.
 
 \constraints
-The second argument passed to the entry point must be a reference
-to a variable of specified type.
+The \plc{callback} argument must be a reference to a variable of specified type.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callbacks_t} enumeration type, see \specref{sec:ompt_callbacks_t}.
+
 \item \code{ompt_callback_t} type, see \specref{sec:ompt_callback_t}.
+
 \item \code{ompt_set_callback_t} type signature,
 see \specref{sec:ompt_set_callback_t}.
 \end{itemize}
@@ -385,9 +358,9 @@ see \specref{sec:ompt_set_callback_t}.
 \label{sec:ompt_get_thread_data}
 
 \summary
-A runtime entry point known as \code{ompt_get_thread_data}
-with type signature \code{ompt_get_thread_data_t}
-returns the address of the thread data object for the current thread.
+The \code{ompt_get_thread_data_t} type is the type signature of the 
+\code{ompt_get_thread_data} runtime entry point, which returns the
+address of the thread data object for the current thread.
 
 \format
 \begin{ccppspecific}
@@ -397,46 +370,38 @@ typedef ompt_data_t *(*ompt_get_thread_data_t) (void);
 \end{ccppspecific}
 
 \binding
-
-The binding thread for runtime entry point known as
-\code{ompt_get_thread_data} is the current thread.
+The binding thread for the \code{ompt_get_thread_data} runtime entry 
+point is the current thread.
 
 \descr
-
-Each OpenMP thread has an associated thread data object of type
-\code{ompt_data_t}.
-A tool uses the runtime entry point known as
-\code{ompt_get_thread_data}
-with type signature \code{ompt_get_thread_data_t}
-to obtain a pointer to the thread data object, if any, associated with the
-current thread. 
-
-A tool may use a pointer to an OpenMP thread's data object
-obtained from this runtime entry point to
-inspect or modify the value of the data object.
-When an OpenMP thread is created, its data object will be initialized
-with value \code{ompt_data_none}.
+Each OpenMP thread can have an associated thread data object of type 
+\code{ompt_data_t}. The \code{ompt_get_thread_data} runtime entry point, 
+which has type signature \code{ompt_get_thread_data_t}, retrieves a pointer 
+to the thread data object, if any, that is associated with the current thread. 
+A tool may use a pointer to an OpenMP thread's data object that 
+\code{ompt_get_thread_data} retrieves to inspect or to modify the value of 
+the data object. When an OpenMP thread is created, its data object is
+initialized with value \code{ompt_data_none}.
 
 This runtime entry point is \emph{async signal safe}.
+
 \crossreferences
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
 \end{itemize}
 
 
+
 \subsubsubsection{\hcode{ompt_get_num_procs_t}}
 \label{sec:ompt_get_num_procs_t}
 
 \summary
-
-A runtime entry point known as
-\code{ompt_get_num_procs} with type signature
-\code{ompt_get_num_procs_t}  returns
-the number of processors currently available to the execution
-environment on the host device.
+The \code{ompt_get_num_procs_t} type is the type signature of the 
+\code{ompt_get_num_procs} runtime entry point, which returns the
+number of processors currently available to the execution environment 
+on the host device.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_num_procs_t) (void);
@@ -444,37 +409,32 @@ typedef int (*ompt_get_num_procs_t) (void);
 \end{ccppspecific}
 
 \binding
-
-The binding thread set for runtime entry point known as
-\code{ompt_get_num_procs} is all threads on a device.
+The binding thread set for the \code{ompt_get_num_procs} runtime entry 
+point is all threads on the host device.
 
 \descr
-
-The \code{ompt_get_num_procs} runtime entry point returns the
-number of processors that are available on the host device at the time
-the routine is called. This value may change between the time that
-it is determined and the time that it is read in the calling context due to
-system actions outside the control of the OpenMP implementation.
+The \code{ompt_get_num_procs} runtime entry point, which has type 
+signature  \code{ompt_get_num_procs_t}, returns the number of processors 
+that are available on the host device at the time the routine is called. 
+This value may change between the time that it is determined and the 
+time that it is read in the calling context due to system actions 
+outside the control of the OpenMP implementation.
 
 This runtime entry point is \emph{async signal safe}.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% Alex new proc_bind calls
+
 
 \subsubsubsection{\hcode{ompt_get_num_places_t}}
 \label{sec:ompt_get_num_places_t}
-\label{sec:ompt_get_num_place}
+\label{sec:ompt_get_num_places}
 
 \summary
-
-A runtime entry point known as
-\code{ompt_get_num_places} with type signature
-\code{ompt_get_num_places_t}  returns
-the number of places available to the execution
-environment in the place list.
+The \code{ompt_get_num_places_t} type is the type signature of the 
+\code{ompt_get_num_places} runtime entry point, which returns the
+number of places currently available to the execution environment 
+in the place list.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_num_places_t) (void);
@@ -482,18 +442,14 @@ typedef int (*ompt_get_num_places_t) (void);
 \end{ccppspecific}
 
 \binding
-
-The binding thread set for
-the runtime entry point known as \code{ompt_get_num_places}
-is all threads on a device.
+The binding thread set for the \code{ompt_get_num_places} runtime entry 
+point is all threads on a device.
 
 \descr
-
-The runtime entry point known as  \code{ompt_get_num_places}
-returns the number of places in the place list.
-This value is equivalent to the number of places in
-the  \plc{place-partition-var} ICV in the execution environment
-of the initial task.
+The \code{ompt_get_num_places} runtime entry point, which has type signature 
+\code{ompt_get_num_places_t}, returns the number of places in the place list. 
+This value is equivalent to the number of places in the \plc{place-partition-var} 
+ICV in the execution environment of the initial task.
 
 This runtime entry point is \emph{async signal safe}.
 
@@ -514,15 +470,12 @@ This runtime entry point is \emph{async signal safe}.
 \label{sec:ompt_get_place_proc_ids}
 
 \summary
-
-A runtime entry point known as
-\code{ompt_get_place_proc_ids} with type signature
-\code{ompt_get_place_proc_ids_t}
-returns the numerical identifiers of the processors
-available to the execution environment in the specified place.
+The \code{ompt_get_place_procs_ids_t} type is the type signature of the 
+\code{ompt_get_num_place_procs_ids} runtime entry point, which returns the
+the numerical identifiers of the processors that are available to the execution 
+environment in the specified place.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_place_proc_ids_t) (
@@ -534,44 +487,33 @@ typedef int (*ompt_get_place_proc_ids_t) (
 \end{ccppspecific}
 
 \binding
-
-The binding thread set for
-the runtime entry point known as \code{ompt_get_place_proc_ids}
-is all threads on a device.
+The binding thread set for the \code{ompt_get_place_proc_ids} runtime 
+entry point is all threads on a device.
 
 \descr
-
-The runtime entry point known as
-\code{ompt_get_place_proc_ids} with type signature
-\code{ompt_get_place_proc_ids_t} returns
-the numerical identifiers of each processor
-associated with the specified place.
-The numerical identifiers returned are non-negative, and
-their meaning is implementation defined.
+The \code{ompt_get_place_proc_ids} runtime entry point, which has type 
+signature \code{ompt_get_place_proc_ids_t}, returns the numerical 
+identifiers of each processor that is associated with the specified 
+place. These numerical identifiers are non-negative and their meaning 
+is implementation defined.
 
 \argdesc
+The \plc{place_num} argument specifies the place that is being queried.
 
-The argument \plc{place_num} specifies the place being
-queried.
-
-The argument \plc{ids_size} indicates the size of the result
-array specified by argument \plc{ids}.
-
-The argument \plc{ids} is an array where the routine can return
+The \plc{ids} argument is an array in which the routine can return
 a vector of processor identifiers in the specified place.
 
+The \plc{ids_size} argument indicates the size of the result array that
+is specified by \plc{ids}.
+
 \effect
+If the \plc{ids} array of size \plc{ids_size} is large enough to contain 
+all identifiers then they are returned in \plc{ids} and their order in the 
+array is implementation defined. Otherwise, if the \plc{ids} array is too 
+small the the values in \plc{ids} when the function returns are unspecified.
+The routine always returns the number of numerical identifiers of the 
+processors that are available to the execution environment in the specified place.
 
-If the array \plc{ids} of size \plc{ids_size} is large enough to
-contain all identifiers, they are returned in \plc{ids} and
-their order in the array is implementation defined.
-
-Otherwise, if the \plc{ids} array is too small, the values in \plc{ids} when the function returns are unspecified.
-
-In both cases, the routine returns the number of numerical identifiers
-available to the execution environment in the specified place.
-
-% This runtime entry point is \emph{async signal safe}.
 
 
 \subsubsubsection{\hcode{ompt_get_place_num_t}}
@@ -579,15 +521,11 @@ available to the execution environment in the specified place.
 \label{sec:ompt_get_place_num}
 
 \summary
-
-A runtime entry point known as
-\code{ompt_get_place_num} with type signature
-\code{ompt_get_place_num_t} returns
-the place number of the place to which the current
-thread is bound.
+The \code{ompt_get_place_num_t} type is the type signature of the 
+\code{ompt_get_place_num} runtime entry point, which returns the
+place number of the place to which the current thread is bound.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_place_num_t) (void);
@@ -595,21 +533,17 @@ typedef int (*ompt_get_place_num_t) (void);
 \end{ccppspecific}
 
 \binding
-
-The binding thread set
-for the runtime entry point known as \code{ompt_get_place_num}
+The binding thread set of the \code{ompt_get_place_num} runtime entry point
 is the current thread.
 
 \descr
-
-When the current thread is bound to a place,
-the runtime entry point known as \code{ompt_get_place_num}
-returns the place number associated with the thread.
-The returned value is between 0 and one less than the value returned
-by runtime entry point known as \code{ompt_get_num_places}, inclusive.
-When the current thread is not bound to a place, the routine returns -1.
+When the current thread is bound to a place, \code{ompt_get_place_num}
+returns the place number associated with the thread. The returned value 
+is between 0 and one less than the value returned by \code{ompt_get_num_places}, 
+inclusive. When the current thread is not bound to a place, the routine returns -1.
 
 This runtime entry point is \emph{async signal safe}.
+
 
 
 \subsubsubsection{\hcode{ompt_get_partition_place_nums_t}}
@@ -617,15 +551,12 @@ This runtime entry point is \emph{async signal safe}.
 \label{sec:ompt_get_partition_place_nums}
 
 \summary
-
-A runtime entry point known as
-\code{ompt_get_partition_place_nums} with type signature
-\code{ompt_get_partition_place_nums_t}
-returns the list of place numbers corresponding to the places in the \plc{place-partition-var}
-ICV of the innermost implicit task.
+The \code{ompt_get_partition_place_nums_t} type is the type signature 
+of the \code{ompt_get_partition_place_nums} runtime entry point, which 
+returns a list of place numbers that correspond to the places in the 
+\plc{place-partition-var} ICV of the innermost implicit task.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_partition_place_nums_t) (
@@ -636,40 +567,31 @@ typedef int (*ompt_get_partition_place_nums_t) (
 \end{ccppspecific}
 
 \binding
-
-The binding task set for
-the runtime entry point known as \code{ompt_get_partition_place_nums}
-is the current implicit task.
+The binding task set for the \code{ompt_get_partition_place_nums} runtime 
+entry point is the current implicit task.
 
 \descr
-
-The runtime entry point known as
-\code{ompt_get_partition_place_nums} with type signature
-\code{ompt_get_partition_place_nums_t} returns the list of place
-numbers corresponding to the places in the \plc{place-partition-var}
+The \code{ompt_get_partition_place_nums} runtime entry point, which has
+type signature \code{ompt_get_partition_place_nums_t}, returns a list of 
+place numbers that correspond to the places in the \plc{place-partition-var}
 ICV of the innermost implicit task.
 
 This runtime entry point is \emph{async signal safe}.
 
 \argdesc
+The \plc{place_nums} argument is an array in which the routine can 
+return a vector of place identifiers.
 
-The argument \plc{place_nums_size} indicates the size of the result
-array specified by argument \plc{place_nums}.
-
-The argument \plc{place_nums} is an array where the routine can return
-a vector of place identifiers.
+The \plc{place_nums_size} argument indicates the size of the result
+array that the \plc{place_nums} argument specifies.
 
 \effect
-
-If the array \plc{place_nums} of size \plc{place_nums_size} is
-large enough to contain all identifiers, they are returned in
-\plc{place_nums} and their order in the array is implementation
-defined.
-
-Otherwise, if the \plc{place_nums} array is too small, the values in \plc{place_nums} when the function returns are unspecified.
-
-In both cases, the routine returns the number of places in the
-\plc{place-partition-var} ICV of the innermost implicit task.
+If the \plc{place_nums} array of size \plc{place_nums_size} is large 
+enough to contain all identifiers then they are returned in \plc{place_nums} 
+and their order in the array is implementation defined. Otherwise, if the 
+\plc{place_nums} array is too small, the values in \plc{place_nums} when 
+the function returns are unspecified. The routine always returns the number 
+of places in the \plc{place-partition-var} ICV of the innermost implicit task.
 
 \crossreferences
 \begin{itemize}
@@ -678,10 +600,7 @@ In both cases, the routine returns the number of places in the
 
 \item \code{OMP_PLACES} environment variable, see
 \specref{sec:OMP_PLACES}.
-
 \end{itemize}
-
-
 
 
 
@@ -690,14 +609,11 @@ In both cases, the routine returns the number of places in the
 \label{sec:ompt_get_proc_id}
 
 \summary
-
-A runtime entry point known as
-\code{ompt_get_proc_id} with type signature
-\code{ompt_get_proc_id_t} returns the numerical identifier
-of the processor of the current thread.
+The \code{ompt_get_proc_id_t} type is the type signature of the 
+\code{ompt_get_proc_id} runtime entry point, which returns the
+numerical identifier of the processor of the current thread.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_proc_id_t) (void);
@@ -705,24 +621,17 @@ typedef int (*ompt_get_proc_id_t) (void);
 \end{ccppspecific}
 
 \binding
-
-The binding thread set for
-the runtime entry point known as \code{ompt_get_proc_id}
+The binding thread set for the \code{ompt_get_proc_id} runtime entry point
 is the current thread.
 
 \descr
-
-The runtime entry point known as
-\code{ompt_get_proc_id} returns the numerical identifier
-of the processor of the current thread.
-A defined numerical identifier is non-negative, and
-its meaning is implementation defined.
-A negative number indicates a failure to retrieve the numerical identifier.
+The \code{ompt_get_proc_id} runtime entry point, which has type signature
+\code{ompt_get_proc_id_t}, returns the numerical identifier of the processor 
+of the current thread. A defined numerical identifier is non-negative and
+its meaning is implementation defined. A negative number indicates a failure 
+to retrieve the numerical identifier.
 
 This runtime entry point is \emph{async signal safe}.
-
-
-
 
 
 
@@ -731,10 +640,9 @@ This runtime entry point is \emph{async signal safe}.
 \label{sec:ompt_get_state}
 
 \summary
-A runtime entry point known as \code{ompt_get_state}
-with type signature \code{ompt_get_state_t}
-returns the state and the wait identifier of the
-current thread.
+The \code{ompt_get_state_t} type is the type signature of the 
+\code{ompt_get_state} runtime entry point, which returns the
+the state and the wait identifier of the current thread.
 
 \format
 \begin{ccppspecific}
@@ -746,42 +654,36 @@ typedef int (*ompt_get_state_t) (
 \end{ccppspecific}
 
 \binding
-
-The binding thread for runtime entry point known as
-\code{ompt_get_state} is the current thread.
+The binding thread for the \code{ompt_get_state} runtime entry point 
+is the current thread.
 
 \descr
-
-Each OpenMP thread has an associated state and a wait identifier.  If
-a thread's state indicates that the thread is waiting for mutual
-exclusion, the thread's wait identifier will contain an opaque handle
-that indicates the data object upon which the thread is waiting.
-
-To retrieve the state and wait identifier for the current thread,
-a tool uses the runtime entry point known as
-\code{ompt_get_state} with type signature \code{ompt_get_state_t}.
-
-The returned value may be any one of the states predefined by
+Each OpenMP thread has an associated state and a wait identifier. If
+a thread's state indicates that the thread is waiting for mutual exclusion
+then its wait identifier contains an opaque handle that indicates the 
+data object upon which the thread is waiting. The \code{ompt_get_state} 
+runtime entry point, which has type signature \code{ompt_get_state_t},
+retrieves the state and wait identifier of the current thread.
+The returned value may be any one of the states predefined by 
 \code{omp_state_t} or a value that represents any implementation
-specific state.
-The tool may obtain a string representation for each state with the
-function known as \code{ompt_enumerate_states}.
+specific state. The tool may obtain a string representation for each 
+state with the \code{ompt_enumerate_states} function.
 
 If the returned state indicates that the thread is waiting for a
 lock, nest lock, critical section, atomic region, or ordered region
-the value of the thread's wait identifier will be assigned to a
-non-\code{NULL} wait identifier passed as an argument.
+then the value of the thread's wait identifier is assigned to a
+non-null wait identifier passed as the \plc{wait_id} argument.
 
 This runtime entry point is \emph{async signal safe}.
 
 \argdesc
-
-The argument \plc{wait_id} is a pointer to an opaque handle
-available to receive the value of the thread's wait identifier.  If
-the \plc{wait_id} pointer is not \code{NULL}, the entry point
-will assign the value of the thread's wait identifier
-*\plc{wait_id}.  If the returned state is not one of the specified
-wait states, the value of *\plc{wait_id} is undefined after the call.
+The \plc{wait_id} argument is a pointer to an opaque handle that is
+available to receive the value of the thread's wait identifier. If
+\plc{wait_id} is not \code{NULL} then the entry point assigns the 
+value of the thread's wait identifier to the object to which 
+\plc{wait_id} points. If the returned state is not one of the specified
+wait states then the value of opaque object to which \plc{wait_id} points
+is undefined after the call.
 
 \constraints
 The argument passed to the entry point must be a reference
@@ -790,9 +692,12 @@ to a variable of the specified type or \code{NULL}.
 \crossreferences
 \begin{itemize}
 \item \code{ompt_enumerate_states_t} type, see \specref{sec:ompt_enumerate_states_t}.
+
 \item \code{omp_state_t} type, see \specref{sec:omp_state_t}.
+
 \item \code{omp_wait_id_t} type, see \specref{sec:omp_wait_id_t}.
 \end{itemize}
+
 
 
 \subsubsubsection{\hcode{ompt_get_parallel_info_t}}
@@ -800,12 +705,10 @@ to a variable of the specified type or \code{NULL}.
 \label{sec:ompt_get_parallel_info}
 
 \summary
-
-A runtime entry point known as \code{ompt_get_parallel_info}
-with type signature \code{ompt_get_parallel_info_t}
-returns information about
-the parallel region, if any, at the specified ancestor level
-for the current execution context.
+The \code{ompt_get_parallel_info_t} type is the type signature of the 
+\code{ompt_get_parallel_info} runtime entry point, which returns information 
+about the parallel region, if any, at the specified ancestor level for 
+the current execution context.
 
 \format
 \begin{ccppspecific}
@@ -819,96 +722,86 @@ typedef int (*ompt_get_parallel_info_t) (
 \end{ccppspecific}
 
 \descr
-During execution, an OpenMP program may employ nested parallel
-regions.
-To obtain information about a parallel region,
-a tool uses the runtime entry point known as
-\code{ompt_get_parallel_info}
-with type signature \code{ompt_get_parallel_info_t}.
-This runtime entry point
-can be used to obtain information about the current parallel region,
-if any, and any enclosing parallel regions
-for the current execution context.
-
-The entry point returns 2 if there is a parallel region at the
-specified ancestor level and the information is available,
-1 if there is a parallel region at the specified ancestor level
-but the information is currently unavailable, and 0 otherwise.
+During execution, an OpenMP program may employ nested parallel regions.
+The \code{ompt_get_parallel_info} runtime entry point known, which has
+type signature \code{ompt_get_parallel_info_t}, retrieves information,
+about the current parallel region and any enclosing parallel regions 
+for the current execution context. The entry point returns 2 if there 
+is a parallel region at the specified ancestor level and the information 
+is available, 1 if there is a parallel region at the specified ancestor 
+level but the information is currently unavailable, and 0 otherwise.
 
 A tool may use the pointer to a parallel region's data object that it
-obtains from this runtime entry point to inspect or modify the value
-of the data object.  When a parallel region is created, its data
+obtains from this runtime entry point to inspect or to modify the value
+of the data object. When a parallel region is created, its data
 object will be initialized with the value \code{ompt_data_none}.
 
 This runtime entry point is \emph{async signal safe}.
 
+Between a \emph{parallel-begin} event and an \emph{implicit-task-begin} event, 
+a call to \code{ompt_get_parallel_info(0,...)} may return information about 
+the outer parallel team, the new parallel team or an inconsistent state.
+
+If a thread is in the state \code{omp_state_wait_barrier_implicit_parallel}
+then a call to \code{ompt_get_parallel_info} may return a pointer to a copy 
+of the specified parallel region's \plc{parallel_data} rather than a pointer 
+to the data word for the region itself. This convention enables the master 
+thread for a parallel region to free storage for the region immediately after 
+the region ends, yet avoid having some other thread in the region's team potentially 
+reference the region's \plc{parallel_data} object after it has been freed.
+
 \argdesc
+The \plc{ancestor_level} argument specifies the parallel region of 
+interest by its ancestor level. Ancestor level 0 refers to the innermost 
+parallel region; information about enclosing parallel regions may be 
+obtained using larger values for \plc{ancestor_level}.
 
-The argument \plc{ancestor_level} specifies the parallel region
-of interest to a tool by its ancestor level.  Ancestor level 0 refers
-to the innermost parallel region; information about enclosing parallel
-regions may be obtained using larger ancestor levels.
+The \plc{parallel_data} argument returns the parallel data if the 
+argument is not \code{NULL}.
 
-The argument \plc{parallel_data} returns the parallel data
-if the argument is not \code{NULL}.
-
-The argument \plc{team_size} returns the team size if the argument is
-not \code{NULL}.
+The \plc{team_size} argument returns the team size if the argument 
+is not \code{NULL}.
 
 \effect
+If the runtime entry point returns 0 or 1, no argument is modified. 
+Otherwise, \code{ompt_get_parallel_info} has the following effects:
 
-If the runtime entry point returns 0 or 1, no argument is modified. Otherwise,
-the entry point has the effects described below.
-
-If a non-\code{NULL} value was passed for \plc{parallel_data}, the
-value returned in *\plc{parallel_data} is a pointer to a data word
-associated with the parallel region at the specified level.
-
-If a non-\code{NULL} value was passed for \plc{team_size}, the value
-returned in *\plc{team_size} is the number of threads in the team
-associated with the parallel region.
+\begin{itemize}
+\item If a non-null value was passed for \plc{parallel_data}, the value 
+      returned in \plc{parallel_data} is a pointer to a data word that is
+      associated with the parallel region at the specified level; and
+\item If a non-null value was passed for \plc{team_size}, the value
+      returned in the integer to which \plc{team_size} point is the 
+      number of threads in the team that is associated with the parallel region.
+\end{itemize}
 
 \constraints
-While argument \plc{ancestor_level} is passed by
-value, all other arguments to the entry point must be pointers
-to variables of the specified types or \code{NULL}.
-
-
-\restrictions
-Between a \emph{parallel-begin} event and an \emph{implicit-task-begin}
-event, a call to \code{ompt_get_parallel_info(0,...)} may return
-information about the outer parallel team, the new parallel team or an
-inconsistent state.
-
-If a thread is in the state \code{omp_state_wait_barrier_implicit_parallel},
-a call to \code{ompt_get_parallel_info}
-may return a pointer to a copy of the specified parallel region's \plc{parallel_data}
-rather than a pointer to the data word for the region itself. This convention enables the master thread
-for a parallel region to free storage for the region immediately after the region ends, yet
-avoid having some other thread in the region's team
-potentially reference the region's \plc{parallel_data} object after it has been freed.
+While argument \plc{ancestor_level} is passed by value, all other arguments 
+to the entry point must be pointers to variables of the specified types or \code{NULL}.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
 \end{itemize}
 
+
+
 \subsubsubsection{\hcode{ompt_get_task_info_t}}
 \label{sec:ompt_get_task_info_t}
 \label{sec:ompt_get_task_info}
 
 \summary
-A runtime entry point known as \code{ompt_get_task_info}
-with type signature \code{ompt_get_task_info_t} provides information about the
-task, if any, at the specified ancestor level in the current execution
-context.
+The \code{ompt_get_task_info_t} type is the type signature of the 
+\code{ompt_get_task_info} runtime entry point, which returns information 
+about the task, if any, at the specified ancestor level in the current 
+execution context.
 
 \format
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_get_task_info_t) (
   int \plc{ancestor_level},
-  int *\plc{flag},
+  int *\plc{flags},
   ompt_data_t **\plc{task_data},
   omp_frame_t **\plc{task_frame},
   ompt_data_t **\plc{parallel_data},
@@ -919,119 +812,107 @@ typedef int (*ompt_get_task_info_t) (
 
 \descr
 During execution, an OpenMP thread may be executing an OpenMP task.
-Additionally, the thread's stack may contain
-procedure frames associated with suspended OpenMP tasks or
-OpenMP runtime system routines.
-To obtain information about any task on the current thread's stack,
-a tool uses the runtime entry point known as
-\code{ompt_get_task_info}
-with type signature \code{ompt_get_task_info_t}.
+Additionally, the thread's stack may contain procedure frames that 
+are associated with suspended OpenMP tasks or OpenMP runtime system 
+routines. To obtain information about any task on the current thread's 
+stack, a tool uses the \code{ompt_get_task_info} runtime entry point,
+which has type signature \code{ompt_get_task_info_t}.
 
-Ancestor level 0 refers to the active task; information about
-other tasks with associated frames present on the stack in the current execution context may be queried at
-higher ancestor levels.
+Ancestor level 0 refers to the active task; information about other 
+tasks with associated frames present on the stack in the current execution 
+context may be queried at higher ancestor levels.
 
-The \code{ompt_get_task_info} runtime entry point
-returns 2 if there is a task region at the
-specified ancestor level
-and the information is available, 1 if there is a task region at the
-specified ancestor level but the information is currently unavailable,
-and 0 otherwise.
+The \code{ompt_get_task_info} runtime entry point returns 2 if there 
+is a task region at the specified ancestor level and the information 
+is available, 1 if there is a task region at the specified ancestor 
+level but the information is currently unavailable, and 0 otherwise.
 
-If a task exists at the specified ancestor level and the information is available,
-information will be returned in the variables passed by reference to the entry
-point.  If no task region exists at the specified ancestor level
-or the information is unavailable,
-the values of variables passed by reference to the entry point will be
-undefined when the entry point returns.
+If a task exists at the specified ancestor level and the information is 
+available then information is returned in the variables passed by reference 
+to the entry point. If no task region exists at the specified ancestor level 
+or the information is unavailable then the values of variables passed by 
+reference to the entry point are undefined when \code{ompt_get_task_info} returns.
 
-A tool may use a pointer to a data object for a task or parallel
-region that it obtains from this runtime entry point to inspect or modify the
-value of the data object.  When either a parallel region or a task
-region is created, its data object will be initialized with the value
-\code{ompt_data_none}.
+A tool may use a pointer to a data object for a task or parallel region 
+that it obtains from \code{ompt_get_task_info} to inspect or to modify the
+value of the data object. When either a parallel region or a task region 
+is created, its data object will be initialized with the value \code{ompt_data_none}.
 
 This runtime entry point is \emph{async signal safe}.
 
 \argdesc
+The \plc{ancestor_level} argument specifies the task region of interest by 
+its ancestor level. Ancestor level 0 refers to the active task; information 
+about ancestor tasks found in the current execution context may be queried 
+at higher ancestor levels.
 
-The argument \plc{ancestor_level} specifies the task region
-of interest to a tool by its ancestor level.  Ancestor level 0 refers
-to the active task; information about
-ancestor tasks found in the current execution context may be queried at
-higher ancestor levels.
+The \plc{flags} argument returns the task type if the argument is not \code{NULL}.
 
-The argument \plc{flag} returns the task type
+The \plc{task_data} argument returns the task data if the argument is not \code{NULL}.
+
+The \plc{task_frame} argument returns the task frame pointer
 if the argument is not \code{NULL}.
 
-The argument \plc{task_data} returns the task data
+The \plc{parallel_data} argument returns the parallel data
 if the argument is not \code{NULL}.
 
-The argument \plc{task_frame} returns the task frame
-pointer
-if the argument is not \code{NULL}.
-
-The argument \plc{parallel_data} returns the parallel data
-if the argument is not \code{NULL}.
-
-The argument \plc{thread_num} returns the thread number
+The \plc{thread_num} argument returns the thread number
 if the argument is not \code{NULL}.
 
 \effect
-
-
 If the runtime entry point returns 0 or 1, no argument is modified.
-Otherwise, the entry point has the effects described below.
+Otherwise, \code{ompt_get_task_info} has the following effects:
 
-If a non-\code{NULL} value was passed for \plc{flag},
-the value returned in *\plc{flag} represents the type of the task
-at the specified level.
-Task types that a tool may observe on a thread's stack include
-initial, implicit, explicit, and target tasks.
-
-If a non-\code{NULL} value was passed for \plc{task_data},
-the value returned in *\plc{task_data} is a pointer to a data word
-associated with the task at the specified level.
-
-If a non-\code{NULL} value was passed for \plc{task_frame},
-the value returned in *\plc{task_frame} is a pointer to the
-\code{omp_frame_t} structure associated with the task at the specified level.
-Appendix~\ref{chap:frames} discusses an example that
-illustrates the use of \code{omp_frame_t} structures with multiple
-threads and nested parallelism.
-
-If a non-\code{NULL} value was passed for \plc{parallel_data},
-the value returned in *\plc{parallel_data} is a pointer to a data word
-associated with the parallel region containing the task at the specified level.
-If the task at the specified level is an initial task,
-the value of *\plc{parallel_data} will be \code{NULL}.
-
-If a non-\code{NULL} value was passed for \plc{thread_num},
-the value returned in *\plc{thread_num}
-indicates the number of the thread in the parallel region executing the task.
+\begin{itemize}
+\item If a non-null value was passed for \plc{flags} then the value 
+      returned in the integer to which \plc{flags} points represents 
+      the type of the task at the specified level; possible task types 
+      include initial, implicit, explicit, and target tasks;
+\item If a non-null value was passed for \plc{task_data} then the value that
+      is returned in the object to which it points is a pointer to a data word
+      that is associated with the task at the specified level;
+\item If a non-null value was passed for \plc{task_frame} then the value that
+      is returned in the object to which \plc{task_frame} points is a pointer 
+      to the \code{omp_frame_t} structure that is associated with the task at 
+      the specified level;
+\item If a non-null value was passed for \plc{parallel_data} then the value that
+      is returned in the object to which \plc{parallel_data} points is a pointer 
+      to a data word that is associated with the parallel region that contains 
+      the task at the specified level or, if the task at the specified level is 
+      an initial task, \code{NULL}; and
+\item If a non-null value was passed for \plc{thread_num} then the value that 
+      is returned in the object to which \plc{thread_num} points indicates the 
+      number of the thread in the parallel region that is executing the task
+      at the specified level.
+\end{itemize}
 
 \constraints
-While argument \plc{ancestor_level} is passed by
-value, all other arguments to the entry point must be pointers
-to variables of the specified types or \code{NULL}.
+While argument \plc{ancestor_level} is passed by value, all other arguments to 
+\code{ompt_get_task_info} must be pointers to variables of the specified types 
+or \code{NULL}.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_data_t} type, see \specref{sec:ompt_data_t}.
-\item \code{ompt_task_flag_t} type, see
-  \specref{sec:ompt_task_flag_t}.
+
+\item \code{ompt_task_flag_t} type, see \specref{sec:ompt_task_flag_t}.
+
 \item \code{omp_frame_t} type, see \specref{sec:omp_frame_t}.
+
+\item Example of the use of \code{omp_frame_t} structures with multiple
+      threads and nested parallelism, see Appendix~\ref{chap:frames}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_task_memory_t}}
 \label{sec:ompt_get_task_memory_t}
 \label{sec:ompt_get_task_memory}
 
 \summary
-A runtime entry point known as \code{ompt_get_task_memory} 
-with type signature \code{ompt_get_task_memory_t} provides information 
-about memory ranges that are associated with the task at task creation
-to store the data environment of the task for the execution.
+The \code{ompt_get_task_memory_t} type is the type signature of the 
+\code{ompt_get_task_memory} runtime entry point, which returns information 
+about memory ranges that are associated with the task.
 
 \format
 \begin{ccppspecific}
@@ -1045,53 +926,42 @@ typedef int (*ompt_get_task_memory_t)(
 \end{ccppspecific}
 
 \descr
+During execution, an OpenMP thread may be executing an OpenMP task. The 
+OpenMP implementation must preserve the data environment from the creation 
+of the task for the execution of the task. The \code{ompt_get_task_memory} 
+runtime entry point, which has type signature \code{ompt_get_task_memory_t},
+provides information about the  memory ranges used to store the data 
+environment for the current task.
 
-During execution, an OpenMP thread may be executing an OpenMP task.
-The OpenMP implementation needs to preserve the data environment
-from the creation of the task to the execution of the task.
-To obtain information about the memory ranges used to store the 
-data environment for the current task, 
-a tool uses the runtime entry point known as
-\code{ompt_get_task_memory} 
-with type signature \code{ompt_get_task_memory_t}. 
+Multiple memory ranges may be used to store these data. The \plc{block} 
+argument supports iteration over these memory ranges.
 
-There might be multiple memory ranges used to store these data. The
-\plc{block} argument allows the tool to iterate over these memory ranges.
-
-The \code{ompt_get_task_memory} runtime entry point
-returns 1 if there are more memory ranges available, and 0 otherwise. 
-
-If there is no memory used for a task, \plc{size} is set to 0. 
-In this case, addr is unspecified.
+The \code{ompt_get_task_memory} runtime entry point returns 1 if there 
+are more memory ranges available, and 0 otherwise. If no memory is used 
+for a task, \plc{size} is set to 0. In this case, addr is unspecified.
 
 This runtime entry point is \emph{async signal safe}.
 
 \argdesc
-
-The argument \plc{addr} is a pointer to a void pointer return value
+The \plc{addr} argument is a pointer to a void pointer return value
 to provide the start address of a memory block.  
 
-The argument \plc{size} is a pointer to a size type return
+The \plc{size} argument is a pointer to a size type return
 value to provide the size of the memory block.
 
-The argument \plc{block} is an integer value to specify the
+The \plc{block} argument is an integer value to specify the
 memory block of interest.
 
-%\effect
-%
-%If the runtime has 
-%a non-\code{NULL} value was passed for \plc{thread_num}, 
-%the value returned in *\plc{thread_num}
-%indicates the number of the thread in the parallel region executing the task.
+
 
 \subsubsubsection{\hcode{ompt_get_target_info_t}}
 \label{sec:ompt_get_target_info_t}
 \label{sec:ompt_get_target_info}
 
 \summary
-A runtime entry point known as \code{ompt_get_target_info}
-with type signature \code{ompt_get_target_info_t} returns identifiers that specify a
-thread's current target region and target operation id, if any.
+The \code{ompt_get_target_info_t} type is the type signature of the 
+\code{ompt_get_target_info} runtime entry point, which returns identifiers 
+that specify a thread's current \code{target} region and target operation ID, if any.
 
 \format
 \begin{ccppspecific}
@@ -1105,52 +975,48 @@ typedef int (*ompt_get_target_info_t) (
 \end{ccppspecific}
 
 \descr
-A tool can query whether an OpenMP thread is in a target region by
-invoking the entry point known as \code{ompt_get_target_info}
-with type signature \code{ompt_get_target_info_t}.
-This runtime entry point returns 1 if the current thread is
-in a target region and 0 otherwise. If the entry point returns 0,
-the values of the variables passed by reference as its arguments
-are undefined.
+The \code{ompt_get_target_info} entry point, which has type signature 
+\code{ompt_get_target_info_t}, returns 1 if the current thread is in a 
+\code{target} region and 0 otherwise. If the entry point returns 0 then
+the values of the variables passed by reference as its arguments are undefined.
 
-If the current thread is in a target region, the entry point will
-return information about the current device, active target region, and
+If the current thread is in a \code{target} region then \code{ompt_get_target_info}
+returns information about the current device, active \code{target} region, and
 active host operation, if any.
 
 This runtime entry point is \emph{async signal safe}.
 
 \argdesc
+The \plc{device_num} argument returns the device number if the current 
+thread is in a \code{target} region.
 
-If the host is in a \code{target} region,
-\plc{device_num} returns the target device.
+Th \plc{target_id} argument returns the \code{target} region identifier 
+if the current thread is in a \code{target} region.
 
-If the host is in a \code{target} region,
-\plc{target_id} returns the \code{target} region identifier.
-
-If the current thread is in the process of initiating an
-operation on a target device (e.g., copying data to or from an
-accelerator or launching a kernel) \plc{host_op_id} returns
-the identifier for the operation; otherwise,
-\plc{host_op_id} returns \code{ompt_id_none}.
+If the current thread is in the process of initiating an operation on a 
+target device (for example, copying data to or from an accelerator or 
+launching a kernel) then \plc{host_op_id} returns the identifier for the 
+operation; otherwise, \plc{host_op_id} returns \code{ompt_id_none}.
 
 \constraints
-
-Arguments passed to the entry point must be valid
-references to variables of the specified types.
+Arguments passed to the entry point must be valid references to variables 
+of the specified types.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
 \end{itemize}
 
+
+
 \subsubsubsection{\hcode{ompt_get_num_devices_t}}
 \label{sec:ompt_get_num_devices_t}
 \label{sec:ompt_get_num_devices}
 
 \summary
-A runtime entry point known as \code{ompt_get_num_devices}
-with type signature \code{ompt_get_num_devices_t}
-returns the number of available devices.
+The \code{ompt_get_num_devices_t} type is the type signature of the 
+\code{ompt_get_num_devices} runtime entry point, which returns the
+number of available devices.
 
 \format
 \begin{ccppspecific}
@@ -1160,12 +1026,9 @@ typedef int (*ompt_get_num_devices_t) (void);
 \end{ccppspecific}
 
 \descr
-
-An OpenMP program may execute on one or more devices.
-A tool may determine the number of devices available to an OpenMP
-program by invoking a runtime entry point
-known as \code{ompt_get_num_devices}
-with type signature \code{ompt_get_num_devices_t}.
+The \code{ompt_get_num_devices} runtime entry point, which has 
+type signature \code{ompt_get_num_devices_t}, returns the number 
+of devices available to an OpenMP program.
 
 This runtime entry point is \emph{async signal safe}.
 
@@ -1176,9 +1039,8 @@ This runtime entry point is \emph{async signal safe}.
 \label{sec:ompt_get_unique_id}
 
 \summary
-A runtime entry point known as \code{ompt_get_unique_id}
-with type signature \code{ompt_get_unique_id_t}
-returns a unique number.
+The \code{ompt_get_unique_id_t} type is the type signature of the 
+\code{ompt_get_unique_id} runtime entry point, which returns a unique number.
 
 \format
 \begin{ccppspecific}
@@ -1188,15 +1050,13 @@ typedef uint64_t (*ompt_get_unique_id_t) (void);
 \end{ccppspecific}
 
 \descr
-
-A tool may obtain a number that is unique for the duration of an
-OpenMP program by invoking a runtime entry point
-known as \code{ompt_get_unique_id}
-with type signature \code{ompt_get_unique_id_t}.
-Successive invocations may not result in
-consecutive or even increasing numbers.
+The \code{ompt_get_unique_id} runtime entry point, which has type 
+signature \code{ompt_get_unique_id_t}, returns a number that is unique 
+for the duration of an OpenMP program. Successive invocations may not 
+result in consecutive or even increasing numbers.
 
 This runtime entry point is \emph{async signal safe}.
+
 
 
 \subsubsubsection{\hcode{ompt_finalize_tool_t}}
@@ -1204,9 +1064,9 @@ This runtime entry point is \emph{async signal safe}.
 \label{sec:ompt_finalize_tool}
 
 \summary
-A runtime entry point known as \code{ompt_finalize_tool}
-with type signature \code{ompt_finalize_tool_t}
-enables the tool to finalize itself.
+The \code{ompt_finalize_tool_t} type is the type signature of the 
+\code{ompt_finalize_tool} runtime entry point, which enables a tool 
+to finalize itself.
 
 \format
 \begin{ccppspecific}
@@ -1216,41 +1076,41 @@ typedef void (*ompt_finalize_tool_t) (void);
 \end{ccppspecific}
 
 \descr
-
 A tool may detect that the execution of an OpenMP program is ending 
-before the OpenMP implementation does.
-To facilitate clean termination of the tool, the tool may
-invoke a runtime entry point known as \code{ompt_finalize_tool}
-with type signature \code{ompt_finalize_tool_t}. 
-Upon completion of the \code{ompt_finalize_tool} routine, no OMPT callbacks are 
-dispatched.
+before the OpenMP implementation does. To facilitate clean termination 
+of the tool, the tool may invoke the \code{ompt_finalize_tool} runtime 
+entry point, which has type signature \code{ompt_finalize_tool_t}. Upon 
+completion of \code{ompt_finalize_tool}, no OMPT callbacks are dispatched.
 
 \effect
+The \code{ompt_finalize_tool} routine detaches the tool from the runtime, 
+unregisters all callbacks and invalidates all OMPT entry points passed to 
+the tool in the \plc{lookup-function}. Upon completion of \code{ompt_finalize_tool},
+no further callbacks will be issued on any thread.
 
-The \code{ompt_finalize_tool} routine detaches the tool from the runtime and unregisters 
-all callbacks and invalidates all OMPT entry points passed to the tool in the 
-lookup-function. 
-Upon completion of the \code{ompt_finalize_tool} routine, no further callbacks on any 
-thread will be issued.
+Before the callbacks are unregistered, the OpenMP runtime should attempt
+to dispatch all outstanding registered callbacks as well as the callbacks 
+that would be encountered during shutdown of the runtime, if possible in 
+the current execution context.
 
-Before the callbacks get unregistered, the OpenMP runtime should make all efforts to 
-dispatch all outstanding registered callbacks as well as dispatch callbacks that would be 
-encountered during shutdown of the runtime, if possible in the current execution context.
+
 
 \subsubsection{Entry Points in the OMPT Device Tracing Interface}
 \label{sec:ompt-tracing-entry-points}
+
+The runtime entry points with type signatures of the types that are 
+specified in this section enable a tool to trace activities on a device.
+
 
 
 \subsubsubsection{\hcode{ompt_get_device_num_procs_t}}
 \label{sec:ompt_get_device_num_procs_t}
 
 \summary
-
-A runtime entry point for a device known as
-\code{ompt_get_device_num_procs} with type signature
-\code{ompt_get_device_num_procs_t} returns
-the number of processors currently available to the execution
-environment on the specified device.
+The \code{ompt_get_device_num_procs_t} type is the type signature of the 
+\code{ompt_get_device_num_procs} runtime entry point, which returns the 
+number of processors currently available to the execution environment on 
+the specified device.
 
 \format
 \begin{ccppspecific}
@@ -1262,35 +1122,33 @@ typedef int (*ompt_get_device_num_procs_t) (
 \end{ccppspecific}
 
 \descr
-A runtime entry point for a device known
-as \code{ompt_get_device_num_procs} with type signature
-\code{ompt_get_device_num_procs_t} returns the
-number of processors that are available on the device at the time
-the routine is called. This value may change between the time that
-it is determined and the time that it is read in the calling context due to
-system actions outside the control of the OpenMP implementation.
+The \code{ompt_get_device_num_procs} runtime entry point, which has type 
+signature \code{ompt_get_device_num_procs_t}, returns the number of processors 
+that are available on the device at the time the routine is called. This value 
+may change between the time that it is determined and the time that it is read 
+in the calling context due to system actions outside the control of the OpenMP 
+implementation.
 
 \argdesc
-
-The argument \plc{device} is a pointer to an opaque object that
+The \plc{device} argument is a pointer to an opaque object that
 represents the target device instance. The pointer to the device
 instance object is used by functions in the device tracing interface
 to identify the device being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_device_time_t}}
 \label{sec:ompt_get_device_time_t}
 
 \summary
-A runtime entry point for a device known
-as \code{ompt_get_device_time}
-with type signature \code{ompt_get_device_time_t}
-returns the current time on the specified device.
+The \code{ompt_get_device_time_t} type is the type signature of the 
+\code{ompt_get_device_time} runtime entry point, which returns the 
+current time on the specified device.
 
 \format
 \begin{ccppspecific}
@@ -1304,40 +1162,37 @@ typedef ompt_device_time_t (*ompt_get_device_time_t) (
 \descr
 Host and target devices are typically distinct and run independently.
 If host and target devices are different hardware components, they
-may use different clock generators. For this reason,  there may be
-no common time base for ordering host-side and device-side events.
+may use different clock generators. For this reason, a common time 
+base for ordering host-side and device-side events may not be available.
 
-A runtime entry point for a device known
-as \code{ompt_get_device_time} with type signature
-\code{ompt_get_device_time_t}
-returns the current time on the specified device.
-A tool can use this information
-to align time stamps from different devices.
+The \code{ompt_get_device_time} runtime entry point, which has type 
+signature \code{ompt_get_device_time_t}, returns the current time on 
+the specified device. A tool can use this information to align time 
+stamps from different devices.
 
 \argdesc
-
-The argument \plc{device} is a pointer to an opaque object that
+The \plc{device} argument is a pointer to an opaque object that
 represents the target device instance. The pointer to the device
 instance object is used by functions in the device tracing interface
 to identify the device being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
-\item \code{ompt_device_time_t},
-see \specref{sec:ompt_device_time_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+
+\item \code{ompt_device_time_t}, see \specref{sec:ompt_device_time_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_translate_time_t}}
 \label{sec:ompt_translate_time_t}
 
 \summary
-A runtime entry point for a device known
-as \code{ompt_translate_time}
-with type signature \code{ompt_translate_time_t} translates
-a time value obtained from the specified device to a corresponding time
-value on the host device.
+The \code{ompt_translate_time_t} type is the type signature of the 
+\code{ompt_translate_time} runtime entry point, which translates a 
+time value that is obtained from the specified device to a corresponding 
+time value on the host device.
 
 \format
 \begin{ccppspecific}
@@ -1350,44 +1205,43 @@ typedef double (*ompt_translate_time_t) (
 \end{ccppspecific}
 
 \descr
-A runtime entry point for a device known as \code{ompt_translate_time}
-with type signature \code{ompt_translate_time_t} translates
-a time value obtained from the specified device to a corresponding time
-value on the host device. The returned value for the host time has
-the same meaning as the value returned from \code{omp_get_wtime}.
+The \code{ompt_translate_time} runtime entry point, which has type signature 
+\code{ompt_translate_time_t}, translates a time value obtained from the specified 
+device to a corresponding time value on the host device. The returned value for 
+the host time has the same meaning as the value returned from \code{omp_get_wtime}.
 
-\needspace{6\baselineskip}\begin{note}
-The accuracy of time translations may degrade if they are not
-performed promptly after a device time value is received if either
-the host or device vary their clock speeds. Prompt translation of
-device times to host times is recommended.
+\begin{note}
+The accuracy of time translations may degrade if they are not performed promptly 
+after a device time value is received and if either the host or device vary their 
+clock speeds. Prompt translation of device times to host times is recommended.
 \end{note}
 
 \argdesc
-
-The argument \plc{device} is a pointer to an opaque object that
+The \plc{device} argument is a pointer to an opaque object that
 represents the target device instance. The pointer to the device
 instance object is used by functions in the device tracing interface
 to identify the device being addressed.
 
-The argument \plc{time} is a time from the specified device.
+The \plc{time} argument is a time from the specified device.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
-\item \code{ompt_device_time_t},
-see \specref{sec:ompt_device_time_t}.
+\item \code{omp_get_wtime}, see \specref{subsec:omp_get_wtime}.
+
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+
+\item \code{ompt_device_time_t}, see \specref{sec:ompt_device_time_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_set_trace_ompt_t}}
 \label{sec:ompt_set_trace_ompt_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_set_trace_ompt}
-with type signature \code{ompt_set_trace_ompt_t}
-enables or disables the recording of trace records for one or more
-types of OMPT events.
+The \code{ompt_set_trace_ompt_t} type is the type signature of the 
+\code{ompt_set_trace_ompt} runtime entry point, which enables or disables 
+the recording of trace records for one or more types of OMPT events.
 
 \format
 \begin{ccppspecific}
@@ -1401,30 +1255,19 @@ typedef int (*ompt_set_trace_ompt_t) (
 \end{ccppspecific}
 
 \argdesc
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
-\devicedesc
+The \plc{etype} argument indicates the events to which the invocation of 
+\code{ompt_set_trace_ompt} applies. If the value of \plc{etype} is 0 then
+the invocation applies to all events. If \plc{etype} is positive then it applies 
+to the event in \code{ompt_callbacks_t} that matches that value.
 
-The argument \plc{enable} indicates whether tracing should be
-enabled or disabled for the event or events specified by
-argument \plc{etype}. A positive value for \plc{enable}
-indicates that recording of one or more events specified by
-\plc{etype} should be enabled; a value of 0 for \plc{enable} indicates
-that recording of events should be disabled by this invocation.
-
-An argument \plc{etype} value 0 indicates that traces for all
-event types will be enabled or disabled.  Passing a positive value for
-\plc{etype} inidicates that recording should be enabled or disabled
-for the event in \code{ompt_callbacks_t} that matches \plc{etype}.
-
-
-\effect
-
-Table~\ref{table:record_set} shows the possible return
-codes for \code{ompt_set_trace_ompt}.  If a single invocation
-of \code{ompt_set_trace_ompt} is used to enable or disable
-more than one event (i.e., \code{etype}=0), the return code will
-be 3 if tracing is possible for one or more events but not for
-others.
+The \plc{enable} argument indicates whether tracing should be enabled 
+or disabled for the event or events that the \plc{etype} argument specifies. 
+A positive value for \plc{enable} indicates that recording should be enabled; 
+a value of 0 for \plc{enable} indicates that recording should be disabled.
 
 \nolinenumbers
 \renewcommand{\arraystretch}{1.5}
@@ -1444,8 +1287,8 @@ others.
 \multicolumn{2}{l}{\small\slshape table continued on next page}\\
 }
 \tablelasttail{\hline}
-\tablecaption{Return codes for \code{ompt_set_trace_ompt} and
-    \code{ompt_set_trace_native}.\label{table:record_set}}
+\tablecaption{Return Codes for \code{ompt_set_trace_ompt} and
+    \code{ompt_set_trace_native}\label{table:record_set}}
 \begin{supertabular}{p{2.0in} p{3.0in}}
 0 & error\\
 1 & event will never occur\\
@@ -1456,22 +1299,28 @@ others.
 
 \linenumbers
 
+\effect
+Table~\ref{table:record_set} shows the possible return codes for 
+\code{ompt_set_trace_ompt}. If the invocation of \code{ompt_set_trace_ompt} 
+applies to all events then the return code is 3 if tracing is possible for 
+one or more events but not for others.
+
 \crossreferences
 \begin{itemize}
-\item \code{ompt_callbacks_t},
-see \specref{sec:ompt_callbacks_t}.
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
+\item \code{ompt_callbacks_t}, see \specref{sec:ompt_callbacks_t}.
+
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_set_trace_native_t}}
 \label{sec:ompt_set_trace_native_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_set_trace_native}
-with type signature \code{ompt_set_trace_native_t}
-enables or disables the recording of native trace records for a device.
-
+The \code{ompt_set_trace_native_t} type is the type signature of the 
+\code{ompt_set_trace_native} runtime entry point, which enables or disables 
+the recording of native trace records for a device.
 
 \format
 \begin{ccppspecific}
@@ -1485,49 +1334,49 @@ typedef int (*ompt_set_trace_native_t) (
 \end{ccppspecific}
 
 \descr
-This interface is designed for use by a tool with no knowledge about
-an attached device. If a tool knows how to program a particular
-attached device, it may opt to invoke native control functions
-directly using pointers obtained through the \plc{lookup} function
-associated with the device and described in the \plc{documentation}
+This interface is designed for use by a tool that cannot directly use 
+native control functions for the device. If a tool can directly use the
+native control functions then it can invoke native control functions
+directly using pointers that the \plc{lookup} function associated with 
+the device provides and that are described in the \plc{documentation}
 string that is provided to the device initializer callback.
 
 \argdesc
-\devicedesc
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
-The argument \plc{enable} indicates whether recording of events
-should be enabled or disabled by this invocation.
+The \plc{enable} argument indicates whether this invocation should 
+enable or disable recording of events.
 
-The argument \plc{flags} specifies the kinds of native device
-monitoring to enable or disable.
-Each kind of monitoring is specified by a flag bit.
+The \plc{flags} argument specifies the kinds of native device monitoring 
+to enable or to disable. Each kind of monitoring is specified by a flag bit.
 Flags can be composed by using logical {\ttfamily or}  to combine enumeration
-values from type \code{ompt_native_mon_flag_t}.
-Table~\ref{table:record_set} shows the possible return codes for
-\code{ompt_set_trace_native}.  If a single invocation of
-\code{ompt_set_trace_ompt} is used to enable/disable more
-than one kind of monitoring, the return code will be 3 if tracing
-is possible for one or more kinds of monitoring but not for others.
+values from type \code{ompt_native_mon_flag_t}. Table~\ref{table:record_set} 
+shows the possible return codes for \code{ompt_set_trace_native}. If an 
+invocation of \code{ompt_set_trace_native} is used to enable or to disable 
+more than one kind of monitoring, the return code is 3 if tracing is possible 
+for one or more kinds of monitoring but not for others.
 
-To start, pause, flush, or stop tracing for a specific target device
-associated with the handle \plc{device}, a tool invokes the 
-\code{ompt_start_trace}, \code{ompt_pause_trace}, \code{ompt_flush_trace}, or
-\code{ompt_stop_trace} runtime entry point for the device.
-
+To start, to pause, to flush, or to stop tracing for a specific target device
+associated with \plc{device}, a tool invokes the \code{ompt_start_trace}, 
+\code{ompt_pause_trace}, \code{ompt_flush_trace}, or \code{ompt_stop_trace} 
+runtime entry point for the device.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_start_trace_t}}
 \label{sec:ompt_start_trace_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_start_trace}
-with type signature \code{ompt_start_trace_t}
-starts tracing of activity on a specific device.
+The \code{ompt_start_trace_t} type is the type signature of the 
+\code{ompt_start_trace} runtime entry point, which starts tracing 
+of activity on a specific device.
 
 \format
 \begin{ccppspecific}
@@ -1541,48 +1390,50 @@ typedef int (*ompt_start_trace_t) (
 \end{ccppspecific}
 
 \descr
-A tool may initiate tracing on a device by invoking the device's \code{ompt_start_trace}
-runtime entry point.
-
-Under normal operating conditions, every event buffer provided to
-a device by a tool callback will be returned to the tool
-before the OpenMP runtime shuts down.
-If an exceptional condition terminates  execution of an OpenMP
-program, the OpenMP runtime may not return buffers provided to the
-device.
+A device's \code{ompt_start_trace} runtime entry point, which has type
+signature \code{ompt_start_trace_t}, initiates tracing on the device.
+Under normal operating conditions, every event buffer provided to a 
+device by a tool callback is returned to the tool before the OpenMP 
+runtime shuts down. If an exceptional condition terminates  execution 
+of an OpenMP program, the OpenMP runtime may not return buffers provided 
+to the device.
 
 An invocation of \code{ompt_start_trace} returns 1 if the command
-succeeded and 0 otherwise.
+succeeds and 0 otherwise.
 
 \argdesc
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
-\devicedesc
+The \emph{buffer request} argument specifies a tool callback that supplies
+a device with a buffer to deposit events.
 
-The argument \emph{buffer request} specifies a tool callback
-that will supply a device with a buffer to deposit events.
-
-The argument \emph{buffer complete} specifies a tool callback
-that will be invoked by the OpenMP implmementation to empty a buffer
-containing event records.
+The \emph{buffer complete} argument specifies a tool callback that is invoked 
+by the OpenMP implementation to empty a buffer that contains event records.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
-\item \code{ompt_callback_buffer_request_t},
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+
+\item \code{ompt_callback_buffer_request_t}, 
 see \specref{sec:ompt_callback_buffer_request_t}.
-\item \code{ompt_callback_buffer_complete_t},
+
+\item \code{ompt_callback_buffer_complete_t}, 
 see \specref{sec:ompt_callback_buffer_complete_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_pause_trace_t}}
 \label{sec:ompt_pause_trace_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_pause_trace}
-with type signature \code{ompt_pause_trace_t}
-pauses or restarts activity tracing on a specific device.
+The \code{ompt_pause_trace_t} type is the type signature of the 
+\code{ompt_pause_trace} runtime entry point, which pauses or 
+restarts activity tracing on a specific device.
 
+\format
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_pause_trace_t) (
@@ -1593,37 +1444,37 @@ typedef int (*ompt_pause_trace_t) (
 \end{ccppspecific}
 
 \descr
-
-A tool may pause or resume tracing on a device by invoking the device's
-\code{ompt_pause_trace} runtime entry point.
+A device's \code{ompt_pause_trace} runtime entry point, which has type
+signature \code{ompt_pause_trace_t}, pauses or resumes tracing on a device.
 An invocation of \code{ompt_pause_trace} returns 1 if the command
-succeeded and 0 otherwise.
-
-Redundant pause or resume commands are idempotent and will
-return 1 indicating success.
+succeeds and 0 otherwise. Redundant pause or resume commands are 
+idempotent and will return the same value as the prior command. 
 
 \argdesc
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
-\devicedesc
-
-The argument \plc{begin_pause} indicates whether to pause or
-resume tracing.
-To resume tracing, zero should be supplied for \plc{begin_pause}.
+The \plc{begin_pause} argument indicates whether to pause or to resume 
+tracing. To resume tracing, zero should be supplied for \plc{begin_pause};
+To pause tracing, any other value should be supplied.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_flush_trace_t}}
 \label{sec:ompt_flush_trace_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_flush_trace}
-with type signature \code{ompt_flush_trace_t} causes all pending trace 
-records for the specified device to be delivered to the tool.
+The \code{ompt_flush_trace_t} type is the type signature of the 
+\code{ompt_flush_trace} runtime entry point, which causes all 
+pending trace records for the specified device to be delivered.
 
+\format
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef int (*ompt_flush_trace_t) (
@@ -1633,32 +1484,30 @@ typedef int (*ompt_flush_trace_t) (
 \end{ccppspecific}
 
 \descr
-
-A tool may request that a device flush any pending trace records
-by invoking the \code{ompt_flush_trace} runtime entry point for the device.
-Invoking \code{ompt_flush_trace} causes the OpenMP implementation to issue a sequence 
-of zero or more buffer completion callbacks to deliver to the tool all trace records 
-that have been collected prior to the flush.
-An invocation of \code{ompt_flush_trace} returns 1 if the command
-succeeded and 0 otherwise.
+A device's \code{ompt_flush_trace} runtime entry point, which has type
+signature \code{ompt_flush_trace_t}, causes the OpenMP implementation to 
+issue a sequence of zero or more buffer completion callbacks to deliver 
+all trace records that have been collected prior to the flush. An invocation 
+of \code{ompt_flush_trace} returns 1 if the command succeeds and 0 otherwise.
 
 \argdesc
-
-\devicedesc
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_stop_trace_t}}
 \label{sec:ompt_stop_trace_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_stop_trace}
-with type signature \code{ompt_stop_trace_t}
-stops tracing for a device.
+The \code{ompt_stop_trace_t} type is the type signature of the 
+\code{ompt_stop_trace} runtime entry point, which stops tracing for a device.
 
 \begin{ccppspecific}
 \begin{omptInquiry}
@@ -1669,40 +1518,30 @@ typedef int (*ompt_stop_trace_t) (
 \end{ccppspecific}
 
 \descr
-
-A tool may halt tracing on a device and request that the device flush any pending trace records
-by invoking the \code{ompt_stop_trace} runtime entry point for the device.
-An invocation of \code{ompt_stop_trace} returns 1 if the command
-succeeded and 0 otherwise.
+A device's \code{ompt_stop_trace} runtime entry point, which has type 
+signature \code{ompt_stop_trace_t}, halts tracing on the device and 
+requests that any pending trace records are flushed. An invocation of 
+\code{ompt_stop_trace} returns 1 if the command succeeds and 0 otherwise.
 
 \argdesc
-
-\devicedesc
-
-
-%%? johnmc says: we should export one more function from a target device: ompt_target_scope(begin/end, host_id)
-%% this function will be used by the OpenMP runtime when a target device is being monitored to signal the target device when
-%% (1) entering and leaving a target region
-%% (2) before and after launching a kernel
-%% (3) before and after performing a data operation: copy, allocation, release, ...
-%% this function will enable the target device to associate device_activity_ids with some host_id that either represents a
-%% target region, target data operation, or target kernel submission
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_advance_buffer_cursor_t}}
 \label{sec:ompt_advance_buffer_cursor_t}
 
-%There are several routines that need to be used together to process %target event records deposited in a buffer by a device.
-
 \summary
-A runtime entry point for a device known as \code{ompt_advance_buffer_cursor}
-with type signature \code{ompt_advance_buffer_cursor_t}
-advances a trace buffer cursor to the next record.
+The \code{ompt_advance_buffer_cursor_t} type is the type signature of the 
+\code{ompt_advance_buffer_cursor} runtime entry point, which advances
+a trace buffer cursor to the next record.
 
 \format
 \begin{ccppspecific}
@@ -1717,40 +1556,42 @@ typedef int (*ompt_advance_buffer_cursor_t) (
 \end{ccppspecific}
 
 \descr
-It returns \plc{true} if the advance is successful and the next
-position in the buffer is valid.
+A device's \code{ompt_advance_buffer_cursor} runtime entry point, which has 
+type signature \code{ompt_advance_buffer_cursor_t}, advances a trace buffer
+pointer to the next trace record. An invocation of 
+\code{ompt_advance_buffer_cursor} returns \plc{true} if the advance is 
+successful and the next position in the buffer is valid.
 
 \argdesc
+The \plc{device} argument points to an opaque object that represents
+the target device instance. Functions in the device tracing interface
+use this pointer to identify the device that is being addressed.
 
-\devicedesc
+The \plc{current} argument is an opaque buffer cursor.
 
-The argument \plc{buffer} indicates a trace buffer associated
+The \plc{next} argument returns the next value of an opaque buffer cursor.
+
+The \plc{buffer} argument indicates a trace buffer that is associated
 with the cursors.
 
-The argument \plc{size} indicates the size of \plc{buffer} in
-bytes.
-
-The argument \plc{current} is an opaque buffer cursor.
-
-The argument \plc{next} returns the next value of a opaque buffer cursor.
-
+The argument \plc{size} indicates the size of \plc{buffer} in bytes.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
-\item \code{ompt_buffer_cursor_t},
-see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+
+\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_record_type_t}}
 \label{sec:ompt_get_record_type_t}
 
 \summary
-A runtime entry point for a device known as
-\code{ompt_get_record_type} with type signature
-\code{ompt_get_record_type_t} inspects the type
-of a trace record for a device.
+The \code{ompt_get_record_type_t} type is the type signature of the 
+\code{ompt_get_record_type} runtime entry point, which inspects the 
+type of a trace record.
 
 \format
 \begin{ccppspecific}
@@ -1763,45 +1604,41 @@ typedef ompt_record_t (*ompt_get_record_type_t) (
 \end{ccppspecific}
 
 \descr
+Trace records for a device may be in one of two forms: \emph{native} 
+record format, which may be device-specific, or \emph{OMPT} record 
+format, in which each trace record corresponds to an OpenMP \emph{event} 
+and most fields in the record structure are the arguments that would 
+be passed to the OMPT callback for the event.
 
-Trace records for a device may be in one of two forms: a
-\emph{native} record format, which may be device-specific,
-or an \emph{OMPT} record format, where each trace record
-corresponds to an OpenMP \emph{event} and fields in the record
-structure are mostly the arguments that would be passed to the
-OMPT callback for the event.
-
-A runtime entry point for a device known as
-\code{ompt_get_record_type} with type signature
-\code{ompt_get_record_type_t} inspects the type
-of a trace record and indicates whether the record at the current
-position in the provided trace buffer is an OMPT record,
-a native record, or an invalid record. An invalid record type
-is returned if the cursor is out of bounds.
+A device's \code{ompt_get_record_type} runtime entry point, which has
+type signature \code{ompt_get_record_type_t}, inspects the type of a 
+trace record and indicates whether the record at the current position 
+in the trace buffer is an OMPT record, a native record, or an invalid 
+record. An invalid record type is returned if the cursor is out of bounds.
 
 \argdesc
-The argument \plc{buffer} indicates a trace buffer.
+The \plc{buffer} argument indicates a trace buffer.
 
-The argument \plc{current} is an opaque buffer cursor.
-
-
-
+The \plc{current} argument is an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_buffer_t},
-see \specref{sec:ompt_buffer_t}.
-\item \code{ompt_buffer_cursor_t},
-see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_record_t}, see \specref{sec:ompt_record_t}.
+
+\item \code{ompt_buffer_t}, see \specref{sec:ompt_buffer_t}.
+
+\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_record_ompt_t}}
 \label{sec:ompt_get_record_ompt_t}
 
 \summary
-A runtime entry point for a device known as \code{ompt_get_record_ompt}
-with type signature \code{ompt_get_record_ompt_t}
-obtains a pointer to an OMPT trace record from a trace buffer associated with a device.
+The \code{ompt_get_record_ompt_t} type is the type signature of the 
+\code{ompt_get_record_ompt} runtime entry point, which obtains a pointer 
+to an OMPT trace record from a trace buffer associated with a device.
 
 \format
 \begin{ccppspecific}
@@ -1814,42 +1651,40 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t) (
 \end{ccppspecific}
 
 \descr
+A device's \code{ompt_get_record_ompt} runtime entry point, which has
+type signature \code{ompt_get_record_ompt_t}, returns a pointer that may 
+point to a record in the trace buffer, or it may point to a record in 
+thread local storage in which the information extracted from a record was 
+assembled. The information available for an event depends upon its type.
 
-This function returns a pointer that may point to a record in the
-trace buffer, or it may point to a record in thread local storage
-where the information extracted from a record was assembled. The
-information available for an event depends upon its type.
-
-The return value of type \code{ompt_record_ompt_t}
-defines a union type that can represent
-information for any OMPT event record type.
-Another call to the runtime entry point may overwrite the
-contents of the fields in a record returned by a prior invocation.
+The return value of the \code{ompt_record_ompt_t} type includes a field 
+of a union type that can represent information for any OMPT event record 
+type. Another call to the runtime entry point may overwrite the contents 
+of the fields in a record returned by a prior invocation.
 
 \argdesc
-The argument \plc{buffer} indicates a trace buffer.
+The \plc{buffer} argument indicates a trace buffer.
 
-The argument \plc{current} is an opaque buffer cursor.
+The \plc{current} argument is an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_record_ompt_t},
-see \specref{sec:ompt_record_ompt_t}.
-\item \code{ompt_device_t},
-see \specref{sec:ompt_device_t}.
-\item \code{ompt_buffer_cursor_t},
-see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_record_ompt_t}, see \specref{sec:ompt_record_ompt_t}.
+
+\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+
+\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_record_native_t}}
 \label{sec:ompt_get_record_native_t}
 
 \summary
-
-A runtime entry point for a device known as
-\code{ompt_get_record_native} with type signature
-\code{ompt_get_record_native_t}
-obtains a pointer to a native trace record from a trace buffer associated with a device.
+The \code{ompt_get_record_native_t} type is the type signature of the 
+\code{ompt_get_record_native} runtime entry point, which obtains a pointer 
+to a native trace record from a trace buffer associated with a device.
 
 \format
 \begin{ccppspecific}
@@ -1863,47 +1698,46 @@ typedef void *(*ompt_get_record_native_t) (
 \end{ccppspecific}
 
 \descr
-
-The pointer returned  may point into the specified trace buffer, or into
-thread local storage where the information extracted from a trace
-record was assembled. The information available for a native event
-depends upon its type. If the function returns a non-NULL result,
-it will also set \code{*host_op_id} to identify host-side identifier
-for the operation associated with the record.  A subsequent call
-to \code{ompt_get_record_native} may overwrite the
-contents of the fields in a record returned by a prior invocation.
+A device's \code{ompt_get_record_native} runtime entry point, which has
+type signature \code{ompt_get_record_native_t}, returns a pointer that may 
+point may point into the specified trace buffer, or into thread local 
+storage in which the information extracted from a trace record was 
+assembled. The information available for a native event depends upon 
+its type. If the function returns a non-null result, it will also set the
+object to which \code{host_op_id} points to a host-side identifier for the 
+operation that is associated with the record. A subsequent call to 
+\code{ompt_get_record_native} may overwrite the contents of the fields 
+in a record returned by a prior invocation.
 
 \argdesc
-The argument \plc{buffer} indicates a trace buffer.
+The \plc{buffer} argument indicates a trace buffer.
 
-The argument \plc{current} is an opaque buffer cursor.
+The \plc{current} argument is an opaque buffer cursor.
 
-The argument \plc{host_op_id} is a pointer to an identifier
-that will be returned by the function. The entry point will set
-*\plc{host_op_id} to the value of a host-side identifier for an operation on
-a target device that was created when the operation was initiated by
-the host.
-
+The \plc{host_op_id} argument is a pointer to an identifier that is 
+returned by the function. The entry point sets the identifier to which
+\plc{host_op_id} points to the value of a host-side identifier for an 
+operation on a target device that was created when the operation was 
+initiated by the host.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_id_t},
-see \specref{sec:ompt_id_t}.
-\item \code{ompt_buffer_t},
-see \specref{sec:ompt_buffer_t}.
-\item \code{ompt_buffer_cursor_t},
-see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_id_t}, see \specref{sec:ompt_id_t}.
+
+\item \code{ompt_buffer_t}, see \specref{sec:ompt_buffer_t}.
+
+\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
+
+
 
 \subsubsubsection{\hcode{ompt_get_record_abstract_t}}
 \label{sec:ompt_get_record_abstract_t}
 
 \summary
-A runtime entry point for a device known as
-\code{ompt_get_record_abstract}
-with type signature
-\code{ompt_get_record_abstract_t}
-summarizes the context of a native (device-specific) trace record.
+The \code{ompt_get_record_abstract_t} type is the type signature of the 
+\code{ompt_get_record_abstract} runtime entry point, which summarizes the 
+context of a native (device-specific) trace record.
 
 \format
 \begin{ccppspecific}
@@ -1916,39 +1750,32 @@ typedef ompt_record_abstract_t *
 \end{ccppspecific}
 
 \descr
-An OpenMP implementation may execute on a device that logs
-trace records in a native (device-specific) format unknown to a tool.
-A tool can use the \code{ompt_get_record_abstract}
-runtime entry point for the device with type signature
-\code{ompt_get_record_abstract_t}
-to decode a native trace record that it
-does not understand into a standard form that it can interpret.
+An OpenMP implementation may execute on a device that logs trace 
+records in a native (device-specific) format that a tool cannot
+interpret directly. A device's \code{ompt_get_record_abstract} runtime 
+entry point, which has type signature \code{ompt_get_record_abstract_t}, 
+translates a native trace record into a standard form.
 
 \argdesc
-
-The argument \plc{native_record} is a pointer to a native trace
-record.
+The \plc{native_record} argument is a pointer to a native trace record.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_record_abstract_t},
-see \specref{sec:ompt_record_abstract_t}.
+\item \code{ompt_record_abstract_t}, see \specref{sec:ompt_record_abstract_t}.
 \end{itemize}
 
-\subsubsection{Lookup Entry Point}
 
-\subsubsubsection{\hcode{ompt_function_lookup_t}}
+
+\subsubsection{Lookup Entry Points: \hcode{ompt_function_lookup_t}}
 \label{sec:ompt_function_lookup_t}
 \label{sec:ompt_function_lookup}
 
 \summary
-A tool uses a lookup routine with type signature
-\code{ompt_function_lookup_t}
-to obtain pointers to runtime entry points that are
-part of the OMPT interface.
+The \code{ompt_function_lookup_t} type is the type signature of the 
+lookup runtime entry points that provide pointers to runtime entry 
+points that are part of the OMPT interface.
 
 \format
-
 \begin{ccppspecific}
 \begin{omptInquiry}
 typedef void (*ompt_interface_fn_t) (void);
@@ -1959,44 +1786,34 @@ typedef ompt_interface_fn_t (*ompt_function_lookup_t) (
 \end{omptInquiry}
 \end{ccppspecific}
 
-
 \descr
-
-An OpenMP implementation provides a pointer to a lookup routine as an
-argument to tool callbacks used to initialize tool support for
-monitoring an OpenMP device using either tracing or callbacks.
-
-
-
-When an OpenMP implementation invokes a tool initializer to configure
-the OMPT callback interface, the OpenMP implementation will pass the
-initializer a lookup function that the tool can use to obtain
-pointers to runtime entry points that implement routines that are part of
-the OMPT callback interface.
-
-When an OpenMP implementation invokes a tool initializer to configure
-the OMPT tracing interface for a device, the Open implementation will
-pass the device tracing initializer a lookup function that the tool
-can use to obtain pointers to runtime entry points that implement
-tracing control routines appropriate for that device.
-
-A tool can call the lookup function to obtain a pointer to a runtime
-entry point.
+An OpenMP implementation provides a pointer to a lookup routine that 
+provides pointers to OMPT runtime entry points. When the implementation 
+invokes a tool initializer to configure the OMPT callback interface, it 
+provides a lookup function that provides pointers to runtime entry points 
+that implement routines that are part of the OMPT callback interface. 
+Alternatively, when it invokes a tool initializer to configure the OMPT 
+tracing interface for a device, it provides a lookup function that provides
+pointers to runtime entry points that implement tracing control routines 
+appropriate for that device.
 
 \argdesc
-The argument \plc{interface_function_name} is a C string
-that represents the name of a runtime entry point.
+The \plc{interface_function_name} argument is a C string that represents 
+the name of a runtime entry point.
 
 \crossreferences
 \begin{itemize}
 \item Tool initializer for a device's OMPT tracing interface, 
-\specref{sec:tracing-device-activity}.
-\item Tool initializer for the OMPT callback interface, \specref{sec:ompt_initialize_t}
+see \specref{sec:tracing-device-activity}.
+
+\item Tool initializer for the OMPT callback interface, 
+see \specref{sec:ompt_initialize_t}.
+
 \item Entry points in the OMPT callback interface, see
   \tabref{table:ompt-callback-interface-functions} for a list and
   \specref{sec:ompt-callback-entry-points} for detailed definitions.
+
 \item Entry points in the OMPT tracing interface, see
   \tabref{table:ompt-tracing-interface-functions} for a list and
   \specref{sec:ompt-tracing-entry-points} for detailed definitions.
 \end{itemize}
-% This is the end of ch4-toolsSupport.tex
