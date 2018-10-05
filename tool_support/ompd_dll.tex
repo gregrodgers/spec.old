@@ -3,54 +3,49 @@
 \index{ompd_dll_locations@{\code{ompd_dll_locations}}}
 
 \summary
-The global variable \code{ompd_dll_locations} indicates
-where a tool should look for OMPD libraries that are compatible
-with the OpenMP implementation.
+The \code{ompd_dll_locations} global variable indicates the location
+of OMPD libraries that are compatible with the OpenMP implementation.
 
+\format
 \begin{cspecific}
 \begin{ompSyntax}
 const char **ompd_dll_locations;
 \end{ompSyntax}
 \end{cspecific}
 
-
 \descr
-\code{ompd_dll_locations} is an \code{argv}-style vector of filename
-strings that provide the names of any OMPD libraries
-that are compatible with the OpenMP runtime.
-The vector is NULL-terminated.
+An OpenMP runtime may have more than one OMPD libary. The tool must be able 
+to locate the right library to use for the OpenMP program that it is examining.
+The OpenMP runtime system must provide a public variable \code{ompd_dll_locations},
+which is an \code{argv}-style vector of filename string pointers that provides 
+the name(s) of any compatible OMPD library. This variable must have \code{C} 
+linkage. The tool uses the name of the variable verbatim and, in particular, 
+does not apply any name mangling before performing the look up.
 
-The programming model or architecture of the third-party tool, and
-hence that of the required OMPD library, might not match that of
-the OpenMP program to be examined.
-On platforms that support multiple programming models (\textit{e.g.},
-32- v. 64-bit), or in heterogenous  environments where the architectures
-of the OpenMP program and third-party tool may be be different,
-OpenMP implementors are encouraged to provide OMPD libraries for all models.
-The vector, therefore, may name libraries that are not compatible
-with the third-party tool.
-This is legal, and it is up to the third-party tool to check that
-a library is compatible.
-(Typically, a tool might iterate over the vector until a compatible
-library is found.)
+The programming model or architecture of the tool and, thus, that of OMPD does 
+not have to match that of the OpenMP program that is being examined. The tool
+must interpret the contents of \code{ompd_dll_locations} to find a suitable OMPD 
+that matches its own architectural characteristics. On platforms that support 
+different programming models (for example, 32-bit vs 64-bit), OpenMP 
+implementations are encouraged to provide OMPD libraries for all models, and 
+that can handle OpenMP programs of any model. Thus, for example, a 32-bit 
+debugger that uses OMPD should be able to debug a 64-bit OpenMP program by 
+loading a 32-bit OMPD implementation that can manage a 64-bit OpenMP runtime.
 
-\restrictions
-\code{ompd_dll_locations} has external \code{C} linkage,
-no demangling or other transformations are required by a third-party
-tool before looking up its address in the OpenMP program.
-
-The vector and its members must be fully initialized before
-\code{ompd_dll_locations} is set to a non-NULL value.
-That is, if \code{ompd_dll_locations} is not NULL, the vector
-and its contents are valid.
+\code{ompd_dll_locations} points to a NULL-terminated vector of zero or more 
+NULL-terminated pathname strings that do not have any filename conventions. 
+This vector must be fully initialized \emph{before} \code{ompd_dll_locations} 
+is set to a non-null value, such that if a tool, such as a debugger, stops 
+execution of the OpenMP program at any point at which \code{ompd_dll_locations} 
+is non-null, then the vector of strings to which it points is valid and complete.
 
 \crossreferences
 \begin{itemize}
-\item
-  Finding the OMPD library, \specref{subsubsec:finding-the-ompd}
-\item
-  \code{ompd_dll_locations_valid}, \specref{subsubsec:ompd_dll_locations_valid}
+\item   \code{ompd_dll_locations_valid}, 
+see \specref{subsubsec:ompd_dll_locations_valid}
 \end{itemize}
+
+
 
 \subsubsection{\hcode{ompd_dll_locations_valid}}
 \label{subsubsec:ompd_dll_locations_valid}
@@ -58,29 +53,24 @@ and its contents are valid.
 
 \summary
 The OpenMP runtime notifies third-party tools that \code{ompd_dll_locations}
-is valid by allowing execution to pass through a location identified
-by the symbol \code{ompd_dll_locations_valid}.
+is valid by allowing execution to pass through a location that the symbol 
+\code{ompd_dll_locations_valid} identifies.
 
-
+\format
 \begin{cspecific}
 \begin{ompSyntax}
 void ompd_dll_locations_valid(void);
 \end{ompSyntax}
 \end{cspecific}
 
-
 \descr
-Depending on how the OpenMP runtime is
-implemented, \code{ompd_dll_locations} might not be a static
-variable, and therefore needs to be initialized at runtime.  The
-OpenMP runtime notifies third-party tools
-that \code{ompd_dll_locations} is valid by having execution pass
-through a location identified by the
-symbol \code{ompd_dll_locations_valid}.
-If \code{ompd_dll_locations} is NULL, a third-party tool, e.g., a
-debugger can place a breakpoint at \code{ompd_dll_locations_valid}
-to be notified when \code{ompd_dll_locations} has been initialized.
-In practice, the symbol \code{ompd_dll_locations_valid} need not be
-a function; instead, it may be a labeled machine instruction through
+Since \code{ompd_dll_locations} may not be a static variable, it may require
+runtime initialization. The OpenMP runtime notifies third-party tools that 
+\code{ompd_dll_locations} is valid by having execution pass through a location 
+that the symbol \code{ompd_dll_locations_valid} identifies. If 
+\code{ompd_dll_locations} is NULL, a third-party tool can place a breakpoint 
+at \code{ompd_dll_locations_valid} to be notified that \code{ompd_dll_locations} 
+is initialized. In practice, the symbol \code{ompd_dll_locations_valid} 
+may not be a function; instead, it may be a labeled machine instruction through
 which execution passes once the vector is valid.
 
