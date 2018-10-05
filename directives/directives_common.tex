@@ -185,37 +185,6 @@ Restrictions to structured blocks are as follows:
 
 \begin{ccppspecific}
 \item The point of entry to a structured block must not be a call to \code{setjmp()}.
-\end{ccppspecific}
-\end{itemize}
-
-Some executable directives include a structured block. A structured block:
-\begin{itemize}
-\item may contain infinite loops where the point of exit is never reached; 
-\item may halt due to an IEEE exception;
-
-\begin{ccppspecific}
-\item may contain calls to \code{exit()}, \code{_Exit()}, \code{quick_exit()}, 
-      \code{abort()} or functions with a \code{_Noreturn} specifier (in C) or 
-      a \code{noreturn} attribute (in C/C++); 
-\item may be an expression statement, iteration statement, selection statement,
-      or try block, provided that the corresponding compound statement obtained 
-      by enclosing it in \tcode{\{} and \tcode{\}} would be a structured block; and
-\end{ccppspecific}
-
-\begin{fortranspecific}
-\item may contain \code{STOP} statements.
-\end{fortranspecific}
-\end{itemize}
-
-\restrictions
-Restrictions to structured blocks are as follows:
-
-\begin{itemize}
-\item Entry to a structured block must not be the result of a branch.
-\item The point of exit cannot be a branch out of the structured block.
-
-\begin{ccppspecific}
-\item The point of entry to a structured block must not be a call to \code{setjmp()}.
 \item \code{longjmp()} and \code{throw()} must not violate the entry/exit criteria.
 \end{ccppspecific}
 \end{itemize}
@@ -863,8 +832,8 @@ supported by the OpenMP implementation at that point in the program. At least
 the following traits can be defined:
 
 \begin{itemize}
-\item The \plc{vendor(vendor-name)} trait, which specifies the name of the
-      vendor of the implementation. OpenMP defined values for \plc{vendor-name}
+\item The \plc{vendor(vendor-name-list)} trait, which specifies the vendor
+      identifiers of the implementation. OpenMP defined values for \plc{vendor-name}
       are defined in the ``OpenMP Context Definitions'' document, which is
       available at \url{http://www.openmp.org/}.
 \item The \plc{extension(extension-name-list)} trait, which specifies vendor
@@ -886,9 +855,9 @@ sets. All implementation defined traits must follow the following syntax:
   \plc{context-value}
 
 \plc{context-value}:
-  \plc{string}
+  \plc{constant string}
   or
-  \plc{integer expression}
+  \plc{constant integer expression}
 \end{ompSyntax}
 
 where \plc{identifier} is a base language identifier.
@@ -909,7 +878,10 @@ The syntax to define a \plc{context-selector-specification} is the following:
    \plc{trait-set-selector-name}={\plc{trait-selector[}, \plc{trait-selector[}, \plc{...]]}}
 
 \plc{trait-selector}:
-   \plc{trait-selector-name[}(\plc{trait-property[}, \plc{trait-property[}, \plc{...]]})\plc{]}
+   \plc{trait-selector-name[}(\plc{[trait-score}: \plc{]} \plc{trait-property[}, \plc{trait-property[}, \plc{...]]})\plc{]}
+
+\plc{trait-score}:
+    score(\plc{score-expression})
 \end{ompSyntax}
 
 The \code{construct} selector set defines the \plc{construct} traits that should
@@ -944,6 +916,8 @@ The \code{condition(}\plc{logical-expr}\code{)} selector defines a \plc{constant
 expression} that must evaluate to true for the selector to be true.
 \end{fortranspecific}
 
+A \plc{score-expression} must be an constant integer expression.
+
 Implementations can allow further selectors to be specified. Implementations can 
 ignore specified selectors that are not those described in this section.
 
@@ -951,6 +925,8 @@ ignore specified selectors that are not those described in this section.
 \begin{itemize}
 \item Each \plc{trait-set-selector-name} can only be specified once.
 \item Each \plc{trait-selector-name} can only be specified once.
+\item A \plc{trait-score} cannot be specified in traits from the \code{construct} 
+      or \code{device} \plc{trait-selector-sets}.
 \end{itemize}
 
 
@@ -992,8 +968,10 @@ Among compatible context selectors a score is computed using the following algor
 \item The \code{kind}, \code{arch} and \code{isa} selectors are given the
       values $2^{l}$, $2^{l+1}$ and $2^{l+2}$, respectively, where $l$ is 
       the number of traits in the \plc{construct} set;
+\item Traits for which a \plc{trait-score} is specified are given the value specified by the
+      \plc{trait-score} \plc{score-expression}; 
 \item The values given to any additional selectors allowed by the implementation 
-      are implemented defined; 
+      are implemented defined;
 \item Other selectors are given a value of zero; and
 \item Context selectors that are a strict subset of another context selector
       have a score of zero. For other context selectors, the final score is the
@@ -1982,5 +1960,5 @@ among construct clauses and ICVs.
 \specref{subsec:Worksharing-Loop Construct}.
 
 \item \code{schedule} clause, see
-\specref{subsubsec:Determining the Schedule of a Worksharing Loop}.
+\specref{subsubsec:Determining the Schedule of a Worksharing-Loop}.
 \end{itemize}

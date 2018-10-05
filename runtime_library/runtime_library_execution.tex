@@ -668,19 +668,14 @@ include the following, which can be extended with implementation specific values
 \begin{ccppspecific}
 \begin{ompcEnum}
 typedef enum omp_sched_t {
-  omp_sched_nonmonotonic_static = 1,
-  omp_sched_static = omp_sched_nonmonotonic_static,
-  omp_sched_nonmonotonic_dynamic = 2,
-  omp_sched_dynamic = omp_sched_nonmonotonic_dynamic,
-  omp_sched_nonmonotonic_guided = 3,
-  omp_sched_guided = omp_sched_nonmonotonic_guided,
-  omp_sched_nonmonotonic_auto = 4,
-  omp_sched_auto = omp_sched_nonmonotonic_auto,
+  // schedule kinds
+  omp_sched_static = 0x1,
+  omp_sched_dynamic = 0x2,
+  omp_sched_guided = 0x3,
+  omp_sched_auto = 0x4,
 
-  omp_sched_monotonic_static = 17,
-  omp_sched_monotonic_dynamic= 18,
-  omp_sched_monotonic_guided = 19,
-  omp_sched_monotonic_auto = 20
+  // schedule modifier
+  omp_sched_monotonic = 0x80000000u
 } omp_sched_t;
 \end{ompcEnum}
 \end{ccppspecific}
@@ -688,31 +683,24 @@ typedef enum omp_sched_t {
 \begin{samepage}
 \begin{fortranspecific}
 \begin{ompfEnum}
+! schedule kinds
 integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_nonmonotonic_static = 1
+  parameter :: omp_sched_static = &
+                   int(Z'1', kind=omp_sched_kind)
 integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_static = omp_sched_nonmonotonic_static
+  parameter :: omp_sched_dynamic = &
+                   int(Z'2', kind=omp_sched_kind)
 integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_nonmonotonic_dynamic = 2
+  parameter :: omp_sched_guided = &
+                   int(Z'3', kind=omp_sched_kind)
 integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_dynamic = omp_sched_nonmonotonic_dynamic
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_nonmonotonic_guided = 3
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_guided = omp_sched_nonmonotonic_guided
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_nonmonotonic_auto = 4
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_auto = omp_sched_nonmonotonic_auto
+  parameter :: omp_sched__auto = &
+                   int(Z'4', kind=omp_sched_kind)
 
+! schedule modifier
 integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_monotonic_static = 17
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_monotonic_dynamic= 18
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_monotonic_guided = 19
-integer(kind=omp_sched_kind), &
-  parameter :: omp_sched_monotonic_auto = 20
+  parameter :: omp_sched_monotonic = &
+                   int(Z'80000000', kind=omp_sched_kind)
 \end{ompfEnum}
 \end{fortranspecific}
 \end{samepage}
@@ -724,13 +712,20 @@ The binding task set for an \code{omp_set_schedule} region is the generating tas
 The effect of this routine is to set the value of the \plc{run-sched-var} 
 ICV of the current task to the values specified in the two arguments. The 
 schedule is set to the schedule kind that is specified by the first argument 
-\plc{kind}. It can be any of the standard schedule kinds or any other implementation 
-specific one. For the schedule kinds \code{static}, \code{dynamic}, and
-\code{guided} the \plc{chunk_size} is set to the value of the second 
+\plc{kind}. It can be any of the standard schedule kinds or any other 
+implementation specific one. For the schedule kinds \code{static}, \code{dynamic},
+and \code{guided} the \plc{chunk_size} is set to the value of the second 
 argument, or to the default \plc{chunk_size} if the value of the second 
 argument is less than 1; for the schedule kind \code{auto} the second 
-argument has no meaning; for implementation specific schedule kinds,
-the values and associated meanings of the second argument are implementation defined.
+argument has no meaning; for implementation specific schedule kinds, the 
+values and associated meanings of the second argument are implementation defined.
+
+Each of the schedule kinds can be combined with the
+\code{omp_sched_monotonic} modifier by using the + or | operators in
+C/C++ or the + operator in Fortran.  If the schedule kind is combined
+with the \code{omp_sched_monotonic} modifier, the schedule is modified
+as if the \code{monotonic} schedule modifier was specified.  Otherwise,
+the schedule modifier is \code{nonmonotonic}.
 
 \crossreferences
 \begin{itemize}
@@ -783,12 +778,11 @@ This routine returns the \plc{run-sched-var} ICV in the task to which
 the routine binds. The first argument \plc{kind} returns the schedule 
 to be used. It can be any of the standard schedule kinds as defined in
 \specref{subsec:omp_set_schedule}, or any implementation specific
-schedule kind. If the first argument returns \code{static}, \code{dynamic}, 
-or \code{guided}, then if the second argument \plc{chunk_size} returned 
-is greater than or equal to 1 then it is the \plc{chunk_size} to be used; 
-if it is less than 1 then the default \plc{chunk_size} is to be used. The 
-second argument \plc{chunk_size} returned is implementation defined for 
-any other schedule types.
+schedule kind. The second argument \plc{chunk_size} returns the chunk size to
+be used, or a value less than 1 if the default chunk size is to be used, if
+the returned schedule kind is \code{static}, \code{dynamic}, or \code{guided}.
+The value returned by the second argument is implementation defined for any
+other schedule kinds.
 
 \crossreferences
 \begin{itemize}
@@ -1671,7 +1665,7 @@ used on the device by setting the value of the \plc{affinity-format-var} ICV.
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-void omp_set_affinity_format(char const *\plc{format});
+void omp_set_affinity_format(const char *\plc{format});
 \end{ompcFunction}
 \end{ccppspecific}
 
@@ -1802,7 +1796,7 @@ affinity information using the format specification provided.
 \format
 \begin{ccppspecific}
 \begin{ompcFunction}
-void omp_display_affinity(char const *\plc{format});
+void omp_display_affinity(const char *\plc{format});
 \end{ompcFunction}
 \end{ccppspecific}
 
@@ -1863,7 +1857,7 @@ affinity information into a buffer using the format specification provided.
 size_t omp_capture_affinity(
   char *\plc{buffer},
   size_t \plc{size},
-  char const *\plc{format}
+  const char *\plc{format}
 );
 \end{ompcFunction}
 \end{ccppspecific}
@@ -2056,14 +2050,14 @@ region the effect of this routine is unspecified.
 
 \crossreferences
 \begin{itemize}
+\item \code{target} construct, see
+\specref{subsec:target Construct}
+
 \item \code{omp_get_default_device}, see
 \specref{subsec:omp_get_default_device}.
 
 \item \code{omp_get_device_num}, see
 \specref{subsec:omp_get_device_num}.
-
-\item \code{target} construct, see
-\specref{subsec:target Construct}
 \end{itemize}
 
 
@@ -2102,6 +2096,9 @@ the host device, it will return the same value as the
 \crossreferences
 \begin{itemize}
 
+\item \code{target} construct, see
+\specref{subsec:target Construct}
+
 \item \code{omp_get_initial_device} routine, see
 \specref{subsec:omp_get_initial_device}.
 
@@ -2111,9 +2108,6 @@ the host device, it will return the same value as the
 
 \item \code{omp_get_num_devices}, see
 \specref{subsec:omp_get_num_devices}.
-
-\item \code{target} construct, see
-\specref{subsec:target Construct}
 
 \end{itemize}
 
@@ -2154,11 +2148,11 @@ if it is called from outside of a \code{teams} region.
 \item \code{teams} construct, see
 \specref{sec:teams Construct}.
 
-\item \code{omp_get_team_num} routin
-
-
 \item \code{target} construct, see
-\specref{subsec:target Construct}
+\specref{subsec:target Construct}.
+
+\item \code{omp_get_team_num} routine, see
+\specref{subsec:omp_get_team_num}.
 \end{itemize}
 
 
@@ -2279,15 +2273,14 @@ is the generating task.
 
 \effect
 The effect of this routine is to return the device number of the 
-host device. The value of the device number is implementation defined.
-If it is between 0 and one less than \code{omp_get_num_devices()} then 
-it is valid for use with all device constructs and routines; if it is 
-outside that range, then it is only valid for use with the device 
-memory routines and not in the \code{device} clause. When called from 
-within a \code{target} region the effect of this routine is unspecified.
+host device. The value of the device number is implementation defined. 
+When called from within a \code{target} region the effect of this 
+routine is unspecified.
 
 \crossreferences
 \begin{itemize}
+\item \code{target} construct, see
+\specref{subsec:target Construct}.
 
 \item \code{omp_is_initial_device} routine, see
 \specref{subsec:omp_is_initial_device}.
@@ -2461,7 +2454,7 @@ The \code{omp_pause_resource} routine has the following restrictions:
 \item The \code{omp_pause_resource} region may not be nested in any explicit
       OpenMP region.
 \item The routine may only be called when all explicit tasks have finalized
-      execution. Calling in any other circumstances may result
+      execution. Calling the routine in any other circumstances may result
       in unspecified behavior.
 \end{itemize}
 
@@ -2471,6 +2464,9 @@ The \code{omp_pause_resource} routine has the following restrictions:
 \item \code{target} construct, see
 \specref{subsec:target Construct}
 
+\item \code{threadprivate} directives, see
+\specref{subsec:threadprivate Directive}.
+
 \item \code{declare target} directive, see
 \specref{subsec:declare target Directive}
 
@@ -2479,9 +2475,6 @@ The \code{omp_pause_resource} routine has the following restrictions:
 
 \item \code{omp_get_get_initial_device} routine, see
 \specref{subsec:omp_get_initial_device}.
-
-\item \code{threadprivate} directives, see
-\specref{subsec:threadprivate Directive}.
 
 \item To pause resources on all devices at once, see
 \specref{subsec:omp_pause_resource_all}.
@@ -2537,7 +2530,7 @@ The \code{omp_pause_resource_all} routine has the following restrictions:
 \item The \code{omp_pause_resource_all} region may not be nested in any explicit
       OpenMP region.
 \item The routine may only be called when all explicit tasks have finalized
-      execution. Calling in any other circumstances may result
+      execution. Calling the routine in any other circumstances may result
       in unspecified behavior.
 \end{itemize}
 
