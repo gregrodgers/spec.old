@@ -67,13 +67,15 @@ integer (kind=omp_control_tool_kind) \plc{modifier}
 \end{fortranspecific}
 
 \descr
-An OpenMP program may use \code{omp_control_tool} to pass commands 
-to a tool.Using \code{omp_control_tool}, an application can request 
-that a tool start or restart data collection when a code region of 
-interest is encountered, pause data collection when leaving the region 
-of interest, flush any data that it has collected so far, or end data 
-collection. Additionally, \code{omp_control_tool} can be used to pass
-tool-specific commands to a particular tool.
+An OpenMP program may use \code{omp_control_tool} to pass commands to
+a tool. An application can use \code{omp_control_tool} to request that
+a tool starts or restarts data collection when a code region of interest 
+is encountered, that a tool pauses data collection when leaving the region 
+of interest, that a tool flushes any data that it has collected so far, or
+that a tool ends data collection. Additionally, \code{omp_control_tool} can 
+be used to pass tool-specific commands to a particular tool.
+
+The following types correspond to return values from \code{omp_control_tool}:
 
 \begin{ccppspecific}
 \begin{ompcEnum}
@@ -85,8 +87,6 @@ typedef enum omp_control_tool_result_t {
 } omp_control_tool_result_t;
 \end{ompcEnum}
 \end{ccppspecific}
-
-
 
 \begin{fortranspecific}
 \begin{ompfEnum}
@@ -101,21 +101,20 @@ integer (kind=omp_control_tool_result_kind), &
 \end{ompfEnum}
 \end{fortranspecific}
 
-
-If the OMPT interface state is inactive, the OpenMP implementation will return
+If the OMPT interface state is inactive, the OpenMP implementation returns
 \code{omp_control_tool_notool}. If the OMPT interface state is active, but
-the tool has not registered a callback for the \plc{tool-control} event, the OpenMP
-implementation will return \code{omp_control_tool_nocallback}.
-An OpenMP implementation may return other implementation-defined negative
-values $< -64$; an application may assume that any negative return value
-indicates that a tool has not received the command.  A return value of
-\code{omp_control_tool_success} indicates that the tool has performed the
-specified command.  A return value of \code{omp_control_tool_ignored}
-indicates that the tool has ignored the specified command.
-A tool may return other positive values $> 64$ that are tool-defined.
+no callback is registered for the \plc{tool-control} event, the OpenMP
+implementation returns \code{omp_control_tool_nocallback}. An OpenMP 
+implementation may return other implementation-defined negative values 
+strictly smaller than -64; an application may assume that any negative 
+return value indicates that a tool has not received the command. A return 
+value of \code{omp_control_tool_success} indicates that the tool has 
+performed the specified command. A return value of 
+\code{omp_control_tool_ignored} indicates that the tool has ignored the 
+specified command. A tool may return other positive values strictly greater 
+than 64 that are tool-defined.
 
 \constraints
-
 The following enumeration type defines four standard commands.
 Table~\ref{table:std-tool-cmds} describes the
 actions that these commands request from a tool.
@@ -132,8 +131,6 @@ typedef enum omp_control_tool_t {
 \end{ompcEnum}
 \end{ccppspecific}
 
-
-
 \begin{fortranspecific}
 \begin{ompfEnum}
 integer (kind=omp_control_tool_kind), &
@@ -147,11 +144,9 @@ integer (kind=omp_control_tool_kind), &
 \end{ompfEnum}
 \end{fortranspecific}
 
-
-Tool-specific values for \plc{command} must be $\geq$ 64.
-Tools must ignore \plc{command} values that they are not
-explicitly designed to handle.
-Other values accepted by a tool for \plc{command},
+Tool-specific values for \plc{command} must be greater or equal to 64.
+Tools must ignore \plc{command} values that they are not explicitly 
+designed to handle. Other values accepted by a tool for \plc{command},
 and any values for \plc{modifier} and \plc{arg} are tool-defined.
 
 
@@ -174,42 +169,39 @@ and any values for \plc{modifier} and \plc{arg} are tool-defined.
 \multicolumn{2}{l}{\small\slshape table continued on next page}\\
 }
 \tablelasttail{\hline}
-\tablecaption{Standard tool control commands.\label{table:std-tool-cmds}}
+\tablecaption{Standard Tool Control Commands\label{table:std-tool-cmds}}
 \begin{supertabular}{p{2in} p{3.0in}}
-{\scode{omp_control_tool_start}} & Start or
-restart monitoring if it is off. If monitoring is already on, this
-command is idempotent. If monitoring has already been turned off
-permanently, this command will have no effect.\\
-{\scode{omp_control_tool_pause}} & Temporarily
-turn monitoring off. If monitoring is already off, it is idempotent.\\
+{\scode{omp_control_tool_start}} & Start or restart monitoring if it is 
+                                   off. If monitoring is already on, this
+                                   command is idempotent. If monitoring has 
+                                   already been turned off permanently, this 
+                                   command will have no effect.\\
+{\scode{omp_control_tool_pause}} & Temporarily turn monitoring off. If 
+                                   monitoring is already off, it is idempotent.\\
 {\scode{omp_control_tool_flush}} & Flush any data buffered by a tool.
-This command may be applied whether monitoring is on or off.\\
-{\scode{omp_control_tool_end}} & Turn monitoring off permanently;
-the tool finalizes itself and flushes all output.\\
+                                   This command may be applied whether 
+                                   monitoring is on or off.\\
+{\scode{omp_control_tool_end}}   & Turn monitoring off permanently;
+                                   the tool finalizes itself and flushes all output.\\
 \end{supertabular}
 
 \linenumbers
 
 \events
-
-The \plc{tool-control} event occurs in the thread encountering a call
+The \plc{tool-control} event occurs in the thread that encounters a call
 to \code{omp_control_tool} at a point inside its corresponding OpenMP region.
 
 \tools
-
-A thread dispatches a registered
-\code{ompt_callback_control_tool} callback for each occurrence of a
-\plc{tool-control} event.  The callback executes in the context of the
-call that occurs in the user program.  This callback has type
-signature \code{ompt_callback_control_tool_t}.The callback may return
-any non-negative value, which will be returned to the application by
-the OpenMP implementation as the return value of the
-\code{omp_control_tool} call that triggered the callback.
-
+A thread dispatches a registered \code{ompt_callback_control_tool} callback 
+for each occurrence of a \plc{tool-control} event. The callback executes in 
+the context of the call that occurs in the user program and has type signature 
+\code{ompt_callback_control_tool_t}. The callback may return any non-negative 
+value, which will be returned to the application by the OpenMP implementation 
+as the return value of the \code{omp_control_tool} call that triggered the callback.
 
 Arguments passed to the callback are those passed by the user to
 \code{omp_control_tool}. If the call is made in Fortran, the tool
-will be passed a \code{NULL} as the third argument to the callback. If
+will be passed \code{NULL} as the third argument to the callback. If
 any of the four standard commands is presented to a tool, the tool
 will ignore the \plc{modifier} and \plc{arg} argument values.
 
