@@ -778,12 +778,15 @@ OPENMP DISPLAY ENVIRONMENT END
 %the information accessible by the format specifiers listed in table
 
 The \code{OMP_DISPLAY_AFFINITY} environment variable instructs the runtime to
-display formatted affinity information for all the threads in a team executing a parallel region. 
-The information is displayed upon entering the first parallel region and when there is any change in
-the information accessible by the format specifiers listed in table
+display formatted affinity information for all OpenMP threads in the parallel
+region upon entering the first parallel region and when there is any change in
+the information accessible by the format specifiers listed in Table
 \ref{tab:Available Field Types for Formatting OpenMP Thread Affinity Information}.
 If there is a change of affinity of any thread in a parallel region, thread
 affinity information for all threads in that region will be displayed.
+If the thread affinity for each respective parallel region at each nesting level
+has already been displayed and the thread affinity has not changed, then the
+information is not displayed again.
 There is no specific order in displaying thread affinity information for all
 threads in the same parallel region.
 
@@ -809,8 +812,8 @@ setenv OMP_DISPLAY_AFFINITY TRUE
 The above example causes an OpenMP implementation to display OpenMP thread affinity information during execution of
 the program, in a format given by the \plc{affinity-format-var} ICV.  The following is a sample output:
 \begin{ompSyntax}
-thread_level=   1,   thread_id=   0,   thread_affinity=    0,1
-thread_level=   1,   thread_id=   1,   thread_affinity=    2,3
+nesting_level=   1,   thread_num=   0,   thread_affinity=    0,1
+nesting_level=   1,   thread_num=   1,   thread_affinity=    2,3
 \end{ompSyntax}
 
 \crossreferences
@@ -860,8 +863,8 @@ By default, output is left justified.
 The minimum field length is \plc{size}, which is a decimal digit string
 with a non-zero first digit.
 If no \plc{size} is specified, the actual length needed to print the field will be used.
-If the \code{0} modifier is used with \plc{type} of \code{a}, {\pcode{\{thread\_affinity\}}},
-\code{h}, {\pcode{\{host\}}}, or a type that is not printed as a number, the
+If the \code{0} modifier is used with \plc{type} of \code{A}, {\pcode{\{thread\_affinity\}}},
+\code{H}, {\pcode{\{host\}}}, or a type that is not printed as a number, the
 result is unspecified.
 Any other characters in the format string that are not part of a field specifier will be included literally
 in the output.
@@ -889,16 +892,17 @@ in the output.
 \tablelasttail{\hline}
 \tablecaption{Available Field Types for Formatting OpenMP Thread Affinity Information \label{tab:Available Field Types for Formatting OpenMP Thread Affinity Information}}
 \begin{supertabular}{ p{0.06\textwidth} p{0.24\textwidth} p{0.6\textwidth}}
-{\scode{L}} & {\scode{thread_level}} & The value returned by {\scode{omp_get_level()}}. \\
+{\scode{t}} & {\scode{team_num}} &  The value returned by {\scode{omp_get_team_num()}}. \\
+{\scode{T}} & {\scode{num_teams}} & The value returned by {\scode{omp_get_num_teams()}}. \\
+{\scode{L}} & {\scode{nesting_level}} & The value returned by {\scode{omp_get_level()}}. \\
 {\scode{n}} & {\scode{thread_num}} &  The value returned by {\scode{omp_get_thread_num()}}. \\
-{\scode{h}} & {\scode{host}} & The name for the host machine on which the OpenMP program is running. \\
-{\scode{P}} & {\scode{process_id}} & The process identifier used by the implementation. \\
-{\scode{T}} & {\scode{thread_identifier}} & The thread identifier for a native thread defined by the implementation. \\
 {\scode{N}} & {\scode{num_threads}} & The value returned by {\scode{omp_get_num_threads()}}. \\
-{\scode{A}} & {\scode{ancestor_tnum}} & The value returned by {\scode{omp_get_ancestor_thread_num(}\splc{level}\scode{)}}, where {\splc{level}} is
+{\scode{a}} & {\scode{ancestor_tnum}} & The value returned by {\scode{omp_get_ancestor_thread_num(}\splc{level}\scode{)}}, where {\splc{level}} is
 {\scode{omp_get_level()}} minus 1. \\
-{\scode{a}} & {\scode{thread_affinity}} & The list of numerical identifiers, in the format of a comma-separated list of integers or integer ranges, representing processors on which a thread may execute, subject to OpenMP thread affinity control and/or other external affinity mechanisms. \\
-
+{\scode{H}} & {\scode{host}} & The name for the host machine on which the OpenMP program is running. \\
+{\scode{P}} & {\scode{process_id}} & The process identifier used by the implementation. \\
+{\scode{i}} & {\scode{native_thread_id}} & The native thread identifier used by the implementation. \\
+{\scode{A}} & {\scode{thread_affinity}} & The list of numerical identifiers, in the format of a comma-separated list of integers or integer ranges, representing processors on which a thread may execute, subject to OpenMP thread affinity control and/or other external affinity mechanisms. \\
 \end{supertabular}
 
 \linenumbers
@@ -919,7 +923,7 @@ affinity information.
 Example:
 \begin{ompEnv}
 setenv OMP_AFFINITY_FORMAT
-       "Thread Affinity: %0.3L %.8n %.15{thread_affinity} %.12h"
+       "Thread Affinity: %0.3L %.8n %.15{thread_affinity} %.12H"
 \end{ompEnv}
 
 The above example causes an OpenMP implementation to display OpenMP thread affinity information in the following form:
