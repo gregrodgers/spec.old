@@ -106,6 +106,8 @@ attributes as follows:
       has a base pointer, and the base pointer is a scalar variable that 
       does not appear in a \code{map} clause on the construct, the base 
       pointer is firstprivate.
+\item If a list item in a \code{reduction} or \code{in_reduction} clause on a
+      construct has a base pointer then the base pointer is private.
 \end{itemize}
 \end{ccppspecific}
 
@@ -1521,8 +1523,9 @@ The restrictions common to reduction clauses are as follows:
       expression must be a base language identifier.
 \item If a list item is an array section, it must specify contiguous storage
       and it cannot be a zero-length array section.
-\item If a list item is an array section, accesses to the elements of the array
-      outside the specified array section result in unspecified behavior.
+\item If a list item is an array section or an array element, accesses to the
+      elements of the array outside the specified array section or array
+      element result in unspecified behavior.
 
 \begin{cspecific}
 \item A variable that is part of another variable, with the exception of array
@@ -1739,6 +1742,10 @@ The restrictions to the \code{reduction} clause are as follows:
 \item A list item that appears in a \code{reduction} clause of a worksharing
       construct must be shared in the \code{parallel} region to which a corresponding
       worksharing region binds.
+\item If a list item that appears in a \code{reduction} clause of a worksharing
+      construct or \code{loop} construct for which the corresponding region binds to a
+      parallel region is an array section or an array element, all threads
+      that participate in the reduction must specify the same storage location.
 \item A list item that appears in a \code{reduction} clause with the \code{inscan} 
       \plc{reduction-modifier} must appear as a list item in an \code{inclusive} or
       \code{exclusive} clause on a \code{scan} directive enclosed by the construct.
@@ -1762,8 +1769,14 @@ The restrictions to the \code{reduction} clause are as follows:
       clause if the \code{nowait} clause is specified on the same construct.
 
 \begin{ccppspecific}
-\item If a list item in a \code{reduction} clause on a worksharing construct has a 
-      reference type then it must bind to the same object for all threads of the team.
+\item If a list item in a \code{reduction} clause on a worksharing construct
+      or \code{loop} construct for which the corresponding region binds to a
+      parallel region has a reference type then it must bind to the same object
+      for all threads of the team.
+\item If a list item in a \code{reduction} clause on a worksharing construct
+      or \code{loop} construct for which the corresponding region binds to a
+      parallel region is an array section or an array element then the base
+      pointer must point to the same variable for all threads of the team.
 \item A variable of class type (or array thereof) that appears in a \code{reduction} 
       clause with the \code{inscan} \plc{reduction-modifier} requires an accessible, 
       unambiguous default constructor for the class type. The number of calls to the 
