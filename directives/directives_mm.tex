@@ -121,7 +121,9 @@ threads may use the allocator. The values and their description are:
 \end{itemize}
 
 Allocated memory will be byte aligned to at least the value specified for the 
-{\scode{alignment}} trait of the allocator.
+{\scode{alignment}} trait of the allocator. Some directives and API routines
+can specify additional requirements on alignment beyond those described in 
+this section.
 
 Memory allocated by allocators with the \scode{access} trait defined to be 
 \scode{all} must be accessible by all threads in the device where the allocation 
@@ -310,17 +312,19 @@ through a memory allocator. If no clause is specified then the memory allocator
 specified by the \plc{def-allocator-var} ICV will be used. If the \code{allocator} 
 clause is specified, the memory allocator specified in the clause will be used. 
 If a memory allocator is unable to fulfill the allocation request for any list 
-item, the behavior is implementation defined.
+item, the behavior is implementation defined. The allocation of each \plc{list item} 
+will be byte aligned to at least the alignment required by the
+base language for the type of that \plc{list item}.
 
 The scope of this allocation is that of the list item in the base language. At 
 the end of the scope for a given list item the memory allocator used to allocate 
 that list item deallocates the storage.
 
 \begin{fortranspecific}
-If the directive is associated with an \code{allocate} statement, the same list 
-items appearing in the directive list and the \code{allocate} statement list are 
+If the directive is associated with an \plc{allocate statement}, the same list 
+items appearing in the directive list and the \plc{allocate statement} list are 
 allocated with the memory allocator of the directive. If no list items are 
-specified then all variables listed in the \code{allocate} statement are 
+specified then all variables listed in the \plc{allocate statement} are 
 allocated with the memory allocator of the directive.
 \end{fortranspecific}
 
@@ -331,8 +335,8 @@ fallback allocator trait will behave as if the \scode{abort_fb} had been specifi
 \begin{itemize}
 \item A variable that is part of another variable (as an array or structure 
       element) cannot appear in an \code{allocate} directive.
-\item The directive must appear in the same scope of the \plc{list item} 
-      declaration and before its first use.
+\item The \code{allocate} directive must appear in the same scope as the 
+      declarations of each of its list items and must follow all such declarations.
 \item At most one \code{allocator} clause can appear on the \code{allocate} directive.
 \item \code{allocate} directives that appear in a \code{target} region must specify 
       an \code{allocator} clause unless a \code{requires} directive with the 
@@ -341,20 +345,25 @@ fallback allocator trait will behave as if the \scode{abort_fb} had been specifi
 \begin{ccppspecific}
 \item If a list item has a static storage type, only predefined memory allocator 
       variables can be used in the \code{allocator} clause.
+\item If after a \plc{list item} has been allocated the scope that 
+      contains the \code{allocate} directive ends abnormally 
+      other than through C++ exceptions, such as through a 
+      call to the \code{longjmp} function, then the behavior 
+      is unspecified.
 \end{ccppspecific}
 
 \begin{fortranspecific}
 \item List items specified in the \code{allocate} directive must not have the 
       \code{ALLOCATABLE} attribute unless the directive is associated with an 
-      \code{allocate} statement.
+      \plc{allocate statement}.
 \item List items specified in an \code{allocate} directive that is associated 
-      with an \code{allocate} statement must be variables that are allocated 
-      by the \code{allocate} statement.
-\item Multiple directives can only be associated with an \code{allocate} 
-      statement if list items are specified on each \code{allocate} directive.
+      with an \plc{allocate statement} must be variables that are allocated 
+      by the \plc{allocate statement}.
+\item Multiple directives can only be associated with an \plc{allocate 
+      statement} if list items are specified on each \code{allocate} directive.
 \item If a list item has the \code{SAVE} attribute, is a common block name, or 
       is declared in the scope of a module, then only predefined memory allocator 
-      variables can be used in the \code{allocator} clause.
+      parameters can be used in the \code{allocator} clause.
 \item A type parameter inquiry cannot appear in an \code{allocate} directive.
 \end{fortranspecific}
 \end{itemize}
@@ -403,7 +412,11 @@ is specified in the clause, that allocator will be used for allocations. For
 all directives except the \code{target} directive, if no \plc{allocator} is 
 specified in the clause then the memory allocator that is specified by the 
 \plc{def-allocator-var} ICV will be used for the list items that are specified 
-in the \code{allocate} clause. If a memory allocator is unable to fulfill the 
+in the \code{allocate} clause. The allocation of each \plc{list item} 
+will be byte aligned to at least the alignment required by the
+base language for the type of that \plc{list item}.
+
+If a memory allocator is unable to fulfill the 
 allocation request for any list item, the behavior is implementation defined.
 
 For allocations that arise from this clause the \scode{null_fb} value of the 
