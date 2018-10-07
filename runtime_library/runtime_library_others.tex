@@ -46,127 +46,113 @@
 \section{Lock Routines}
 \index{lock routines}
 \label{sec:Lock Routines}
-
-
-
-The OpenMP runtime library includes a set of general-purpose lock routines that can be
-used for synchronization. These general-purpose lock routines operate on OpenMP locks
-that are represented by OpenMP lock variables. OpenMP lock variables must be
-accessed only through the routines described in this section; programs that otherwise
+The OpenMP runtime library includes a set of general-purpose lock 
+routines that can be used for synchronization. These general-purpose 
+lock routines operate on OpenMP locks that are represented by OpenMP 
+lock variables. OpenMP lock variables must be accessed only through 
+the routines described in this section; programs that otherwise
 access OpenMP lock variables are non-conforming.
 
-An OpenMP lock can be in one of the following states: \emph{uninitialized}, \emph{unlocked}, or
-\emph{locked}. If a lock is in the \emph{unlocked} state, a task can \emph{set} the lock, which changes its state
-to \emph{locked}. The task that sets the lock is then said to \emph{own} the lock. A task that owns a
-lock can \emph{unset} that lock, returning it to the \emph{unlocked} state. A program in which a task
-unsets a lock that is owned by another task is non-conforming.
+An OpenMP lock can be in one of the following states: \emph{uninitialized}; 
+\emph{unlocked}; or \emph{locked}. If a lock is in the \emph{unlocked} state, 
+a task can \emph{set} the lock, which changes its state to \emph{locked}. 
+The task that sets the lock is then said to \emph{own} the lock. A task 
+that owns a lock can \emph{unset} that lock, returning it to the 
+\emph{unlocked} state. A program in which a task unsets a lock that is 
+owned by another task is non-conforming.
 
-Two types of locks are supported: \emph{simple locks} and \emph{nestable locks}. A \emph{nestable lock} can
-be set multiple times by the same task before being unset; a \emph{simple lock} cannot be set if
-it is already owned by the task trying to set it. \emph{Simple lock} variables are associated with
-\emph{simple locks} and can only be passed to \emph{simple lock} routines. \emph{Nestable lock} variables are
-associated with \emph{nestable locks} and can only be passed to \emph{nestable lock} routines.
+Two types of locks are supported: \emph{simple locks} and \emph{nestable locks}. 
+A \emph{nestable lock} can be set multiple times by the same task before being 
+unset; a \emph{simple lock} cannot be set if it is already owned by the task 
+trying to set it. \emph{Simple lock} variables are associated with 
+\emph{simple locks} and can only be passed to \emph{simple lock} routines. 
+\emph{Nestable lock} variables are associated with \emph{nestable locks} and 
+can only be passed to \emph{nestable lock} routines.
 
-Each type of lock can also have a \emph{synchronization hint} that contains information about the intended usage
-of the lock by the application code.  The effect of the hint is
-implementation defined.  An OpenMP implementation can use this hint to select a
-usage-specific lock, but hints do not change the mutual exclusion semantics of locks.
-A conforming implementation can safely ignore the hint.
+Each type of lock can also have a \emph{synchronization hint} that contains 
+information about the intended usage of the lock by the application code.  
+The effect of the hint is implementation defined.  An OpenMP implementation 
+can use this hint to select a usage-specific lock, but hints do not change 
+the mutual exclusion semantics of locks. A conforming implementation can 
+safely ignore the hint.
 
-Constraints on the state and ownership of the lock accessed by each of the lock routines
-are described with the routine. If these constraints are not met, the behavior of the
-routine is unspecified.
+Constraints on the state and ownership of the lock accessed by each of the 
+lock routines are described with the routine. If these constraints are not 
+met, the behavior of the routine is unspecified.
 
 The OpenMP lock routines access a lock variable such that they always read
-and update the most current value of the lock variable. It is not necessary for an
-OpenMP program to include explicit \code{flush} directives to ensure that the lock variable's
-value is consistent among different tasks.
-
-
+and update the most current value of the lock variable. It is not necessary 
+for an OpenMP program to include explicit \code{flush} directives to ensure 
+that the lock variable's value is consistent among different tasks.
 
 \binding
-The binding thread set for all lock routine regions is all threads in the contention group.
-As a consequence, for each OpenMP lock, the lock routine effects relate to all tasks that
-call the routines, without regard to which teams the threads in the contention group
-executing the tasks belong.
-
-
-
+The binding thread set for all lock routine regions is all threads in the 
+contention group. As a consequence, for each OpenMP lock, the lock routine 
+effects relate to all tasks that call the routines, without regard to which 
+teams the threads in the contention group that are executing the tasks belong.
 
 \littleheader{Simple Lock Routines}
 \index{Simple Lock Routines}
 \begin{ccppspecific}
-The type \code{omp_lock_t} represents a simple lock. For the
-following routines, a simple lock variable must be of \code{omp_lock_t} type. All simple
-lock routines require an argument that is a pointer to a variable of type \code{omp_lock_t}.
+The type \code{omp_lock_t} represents a simple lock. For the following 
+routines, a simple lock variable must be of \code{omp_lock_t} type. All 
+simple lock routines require an argument that is a pointer to a variable 
+of type \code{omp_lock_t}. 
 \end{ccppspecific}
 
 \begin{fortranspecific}
-For the following routines, a simple lock variable must be an integer variable of
-\code{kind=omp_lock_kind}.
+For the following routines, a simple lock variable must be an integer 
+variable of \code{kind=omp_lock_kind}.
 \end{fortranspecific}
 
 The simple lock routines are as follows:
 
 \begin{itemize}
-\item The \code{omp_init_lock} routine initializes a simple lock.
-
-\item The \code{omp_init_lock_with_hint} routine initializes a simple lock and attaches a hint to it.
-
-\item The \code{omp_destroy_lock} routine uninitializes a simple lock.
-
-\item The \code{omp_set_lock} routine waits until a simple lock is available, and then sets it.
-
-\item The \code{omp_unset_lock} routine unsets a simple lock.
-
-\item The \code{omp_test_lock} routine tests a simple lock, and sets it if it is available.
+\item The \code{omp_init_lock} routine initializes a simple lock;
+\item The \code{omp_init_lock_with_hint} routine initializes a simple 
+      lock and attaches a hint to it;
+\item The \code{omp_destroy_lock} routine uninitializes a simple lock;
+\item The \code{omp_set_lock} routine waits until a simple lock is 
+      available and then sets it;
+\item The \code{omp_unset_lock} routine unsets a simple lock; and
+\item The \code{omp_test_lock} routine tests a simple lock and sets 
+      it if it is available.
 \end{itemize}
 
 \littleheader{Nestable Lock Routines}
 \begin{ccppspecific}
-The type \code{omp_nest_lock_t} represents a nestable lock.
-For the following routines, a nestable lock variable must be of \code{omp_nest_lock_t} type.
-All nestable lock routines require an argument that is a pointer to a variable of type
-\code{omp_nest_lock_t}.
+The type \code{omp_nest_lock_t} represents a nestable lock. For the 
+following routines, a nestable lock variable must be of 
+\code{omp_nest_lock_t} type. All nestable lock routines require an 
+argument that is a pointer to a variable of type \code{omp_nest_lock_t}.
 \end{ccppspecific}
 
 \begin{fortranspecific}
-For the following routines, a nestable lock variable must be an integer variable of
-\code{kind=omp_nest_lock_kind}.
+For the following routines, a nestable lock variable must be an 
+integer variable of \code{kind=omp_nest_lock_kind}.
 \end{fortranspecific}
 
 The nestable lock routines are as follows:
 
 \begin{itemize}
-\item The \code{omp_init_nest_lock} routine initializes a nestable lock.
-
-\item The \code{omp_init_nest_lock_with_hint} routine initializes a nestable lock and attaches a hint to it.
-
-\item The \code{omp_destroy_nest_lock} routine uninitializes a nestable lock.
-
-\item The \code{omp_set_nest_lock} routine waits until a nestable lock is available, and then
-sets it.
-
-\item The \code{omp_unset_nest_lock} routine unsets a nestable lock.
-
-\item The \code{omp_test_nest_lock} routine tests a nestable lock, and sets it if it is
-available
+\item The \code{omp_init_nest_lock} routine initializes a nestable lock;
+\item The \code{omp_init_nest_lock_with_hint} routine initializes a 
+      nestable lock and attaches a hint to it;
+\item The \code{omp_destroy_nest_lock} routine uninitializes a nestable lock;
+\item The \code{omp_set_nest_lock} routine waits until a nestable lock 
+      is available and then sets it;
+\item The \code{omp_unset_nest_lock} routine unsets a nestable lock; and
+\item The \code{omp_test_nest_lock} routine tests a nestable lock and 
+      sets it if it is available.
 \end{itemize}
 
 \restrictions
-OpenMP lock routines have the following restrictions:
+OpenMP lock routines have the following restriction:
 
 \begin{itemize}
-\item The use of the same OpenMP lock in different contention groups results in
-unspecified behavior.
+\item The use of the same OpenMP lock in different contention groups 
+      results in unspecified behavior.
 \end{itemize}
-
-
-
-
-
-
-
 
 
 
@@ -196,43 +182,38 @@ integer (kind=omp_nest_lock_kind) \plc{nvar}
 \end{fortranspecific}
 
 \constraints
-A program that accesses a lock that is not in the uninitialized state through either routine
-is non-conforming.
+A program that accesses a lock that is not in the uninitialized state 
+through either routine is non-conforming.
 
 \effect
-The effect of these routines is to initialize the lock to the unlocked state; that is, no task
-owns the lock. In addition, the nesting count for a nestable lock is set to zero.
+The effect of these routines is to initialize the lock to the unlocked 
+state; that is, no task owns the lock. In addition, the nesting count 
+for a nestable lock is set to zero.
 
 \events
-
-The \plc{lock-init} or \plc{nest-lock-init} event occurs in the thread
-executing a \code{omp_init_lock} or \code{omp_init_nest_lock} region
-after initialization of the lock, but before finishing the region.
+The \plc{lock-init} event occurs in a thread that executes an 
+\code{omp_init_lock} region after initialization of the lock, but 
+before it finishes the region. The \plc{nest-lock-init} event occurs 
+in a thread that executes an \code{omp_init_nest_lock} region
+after initialization of the lock, but before it finishes the region.
 
 \tools
-
-A thread dispatches a registered \code{ompt_callback_lock_init}
-callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
-The callbacks occur in the task encountering the routine.
-The callback receives \code{omp_sync_hint_none} as
-\plc{hint} argument and
-\code{ompt_mutex_lock} or
- \code{ompt_mutex_nest_lock} as \plc{kind} argument as appropriate.
+A thread dispatches a registered \code{ompt_callback_lock_init} 
+callback with \code{omp_sync_hint_none} as the \plc{hint} argument 
+and \code{ompt_mutex_lock} as the \plc{kind} argument for each 
+occurrence of a \plc{lock-init} event in that thread. Similarly, 
+a thread dispatches a registered \code{ompt_callback_lock_init} 
+callback with \code{omp_sync_hint_none} as the \plc{hint} argument 
+and \code{ompt_mutex_nest_lock} as the \plc{kind} argument for each 
+occurrence of a \plc{nest-lock-init} event in that thread. These 
+callbacks have the type signature \code{ompt_callback_mutex_acquire_t}
+and occur in the task that encounters the routine.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callback_mutex_acquire_t}, see
 \specref{sec:ompt_callback_mutex_acquire_t}.
 \end{itemize}
-
-
-
-
-
-
-
-
 
 
 
@@ -243,10 +224,9 @@ The callback receives \code{omp_sync_hint_none} as
 \index{omp_init_lock@{\code{omp_init_lock}}}
 \index{omp_init_nest_lock@{\code{omp_init_nest_lock}}}
 \summary
-These routines initialize an OpenMP lock with a hint.
-The effect of the hint is implementation-defined. The OpenMP implementation
+These routines initialize an OpenMP lock with a hint. The effect 
+of the hint is implementation-defined. The OpenMP implementation
 can ignore the hint without changing program semantics.
-
 
 \format
 \begin{ccppspecific}
@@ -276,36 +256,41 @@ integer (kind=omp_sync_hint_kind) \plc{hint}
 \end{fortranspecific}
 
 \constraints
-A program that accesses a lock that is not in the uninitialized state through either routine
-is non-conforming.
+A program that accesses a lock that is not in the uninitialized 
+state through either routine is non-conforming.
 
 The second argument passed to these routines (\plc{hint}) is a hint
 as described in \specref{subsec:Synchronization Hints}.
 
 \effect
-The effect of these routines is to initialize the lock to the unlocked state and, optionally, to choose a specific lock implementation based on the hint.
-After initialization no task owns the lock. In addition, the nesting count for a nestable lock is set to zero.
+The effect of these routines is to initialize the lock to the unlocked 
+state and, optionally, to choose a specific lock implementation based 
+on the hint. After initialization no task owns the lock. In addition, 
+the nesting count for a nestable lock is set to zero.
 
 \events
-
-The \plc{lock-init} or \plc{nest-lock-init} event occurs in the thread
-executing a \code{omp_init_lock_with_hint} or \code{omp_init_nest_lock_with_hint} region
-after initialization of the lock, but before finishing the region.
+The \plc{lock-init} event occurs in a thread that executes an 
+\code{omp_init_lock_with_hint} region after initialization of the 
+lock, but before it finishes the region. The \plc{nest-lock-init_with_hint} 
+event occurs in a thread that executes an \code{omp_init_nest_lock} 
+region after initialization of the lock, but before it finishes the region.
 
 \tools
-
-A thread dispatches a registered \code{ompt_callback_lock_init}
-callback for each occurrence of a \plc{lock-init} or \plc{nest-lock-init} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
-The callbacks occur in the task encountering the routine.
-The callback receives the function's \plc{hint} argument as
-\plc{hint} argument and
-\code{ompt_mutex_lock} or
- \code{ompt_mutex_nest_lock} as \plc{kind} argument as appropriate.
+A thread dispatches a registered \code{ompt_callback_lock_init} 
+callback with the function's \plc{hint} argument as the \plc{hint} argument 
+and \code{ompt_mutex_lock} as the \plc{kind} argument for each 
+occurrence of a \plc{lock-init} event in that thread. Similarly, 
+a thread dispatches a registered \code{ompt_callback_lock_init} 
+callback with the function's \plc{hint} argument as the \plc{hint} argument 
+and \code{ompt_mutex_nest_lock} as the \plc{kind} argument for each 
+occurrence of a \plc{nest-lock-init} event in that thread. These 
+callbacks have the type signature \code{ompt_callback_mutex_acquire_t}
+and occur in the task that encounters the routine.
 
 \crossreferences
 \begin{itemize}
 \item Synchronization Hints, see \specref{subsec:Synchronization Hints}.
+
 \item \code{ompt_callback_mutex_acquire_t}, see
 \specref{sec:ompt_callback_mutex_acquire_t}.
 \end{itemize}
@@ -338,39 +323,33 @@ integer (kind=omp_nest_lock_kind) \plc{nvar}
 \end{fortranspecific}
 
 \constraints
-A program that accesses a lock that is not in the unlocked state through either routine is
-non-conforming.
+A program that accesses a lock that is not in the unlocked state 
+through either routine is non-conforming.
 
 \effect
 The effect of these routines is to change the state of the lock to uninitialized.
 
 \events
-
-The \plc{lock-destroy} or \plc{nest-lock-destroy} event occurs in the thread
-executing a \code{omp_destroy_lock} or \code{omp_destroy_nest_lock} region
-before finishing the region.
+The \plc{lock-destroy} event occurs in a thread that executes an 
+\code{omp_destroy_lock} region before it finishes the region. The 
+\plc{nest-lock-destroy_with_hint} event occurs in a thread that 
+executes an \code{omp_destroy_nest_lock} region before it finishes the region.
 
 \tools
-
-A thread dispatches a registered \code{ompt_callback_lock_destroy}
-callback for each occurrence of a \plc{lock-destroy} or \plc{nest-lock-destroy} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
-The callbacks occur in the task encountering the routine.
-The callbacks receive \code{ompt_mutex_lock} or
- \code{ompt_mutex_nest_lock} as their \plc{kind} argument as appropriate.
-
+A thread dispatches a registered \code{ompt_callback_lock_destroy} 
+callback with \code{ompt_mutex_lock} as the \plc{kind} argument for each 
+occurrence of a \plc{lock-destroy} event in that thread. Similarly, 
+a thread dispatches a registered \code{ompt_callback_lock_destroy} 
+callback with \code{ompt_mutex_nest_lock} as the \plc{kind} argument for each 
+occurrence of a \plc{nest-lock-destroy} event in that thread. These 
+callbacks have the type signature \code{ompt_callback_mutex_acquire_t}
+and occur in the task that encounters the routine.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callback_mutex_t}, see
 \specref{sec:ompt_callback_mutex_t}.
 \end{itemize}
-
-
-
-
-
-
 
 
 
@@ -402,84 +381,80 @@ integer (kind=omp_nest_lock_kind) \plc{nvar}
 \end{fortranspecific}
 
 \constraints
-A program that accesses a lock that is in the uninitialized state through either routine is
-non-conforming. A simple lock accessed by \code{omp_set_lock} that is in the locked state
-must not be owned by the task that contains the call or deadlock will result.
+A program that accesses a lock that is in the uninitialized state 
+through either routine is non-conforming. A simple lock accessed by 
+\code{omp_set_lock} that is in the locked state must not be owned 
+by the task that contains the call or deadlock will result.
 
 \effect
 Each of these routines has an effect equivalent to suspension of the task
-executing the routine until the specified lock is available.
+that is executing the routine until the specified lock is available.
 
-% However, the
-% task region may continue to execute speculatively, provided that the
-% implementation ensures that execution is as if the lock were owned
-% exclusively by one thread.
-
-% A note because it's only explanatory. The as-ifness already allows
-% this via the ``equivalent to''
-\begin{note} The semantics of these routines is specified
-\emph{as if} they serialize execution of the region guarded by the
-lock. However, implementations may implement them in other ways
-provided that the isolation properties are respected so that the
-actual execution delivers a result that could arise from some
-serialization.
+\begin{note} The semantics of these routines is specified \emph{as if} 
+they serialize execution of the region guarded by the lock. However, 
+implementations may implement them in other ways provided that the 
+isolation properties are respected so that the actual execution 
+delivers a result that could arise from some serialization.
 \end{note}
 
 A simple lock is available if it is unlocked. Ownership of the lock is
-granted to the task executing the routine.
+granted to the task that executes the routine.
 
 A nestable lock is available if it is unlocked or if it is already owned by
-the task executing the routine. The task executing the routine is granted,
+the task that executes the routine. The task that executes the routine is granted,
 or retains, ownership of the lock, and the nesting count for the lock is
 incremented.
 
 \events
+The \plc{lock-acquire} event occurs in a thread that executes an 
+\code{omp_set_lock} region before the associated lock is requested.
+The \plc{nest-lock-acquire} event occurs in a thread that executes
+an \code{omp_set_nest_lock} region before the associated lock is requested.
 
-The \plc{lock-acquire} or \plc{nest-lock-acquire} event occurs in the thread
-executing a \code{omp_set_lock} or \code{omp_set_nest_lock} region
-before the associated lock is requested.
+The \plc{lock-acquired} event occurs in a thread that executes an 
+\code{omp_set_lock} region after it acquires the associated lock but 
+before it finishes the region. The \plc{nest-lock-acquired} event occurs 
+in a thread that executes an \code{omp_set_nest_lock} region if the 
+thread did not already own the lock, after it acquires the associated 
+lock but before it finishes the region.
 
-The \plc{lock-acquired} or \plc{nest-lock-acquired} event occurs in the thread
-executing a \code{omp_set_lock} or \code{omp_set_nest_lock} region
-after acquiring the associated lock, if the thread did not already own the lock,
-but before finishing the region.
-
-The \plc{nest-lock-owned} event occurs in the thread
-executing a \code{omp_set_nest_lock} region
-when the thread already owned the lock,
-before finishing the region.
-
+The \plc{nest-lock-owned} event occurs in a thread when it already owns the 
+lock and executes an \code{omp_set_nest_lock} region. The event occurs after 
+the nesting count is incremented but before the thread finishes the region.
 
 \tools
-
 A thread dispatches a registered \code{ompt_callback_mutex_acquire}
-callback for each occurrence of a \plc{lock-acquire} or \plc{nest-lock-acquire} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
+callback for each occurrence of a \plc{lock-acquire} or \plc{nest-lock-acquire} 
+event in that thread.  This callback has the type signature 
+\code{ompt_callback_mutex_acquire_t}.
 
 A thread dispatches a registered \code{ompt_callback_mutex_acquired}
-callback for each occurrence of a \plc{lock-acquired} or \plc{nest-lock-acquired} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+callback for each occurrence of a \plc{lock-acquired} or \plc{nest-lock-acquired} 
+event in that thread.  This callback has the type signature 
+\code{ompt_callback_mutex_t}.
 
 A thread dispatches a registered \code{ompt_callback_nest_lock}
-callback for each occurrence of a \plc{nest-lock-owned} event
-in that thread. This callback has the type signature \code{ompt_callback_nest_lock_t}.
-The callback receives \code{ompt_scope_begin} as its \plc{endpoint} argument.
+callback with \code{ompt_scope_begin} as its \plc{endpoint} argument
+for each occurrence of a \plc{nest-lock-owned} event in that thread. 
+This callback has the type signature \code{ompt_callback_nest_lock_t}.
 
-The callbacks occur in the task encountering
-the lock function.  The callbacks receive \code{ompt_mutex_lock} or
- \code{ompt_mutex_nest_lock} as their \plc{kind} argument, as appropriate.
-
+The above callbacks occur in the task that encounters the lock function.  
+The \plc{kind} argument of these callbacks is \code{ompt_mutex_lock} when
+the events arise from an \code{omp_set_lock} region while it is 
+ \code{ompt_mutex_nest_lock} when the events arise from an 
+\code{omp_set_nest_lock} region.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callback_mutex_acquire_t}, see
 \specref{sec:ompt_callback_mutex_acquire_t}.
+
 \item \code{ompt_callback_mutex_t}, see
 \specref{sec:ompt_callback_mutex_t}.
+
 \item \code{ompt_callback_nest_lock_t}, see
 \specref{sec:ompt_callback_nest_lock_t}.
 \end{itemize}
-
 
 
 
@@ -498,7 +473,6 @@ void omp_unset_nest_lock(omp_nest_lock_t *\plc{lock});
 \end{ompcFunction}
 \end{ccppspecific}
 
-
 \begin{fortranspecific}
 \begin{ompfSubroutine}
 subroutine omp_unset_lock(\plc{svar})
@@ -514,58 +488,52 @@ A program that accesses a lock that is not in the locked state or that is
 not owned by the task that contains the call through either routine is
 non-conforming.
 
-% Jim Cownie: I don't believe we need anything more about speculation
-% here. It has to behave ``as-if'' it held the lock, and released it
-% here, and that's what we say happens.
-
 \effect
-For a simple lock, the \code{omp_unset_lock} routine causes the lock to become unlocked.
+For a simple lock, the \code{omp_unset_lock} routine causes the lock to 
+become unlocked.
 
-For a nestable lock, the \code{omp_unset_nest_lock} routine decrements the nesting
-count, and causes the lock to become unlocked if the resulting nesting count is zero.
+For a nestable lock, the \code{omp_unset_nest_lock} routine decrements 
+the nesting count, and causes the lock to become unlocked if the resulting 
+nesting count is zero.
 
 For either routine, if the lock becomes unlocked, and if one or more task
 regions were effectively suspended because the lock was unavailable, the
 effect is that one task is chosen and given ownership of the lock.
 
 \events
+The \plc{lock-release} event occurs in a thread that executes an 
+\code{omp_unset_lock} region after it releases the associated lock but 
+before it finishes the region. The \plc{nest-lock-release} event occurs 
+in a thread that executes an \code{omp_unset_nest_lock} region after it 
+releases the associated lock but before it finishes the region.
 
-The \plc{lock-release} or \plc{nest-lock-release} event occurs in the thread
-executing a \code{omp_unset_lock} or \code{omp_unset_nest_lock} region
-after releasing the associated lock, but before finishing the region.
-
-The \plc{nest-lock-held} event occurs in the thread
-executing a \code{omp_unset_nest_lock} region
-when the thread still owns the lock,
-before finishing the region.
-
+The \plc{nest-lock-held} event occurs in a thread that executes an 
+\code{omp_unset_nest_lock} region before it finishes the region  when 
+the thread still owns the lock after the nesting count is decremented.
 
 \tools
-
 A thread dispatches a registered \code{ompt_callback_mutex_released}
-callback for each occurrence of a \plc{lock-release} or \plc{nest-lock-release} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
-The callback occurs in the task encountering
-the routine. The callback receives \code{ompt_mutex_lock} or
- \code{ompt_mutex_nest_lock} as \plc{kind} argument as appropriate.
+callback with \code{ompt_mutex_lock} as the \plc{kind} argument for 
+each occurrence of a \plc{lock-release} event in that thread. Similarly,
+a thread dispatches a registered \code{ompt_callback_mutex_released}
+callback with \code{ompt_mutex_nest_lock} as the \plc{kind} argument for 
+each occurrence of a \plc{nest-lock-release} event in that thread.
+These callbacks have the type signature \code{ompt_callback_mutex_t}
+and occur in the task that encounters the routine.
 
 A thread dispatches a registered \code{ompt_callback_nest_lock}
-callback for each occurrence of a \plc{nest-lock-held} event
-in that thread. This callback has the type signature \code{ompt_callback_nest_lock_t}.
-The callback receives \code{ompt_scope_end} as its \plc{endpoint} argument.
+callback with \code{ompt_scope_end} as its \plc{endpoint} argument
+for each occurrence of a \plc{nest-lock-held} event in that thread. 
+This callback has the type signature \code{ompt_callback_nest_lock_t}.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callback_mutex_t}, see
 \specref{sec:ompt_callback_mutex_t}.
+
 \item \code{ompt_callback_nest_lock_t}, see
 \specref{sec:ompt_callback_nest_lock_t}.
 \end{itemize}
-
-
-
-
-
 
 
 
@@ -574,8 +542,8 @@ The callback receives \code{ompt_scope_end} as its \plc{endpoint} argument.
 \index{omp_test_lock@{\code{omp_test_lock}}}
 \index{omp_test_nest_lock@{\code{omp_test_nest_lock}}}
 \summary
-These routines attempt to set an OpenMP lock but do not suspend execution of the task
-executing the routine.
+These routines attempt to set an OpenMP lock but do not suspend execution 
+of the task that executes the routine.
 
 \format
 \begin{ccppspecific}
@@ -595,66 +563,74 @@ integer (kind=omp_nest_lock_kind) \plc{nvar}
 \end{fortranspecific}
 
 \constraints
-A program that accesses a lock that is in the uninitialized state through either routine is
-non-conforming. The behavior is unspecified if a simple lock accessed by
-\code{omp_test_lock} is in the locked state and is owned by the task that contains the call.
+A program that accesses a lock that is in the uninitialized state 
+through either routine is non-conforming. The behavior is unspecified 
+if a simple lock accessed by \code{omp_test_lock} is in the locked state 
+and is owned by the task that contains the call.
 
 \effect
-These routines attempt to set a lock in the same manner as \code{omp_set_lock} and
-\code{omp_set_nest_lock}, except that they do not suspend execution of the task
-executing the routine.
+These routines attempt to set a lock in the same manner as \code{omp_set_lock} 
+and \code{omp_set_nest_lock}, except that they do not suspend execution of the 
+task that executes the routine.
 
-For a simple lock, the \code{omp_test_lock} routine returns \plc{true} if the lock is successfully
-set; otherwise, it returns \plc{false}.
+For a simple lock, the \code{omp_test_lock} routine returns \plc{true} if 
+the lock is successfully set; otherwise, it returns \plc{false}.
 
-For a nestable lock, the \code{omp_test_nest_lock} routine returns the new nesting count
-if the lock is successfully set; otherwise, it returns zero.
+For a nestable lock, the \code{omp_test_nest_lock} routine returns the 
+new nesting count if the lock is successfully set; otherwise, it returns zero.
 
 \events
+The \plc{lock-test} event occurs in a thread that executes an 
+\code{omp_test_lock} region before the associated lock is tested.
+The \plc{nest-lock-test} event occurs in a thread that executes 
+an \code{omp_test_nest_lock} region before the associated lock is tested.
 
-The \plc{lock-test} or \plc{nest-lock-test} event occurs in the thread
-executing a \code{omp_test_lock} or \code{omp_test_nest_lock} region
-before the associated lock is tested.
+The \plc{lock-test-acquired} event occurs in a thread that executes an 
+\code{omp_test_lock} region before it finishes the region if the associated 
+lock was acquired. The \plc{nest-lock-test-acquired} event occurs in a 
+thread that executes an \code{omp_test_nest_lock} region before it finishes
+the region if the associated lock was acquired and the thread did not already 
+own the lock.
 
-The \plc{lock-test-acquired} or \plc{nest-lock-test-acquired} event occurs in the thread
-executing a \code{omp_test_lock} or \code{omp_test_nest_lock} region
-before finishing the region if the associated lock was acquired and the thread did not already own the lock.
-
-The \plc{nest-lock-owned} event occurs in the thread
-executing a \code{omp_test_nest_lock} region
-if the thread already owned the lock,
-before finishing the region.
-
+The \plc{nest-lock-owned} event occurs in a thread that executes an 
+\code{omp_test_nest_lock} region before it finishes the region after 
+the nesting count is incremented if the thread already owned the lock.
 
 \tools
-
 A thread dispatches a registered \code{ompt_callback_mutex_acquire}
-callback for each occurrence of a \plc{lock-test} or \plc{nest-lock-test} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_acquire_t}.
+callback for each occurrence of a \plc{lock-test} or \plc{nest-lock-test} 
+event in that thread. This callback has the type signature 
+\code{ompt_callback_mutex_acquire_t}.
 
 A thread dispatches a registered \code{ompt_callback_mutex_acquired}
-callback for each occurrence of a \plc{lock-test-acquired} or \plc{nest-lock-test-acquired} event
-in that thread.  This callback has the type signature \code{ompt_callback_mutex_t}.
+callback for each occurrence of a \plc{lock-test-acquired} or 
+\plc{nest-lock-test-acquired} event in that thread.  This callback has 
+the type signature \code{ompt_callback_mutex_t}.
 
 A thread dispatches a registered \code{ompt_callback_nest_lock}
-callback for each occurrence of a \plc{nest-lock-owned} event
-in that thread. This callback has the type signature \code{ompt_callback_nest_lock_t}.
-The callback receives \code{ompt_scope_begin} as its \plc{endpoint} argument.
+callback with \code{ompt_scope_begin} as its \plc{endpoint} argument
+for each occurrence of a \plc{nest-lock-owned} event in that thread. 
+This callback has the type signature \code{ompt_callback_nest_lock_t}.
 
-The callbacks occur in the task encountering
-the lock function.  The callbacks receive \code{ompt_mutex_lock} or
- \code{ompt_mutex_nest_lock} as their \plc{kind} argument, as appropriate.
-
+The above callbacks occur in the task that encounters the lock function.  
+The \plc{kind} argument of these callbacks is \code{ompt_mutex_test_lock} when
+the events arise from an \code{omp_test_lock} region while it is 
+\code{ompt_mutex_test_nest_lock} when the events arise from an 
+\code{omp_test_nest_lock} region.
 
 \crossreferences
 \begin{itemize}
 \item \code{ompt_callback_mutex_acquire_t}, see
 \specref{sec:ompt_callback_mutex_acquire_t}.
+
 \item \code{ompt_callback_mutex_t}, see
 \specref{sec:ompt_callback_mutex_t}.
+
 \item \code{ompt_callback_nest_lock_t}, see
 \specref{sec:ompt_callback_nest_lock_t}.
 \end{itemize}
+
+
 
 \section{Timing Routines}
 \index{timing routines}
@@ -662,14 +638,6 @@ the lock function.  The callbacks receive \code{ompt_mutex_lock} or
 \index{wall clock timer}
 \label{sec:Timing Routines}
 This section describes routines that support a portable wall clock timer.
-
-
-
-
-
-
-
-
 
 
 
@@ -693,18 +661,20 @@ double precision function omp_get_wtime()
 \end{fortranspecific}
 
 \binding
-The binding thread set for an \code{omp_get_wtime} region is the encountering thread. The
-routine's return value is not guaranteed to be consistent across any set of threads.
+The binding thread set for an \code{omp_get_wtime} region is the 
+encountering thread. The routine's return value is not guaranteed 
+to be consistent across any set of threads.
 
 \effect
-The \code{omp_get_wtime} routine returns a value equal to the elapsed wall clock time in
-seconds since some ``time in the past''. The actual ``time in the past'' is arbitrary, but it is
-guaranteed not to change during the execution of the application program. The time
-returned is a ``per-thread time'', so it is not required to be globally consistent across all
-threads participating in an application.
+The \code{omp_get_wtime} routine returns a value equal to the elapsed 
+wall clock time in seconds since some \emph{time-in-the-past}. The actual 
+\emph{time-in-the-past} is arbitrary, but it is guaranteed not to change 
+during the execution of the application program. The time returned is 
+a \emph{per-thread time}, so it is not required to be globally consistent 
+across all threads that participate in an application.
 
 \begin{note}
-It is anticipated that the routine will be used to measure elapsed times as shown
+The routine is anticipated to be used to measure elapsed times as shown
 in the following example:
 
 \begin{ccppspecific}
@@ -731,19 +701,12 @@ PRINT *, "Work took", END - START, "seconds"
 
 
 
-
-
-
-
-
-
 \subsection{\hcode{omp_get_wtick}}
 \index{omp_get_wtick@{\code{omp_get_wtick}}}
 \label{subsec:omp_get_wtick}
 \summary
-The \code{omp_get_wtick} routine returns the precision of the timer used by
-\code{omp_get_wtime}.
-
+The \code{omp_get_wtick} routine returns the precision of the timer used 
+by \code{omp_get_wtime}.
 
 \format
 \begin{ccppspecific}
@@ -759,19 +722,25 @@ double precision function omp_get_wtick()
 \end{fortranspecific}
 
 \binding
-The binding thread set for an \code{omp_get_wtick} region is the encountering thread. The
-routine's return value is not guaranteed to be consistent across any set of threads.
+The binding thread set for an \code{omp_get_wtick} region is the encountering 
+thread. The routine's return value is not guaranteed to be consistent across 
+any set of threads.
 
 \effect
-The \code{omp_get_wtick} routine returns a value equal to the number of seconds between
-successive clock ticks of the timer used by \code{omp_get_wtime}.
+The \code{omp_get_wtick} routine returns a value equal to the number of seconds 
+between successive clock ticks of the timer used by \code{omp_get_wtime}.
+
+
 
 \section{Event Routines}
 \index{event routines}
 \index{event}
 \label{sec:Event Routines}
 
-This section describes routines that support OpenMP event objects. OpenMP event objects must be accessed only through routines described in this section or through the \code{detach} clause of the \code{task} construct; programs that otherwise access OpenMP event objects are non-conforming.
+This section describes routines that support OpenMP event objects. OpenMP 
+event objects must be accessed only through routines described in this 
+section or through the \code{detach} clause of the \code{task} construct; 
+programs that otherwise access OpenMP event objects are non-conforming.
 
 \binding
 
@@ -798,15 +767,36 @@ integer (kind=omp_event_handle_kind) \plc{event}
 \end{fortranspecific}
 
 \constraints
-
-A program that calls this routine on an event that was already fulfilled is non-conforming.
+A program that calls this routine on an event that was already fulfilled 
+is non-conforming. A program that calls this routine with an event handle 
+that was not created by the \code{detach} clause is non-conforming.
 
 \effect
+The effect of this routine is to fulfill the event associated with the event 
+handle argument. The effect of fulfilling the event will depend on how the 
+event was created. The event is destroyed and cannot be accessed after calling 
+this routine, and the event handle becomes unassociated with any event.
 
-The effect of this routine is to fulfill the event associated with the event handle argument. The effect of fulfilling the event will depend on how the event was created. The event is destroyed and cannot be accessed after calling this routine, and the event handle becomes unassociated with any event.
+\events
+The \plc{task-fulfill} event occurs in a thread that executes an
+\code{omp_fulfill_event} region before the event is fulfilled if 
+the OpenMP event object was created by a \code{detach} clause on a task.
+
+\tools
+A thread dispatches a registered \code{ompt_callback_task_schedule}
+callback with \code{NULL} as its \plc{next_task_data} argument while
+the argument \plc{prior_task_data} binds to the detached task for each 
+occurrence of a \plc{task-fulfill} event. If the \plc{task-fulfill} event 
+occurs before the detached task finished the execution of the associated
+\plc{structured-block}, the callback has \code{ompt_task_early_fulfill} as 
+its  \plc{prior_task_status} argument; otherwise the callback has 
+\code{ompt_task_late_fulfill} as its \plc{prior_task_status} argument.
+This callback has type signature \code{ompt_callback_task_schedule_t}.
 
 \crossreferences
-
 \begin{itemize}
  \item \code{detach} clause, see \specref{subsec:task Construct}.
+
+\item \code{ompt_callback_task_schedule_t}, see
+\specref{sec:ompt_callback_task_schedule_t}.
 \end{itemize}
