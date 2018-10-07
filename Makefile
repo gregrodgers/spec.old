@@ -83,9 +83,16 @@ openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png 
 	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
 	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error $(VERSIONMACRO)
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
+	@if grep --quiet "LaTeX Warning: Label" openmp.log; then \
+		grep "LaTeX Warning: Label" openmp.log; \
+         fi
+	@if grep --quiet "LaTeX Warning: Reference" openmp.log; then \
+		grep "LaTeX Warning: Reference" openmp.log | sed 's/ on .*/ is undefined/' ; \
+	 fi
 
 quick:
 	pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error -project=openmp $(VERSIONMACRO)
+	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 
 debug:
 	pdflatex -shell-escape -synctex=1 -file-line-error -project=openmp $(VERSIONMACRO)
