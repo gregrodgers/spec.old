@@ -92,7 +92,7 @@ where \plc{aff-modifier} is one of the following{}:
 iterator(\plc{iterators-definition}) 
 \end{indentedcodelist}
 
-where \plc{event-handle} is a variable of the \code{omp_event_t *} type.
+where \plc{event-handle} is a variable of the \code{omp_event_handle_t} type.
 
 \end{samepage}
 \end{ccppspecific}
@@ -131,7 +131,7 @@ where \plc{aff-modifier} is one of the following{}:
 iterator(\plc{iterators-definition}) 
 \end{indentedcodelist}
 
-where \plc{event-handle} is an integer variable of \code{omp_event_kind} \plc{kind}.
+where \plc{event-handle} is an integer variable of \code{omp_event_handle_kind} \plc{kind}.
 \end{fortranspecific}
 
 \binding
@@ -157,20 +157,21 @@ part of the outer task region unless the generated task is
 an included task.
 
 If a \code{detach} clause is present on a \code{task} construct a new event 
-\plc{allow-completion-event} of type \code{omp_event_t} is created. The 
+\plc{allow-completion-event} is created. The 
 \plc{allow-completion-event} is connected to the completion of the associated 
-\code{task} region. The original \plc{event-handle} will be updated to point 
-to the \plc{allow-completion-event} event before the task data environment is 
+\code{task} region. The original \plc{event-handle} will be updated to represent 
+the \plc{allow-completion-event} event before the task data environment is 
 created. The \plc{event-handle} will be considered as if it was specified on 
 a \code{firstprivate} clause. The use of a variable in a \code{detach} clause 
 expression of a \code{task} construct causes an implicit reference to the 
 variable in all enclosing constructs.
 
 If no \code{detach} clause is present on a \code{task} construct the generated 
-\code{task} is completed when the execution of its associated \plc{structured-block} 
-is completed. If a \code{detach} clause is present on a \code{task} construct 
-the task is completed when the execution of its associated \plc{structured-block} 
-is completed and the \plc{allow-completion-event} is fulfilled.
+\code{task} is completed when the execution of its associated 
+\plc{structured-block} is completed. If a \code{detach} clause is present on a 
+\code{task} construct the task is completed when the execution of its associated 
+\plc{structured-block} is completed and the \plc{allow-completion-event} 
+is fulfilled.
 
 When an \code{if} clause is present on a \code{task} construct, and the \code{if} 
 clause expression evaluates to \plc{false}, an undeferred task is generated, and 
@@ -190,7 +191,8 @@ a \code{task} construct with the \code{detach} clause during the execution
 of a final task results in unspecified behavior.
 
 The \code{if} clause expression and the \code{final} clause expression are 
-evaluated in the context outside of the \code{task} construct.
+evaluated in the context outside of the \code{task} construct, and no ordering 
+of those evaluations is specified..
 
 A thread that encounters a task scheduling point within the \code{task} region 
 may temporarily suspend the \code{task} region. By default, a task is tied and 
@@ -213,7 +215,7 @@ The \code{priority} clause is a hint for the priority of the generated task. The
 \plc{priority-value} is a non-negative integer expression that provides a hint for 
 task execution order. Among all tasks ready to be executed, higher priority tasks 
 (those with a higher numerical value in the \code{priority} clause expression) are 
-recommended to execute before lower priority ones. The default \plc{priority-value} 
+recommended to execute before lower priority ones. The default \plc{priority-value}
 when no \code{priority} clause is specified is zero (the lowest priority). If a 
 value is specified in the \code{priority} clause that is higher than the 
 \plc{max-task-priority-var} ICV then the implementation will use the value of 
@@ -221,7 +223,7 @@ that ICV. A program that relies on task execution order being determined by this
 \plc{priority-value} may have unspecified behavior.
 
 The \code{affinity} clause is a hint to indicate data affinity of the generated
-task. The task is recommended to execute closely to the location of the list items. 
+task. The task is recommended to execute closely to the location of the list items.
 A program that relies on the task execution location
 being determined by this list may have unspecified behavior.
 
@@ -253,17 +255,38 @@ initialized but before it begins execution or is deferred.
 A thread dispatches a registered \code{ompt_callback_task_create} callback 
 for each occurrence of a \plc{task-create} event in the context of the 
 encountering task. This callback has the type signature 
-\code{ompt_callback_task_create_t}; 
-\code{(}\plc{flags}~\code{&}~\code{ompt_task_explicit)} 
-always evaluates to \plc{true} in the dispatched callback;
-\code{(}\plc{flags}~\code{&}~\code{ompt_task_undeferred)} evaluates to \plc{true} 
-if the task is an undeferred task; \code{(}\plc{flags}~\code{&}~\code{ompt_task_final)}
-evaluates to \plc{true} if the task is a final task;
-\code{(}\plc{flags}~\code{&}~\code{ompt_task_untied)} evaluates to \plc{true} if 
-the task is an untied task; \code{(}\plc{flags}~\code{&}~\code{ompt_task_mergeable)} 
-evaluates to \plc{true} if the task is a mergeable task; and
-\code{(}\plc{flags}~\code{&}~\code{ompt_task_merged)} evaluates to \plc{true}
-if the task is a merged task, 
+\code{ompt_callback_task_create_t} and the \plc{flags} argument indicates the 
+task types shown in Table~\ref{tab:task create callback flags evaluation}.
+
+\nolinenumbers
+\renewcommand{\arraystretch}{1.5}
+\tablefirsthead{%
+\hline
+\textsf{\textbf{Operation}} & \textsf{\textbf{Evaluates to true}}\\
+\hline\\[-3ex]
+}
+\tablehead{%
+\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
+\hline
+\textsf{\textbf{Operation}} & \textsf{\textbf{Evaluates to true}}\\
+\hline\\[-3ex]
+}
+\tabletail{%
+\hline\\[-4ex]
+\multicolumn{2}{l}{\small\slshape table continued on next page}\\
+}
+\tablelasttail{\hline}
+\tablecaption{\code{ompt_callback_task_create} callback flags evaluation\label{tab:task create callback flags evaluation}}
+\begin{supertabular}{p{2.1in}p{3in}}
+{\scode{(}\plc{flags}~\scode{&}~\scode{ompt_task_explicit}\scode{)}}     &   Always in the dispatched callback \\
+{\scode{(}\plc{flags}~\scode{&}~\scode{ompt_task_undeferred}\scode{)}}   &   If the task is an undeferred task \\
+{\scode{(}\plc{flags}~\scode{&}~\scode{ompt_task_final}\scode{)}}        &   If the task is a final task \\
+{\scode{(}\plc{flags}~\scode{&}~\scode{ompt_task_untied}\scode{)}}       &   If the task is an untied task \\
+{\scode{(}\plc{flags}~\scode{&}~\scode{ompt_task_mergeable}\scode{)}}    &   If the task is a mergeable task \\
+{\scode{(}\plc{flags}~\scode{&}~\scode{ompt_task_merged}\scode{)}}       &   If the task is a merged task  \\
+\end{supertabular}
+
+\linenumbers
 
 \restrictions
 Restrictions to the \code{task} construct are as follows:
@@ -748,10 +771,10 @@ callback with \code{ompt_scope_begin} as its \plc{endpoint} argument
 for each occurrence of an \plc{initial-task-begin} in that thread.
 Similarly, a thread dispatches a registered \code{ompt_callback_implicit_task}
 callback with \code{ompt_scope_end} as its \plc{endpoint} argument
-for each occurence of an \plc{initial-task-end} event in that thread. 
+for each occurrence of an \plc{initial-task-end} event in that thread.
 The callbacks occur in the context of the initial task and have type 
 signature \code{ompt_callback_implicit_task_t}. In the dispatched
-callback, \code{(flag & ompt_task_initial)} always evaluates to
+callback, \code{(}\plc{flag}~\code{&}~\code{ompt_task_initial)} always evaluates to
 \plc{true}.
 
 A thread dispatches a registered \code{ompt_callback_thread_end}

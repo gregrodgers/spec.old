@@ -199,7 +199,13 @@ setenv OMP_NUM_THREADS 4,3,2
 \label{sec:OMP_DYNAMIC}
 The \code{OMP_DYNAMIC} environment variable controls dynamic adjustment of the number
 of threads to use for executing \code{parallel} regions by setting the initial value of the
-\plc{dyn-var} ICV. The value of this environment variable must be \code{true} or \code{false}. If the
+\plc{dyn-var} ICV. 
+
+The value of this environment variable must be one of the following:
+
+{\code{true }|\code{ false}} 
+
+If the
 environment variable is set to \code{true}, the OpenMP implementation may adjust the
 number of threads to use for executing \code{parallel} regions in order to optimize the use
 of system resources. If the environment variable is set to \code{false}, the dynamic
@@ -250,7 +256,7 @@ The behavior of the program is implementation defined if the value in the
 list of \code{master}, \code{close}, or \code{spread}. The behavior is also implementation defined if an
 initial thread cannot be bound to the first place in the OpenMP place list.
 
-\pagebreak
+%\pagebreak
 
 Examples:
 \begin{ompEnv}
@@ -517,7 +523,7 @@ implementation about the desired behavior of waiting threads by setting the
 \plc{wait-policy-var} ICV. A compliant OpenMP implementation may or may not abide by the setting of
 the environment variable.
 
-The value of this environment variable takes the form:
+The value of this environment variable must be one of the following:
 
 {\code{ACTIVE }|\code{ PASSIVE}}
 
@@ -530,6 +536,9 @@ consuming processor cycles, while waiting. For example, an OpenMP implementation
 may make waiting threads yield the processor to other threads or go to sleep.
 
 The details of the \code{ACTIVE} and \code{PASSIVE} behaviors are implementation defined.
+
+The behavior of the program is implementation defined if the value of
+\code{OMP_WAIT_POLICY} is neither \code{ACTIVE} nor \code {PASSIVE}.
 
 Examples:
 \begin{ompEnv}
@@ -603,6 +612,7 @@ variables are set, the value of \code{OMP_NESTED} is \code{false}, and
 the value of \code{OMP_MAX_ACTIVE_LEVELS} is greater than 1, the behavior is
 implementation defined. Otherwise, if both environment variables are set then
 the \code{OMP_NESTED} environment variable has no effect.
+
 The \code{OMP_NESTED} environment variable has been deprecated.
 
 
@@ -665,10 +675,16 @@ a positive integer.
 The \code{OMP_CANCELLATION} environment variable sets the initial value of the \plc{cancel-var}
 ICV.
 
-The value of this environment variable must be \code{true} or \code{false}. If set to \code{true}, the
+The value of this environment variable must be one of the following:
+
+{\code{true }|\code{ false}}
+
+If set to \code{true}, the
 effects of the \code{cancel} construct and of cancellation points are enabled and cancellation
 is activated. If set to \code{false}, cancellation is disabled and the \code{cancel} construct and
-cancellation points are effectively ignored.
+cancellation points are effectively ignored. The behavior of the program is
+implementation defined if \code{OMP_CANCELLATION} is set to neither \code{true}
+nor \code{false}.
 
 \crossreferences
 \begin{itemize}
@@ -756,13 +772,21 @@ OPENMP DISPLAY ENVIRONMENT END
 \index{environment variables!OMP_DISPLAY_AFFINITY@{\code{OMP_DISPLAY_AFFINITY}}}
 \index{_OPENMP@{\code{_OPENMP} macro}}
 \label{sec:OMP_DISPLAY_AFFINITY}
+%The \code{OMP_DISPLAY_AFFINITY} environment variable instructs the runtime to
+%display formatted affinity information for all OpenMP threads in the parallel
+%region upon entering the first parallel region and when there is any change in
+%the information accessible by the format specifiers listed in table
+
 The \code{OMP_DISPLAY_AFFINITY} environment variable instructs the runtime to
 display formatted affinity information for all OpenMP threads in the parallel
 region upon entering the first parallel region and when there is any change in
-the information accessible by the format specifiers listed in table
+the information accessible by the format specifiers listed in Table
 \ref{tab:Available Field Types for Formatting OpenMP Thread Affinity Information}.
 If there is a change of affinity of any thread in a parallel region, thread
 affinity information for all threads in that region will be displayed.
+If the thread affinity for each respective parallel region at each nesting level
+has already been displayed and the thread affinity has not changed, then the
+information is not displayed again.
 There is no specific order in displaying thread affinity information for all
 threads in the same parallel region.
 
@@ -788,8 +812,8 @@ setenv OMP_DISPLAY_AFFINITY TRUE
 The above example causes an OpenMP implementation to display OpenMP thread affinity information during execution of
 the program, in a format given by the \plc{affinity-format-var} ICV.  The following is a sample output:
 \begin{ompSyntax}
-thread_level=   1,   thread_id=   0,   thread_affinity=    0,1
-thread_level=   1,   thread_id=   1,   thread_affinity=    2,3
+nesting_level=   1,   thread_num=   0,   thread_affinity=    0,1
+nesting_level=   1,   thread_num=   1,   thread_affinity=    2,3
 \end{ompSyntax}
 
 \crossreferences
@@ -836,17 +860,16 @@ The \code{0} modifier indicates whether or not to add leading zeros to the outpu
 following any indication of sign or base.
 The \code{.} modifier indicates the output should be right justified when \plc{size} is specified.
 By default, output is left justified.
-The minimum field length is \plc{size}, which is decimal digit string
-with non-zero first digit.
+The minimum field length is \plc{size}, which is a decimal digit string
+with a non-zero first digit.
 If no \plc{size} is specified, the actual length needed to print the field will be used.
-If the \code{0} modifier is used with \plc{type} of \code{a}, {\pcode{\{thread\_affinity\}}},
-\code{h}, {\pcode{\{host\}}}, or a type that is not printed as a number, the
+If the \code{0} modifier is used with \plc{type} of \code{A}, {\pcode{\{thread\_affinity\}}},
+\code{H}, {\pcode{\{host\}}}, or a type that is not printed as a number, the
 result is unspecified.
-
 Any other characters in the format string that are not part of a field specifier will be included literally
 in the output.
 
-Available field types are:
+%Available field types are:
 
 % Table
 \nolinenumbers
@@ -859,7 +882,7 @@ Available field types are:
 \tablehead{%
 \multicolumn{3}{l}{\small\slshape table continued from previous page}\\
 \hline
-\textsf{\textbf{Short Name}} & \textsf{textbf{Long Name}} & \textsf{\textbf{Meaning}}\\
+\textsf{\textbf{Short Name}} & \textsf{\textbf{Long Name}} & \textsf{\textbf{Meaning}}\\
 \hline \\[-3ex]
 }
 \tabletail{%
@@ -869,16 +892,17 @@ Available field types are:
 \tablelasttail{\hline}
 \tablecaption{Available Field Types for Formatting OpenMP Thread Affinity Information \label{tab:Available Field Types for Formatting OpenMP Thread Affinity Information}}
 \begin{supertabular}{ p{0.06\textwidth} p{0.24\textwidth} p{0.6\textwidth}}
-{\scode{L}} & {\scode{thread_level}} & The value returned by {\scode{omp_get_level()}}. \\
+{\scode{t}} & {\scode{team_num}} &  The value returned by {\scode{omp_get_team_num()}}. \\
+{\scode{T}} & {\scode{num_teams}} & The value returned by {\scode{omp_get_num_teams()}}. \\
+{\scode{L}} & {\scode{nesting_level}} & The value returned by {\scode{omp_get_level()}}. \\
 {\scode{n}} & {\scode{thread_num}} &  The value returned by {\scode{omp_get_thread_num()}}. \\
-{\scode{h}} & {\scode{host}} & The name for the host machine on which the OpenMP program is running. \\
-{\scode{P}} & {\scode{process_id}} & The process identifier used by the implementation. \\
-{\scode{T}} & {\scode{thread_identifier}} & The thread identifier for a native thread defined by the implementation. \\
 {\scode{N}} & {\scode{num_threads}} & The value returned by {\scode{omp_get_num_threads()}}. \\
-{\scode{A}} & {\scode{ancestor_tnum}} & The value returned by {\scode{omp_get_ancestor_thread_num(}\splc{level}\scode{)}}, where {\splc{level}} is
+{\scode{a}} & {\scode{ancestor_tnum}} & The value returned by {\scode{omp_get_ancestor_thread_num(}\splc{level}\scode{)}}, where {\splc{level}} is
 {\scode{omp_get_level()}} minus 1. \\
-{\scode{a}} & {\scode{thread_affinity}} & The list of numerical identifiers, in the format of a comma-separated list of integers or integer ranges, representing processors on which a thread may execute, subject to OpenMP thread affinity control and/or other external affinity mechanisms. \\
-
+{\scode{H}} & {\scode{host}} & The name for the host machine on which the OpenMP program is running. \\
+{\scode{P}} & {\scode{process_id}} & The process identifier used by the implementation. \\
+{\scode{i}} & {\scode{native_thread_id}} & The native thread identifier used by the implementation. \\
+{\scode{A}} & {\scode{thread_affinity}} & The list of numerical identifiers, in the format of a comma-separated list of integers or integer ranges, representing processors on which a thread may execute, subject to OpenMP thread affinity control and/or other external affinity mechanisms. \\
 \end{supertabular}
 
 \linenumbers
@@ -899,7 +923,7 @@ affinity information.
 Example:
 \begin{ompEnv}
 setenv OMP_AFFINITY_FORMAT
-       "Thread Affinity: %0.3L %.8n %.15{thread_affinity} %.12h"
+       "Thread Affinity: %0.3L %.8n %.15{thread_affinity} %.12H"
 \end{ompEnv}
 
 The above example causes an OpenMP implementation to display OpenMP thread affinity information in the following form:
@@ -968,16 +992,22 @@ Example:
 \label{sec:OMP_TARGET_OFFLOAD}
 %
 The \code{OMP_TARGET_OFFLOAD} environment variable sets the initial value of the \plc{target-offload-var} ICV.
-The value of the \code{OMP_TARGET_OFFLOAD} environment variable may be set to one of these
-values:
+The value of the \code{OMP_TARGET_OFFLOAD} environment variable must be one of
+the following:
 
 {\code{MANDATORY }|\code{ DISABLED }|\code{ DEFAULT}}
 
-The \code{MANDATORY} value specifies that a device construct or a device memory routine must execute on a target device. If the device construct cannot execute on its target device, or if a device memory routine fails to execute, a warning is issued and the program execution aborts. Device constructs are exempt from this behavior when an if-clause is present and the if-clause expression evaluates to false.
+The \code{MANDATORY} value specifies that program execution is terminated if a device construct or device memory routine is encountered and the 
+%specified 
+%target 
+device is not available or is not supported by the implementation.
+%Device constructs are exempt from this behavior when an \code{if} clause is present and the \code{if} clause expression evaluates to \plc{false}.
 
-The support of \code{DISABLED}  is implementation defined. If an implementation supports it, the behavior should be that a device construct must execute on the host.  The behavior with this environment value is equivalent to an if clause present on all device constructs, where each of these if clause expressions evaluate to false. Device memory routines behave as if all device number parameters are set to the value returned by \code{omp_get_initial_device()}. The \code{omp_get_initial_device()} routine returns that no target device is available
+Support for the \code{DISABLED} value is implementation defined.  If an implementation supports it, the behavior is as if 
+%there are no target devices other than the host device.
+the only device is the host device.
 
-The \code{DEFAULT} value specifies that when one or more target devices are available, the runtime behaves as if this environment variable is set to \code{MANDATORY}; otherwise, the runtime behaves as if this environment variable is set to \code{DISABLED}.
+The \code{DEFAULT} value specifies the default behavior as described in \specref{sec:Execution Model}.
 
 Example:
 \begin{ompEnv}
@@ -986,8 +1016,9 @@ Example:
 
 \crossreferences
 \begin{itemize}
-\item \plc{target-offload-icv} ICV, see \specref{sec:Internal Control Variables}.
+\item \plc{target-offload-var} ICV, see \specref{sec:Internal Control Variables}.
 \item device directives, \specref{sec:Device Directives}.
+\item device memory routines \specref{sec:Device Memory Routines}.
 \end{itemize}
 
 
@@ -1000,7 +1031,11 @@ Example:
 
 The \code{OMP_TOOL} environment variable sets the \plc{tool-var} ICV which controls whether an OpenMP runtime will try to register a
 first party tool.
-The value of this environment variable must be \code{enabled} or \code{disabled}.
+
+The value of this environment variable must be one of the following:
+
+{\code{enabled }|\code{ disabled}}
+
 If \code{OMP_TOOL} is set to any value other than \code{enabled} or \code{disabled}, the behavior is unspecified.
 If \code{OMP_TOOL} is not defined, the default value for \plc{tool-var} is \code{enabled}.
 
@@ -1026,13 +1061,14 @@ Example:
 The \code{OMP_TOOL_LIBRARIES} environment variable sets the
 \plc{tool-libraries-var} ICV to a list of tool libraries that will
 be considered for use on a device where an OpenMP implementation
-is being initialized.  The value of this environment variable must
-be a colon-separated list of dynamically-linked libraries, each
-specified by an absolute path.
+is being initialized. The value of this environment variable must 
+be a list of names of dynamically-loadable libraries, separated 
+by an implementation specific, platform typical separator.
 
 If the \plc{tool-var} ICV is not enabled,
 the value of \plc{tool-libraries-var} will be ignored.
-Otherwise, if \code{ompt_start_tool}, a global function symbol for a tool initializer,
+Otherwise, if \code{ompt_start_tool} 
+%, a global function symbol for a tool initializer, 
 isn't visible in the address space on a device where OpenMP is being
 initialized or if \code{ompt_start_tool} returns \code{NULL}, an OpenMP implementation
 will consider libraries in the \plc{tool-libraries-var} list
@@ -1041,6 +1077,11 @@ a library that meets two criteria: it can be dynamically
 loaded on the current device and it defines the symbol \code{ompt_start_tool}.
 If an OpenMP implementation finds a suitable library,
 no further libraries in the list will be considered.
+
+Example:
+\begin{ompEnv}
+% setenv OMP_TOOL_LIBRARIES libtoolXY64.so:/usr/local/lib/libtoolXY32.so
+\end{ompEnv}
 
 \crossreferences
 \begin{itemize}
@@ -1058,8 +1099,11 @@ The \code{OMP_DEBUG} environment variable sets the
 \plc{debug-var} ICV which controls whether an OpenMP runtime
 will collect information that an OMPD library may need to support
 a tool.
-The value of this environment variable must be \code{enabled}
-or \code{disabled}.
+
+The value of this environment variable must be one of the following:
+
+{\code{enabled }|\code{ disabled}}
+
 If \code{OMP_DEBUG} is set to any value other than \code{enabled}
 or \code{disabled}, the behavior is implementation defined.
 
