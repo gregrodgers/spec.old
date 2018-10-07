@@ -786,15 +786,16 @@ nesting level. In addition, if the point in the program is not enclosed by
 a \code{target} construct, the following rules are applied in order:
 
 \begin{enumerate}
-\item For functions with a \code{declare simd} directive, the \plc{simd} trait
-      is added to the beginning of the set as $c_{1}$ for the generated SIMD 
+\item For functions with a \code{declare}~\code{simd} directive, the \plc{simd} trait
+      is added to the beginning of the set as $c_{1}$ for any generated SIMD
       versions so the total size of the set is increased by 1.
-\item For functions with a \code{declare variant} directive, the selectors 
-      $c_{1}$,~\ldots,~$c_{M}$ of the \code{construct} selector set are added 
+\item For functions that are determined to be function variants by a
+      \code{declare}~\code{variant} directive, the selectors 
+      $c_{1}$,~\ldots,~$c_{M}$ of the \code{construct} selector set are added
       in the same order to the beginning of the set as $c_{1}$,~\ldots,~$c_{M}$
-       so the total size of the set is increased by $M$.
-\item For functions within a \code{declare target} block, the \plc{target}
-      trait is added to the beginning of the set as $c_{1}$ for the versions of 
+      so the total size of the set is increased by $M$.
+\item For functions within a \code{declare}~\code{target} block, the \plc{target}
+      trait is added to the beginning of the set as $c_{1}$ for any versions of 
       the function that are generated for \code{target} regions so the total 
       size of the set is increased by 1.
 \end{enumerate}
@@ -1119,9 +1120,10 @@ Restrictions to metadirectives are as follows:
 \index{directives!declare variant@{\code{declare variant}}}
 \label{subsec:declare variant Directive}
 \summary
-The \code{declare}~\code{variant} directive declares a function to be a
-specialized variant of another function and specifies the context in which it
-should be used.
+The \code{declare}~\code{variant} directive declares a specialized variant
+of a base function and specifies the context in which that specialized variant
+is used. The \code{declare}~\code{variant} directive is a declarative
+directive.
 
 \syntax
 \begin{ccppspecific}
@@ -1129,7 +1131,9 @@ should be used.
 The syntax of the \code{declare}~\code{variant} directive is as follows:
 
 \begin{ompcPragma}
-#pragma omp declare variant(\plc{base-func-name}) \plc{clause new-line}
+#pragma omp declare variant(\plc{variant-func-id}) \plc{clause new-line}
+\plc{[}#pragma omp declare variant(\plc{variant-func-id}) \plc{clause new-line]}
+\plc{[ ... ]}
    \plc{function definition or declaration}
 \end{ompcPragma}
 \end{samepage}
@@ -1141,13 +1145,16 @@ where \plc{clause} is one of the following{}:
 match(\plc{context-selector-specification})
 \end{indentedcodelist}
 \end{samepage}
+
+and where \plc{variant-func-id} is the name of a function variant that is
+either a base language identifier or, for C++, a \plc{template-id}.
 \end{ccppspecific}
 
 \begin{fortranspecific}
 The syntax of the \code{declare variant} directive is as follows:
 
 \begin{ompfPragma}
-!$omp declare variant(\plc{[proc-name}:\plc{]base-proc-name}) \plc{clause}
+!$omp declare variant(\plc{[base-proc-name}:\plc{]variant-proc-name}) \plc{clause}
 \end{ompfPragma} %$ close off misinterpreted dollar sign/math symbol
 
 where \plc{clause} is one of the following{}:
@@ -1155,13 +1162,16 @@ where \plc{clause} is one of the following{}:
 \begin{indentedcodelist}
 match(\plc{context-selector-specification})
 \end{indentedcodelist}
+
+and where \plc{variant-proc-name} is the name of a function variant that is
+a base language identifier.
 \end{fortranspecific}
 
 \descr
 
-The use of a \code{declare}~\code{variant} directive declares the function to
-be a function variant of the \plc{base-func-name} or \plc{base-proc-name}
-function. The context selector in the \code{match} clause is associated 
+The \code{declare}~\code{variant} directive declares the
+\textit{base function} to have the specified function variant.
+The context selector in the \code{match} clause is associated
 with the variant.
 
 The OpenMP context for a call to a given base function is defined according 
@@ -1177,20 +1187,34 @@ defined. If a compatible variant exists, the call to the base function is
 replaced with a call to the selected variant. If no compatible variants 
 exist then the call to the base function is not changed.
 
-Multiple variants may be specified for the same base function.
+Different \code{declare}~\code{variant} directives may be specified for
+different declarations of the same base function.
 
 Any differences that the specific OpenMP context requires in the prototype 
 of the variant from the base function prototype are implementation defined.
+
+\begin{cppspecific}
+The function variant is determined by base language standard name lookup
+rules ([basic.lookup]) of \plc{variant-func-id} with arguments that correspond
+to the argument types in the base function declaration.
+
+The \plc{variant-func-id} and any expressions inside of the \code{match}
+clause are interpreted as if they appeared at the scope of the trailing return
+type of the base function.
+\end{cppspecific}
 
 \restrictions
 Restrictions to the \code{declare variant} directive are as follows:
 
 \begin{itemize}
-\item If the function definition or a declaration of the function in the same
-      compilation unit has a \code{declare}~\code{variant} directive, then 
-      calling the variant function directly in an OpenMP context that is 
-      different than the one specified by the \code{construct} set of the 
+\item Calling functions that a \code{declare}~\code{variant} directive determined
+      to be a function variant directly in an OpenMP context that
+      is different than the one specified by the \code{construct} selector set of the 
       context selector is non-conforming.
+
+\item If a function is determined to be a function variant through more than one
+      \code{declare}~\code{variant} directive then the \code{construct}
+      selector set of their context selectors must be the same.
 
 \begin{ccppspecific}
 \item If the function has any declarations, then the \code{declare}~\code{variant} 
@@ -1200,18 +1224,17 @@ Restrictions to the \code{declare variant} directive are as follows:
 \end{ccppspecific}
 
 \begin{cppspecific}
-\item \plc{base-func-name} should not designate an overloaded function name. 
-      Otherwise, \plc{base-func-name} must be a function declaration without 
-      the return type.
-\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
-      cannot be a template function.
-\item The \plc{base-func-name} of a \code{declare}~\code{variant} directive 
-      cannot be a virtual function.
+\item The \code{declare}~\code{variant} directive cannot be specified
+      for a virtual function.
+
+\item The type of the function variant must be compatible with
+      the type of the base function after the implementation-defined
+      transformation for its OpenMP context.
 \end{cppspecific}
 
 \begin{fortranspecific}
-\item \plc{proc-name} must not be a generic name, procedure pointer, or entry name.
-\item If \plc{proc-name} is omitted, the \code{declare}~\code{variant} directive 
+\item \plc{base-proc-name} must not be a generic name, procedure pointer, or entry name.
+\item If \plc{base-proc-name} is omitted, the \code{declare}~\code{variant} directive 
       must appear in the specification part of a subroutine subprogram or a 
       function subprogram.
 \item Any \code{declare}~\code{variant} directive must appear in the specification 
@@ -1221,7 +1244,7 @@ Restrictions to the \code{declare variant} directive are as follows:
       block for a procedure, it must match a \code{declare}~\code{variant} 
       directive in the definition of the procedure.
 \item If a procedure is declared via a procedure declaration statement, the 
-      procedure \plc{proc-name} should appear in the same specification.
+      procedure \plc{base-proc-name} should appear in the same specification.
 \item If a \code{declare}~\code{variant} directive is specified for a procedure 
       name with an explicit interface and a \code{declare}~\code{variant}
       directive is also specified for the definition of the procedure, the two
