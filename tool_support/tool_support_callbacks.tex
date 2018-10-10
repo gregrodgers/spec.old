@@ -86,6 +86,7 @@ use of the OMPT interface.
 \begin{omptInquiry}
 typedef int (*ompt_initialize_t) (
   ompt_function_lookup_t \plc{lookup},
+  int \plc{initial_device_num},
   ompt_data_t *\plc{tool_data}
 );
 \end{omptInquiry}
@@ -105,13 +106,18 @@ The initializer returns a non-zero value if it succeeds.
 \argdesc
 The \plc{lookup} argument is a callback to an OpenMP runtime routine that 
 must be used to obtain a pointer to each runtime entry point in the OMPT 
-interface. The \plc{tool_data} argument is a pointer to the \plc{tool_data} 
+interface. The \plc{initial_device_num} argument provides the value 
+of \code{omp_get_initial_device()}.
+The \plc{tool_data} argument is a pointer to the \plc{tool_data} 
 field in the \code{ompt_start_tool_result_t} structure that \code{ompt_start_tool}
 returned. The expected actions of an initializer are described in 
 Section~\ref{sec:tool-initialize}.
 
 \crossreferences
 \begin{itemize}
+\item \code{omp_get_initial_device} routine, see
+\specref{subsec:omp_get_initial_device}.
+
 \item \code{ompt_start_tool_result_t}, see
 \specref{sec:ompt_start_tool_result_t}.
 
@@ -727,14 +733,14 @@ typedef void (*ompt_callback_implicit_task_t) (
 \record
 \begin{ccppspecific}
 \begin{omptRecord}
-typedef struct ompt_record_implicit_t {
+typedef struct ompt_record_implicit_task_t {
   ompt_scope_endpoint_t \plc{endpoint};
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{task_id};
   unsigned int \plc{actual_parallelism};
   unsigned int \plc{index};
   int \plc{flags};
-} ompt_record_implicit_t;
+} ompt_record_implicit_task_t;
 \end{omptRecord}
 \end{ccppspecific}
 
@@ -1272,7 +1278,7 @@ dispatched when a thread begins to execute a device construct.
 typedef void (*ompt_callback_target_t) (
   ompt_target_t \plc{kind},
   ompt_scope_endpoint_t \plc{endpoint},
-  uint64_t \plc{device_num},
+  int \plc{device_num},
   ompt_data_t *\plc{task_data},
   ompt_id_t \plc{target_id},
   const void *\plc{codeptr_ra}
@@ -1286,8 +1292,8 @@ typedef void (*ompt_callback_target_t) (
 typedef struct ompt_record_target_t {
   ompt_target_t \plc{kind};
   ompt_scope_endpoint_t \plc{endpoint};
-  uint64_t \plc{device_num};
-  ompt_data_t *\plc{task_data};
+  int \plc{device_num};
+  ompt_id_t \plc{task_id};
   ompt_id_t \plc{target_id};
   const void *\plc{codeptr_ra};
 } ompt_record_target_t;
@@ -1356,7 +1362,7 @@ the specified device.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_device_load_t) (
-  uint64_t \plc{device_num},
+  int \plc{device_num},
   const char *\plc{filename},
   int64_t \plc{offset_in_file},
   void *\plc{vma_in_file},
@@ -1416,7 +1422,7 @@ the specified device.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_device_unload_t) (
-  uint64_t \plc{device_num},
+  int \plc{device_num},
   uint64_t \plc{module_id}
 );
 \end{omptCallback}
@@ -1710,7 +1716,7 @@ dispatched when a buffer to store event records for a device is requested.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_buffer_request_t) (
-  uint64_t \plc{device_num},
+  int \plc{device_num},
   ompt_buffer_t **\plc{buffer},
   size_t *\plc{bytes}
 );
@@ -1751,7 +1757,7 @@ and all records written to the buffer are valid.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_buffer_complete_t) (
-  uint64_t \plc{device_num},
+  int \plc{device_num},
   ompt_buffer_t *\plc{buffer},
   size_t \plc{bytes},
   ompt_buffer_cursor_t \plc{begin},
@@ -1819,6 +1825,17 @@ typedef int (*ompt_callback_control_tool_t) (
 \end{omptCallback}
 \end{ccppspecific}
 
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_control_tool_t {
+  uint64_t \plc{command};
+  uint64_t \plc{modifier};
+  const void *\plc{codeptr_ra};
+} ompt_record_control_tool_t;
+\end{omptRecord}
+\end{ccppspecific}
+
 \descr
 Callbacks with type signature \code{ompt_callback_control_tool_t} may return 
 any non-negative value, which will be returned to the application as the return 
@@ -1874,6 +1891,19 @@ typedef void (*ompt_callback_cancel_t) (
 \end{omptCallback}
 \end{ccppspecific}
 
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_cancel_t {
+  ompt_id_t \plc{task_id};
+  int \plc{flags};
+  const void *\plc{codeptr_ra};
+} ompt_record_cancel_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+
+
 \argdesc
 The binding of the \plc{task_data} argument is the task that encounters a 
 \code{cancel} construct, a \code{cancellation point} construct, or a construct 
@@ -1912,7 +1942,7 @@ initialize device tracing interfaces.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_device_initialize_t) (
-  uint64_t \plc{device_num},
+  int \plc{device_num},
   const char *\plc{type},
   ompt_device_t *\plc{device},
   ompt_function_lookup_t \plc{lookup},
@@ -1989,7 +2019,7 @@ finalize device tracing interfaces.
 \begin{ccppspecific}
 \begin{omptCallback}
 typedef void (*ompt_callback_device_finalize_t) (
-  uint64_t \plc{device_num}
+  int \plc{device_num}
 );
 \end{omptCallback}
 \end{ccppspecific}
