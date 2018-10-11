@@ -416,21 +416,23 @@ see \specref{sec:ompt_parallel_flag_t}.
 
 
 
-\subsubsection{\hcode{ompt_callback_master_t}}
-\index{ompt_callback_master_t@{\code{ompt_callback_master_t}}}
-\label{sec:ompt_callback_master_t}
-
+\subsubsection{\hcode{ompt_callback_work_t}}
+\index{ompt_callback_work_t@{\code{ompt_callback_work_t}}}
+\label{sec:ompt_callback_work_t}
 \summary
-The \code{ompt_callback_master_t} type is used for callbacks that are 
-dispatched when \code{master} regions start and end.
+The \code{ompt_callback_work_t} type is used for callbacks that
+are dispatched when worksharing regions, loop-related regions, 
+and \code{taskloop} regions begin and end.
 
 \format
 \begin{ccppspecific}
 \begin{omptCallback}
-typedef void (*ompt_callback_master_t) (
+typedef void (*ompt_callback_work_t) (
+  ompt_work_t \plc{wstype},
   ompt_scope_endpoint_t \plc{endpoint},
   ompt_data_t *\plc{parallel_data},
   ompt_data_t *\plc{task_data},
+  uint64_t \plc{count},
   const void *\plc{codeptr_ra}
 );
 \end{omptCallback}
@@ -439,26 +441,41 @@ typedef void (*ompt_callback_master_t) (
 \record
 \begin{ccppspecific}
 \begin{omptRecord}
-typedef struct ompt_record_master_t {
+typedef struct ompt_record_work_t {
+  ompt_work_t \plc{wstype};
   ompt_scope_endpoint_t \plc{endpoint};
   ompt_id_t \plc{parallel_id};
   ompt_id_t \plc{task_id};
+  uint64_t \plc{count};
   const void *\plc{codeptr_ra};
-} ompt_record_master_t;
+} ompt_record_work_t;
 \end{omptRecord}
 \end{ccppspecific}
 
 \argdesc
+The \plc{wstype} argument indicates the kind of region.
+
 The \plc{endpoint} argument indicates that the callback signals
 the beginning of a scope or the end of a scope.
 
 The binding of the \plc{parallel_data} argument is the current parallel region.
 
-The binding of the \plc{task_data} argument is the encountering task.
+The binding of the \plc{task_data} argument is the current task.
+
+The \plc{count} argument is a measure of the quantity of work involved in 
+the construct. For a worksharing-loop construct, \plc{count} represents the 
+number of iterations of the loop. For a \code{taskloop} construct, \plc{count} 
+represents the number of iterations in the iteration space, which may be the 
+result of collapsing several associated loops. For a \code{sections} construct, 
+\plc{count} represents the number of sections. For a \code{workshare} construct,
+\plc{count} represents the units of work, as defined by the \code{workshare} 
+construct. For a \code{single} construct, \plc{count} is always 1. When the 
+\plc{endpoint} argument signals the end of a scope, a \plc{count} value of 0 
+indicates that the actual \plc{count} value is not available.
 
 The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
 to its source code. If a runtime routine implements the region associated with
-a callback that has type signature \code{ompt_callback_master_t} then
+a callback that has type signature \code{ompt_callback_work_t} then
 \plc{codeptr_ra} contains the return address of the call to that runtime routine.
 If the implementation of the region is inlined then \plc{codeptr_ra} contains the
 return address of the invocation of the callback. If attribution to source code
@@ -466,11 +483,87 @@ is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
 
 \crossreferences
 \begin{itemize}
-\item \code{master} construct, see \specref{sec:master}.
+\item Worksharing constructs, see \specref{sec:Worksharing Constructs} and 
+\specref{subsec:Worksharing-Loop Construct}.
 
-\item \code{ompt_data_t} type signature, see \specref{sec:ompt_data_t}.
+\item Loop-related constructs, see \specref{sec:LoopRelatedConstructs}.
 
-\item \code{ompt_scope_endpoint_t} type, see \specref{sec:ompt_scope_endpoint_t}.
+\item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
+
+\item \code{ompt_data_t} type signature, see
+\specref{sec:ompt_data_t}.
+
+\item \code{ompt_scope_endpoint_t} type signature, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt_work_t} type signature, see
+\specref{sec:ompt_work_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_dispatch_t}}
+\index{ompt_callback_dispatch_t@{\code{ompt_callback_dispatch_t}}}
+\label{sec:ompt_callback_dispatch_t}
+
+\summary
+The \code{ompt_callback_dispatch_t} type is used for callbacks that are
+dispatched when a thread begins to execute a section or loop iteration.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_dispatch_t) (
+  ompt_data_t *\plc{parallel_data},
+  ompt_data_t *\plc{task_data},
+  ompt_dispatch_t \plc{kind},
+  ompt_data_t \plc{instance} 
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_dispatch_t {
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t \plc{task_id};
+  ompt_dispatch_t \plc{kind};
+  ompt_data_t \plc{instance}; 
+} ompt_record_dispatch_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+\argdesc
+The binding of the \plc{parallel_data} argument is the current parallel region.
+
+The binding of the \plc{task_data} argument is the implicit task that executes
+the structured block of the parallel region.
+
+The \plc{kind} argument indicates whether a loop iteration or a section is being 
+dispatched.
+
+For a loop iteration, the \plc{instance.value} argument contains the iteration 
+variable value. For a structured block in the \code{sections} construct, 
+\plc{instance.ptr} contains a code address that identifies the structured block.  
+In cases where a runtime routine implements the structured block associated with 
+this callback, \plc{instance.ptr} contains the return address of the call to the 
+runtime routine. In cases where the implementation of the structured block is 
+inlined, \plc{instance.ptr} contains the return address of the invocation of 
+this callback.
+
+\crossreferences
+\begin{itemize}
+\item \code{sections} and \code{section} constructs, 
+see \specref{subsec:sections Construct}.
+
+\item Worksharing-loop construct, see \specref{subsec:Worksharing-Loop Construct}.
+
+\item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
+
+\item \code{ompt_data_t} type signature, see   \specref{sec:ompt_data_t}.
+
+\item \code{ompt_dispatch_t} type, see \specref{sec:ompt_dispatch_t}.
 \end{itemize}
 
 
@@ -781,6 +874,65 @@ The \plc{flags} argument indicates the kind of the task (initial or implicit).
 
 
 
+\subsubsection{\hcode{ompt_callback_master_t}}
+\index{ompt_callback_master_t@{\code{ompt_callback_master_t}}}
+\label{sec:ompt_callback_master_t}
+
+\summary
+The \code{ompt_callback_master_t} type is used for callbacks that are 
+dispatched when \code{master} regions start and end.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_master_t) (
+  ompt_scope_endpoint_t \plc{endpoint},
+  ompt_data_t *\plc{parallel_data},
+  ompt_data_t *\plc{task_data},
+  const void *\plc{codeptr_ra}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_master_t {
+  ompt_scope_endpoint_t \plc{endpoint};
+  ompt_id_t \plc{parallel_id};
+  ompt_id_t \plc{task_id};
+  const void *\plc{codeptr_ra};
+} ompt_record_master_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+\argdesc
+The \plc{endpoint} argument indicates that the callback signals
+the beginning of a scope or the end of a scope.
+
+The binding of the \plc{parallel_data} argument is the current parallel region.
+
+The binding of the \plc{task_data} argument is the encountering task.
+
+The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
+to its source code. If a runtime routine implements the region associated with
+a callback that has type signature \code{ompt_callback_master_t} then
+\plc{codeptr_ra} contains the return address of the call to that runtime routine.
+If the implementation of the region is inlined then \plc{codeptr_ra} contains the
+return address of the invocation of the callback. If attribution to source code
+is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item \code{master} construct, see \specref{sec:master}.
+
+\item \code{ompt_data_t} type signature, see \specref{sec:ompt_data_t}.
+
+\item \code{ompt_scope_endpoint_t} type, see \specref{sec:ompt_scope_endpoint_t}.
+\end{itemize}
+
+
+
 \subsubsection{\hcode{ompt_callback_sync_region_t}}
 \index{ompt_callback_sync_region_t@{\code{ompt_callback_sync}\discretionary{}{}{}\code{_region_t}}}
 \label{sec:ompt_callback_sync_region_t}
@@ -1066,92 +1218,6 @@ see \specref{subsec:omp_test_lock and omp_test_nest_lock}.
 
 
 
-\subsubsection{\hcode{ompt_callback_work_t}}
-\index{ompt_callback_work_t@{\code{ompt_callback_work_t}}}
-\label{sec:ompt_callback_work_t}
-\summary
-The \code{ompt_callback_work_t} type is used for callbacks that
-are dispatched when worksharing regions, loop-related regions, 
-and \code{taskloop} regions begin and end.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_work_t) (
-  ompt_work_t \plc{wstype},
-  ompt_scope_endpoint_t \plc{endpoint},
-  ompt_data_t *\plc{parallel_data},
-  ompt_data_t *\plc{task_data},
-  uint64_t \plc{count},
-  const void *\plc{codeptr_ra}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_work_t {
-  ompt_work_t \plc{wstype};
-  ompt_scope_endpoint_t \plc{endpoint};
-  ompt_id_t \plc{parallel_id};
-  ompt_id_t \plc{task_id};
-  uint64_t \plc{count};
-  const void *\plc{codeptr_ra};
-} ompt_record_work_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-\argdesc
-The \plc{wstype} argument indicates the kind of region.
-
-The \plc{endpoint} argument indicates that the callback signals
-the beginning of a scope or the end of a scope.
-
-The binding of the \plc{parallel_data} argument is the current parallel region.
-
-The binding of the \plc{task_data} argument is the current task.
-
-The \plc{count} argument is a measure of the quantity of work involved in 
-the construct. For a worksharing-loop construct, \plc{count} represents the 
-number of iterations of the loop. For a \code{taskloop} construct, \plc{count} 
-represents the number of iterations in the iteration space, which may be the 
-result of collapsing several associated loops. For a \code{sections} construct, 
-\plc{count} represents the number of sections. For a \code{workshare} construct,
-\plc{count} represents the units of work, as defined by the \code{workshare} 
-construct. For a \code{single} construct, \plc{count} is always 1. When the 
-\plc{endpoint} argument signals the end of a scope, a \plc{count} value of 0 
-indicates that the actual \plc{count} value is not available.
-
-The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
-to its source code. If a runtime routine implements the region associated with
-a callback that has type signature \code{ompt_callback_work_t} then
-\plc{codeptr_ra} contains the return address of the call to that runtime routine.
-If the implementation of the region is inlined then \plc{codeptr_ra} contains the
-return address of the invocation of the callback. If attribution to source code
-is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
-
-\crossreferences
-\begin{itemize}
-\item Worksharing constructs, see \specref{sec:Worksharing Constructs} and 
-\specref{subsec:Worksharing-Loop Construct}.
-
-\item Loop-related constructs, see \specref{sec:LoopRelatedConstructs}.
-
-\item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
-
-\item \code{ompt_data_t} type signature, see
-\specref{sec:ompt_data_t}.
-
-\item \code{ompt_scope_endpoint_t} type signature, see
-\specref{sec:ompt_scope_endpoint_t}.
-
-\item \code{ompt_work_t} type signature, see
-\specref{sec:ompt_work_t}.
-\end{itemize}
-
-
-
 \subsubsection{\hcode{ompt_callback_flush_t}}
 \index{ompt_callback_flush_t@{\code{ompt_callback_flush_t}}}
 \label{sec:ompt_callback_flush_t}
@@ -1194,680 +1260,6 @@ is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
 \item \code{flush} construct, see \specref{subsec:flush Construct}.
 
 \item \code{ompt_data_t} type signature, see \specref{sec:ompt_data_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_dispatch_t}}
-\index{ompt_callback_dispatch_t@{\code{ompt_callback_dispatch_t}}}
-\label{sec:ompt_callback_dispatch_t}
-
-\summary
-The \code{ompt_callback_dispatch_t} type is used for callbacks that are
-dispatched when a thread begins to execute a section or loop iteration.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_dispatch_t) (
-  ompt_data_t *\plc{parallel_data},
-  ompt_data_t *\plc{task_data},
-  ompt_dispatch_t \plc{kind},
-  ompt_data_t \plc{instance} 
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_dispatch_t {
-  ompt_id_t \plc{parallel_id};
-  ompt_id_t \plc{task_id};
-  ompt_dispatch_t \plc{kind};
-  ompt_data_t \plc{instance}; 
-} ompt_record_dispatch_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-\argdesc
-The binding of the \plc{parallel_data} argument is the current parallel region.
-
-The binding of the \plc{task_data} argument is the implicit task that executes
-the structured block of the parallel region.
-
-The \plc{kind} argument indicates whether a loop iteration or a section is being 
-dispatched.
-
-For a loop iteration, the \plc{instance.value} argument contains the iteration 
-variable value. For a structured block in the \code{sections} construct, 
-\plc{instance.ptr} contains a code address that identifies the structured block.  
-In cases where a runtime routine implements the structured block associated with 
-this callback, \plc{instance.ptr} contains the return address of the call to the 
-runtime routine. In cases where the implementation of the structured block is 
-inlined, \plc{instance.ptr} contains the return address of the invocation of 
-this callback.
-
-\crossreferences
-\begin{itemize}
-\item \code{sections} and \code{section} constructs, 
-see \specref{subsec:sections Construct}.
-
-\item Worksharing-loop construct, see \specref{subsec:Worksharing-Loop Construct}.
-
-\item \code{taskloop} construct, see \specref{subsec:taskloop Construct}.
-
-\item \code{ompt_data_t} type signature, see   \specref{sec:ompt_data_t}.
-
-\item \code{ompt_dispatch_t} type, see \specref{sec:ompt_dispatch_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_target_t}}
-\index{ompt_callback_target_t@{\code{ompt_callback_target_t}}}
-\label{sec:ompt_callback_target_t}
-
-\summary
-The \code{ompt_callback_target_t} type is used for callbacks that are
-dispatched when a thread begins to execute a device construct.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_target_t) (
-  ompt_target_t \plc{kind},
-  ompt_scope_endpoint_t \plc{endpoint},
-  int \plc{device_num},
-  ompt_data_t *\plc{task_data},
-  ompt_id_t \plc{target_id},
-  const void *\plc{codeptr_ra}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_target_t {
-  ompt_target_t \plc{kind};
-  ompt_scope_endpoint_t \plc{endpoint};
-  int \plc{device_num};
-  ompt_id_t \plc{task_id};
-  ompt_id_t \plc{target_id};
-  const void *\plc{codeptr_ra};
-} ompt_record_target_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-
-\argdesc
-The \plc{kind} argument indicates the kind of target region.
-
-The \plc{endpoint} argument indicates that the callback signals 
-the beginning of a scope or the end of a scope.
-
-The \plc{device_num} argument indicates the id of the device that
-will execute the target region.
-
-The binding of the \plc{task_data} argument is the generating task.
-
-The binding of the \plc{target_id} argument is the target region.
-
-The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
-to its source code. If a runtime routine implements the region associated with
-a callback that has type signature \code{ompt_callback_target_t} then
-\plc{codeptr_ra} contains the return address of the call to that runtime routine.
-If the implementation of the region is inlined then \plc{codeptr_ra} contains the
-return address of the invocation of the callback. If attribution to source code
-is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
-
-\crossreferences
-\begin{itemize}
-\item \code{target}~\code{data} construct, see \specref{subsec:target data Construct}.
-
-\item \code{target}~\code{enter}~\code{data} construct, 
-see \specref{subsec:target enter data Construct}.
-
-\item \code{target}~\code{exit}~\code{data} construct, 
-see \specref{subsec:target exit data Construct}.
-
-\item \code{target} construct, see \specref{subsec:target Construct}.
-
-\item \code{target}~\code{update} construct, 
-see \specref{subsec:target update Construct}.
-
-\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
-
-\item \code{ompt_data_t} type signature, see \specref{sec:ompt_data_t}.
-
-\item \code{ompt_scope_endpoint_t} type signature, see
-\specref{sec:ompt_scope_endpoint_t}.
-
-\item \code{ompt_target_t} type signature, see \specref{sec:ompt_target_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_device_load_t}}
-\index{ompt_callback_target_code_t@{\code{ompt_callback_device}\discretionary{}{}{}\code{_load_t}}}
-\label{sec:ompt_callback_device_load_t}
-
-\summary
-The \code{ompt_callback_device_load_t} type is used for callbacks that 
-the OpenMP runtime invokes to indicate that it has just loaded code onto 
-the specified device.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_device_load_t) (
-  int \plc{device_num},
-  const char *\plc{filename},
-  int64_t \plc{offset_in_file},
-  void *\plc{vma_in_file},
-  size_t \plc{bytes}
-  void *\plc{host_addr},
-  void *\plc{device_addr},
-  uint64_t \plc{module_id}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\argdesc
-The \plc{device_num} argument specifies the device.
-
-The \plc{filename} argument indicates the name of a file in which the device 
-code can be found. A NULL \plc{filename} indicates that the code is not available 
-in a file in the file system.
-
-The \plc{offset_in_file} argument indicates an offset into \plc{filename} at 
-which the code can be found. A value of -1 indicates that no offset is provided.
-
-\code{ompt_addr_none} is defined as a pointer with the value \textasciitilde 0.
-
-The \plc{vma_in_file} argument indicates an virtual address in \plc{filename} 
-at which the code can be found. A value of \code{ompt_addr_none} indicates that 
-a virtual address in the file is not available.
-
-The \plc{bytes} argument indicates the size of the device code object in bytes.
-
-The \plc{host_addr} argument indicates the address at which a copy of the device 
-code is available in host memory. A value of \code{ompt_addr_none} indicates that 
-a host code address is not available.
-
-The \plc{device_addr} argument indicates the address at which the device code has 
-been loaded in device memory. A value of \code{ompt_addr_none} indicates that a 
-device code address is not available.
-
-The \plc{module_id} argument is an identifier that is associated with the device 
-code object.
-
-\crossreferences
-\begin{itemize}
-\item Device directives, see \specref{sec:Device Directives}.
-\end{itemize}
-
-
-\subsubsection{\hcode{ompt_callback_device_unload_t}}
-\index{ompt_callback_target_code_t@{\code{ompt_callback_device}\discretionary{}{}{}\code{_unload_t}}}
-\label{sec:ompt_callback_device_unload_t}
-
-\summary
-The \code{ompt_callback_device_unload_t} type is used for callbacks that 
-the OpenMP runtime invokes to indicate that it is about to unload code from
-the specified device.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_device_unload_t) (
-  int \plc{device_num},
-  uint64_t \plc{module_id}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\argdesc
-The \plc{device_num} argument specifies the device.
-
-The \plc{module_id} argument is an identifier that is associated 
-with the device code object.
-
-\crossreferences
-\begin{itemize}
-\item Device directives, see \specref{sec:Device Directives}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_target_data_op_t}}
-\index{ompt_callback_target_data_op_t@{\code{ompt_callback_target}\discretionary{}{}{}\code{_data}\discretionary{}{}{}\code{_op_t}}}
-\label{sec:ompt_callback_target_data_op_t}
-\summary
-The \code{ompt_callback_target_data_op_t} type is used for callbacks that are
-dispatched when a thread maps data to a device.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_target_data_op_t) (
-  ompt_id_t \plc{target_id},
-  ompt_id_t \plc{host_op_id},
-  ompt_target_data_op_t \plc{optype},
-  void *\plc{src_addr},
-  int \plc{src_device_num},
-  void *\plc{dest_addr},
-  int \plc{dest_device_num},
-  size_t \plc{bytes},
-  const void *\plc{codeptr_ra}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_target_data_op_t {
-  ompt_id_t \plc{host_op_id};
-  ompt_target_data_op_t \plc{optype};
-  void *\plc{src_addr};
-  int \plc{src_device_num};
-  void *\plc{dest_addr};
-  int \plc{dest_device_num};
-  size_t \plc{bytes};
-  ompt_device_time_t \plc{end_time};
-  const void *\plc{codeptr_ra};
-} ompt_record_target_data_op_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-\descr
-A registered \code{ompt_callback_target_data_op} callback is dispatched when device 
-memory is allocated or freed, as well as when data is copied to or from a device.
-
-\begin{note}
-An OpenMP implementation may aggregate program variables and data operations 
-upon them.  For instance, an OpenMP implementation may synthesize a composite 
-to represent multiple scalars and then allocate, free, or copy this composite 
-as a whole rather than performing data operations on each scalar individually.  
-Thus, callbacks may not be dispatched as separate data operations on each variable.
-\end{note}
-
-\argdesc
-The \plc{host_op_id} argument is a unique identifier for a data 
-operations on a target device.
-
-The \plc{optype} argument indicates the kind of data mapping.
-
-The \plc{src_addr} argument indicates the data address before the operation, 
-where applicable.
-
-The \plc{src_device_num} argument indicates the source device number
-for the data operation, where applicable.
-
-The \plc{dest_addr} argument indicates the data address after the operation.
-
-The \plc{dest_device_num} argument indicates the destination device
-number for the data operation.
-
-It is implementation defined whether in some operations \plc{src_addr}
-or \plc{dest_addr} may point to an intermediate buffer.
-
-The \plc{bytes} argument indicates the size of data.
-
-The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
-to its source code. If a runtime routine implements the region associated with
-a callback that has type signature \code{ompt_callback_target_data_op_t} then
-\plc{codeptr_ra} contains the return address of the call to that runtime routine.
-If the implementation of the region is inlined then \plc{codeptr_ra} contains the
-return address of the invocation of the callback. If attribution to source code
-is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
-
-\crossreferences
-\begin{itemize}
-\item \code{map} clause, see \specref{subsec:map Clause}.
-
-\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
-
-\item \code{ompt_target_data_op_t} type signature, see
-\specref{sec:ompt_target_data_op_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_target_map_t}}
-\index{ompt_callback_target_map_t@{\code{ompt_callback_target}\discretionary{}{}{}\code{_map_t}}}
-\label{sec:ompt_callback_target_map_t}
-\summary
-The \code{ompt_callback_target_map_t} type is used for callbacks that are
-dispatched to indicate data mapping relationships.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_target_map_t) (
-  ompt_id_t \plc{target_id},
-  unsigned int \plc{nitems},
-  void **\plc{host_addr},
-  void **\plc{device_addr},
-  size_t *\plc{bytes},
-  unsigned int *\plc{mapping_flags},
-  const void *\plc{codeptr_ra}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_target_map_t {
-  ompt_id_t \plc{target_id};
-  unsigned int \plc{nitems};
-  void **\plc{host_addr};
-  void **\plc{device_addr};
-  size_t *\plc{bytes};
-  unsigned int *\plc{mapping_flags};
-  const void *\plc{codeptr_ra};
-} ompt_record_target_map_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-\descr
-An instance of a \code{target}, \code{target data}, \code{target enter data}, or 
-\code{target exit data} construct may contain one or more \code{map} clauses.
-An OpenMP implementation may report the set of mappings associated with \code{map} 
-clauses for a construct with a single \code{ompt_callback_target_map} callback to 
-report the effect of all mappings or multiple \code{ompt_callback_target_map} 
-callbacks with each reporting a subset of the mappings. Furthermore, an OpenMP 
-implementation may omit mappings that it determines are unnecessary. If an OpenMP 
-implementation issues multiple \code{ompt_callback_target_map} callbacks, these 
-callbacks may be interleaved with \code{ompt_callback_target_data_op} callbacks
-used to report data operations associated with the mappings.
-
-\argdesc
-The binding of the \plc{target_id} argument is the target region.
-
-The \plc{nitems} argument indicates the number of data mappings that 
-this callback reports.
-
-The \plc{host_addr} argument indicates an array of host data addresses.
-
-The \plc{device_addr} argument indicates an array of device data addresses.
-
-The \plc{bytes} argument indicates an array of size of data.
-
-The \plc{mapping_flags} argument indicates the kind of data mapping. 
-Flags for a mapping include one or more values specified by the 
-\code{ompt_target_map_flag_t} type.
-
-The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
-to its source code. If a runtime routine implements the region associated with
-a callback that has type signature \code{ompt_callback_target_map_t} then
-\plc{codeptr_ra} contains the return address of the call to that runtime routine.
-If the implementation of the region is inlined then \plc{codeptr_ra} contains the
-return address of the invocation of the callback. If attribution to source code
-is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
-
-\crossreferences
-\begin{itemize}
-\item \code{target}~\code{data} construct, see \specref{subsec:target data Construct}.
-
-\item \code{target}~\code{enter}~\code{data} construct,
-see \specref{subsec:target enter data Construct}.
-
-\item \code{target}~\code{exit}~\code{data} construct,
-see \specref{subsec:target exit data Construct}.
-
-\item \code{target} construct, see \specref{subsec:target Construct}.
-
-\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
-
-\item \code{ompt_target_map_flag_t} type, see \specref{sec:ompt_target_map_flag_t}.
-
-\item \code{ompt_callback_target_data_op_t}, 
-see \specref{sec:ompt_callback_target_data_op_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_target_submit_t}}
-\index{ompt_callback_target_submit_t@{\code{ompt_callback_target}\discretionary{}{}{}\code{_submit_t}}}
-\label{sec:ompt_callback_target_submit_t}
-\summary
-The \code{ompt_callback_target_submit_t} type is used for callbacks that are
-dispatched when an initial task is created on a device.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_target_submit_t) (
-  ompt_id_t \plc{target_id},
-  ompt_id_t \plc{host_op_id},
-  unsigned int \plc{requested_num_teams}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_target_kernel_t {
-  ompt_id_t \plc{host_op_id};
-  unsigned int \plc{requested_num_teams};
-  unsigned int \plc{granted_num_teams};
-  ompt_device_time_t \plc{end_time};
-} ompt_record_target_kernel_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-\descr
-A thread dispatches a registered \code{ompt_callback_target_submit} callback 
-on the host when a target task creates an initial task on a target device.
-
-\argdesc
-The \plc{target_id} argument is a unique identifier for the associated 
-target region.
-
-The \plc{host_op_id} argument is a unique identifier for the initial task 
-on the target device.
-
-The \plc{requested_num_teams} argument is the number of teams that the host 
-requested to execute the kernel. The actual number of teams that execute the 
-kernel may be smaller and generally will not be known until the kernel begins 
-to execute on the device.
-
-If \code{ompt_set_trace_ompt} has configured the device to trace kernel execution
-then the device will log a \code{ompt_record_target_kernel_t} record in a trace. 
-The fields in the record are as follows:
-
-\begin{itemize}
-\item The \plc{host_op_id} field contains a unique identifier that can be used 
-      to correlate a \code{ompt_record_target_kernel_t} record with its associated 
-      \code{ompt_callback_target_submit} callback on the host;
-\item The \plc{requested_num_teams} field contains the number of teams that the 
-      host requested to execute the kernel;
-\item The \plc{granted_num_teams} field contains the number of teams that the 
-      device actually used to execute the kernel;
-\item The time when the initial task began execution on the device is recorded 
-      in the \plc{time} field of an enclosing \code{ompt_record_t} structure; and
-\item The time when the initial task completed execution on the device is recorded 
-      in the \plc{end_time} field.
-\end{itemize}
-
-\crossreferences
-\begin{itemize}
-\item \code{target} construct, see \specref{subsec:target Construct}.
-
-\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_buffer_request_t}}
-\index{ompt_callback_buffer_request_t@{\code{ompt_callback_buffer}\discretionary{}{}{}\code{_request_t}}}
-\label{sec:ompt_callback_buffer_request_t}
-
-\summary
-The \code{ompt_callback_buffer_request_t} type is used for callbacks that are
-dispatched when a buffer to store event records for a device is requested.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_buffer_request_t) (
-  int \plc{device_num},
-  ompt_buffer_t **\plc{buffer},
-  size_t *\plc{bytes}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\descr
-A callback with type signature  \code{ompt_callback_buffer_request_t} requests 
-a buffer to store trace records for the specified device. A buffer request 
-callback may set \plc{*bytes} to 0 if it does not provide a buffer. If a 
-callback sets \plc{*bytes} to 0, further recording of events for the device is
-disabled until the next invocation of \code{ompt_start_trace}. This action
-causes the device to drop future trace records until recording is restarted.
-
-\argdesc
-The \plc{device_num} argument specifies the device.
-
-The \plc{*buffer} argument points to a buffer where device events may be 
-recorded. The \plc{*bytes} argument indicates the length of that buffer.
-
-\crossreferences
-\begin{itemize}
-\item \code{ompt_buffer_t} type, see \specref{sec:ompt_buffer_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_buffer_complete_t}}
-\index{ompt_callback_buffer_complete_t@{\code{ompt_callback_buffer}\discretionary{}{}{}\code{_complete_t}}}
-\label{sec:ompt_callback_buffer_complete_t}
-
-\summary
-The \code{ompt_callback_buffer_complete_t} type is used for callbacks that are
-dispatched when devices will not record any more trace records in an event buffer 
-and all records written to the buffer are valid.
-
-\format
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef void (*ompt_callback_buffer_complete_t) (
-  int \plc{device_num},
-  ompt_buffer_t *\plc{buffer},
-  size_t \plc{bytes},
-  ompt_buffer_cursor_t \plc{begin},
-  int \plc{buffer_owned}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\descr
-A callback with type signature \code{ompt_callback_buffer_complete_t} provides 
-a buffer that contains trace records for the specified device. Typically, a tool 
-will iterate through the records in the buffer and process them.
-
-The OpenMP implementation makes these callbacks on a thread that is not an 
-OpenMP master or worker thread.
-
-The callee may not delete the buffer if the \plc{buffer_owned} argument is 0.
-
-The buffer completion callback is not required to be \emph{async signal safe}.
-
-\argdesc
-The \plc{device_num} argument indicates the device which the buffer contains events.
-
-The \plc{buffer} argument is the address of a buffer that was previously
-allocated by a \emph{buffer request} callback.
-
-The \plc{bytes} argument indicates the full size of the buffer.
-
-The \plc{begin} argument is an opaque cursor that indicates the position 
-of the beginning of the first record in the buffer.
-
-The \plc{buffer_owned} argument is 1 if the data to which the buffer points
-can be deleted by the callback and 0 otherwise. If multiple devices accumulate 
-trace events into a single buffer, this callback may be invoked with a pointer 
-to one or more trace records in a shared buffer with \plc{buffer_owned} = 0. 
-In this case, the callback may not delete the buffer.
-
-\crossreferences
-\begin{itemize}
-\item \code{ompt_buffer_t} type, see \specref{sec:ompt_buffer_t}.
-
-\item \code{ompt_buffer_cursor_t} type, see \specref{sec:ompt_buffer_cursor_t}.
-\end{itemize}
-
-
-
-\subsubsection{\hcode{ompt_callback_control_tool_t}}
-\index{ompt_callback_control_tool_t@{\code{ompt_callback_control}\discretionary{}{}{}\code{_tool_t}}}
-\label{sec:ompt_callback_control_tool_t}
-
-\summary
-The \code{ompt_callback_control_tool_t} type is used for callbacks that 
-dispatch \plc{tool-control} events.
-
-\format
-
-\begin{ccppspecific}
-\begin{omptCallback}
-typedef int (*ompt_callback_control_tool_t) (
-  uint64_t \plc{command},
-  uint64_t \plc{modifier},
-  void *\plc{arg},
-  const void *\plc{codeptr_ra}
-);
-\end{omptCallback}
-\end{ccppspecific}
-
-\record
-\begin{ccppspecific}
-\begin{omptRecord}
-typedef struct ompt_record_control_tool_t {
-  uint64_t \plc{command};
-  uint64_t \plc{modifier};
-  const void *\plc{codeptr_ra};
-} ompt_record_control_tool_t;
-\end{omptRecord}
-\end{ccppspecific}
-
-\descr
-Callbacks with type signature \code{ompt_callback_control_tool_t} may return 
-any non-negative value, which will be returned to the application as the return 
-value of the \code{omp_control_tool} call that triggered the callback.
-
-\argdesc
-The \plc{command} argument passes a command from an application to a tool. 
-Standard values for \plc{command} are defined by \code{omp_control_tool_t} 
-in \specref{sec:control_tool}.
-
-The \plc{modifier} argument passes a command modifier from an application to a tool.
-
-The \plc{command} and \plc{modifier} arguments may have tool-specific values.
-Tools must ignore \plc{command} values that they are not designed to handle.
-
-The \plc{arg} argument is a void pointer that enables a tool and an application 
-to exchange arbitrary state. The \plc{arg} argument may be \code{NULL}.
-
-The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
-to its source code. If a runtime routine implements the region associated with
-a callback that has type signature \code{ompt_callback_control_tool_t} then
-\plc{codeptr_ra} contains the return address of the call to that runtime routine.
-If the implementation of the region is inlined then \plc{codeptr_ra} contains the
-return address of the invocation of the callback. If attribution to source code
-is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
-
-\constraints
-Tool-specific values for \plc{command} must be $\geq$ 64.
-
-\crossreferences
-\begin{itemize}
-\item \code{omp_control_tool_t} enumeration type, see \specref{sec:control_tool}.
 \end{itemize}
 
 
@@ -2042,3 +1434,611 @@ of the callback with type signature \code{ompt_callback_device_finalize_t}.
 \item \code{ompt_callback_buffer_complete_t}, 
 see \specref{sec:ompt_callback_buffer_complete_t}.
 \end{itemize}
+\subsubsection{\hcode{ompt_callback_device_load_t}}
+\index{ompt_callback_target_code_t@{\code{ompt_callback_device}\discretionary{}{}{}\code{_load_t}}}
+\label{sec:ompt_callback_device_load_t}
+
+\summary
+The \code{ompt_callback_device_load_t} type is used for callbacks that 
+the OpenMP runtime invokes to indicate that it has just loaded code onto 
+the specified device.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_device_load_t) (
+  int \plc{device_num},
+  const char *\plc{filename},
+  int64_t \plc{offset_in_file},
+  void *\plc{vma_in_file},
+  size_t \plc{bytes}
+  void *\plc{host_addr},
+  void *\plc{device_addr},
+  uint64_t \plc{module_id}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\argdesc
+The \plc{device_num} argument specifies the device.
+
+The \plc{filename} argument indicates the name of a file in which the device 
+code can be found. A NULL \plc{filename} indicates that the code is not available 
+in a file in the file system.
+
+The \plc{offset_in_file} argument indicates an offset into \plc{filename} at 
+which the code can be found. A value of -1 indicates that no offset is provided.
+
+\code{ompt_addr_none} is defined as a pointer with the value \textasciitilde 0.
+
+The \plc{vma_in_file} argument indicates an virtual address in \plc{filename} 
+at which the code can be found. A value of \code{ompt_addr_none} indicates that 
+a virtual address in the file is not available.
+
+The \plc{bytes} argument indicates the size of the device code object in bytes.
+
+The \plc{host_addr} argument indicates the address at which a copy of the device 
+code is available in host memory. A value of \code{ompt_addr_none} indicates that 
+a host code address is not available.
+
+The \plc{device_addr} argument indicates the address at which the device code has 
+been loaded in device memory. A value of \code{ompt_addr_none} indicates that a 
+device code address is not available.
+
+The \plc{module_id} argument is an identifier that is associated with the device 
+code object.
+
+\crossreferences
+\begin{itemize}
+\item Device directives, see \specref{sec:Device Directives}.
+\end{itemize}
+
+
+\subsubsection{\hcode{ompt_callback_device_unload_t}}
+\index{ompt_callback_target_code_t@{\code{ompt_callback_device}\discretionary{}{}{}\code{_unload_t}}}
+\label{sec:ompt_callback_device_unload_t}
+
+\summary
+The \code{ompt_callback_device_unload_t} type is used for callbacks that 
+the OpenMP runtime invokes to indicate that it is about to unload code from
+the specified device.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_device_unload_t) (
+  int \plc{device_num},
+  uint64_t \plc{module_id}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\argdesc
+The \plc{device_num} argument specifies the device.
+
+The \plc{module_id} argument is an identifier that is associated 
+with the device code object.
+
+\crossreferences
+\begin{itemize}
+\item Device directives, see \specref{sec:Device Directives}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_buffer_request_t}}
+\index{ompt_callback_buffer_request_t@{\code{ompt_callback_buffer}\discretionary{}{}{}\code{_request_t}}}
+\label{sec:ompt_callback_buffer_request_t}
+
+\summary
+The \code{ompt_callback_buffer_request_t} type is used for callbacks that are
+dispatched when a buffer to store event records for a device is requested.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_buffer_request_t) (
+  int \plc{device_num},
+  ompt_buffer_t **\plc{buffer},
+  size_t *\plc{bytes}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\descr
+A callback with type signature  \code{ompt_callback_buffer_request_t} requests 
+a buffer to store trace records for the specified device. A buffer request 
+callback may set \plc{*bytes} to 0 if it does not provide a buffer. If a 
+callback sets \plc{*bytes} to 0, further recording of events for the device is
+disabled until the next invocation of \code{ompt_start_trace}. This action
+causes the device to drop future trace records until recording is restarted.
+
+\argdesc
+The \plc{device_num} argument specifies the device.
+
+The \plc{*buffer} argument points to a buffer where device events may be 
+recorded. The \plc{*bytes} argument indicates the length of that buffer.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt_buffer_t} type, see \specref{sec:ompt_buffer_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_buffer_complete_t}}
+\index{ompt_callback_buffer_complete_t@{\code{ompt_callback_buffer}\discretionary{}{}{}\code{_complete_t}}}
+\label{sec:ompt_callback_buffer_complete_t}
+
+\summary
+The \code{ompt_callback_buffer_complete_t} type is used for callbacks that are
+dispatched when devices will not record any more trace records in an event buffer 
+and all records written to the buffer are valid.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_buffer_complete_t) (
+  int \plc{device_num},
+  ompt_buffer_t *\plc{buffer},
+  size_t \plc{bytes},
+  ompt_buffer_cursor_t \plc{begin},
+  int \plc{buffer_owned}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\descr
+A callback with type signature \code{ompt_callback_buffer_complete_t} provides 
+a buffer that contains trace records for the specified device. Typically, a tool 
+will iterate through the records in the buffer and process them.
+
+The OpenMP implementation makes these callbacks on a thread that is not an 
+OpenMP master or worker thread.
+
+The callee may not delete the buffer if the \plc{buffer_owned} argument is 0.
+
+The buffer completion callback is not required to be \emph{async signal safe}.
+
+\argdesc
+The \plc{device_num} argument indicates the device which the buffer contains events.
+
+The \plc{buffer} argument is the address of a buffer that was previously
+allocated by a \emph{buffer request} callback.
+
+The \plc{bytes} argument indicates the full size of the buffer.
+
+The \plc{begin} argument is an opaque cursor that indicates the position 
+of the beginning of the first record in the buffer.
+
+The \plc{buffer_owned} argument is 1 if the data to which the buffer points
+can be deleted by the callback and 0 otherwise. If multiple devices accumulate 
+trace events into a single buffer, this callback may be invoked with a pointer 
+to one or more trace records in a shared buffer with \plc{buffer_owned} = 0. 
+In this case, the callback may not delete the buffer.
+
+\crossreferences
+\begin{itemize}
+\item \code{ompt_buffer_t} type, see \specref{sec:ompt_buffer_t}.
+
+\item \code{ompt_buffer_cursor_t} type, see \specref{sec:ompt_buffer_cursor_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_target_data_op_t}}
+\index{ompt_callback_target_data_op_t@{\code{ompt_callback_target}\discretionary{}{}{}\code{_data}\discretionary{}{}{}\code{_op_t}}}
+\label{sec:ompt_callback_target_data_op_t}
+\summary
+The \code{ompt_callback_target_data_op_t} type is used for callbacks that are
+dispatched when a thread maps data to a device.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_target_data_op_t) (
+  ompt_id_t \plc{target_id},
+  ompt_id_t \plc{host_op_id},
+  ompt_target_data_op_t \plc{optype},
+  void *\plc{src_addr},
+  int \plc{src_device_num},
+  void *\plc{dest_addr},
+  int \plc{dest_device_num},
+  size_t \plc{bytes},
+  const void *\plc{codeptr_ra}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_target_data_op_t {
+  ompt_id_t \plc{host_op_id};
+  ompt_target_data_op_t \plc{optype};
+  void *\plc{src_addr};
+  int \plc{src_device_num};
+  void *\plc{dest_addr};
+  int \plc{dest_device_num};
+  size_t \plc{bytes};
+  ompt_device_time_t \plc{end_time};
+  const void *\plc{codeptr_ra};
+} ompt_record_target_data_op_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+\descr
+A registered \code{ompt_callback_target_data_op} callback is dispatched when device 
+memory is allocated or freed, as well as when data is copied to or from a device.
+
+\begin{note}
+An OpenMP implementation may aggregate program variables and data operations 
+upon them.  For instance, an OpenMP implementation may synthesize a composite 
+to represent multiple scalars and then allocate, free, or copy this composite 
+as a whole rather than performing data operations on each scalar individually.  
+Thus, callbacks may not be dispatched as separate data operations on each variable.
+\end{note}
+
+\argdesc
+The \plc{host_op_id} argument is a unique identifier for a data 
+operations on a target device.
+
+The \plc{optype} argument indicates the kind of data mapping.
+
+The \plc{src_addr} argument indicates the data address before the operation, 
+where applicable.
+
+The \plc{src_device_num} argument indicates the source device number
+for the data operation, where applicable.
+
+The \plc{dest_addr} argument indicates the data address after the operation.
+
+The \plc{dest_device_num} argument indicates the destination device
+number for the data operation.
+
+It is implementation defined whether in some operations \plc{src_addr}
+or \plc{dest_addr} may point to an intermediate buffer.
+
+The \plc{bytes} argument indicates the size of data.
+
+The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
+to its source code. If a runtime routine implements the region associated with
+a callback that has type signature \code{ompt_callback_target_data_op_t} then
+\plc{codeptr_ra} contains the return address of the call to that runtime routine.
+If the implementation of the region is inlined then \plc{codeptr_ra} contains the
+return address of the invocation of the callback. If attribution to source code
+is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item \code{map} clause, see \specref{subsec:map Clause}.
+
+\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
+
+\item \code{ompt_target_data_op_t} type signature, see
+\specref{sec:ompt_target_data_op_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_target_t}}
+\index{ompt_callback_target_t@{\code{ompt_callback_target_t}}}
+\label{sec:ompt_callback_target_t}
+
+\summary
+The \code{ompt_callback_target_t} type is used for callbacks that are
+dispatched when a thread begins to execute a device construct.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_target_t) (
+  ompt_target_t \plc{kind},
+  ompt_scope_endpoint_t \plc{endpoint},
+  int \plc{device_num},
+  ompt_data_t *\plc{task_data},
+  ompt_id_t \plc{target_id},
+  const void *\plc{codeptr_ra}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_target_t {
+  ompt_target_t \plc{kind};
+  ompt_scope_endpoint_t \plc{endpoint};
+  int \plc{device_num};
+  ompt_id_t \plc{task_id};
+  ompt_id_t \plc{target_id};
+  const void *\plc{codeptr_ra};
+} ompt_record_target_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+
+\argdesc
+The \plc{kind} argument indicates the kind of target region.
+
+The \plc{endpoint} argument indicates that the callback signals 
+the beginning of a scope or the end of a scope.
+
+The \plc{device_num} argument indicates the id of the device that
+will execute the target region.
+
+The binding of the \plc{task_data} argument is the generating task.
+
+The binding of the \plc{target_id} argument is the target region.
+
+The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
+to its source code. If a runtime routine implements the region associated with
+a callback that has type signature \code{ompt_callback_target_t} then
+\plc{codeptr_ra} contains the return address of the call to that runtime routine.
+If the implementation of the region is inlined then \plc{codeptr_ra} contains the
+return address of the invocation of the callback. If attribution to source code
+is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item \code{target}~\code{data} construct, see \specref{subsec:target data Construct}.
+
+\item \code{target}~\code{enter}~\code{data} construct, 
+see \specref{subsec:target enter data Construct}.
+
+\item \code{target}~\code{exit}~\code{data} construct, 
+see \specref{subsec:target exit data Construct}.
+
+\item \code{target} construct, see \specref{subsec:target Construct}.
+
+\item \code{target}~\code{update} construct, 
+see \specref{subsec:target update Construct}.
+
+\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
+
+\item \code{ompt_data_t} type signature, see \specref{sec:ompt_data_t}.
+
+\item \code{ompt_scope_endpoint_t} type signature, see
+\specref{sec:ompt_scope_endpoint_t}.
+
+\item \code{ompt_target_t} type signature, see \specref{sec:ompt_target_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_target_map_t}}
+\index{ompt_callback_target_map_t@{\code{ompt_callback_target}\discretionary{}{}{}\code{_map_t}}}
+\label{sec:ompt_callback_target_map_t}
+\summary
+The \code{ompt_callback_target_map_t} type is used for callbacks that are
+dispatched to indicate data mapping relationships.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_target_map_t) (
+  ompt_id_t \plc{target_id},
+  unsigned int \plc{nitems},
+  void **\plc{host_addr},
+  void **\plc{device_addr},
+  size_t *\plc{bytes},
+  unsigned int *\plc{mapping_flags},
+  const void *\plc{codeptr_ra}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_target_map_t {
+  ompt_id_t \plc{target_id};
+  unsigned int \plc{nitems};
+  void **\plc{host_addr};
+  void **\plc{device_addr};
+  size_t *\plc{bytes};
+  unsigned int *\plc{mapping_flags};
+  const void *\plc{codeptr_ra};
+} ompt_record_target_map_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+\descr
+An instance of a \code{target}, \code{target data}, \code{target enter data}, or 
+\code{target exit data} construct may contain one or more \code{map} clauses.
+An OpenMP implementation may report the set of mappings associated with \code{map} 
+clauses for a construct with a single \code{ompt_callback_target_map} callback to 
+report the effect of all mappings or multiple \code{ompt_callback_target_map} 
+callbacks with each reporting a subset of the mappings. Furthermore, an OpenMP 
+implementation may omit mappings that it determines are unnecessary. If an OpenMP 
+implementation issues multiple \code{ompt_callback_target_map} callbacks, these 
+callbacks may be interleaved with \code{ompt_callback_target_data_op} callbacks
+used to report data operations associated with the mappings.
+
+\argdesc
+The binding of the \plc{target_id} argument is the target region.
+
+The \plc{nitems} argument indicates the number of data mappings that 
+this callback reports.
+
+The \plc{host_addr} argument indicates an array of host data addresses.
+
+The \plc{device_addr} argument indicates an array of device data addresses.
+
+The \plc{bytes} argument indicates an array of size of data.
+
+The \plc{mapping_flags} argument indicates the kind of data mapping. 
+Flags for a mapping include one or more values specified by the 
+\code{ompt_target_map_flag_t} type.
+
+The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
+to its source code. If a runtime routine implements the region associated with
+a callback that has type signature \code{ompt_callback_target_map_t} then
+\plc{codeptr_ra} contains the return address of the call to that runtime routine.
+If the implementation of the region is inlined then \plc{codeptr_ra} contains the
+return address of the invocation of the callback. If attribution to source code
+is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
+
+\crossreferences
+\begin{itemize}
+\item \code{target}~\code{data} construct, see \specref{subsec:target data Construct}.
+
+\item \code{target}~\code{enter}~\code{data} construct,
+see \specref{subsec:target enter data Construct}.
+
+\item \code{target}~\code{exit}~\code{data} construct,
+see \specref{subsec:target exit data Construct}.
+
+\item \code{target} construct, see \specref{subsec:target Construct}.
+
+\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
+
+\item \code{ompt_target_map_flag_t} type, see \specref{sec:ompt_target_map_flag_t}.
+
+\item \code{ompt_callback_target_data_op_t}, 
+see \specref{sec:ompt_callback_target_data_op_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_target_submit_t}}
+\index{ompt_callback_target_submit_t@{\code{ompt_callback_target}\discretionary{}{}{}\code{_submit_t}}}
+\label{sec:ompt_callback_target_submit_t}
+\summary
+The \code{ompt_callback_target_submit_t} type is used for callbacks that are
+dispatched when an initial task is created on a device.
+
+\format
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef void (*ompt_callback_target_submit_t) (
+  ompt_id_t \plc{target_id},
+  ompt_id_t \plc{host_op_id},
+  unsigned int \plc{requested_num_teams}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_target_kernel_t {
+  ompt_id_t \plc{host_op_id};
+  unsigned int \plc{requested_num_teams};
+  unsigned int \plc{granted_num_teams};
+  ompt_device_time_t \plc{end_time};
+} ompt_record_target_kernel_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+\descr
+A thread dispatches a registered \code{ompt_callback_target_submit} callback 
+on the host when a target task creates an initial task on a target device.
+
+\argdesc
+The \plc{target_id} argument is a unique identifier for the associated 
+target region.
+
+The \plc{host_op_id} argument is a unique identifier for the initial task 
+on the target device.
+
+The \plc{requested_num_teams} argument is the number of teams that the host 
+requested to execute the kernel. The actual number of teams that execute the 
+kernel may be smaller and generally will not be known until the kernel begins 
+to execute on the device.
+
+If \code{ompt_set_trace_ompt} has configured the device to trace kernel execution
+then the device will log a \code{ompt_record_target_kernel_t} record in a trace. 
+The fields in the record are as follows:
+
+\begin{itemize}
+\item The \plc{host_op_id} field contains a unique identifier that can be used 
+      to correlate a \code{ompt_record_target_kernel_t} record with its associated 
+      \code{ompt_callback_target_submit} callback on the host;
+\item The \plc{requested_num_teams} field contains the number of teams that the 
+      host requested to execute the kernel;
+\item The \plc{granted_num_teams} field contains the number of teams that the 
+      device actually used to execute the kernel;
+\item The time when the initial task began execution on the device is recorded 
+      in the \plc{time} field of an enclosing \code{ompt_record_t} structure; and
+\item The time when the initial task completed execution on the device is recorded 
+      in the \plc{end_time} field.
+\end{itemize}
+
+\crossreferences
+\begin{itemize}
+\item \code{target} construct, see \specref{subsec:target Construct}.
+
+\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
+\end{itemize}
+
+
+
+\subsubsection{\hcode{ompt_callback_control_tool_t}}
+\index{ompt_callback_control_tool_t@{\code{ompt_callback_control}\discretionary{}{}{}\code{_tool_t}}}
+\label{sec:ompt_callback_control_tool_t}
+
+\summary
+The \code{ompt_callback_control_tool_t} type is used for callbacks that 
+dispatch \plc{tool-control} events.
+
+\format
+
+\begin{ccppspecific}
+\begin{omptCallback}
+typedef int (*ompt_callback_control_tool_t) (
+  uint64_t \plc{command},
+  uint64_t \plc{modifier},
+  void *\plc{arg},
+  const void *\plc{codeptr_ra}
+);
+\end{omptCallback}
+\end{ccppspecific}
+
+\record
+\begin{ccppspecific}
+\begin{omptRecord}
+typedef struct ompt_record_control_tool_t {
+  uint64_t \plc{command};
+  uint64_t \plc{modifier};
+  const void *\plc{codeptr_ra};
+} ompt_record_control_tool_t;
+\end{omptRecord}
+\end{ccppspecific}
+
+\descr
+Callbacks with type signature \code{ompt_callback_control_tool_t} may return 
+any non-negative value, which will be returned to the application as the return 
+value of the \code{omp_control_tool} call that triggered the callback.
+
+\argdesc
+The \plc{command} argument passes a command from an application to a tool. 
+Standard values for \plc{command} are defined by \code{omp_control_tool_t} 
+in \specref{sec:control_tool}.
+
+The \plc{modifier} argument passes a command modifier from an application to a tool.
+
+The \plc{command} and \plc{modifier} arguments may have tool-specific values.
+Tools must ignore \plc{command} values that they are not designed to handle.
+
+The \plc{arg} argument is a void pointer that enables a tool and an application 
+to exchange arbitrary state. The \plc{arg} argument may be \code{NULL}.
+
+The \plc{codeptr_ra} argument relates the implementation of an OpenMP region
+to its source code. If a runtime routine implements the region associated with
+a callback that has type signature \code{ompt_callback_control_tool_t} then
+\plc{codeptr_ra} contains the return address of the call to that runtime routine.
+If the implementation of the region is inlined then \plc{codeptr_ra} contains the
+return address of the invocation of the callback. If attribution to source code
+is impossible or inappropriate, \plc{codeptr_ra} may be \code{NULL}.
+
+\constraints
+Tool-specific values for \plc{command} must be $\geq$ 64.
+
+\crossreferences
+\begin{itemize}
+\item \code{omp_control_tool_t} enumeration type, see \specref{sec:control_tool}.
+\end{itemize}
+
+
+
