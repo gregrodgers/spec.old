@@ -2,8 +2,8 @@
 OMPVERSION=Version 5.0
 
 # This specifies the document version which only shows in release builds
-DOCVERSION=Public Comment Draft,
-DOCDATE=July 2018
+DOCVERSION=
+DOCDATE=November 2018
 
 GITREV=$(shell git rev-parse --short HEAD 2>/dev/null || echo out of git tree)
 
