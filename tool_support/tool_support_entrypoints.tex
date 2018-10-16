@@ -148,7 +148,7 @@ immutable and defined for the lifetime of a program execution.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_state_t}, see \specref{sec:thread-states}.
+\item \code{ompt_state_t} type, see \specref{sec:thread-states}.
 \end{itemize}
 
 
@@ -217,7 +217,7 @@ immutable and defined for the lifetime of a program execution.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_mutex_t}, see \specref{sec:ompt_mutex_t}.
+\item \code{ompt_mutex_t} type, see \specref{sec:ompt_mutex_t}.
 \end{itemize}
 
 
@@ -235,7 +235,7 @@ when a host OpenMP event occurs.
 \format
 \begin{ccppspecific}
 \begin{omptCallback}
-typedef int (*ompt_set_callback_t) (
+typedef ompt_set_result_t (*ompt_set_callback_t) (
   ompt_callbacks_t \plc{event},
   ompt_callback_t \plc{callback}
 );
@@ -246,23 +246,8 @@ typedef int (*ompt_set_callback_t) (
 OpenMP implementations can use callbacks to indicate the occurrence of events 
 during the execution of an OpenMP program. The \code{ompt_set_callback} runtime
 entry point, which has type signature \code{ompt_set_callback_t}, registers a 
-callback for an OpenMP event on the current device,
-
-The return value of \code{ompt_set_callback} may indicate several possible 
-outcomes. Callback registration may fail if it is called outside the initializer 
-for the callback interface, which is indicated by the \code{omp_set_error} return 
-value. Otherwise, the return value indicates if \emph{dispatching} a callback 
-event leads to the invocation of the callback. The \code{ompt_set_never} return 
-value indicates that the callback will never be invoked at runtime. The 
-\code{ompt_set_sometimes} return value indicates that the callback will be 
-invoked at runtime for an implementation-defined subset of associated event 
-occurrences. The \code{ompt_set_sometimes_paired} return value indicates the 
-same result as \code{ompt_set_sometimes}, and, in addition, that a callback
-with an \plc{endpoint} value of \code{ompt_scope_begin} will be invoked if 
-and only if the same callback with an \plc{endpoint} value of \code{ompt_scope_end} 
-will also be invoked sometime in the future. The \code{ompt_set_always} return 
-value indicates that the callback will always be invoked when an associated 
-event occurs.
+callback for an OpenMP event on the current device, The return value of 
+\code{ompt_set_callback} indicates the outcome of registering the callback.
 
 \argdesc
 The \plc{event} argument indicates the event for which the callback is 
@@ -276,25 +261,23 @@ callbacks are successfully disabled then \code{ompt_set_always} is returned.
 When a tool registers a callback for an event, the type signature for the 
 callback must match the type signature appropriate for the event.
 
-\begin{table}
-\caption{Return Codes for \code{ompt_set_callback} and
-    \code{ompt_set_trace_ompt}\label{table:ToolsSupport_set_rc}}
-\begin{omptEnum}
-typedef enum ompt_set_result_t {
-  ompt_set_error            = 0,
-  ompt_set_never            = 1,
-  ompt_set_sometimes        = 2,
-  ompt_set_sometimes_paired = 3,
-  ompt_set_always           = 4
-} ompt_set_result_t;
-\end{omptEnum}
-\end{table}
+\restrictions
+The \code{ompt_set_callback} runtime entry point has the following restriction:
+
+\begin{itemize}
+\item The entry point must not return \code{ompt_set_impossible}.
+\end{itemize}
 
 \crossreferences
 \begin{itemize}
+\item Monitoring activity on the host with OMPT,
+see \specref{sec:ompt-register-callbacks}.
+
 \item \code{ompt_callbacks_t} enumeration type, see \specref{sec:ompt_callbacks_t}.
 
 \item \code{ompt_callback_t} type, see \specref{sec:ompt_callback_t}.
+
+\item \code{ompt_set_result_t} type, see \specref{sec:ompt_set_result_t}.
 
 \item \code{ompt_get_callback_t} host callback type signature,
 see \specref{sec:ompt_get_callback_t}.
@@ -1134,7 +1117,7 @@ to identify the device being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 \end{itemize}
 
 
@@ -1175,9 +1158,9 @@ to identify the device being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 
-\item \code{ompt_device_time_t}, see \specref{sec:ompt_device_time_t}.
+\item \code{ompt_device_time_t} type, see \specref{sec:ompt_device_time_t}.
 \end{itemize}
 
 
@@ -1223,11 +1206,11 @@ The \plc{time} argument is a time from the specified device.
 
 \crossreferences
 \begin{itemize}
-\item \code{omp_get_wtime}, see \specref{subsec:omp_get_wtime}.
+\item \code{omp_get_wtime} routine, see \specref{subsec:omp_get_wtime}.
 
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 
-\item \code{ompt_device_time_t}, see \specref{sec:ompt_device_time_t}.
+\item \code{ompt_device_time_t} type, see \specref{sec:ompt_device_time_t}.
 \end{itemize}
 
 
@@ -1243,7 +1226,7 @@ the recording of trace records for one or more types of OMPT events.
 \format
 \begin{ccppspecific}
 \begin{omptInquiry}
-typedef int (*ompt_set_trace_ompt_t) (
+typedef ompt_set_result_t (*ompt_set_trace_ompt_t) (
   ompt_device_t *\plc{device},
   unsigned int \plc{enable},
   unsigned int \plc{etype}
@@ -1266,47 +1249,23 @@ or disabled for the event or events that the \plc{etype} argument specifies.
 A positive value for \plc{enable} indicates that recording should be enabled; 
 a value of 0 for \plc{enable} indicates that recording should be disabled.
 
-\nolinenumbers
-\renewcommand{\arraystretch}{1.5}
-\tablefirsthead{%
-\hline
-\textsf{\textbf{Return Code}} & \textsf{\textbf{Meaning}}\\
-\hline\\[-3ex]
-}
-\tablehead{%
-\multicolumn{2}{l}{\small\slshape table continued from previous page}\\
-\hline
-\textsf{\textbf{Return Code}} & \textsf{\textbf{Meaning}}\\
-\hline\\[-3ex]
-}
-\tabletail{%
-\hline\\[-4ex]
-\multicolumn{2}{l}{\small\slshape table continued on next page}\\
-}
-\tablelasttail{\hline}
-\tablecaption{Return Codes for \code{ompt_set_trace_ompt} and
-    \code{ompt_set_trace_native}\label{table:record_set}}
-\begin{supertabular}{p{2.0in} p{3.0in}}
-0 & error\\
-1 & event will never occur\\
-2 & event may occur but no tracing is possible\\
-3 & event may occur and will be traced when convenient\\
-4 & event may occur and will always be traced if event occurs\\
-\end{supertabular}
+\restrictions
+The \code{ompt_set_trace_ompt} runtime entry point has the following restriction:
 
-\linenumbers
-
-\effect
-Table~\ref{table:record_set} shows the possible return codes for 
-\code{ompt_set_trace_ompt}. If the invocation of \code{ompt_set_trace_ompt} 
-applies to all events then the return code is 3 if tracing is possible for 
-one or more events but not for others.
+\begin{itemize}
+\item The entry point must not return \code{ompt_set_sometimes_paired}.
+\end{itemize}
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_callbacks_t}, see \specref{sec:ompt_callbacks_t}.
+\item Tracing activity on target devices with OMPT,
+see \specref{sec:tracing-device-activity}.
 
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_callbacks_t} type, see \specref{sec:ompt_callbacks_t}.
+
+\item \code{ompt_set_result_t} type, see \specref{sec:ompt_set_result_t}.
+
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 \end{itemize}
 
 
@@ -1322,7 +1281,7 @@ the recording of native trace records for a device.
 \format
 \begin{ccppspecific}
 \begin{omptInquiry}
-typedef int (*ompt_set_trace_native_t) (
+typedef ompt_set_result_t (*ompt_set_trace_native_t) (
   ompt_device_t *\plc{device},
   int \plc{enable},
   int \plc{flags}
@@ -1349,20 +1308,28 @@ enable or disable recording of events.
 The \plc{flags} argument specifies the kinds of native device monitoring 
 to enable or to disable. Each kind of monitoring is specified by a flag bit.
 Flags can be composed by using logical {\ttfamily or}  to combine enumeration
-values from type \code{ompt_native_mon_flag_t}. Table~\ref{table:record_set} 
-shows the possible return codes for \code{ompt_set_trace_native}. If an 
-invocation of \code{ompt_set_trace_native} is used to enable or to disable 
-more than one kind of monitoring, the return code is 3 if tracing is possible 
-for one or more kinds of monitoring but not for others.
+values from type \code{ompt_native_mon_flag_t}. 
 
 To start, to pause, to flush, or to stop tracing for a specific target device
 associated with \plc{device}, a tool invokes the \code{ompt_start_trace}, 
 \code{ompt_pause_trace}, \code{ompt_flush_trace}, or \code{ompt_stop_trace} 
 runtime entry point for the device.
 
+\restrictions
+The \code{ompt_set_trace_native} runtime entry point has the following restriction:
+
+\begin{itemize}
+\item The entry point must not return \code{ompt_set_sometimes_paired}.
+\end{itemize}
+
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item Tracing activity on target devices with OMPT,
+see \specref{sec:tracing-device-activity}.
+
+\item \code{ompt_set_result_t} type, see \specref{sec:ompt_set_result_t}.
+
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 \end{itemize}
 
 
@@ -1411,12 +1378,12 @@ by the OpenMP implementation to empty a buffer that contains event records.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 
-\item \code{ompt_callback_buffer_request_t}, 
+\item \code{ompt_callback_buffer_request_t} callback type, 
 see \specref{sec:ompt_callback_buffer_request_t}.
 
-\item \code{ompt_callback_buffer_complete_t}, 
+\item \code{ompt_callback_buffer_complete_t} callback type, 
 see \specref{sec:ompt_callback_buffer_complete_t}.
 \end{itemize}
 
@@ -1458,7 +1425,7 @@ To pause tracing, any other value should be supplied.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 \end{itemize}
 
 
@@ -1494,7 +1461,7 @@ use this pointer to identify the device that is being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 \end{itemize}
 
 
@@ -1527,7 +1494,7 @@ use this pointer to identify the device that is being addressed.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 \end{itemize}
 
 
@@ -1576,9 +1543,9 @@ The \plc{next} argument returns the next value of an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 
-\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_buffer_cursor_t} type, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
 
@@ -1621,11 +1588,11 @@ The \plc{current} argument is an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_record_t}, see \specref{sec:ompt_record_t}.
+\item \code{ompt_record_t} type, see \specref{sec:ompt_record_t}.
 
-\item \code{ompt_buffer_t}, see \specref{sec:ompt_buffer_t}.
+\item \code{ompt_buffer_t} type, see \specref{sec:ompt_buffer_t}.
 
-\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_buffer_cursor_t} type, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
 
@@ -1667,11 +1634,11 @@ The \plc{current} argument is an opaque buffer cursor.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_record_ompt_t}, see \specref{sec:ompt_record_ompt_t}.
+\item \code{ompt_record_ompt_t} type, see \specref{sec:ompt_record_ompt_t}.
 
-\item \code{ompt_device_t}, see \specref{sec:ompt_device_t}.
+\item \code{ompt_device_t} type, see \specref{sec:ompt_device_t}.
 
-\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_buffer_cursor_t} type, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
 
@@ -1720,11 +1687,11 @@ initiated by the host.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_id_t}, see \specref{sec:ompt_id_t}.
+\item \code{ompt_id_t} type, see \specref{sec:ompt_id_t}.
 
-\item \code{ompt_buffer_t}, see \specref{sec:ompt_buffer_t}.
+\item \code{ompt_buffer_t} type, see \specref{sec:ompt_buffer_t}.
 
-\item \code{ompt_buffer_cursor_t}, see \specref{sec:ompt_buffer_cursor_t}.
+\item \code{ompt_buffer_cursor_t} type, see \specref{sec:ompt_buffer_cursor_t}.
 \end{itemize}
 
 
@@ -1759,7 +1726,7 @@ The \plc{native_record} argument is a pointer to a native trace record.
 
 \crossreferences
 \begin{itemize}
-\item \code{ompt_record_abstract_t}, see \specref{sec:ompt_record_abstract_t}.
+\item \code{ompt_record_abstract_t} type, see \specref{sec:ompt_record_abstract_t}.
 \end{itemize}
 
 
