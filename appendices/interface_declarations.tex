@@ -458,11 +458,11 @@ extern void omp_control_tool(int command, int modifier, void *arg);
       integer omp_depend_kind
       parameter ( omp_depend_kind = selected_int_kind( 10 ) )
 
-      integer omp_pause_kind
-      parameter ( omp_pause_kind = selected_int_kind( 8 ) )
-      integer ( omp_pause_kind ) omp_pause_soft
+      integer omp_pause_resource_kind
+      parameter ( omp_pause_resource_kind = selected_int_kind( 8 ) )
+      integer ( omp_pause_resource_kind ) omp_pause_soft
       parameter ( omp_pause_soft = 1 )
-      integer ( omp_pause_kind ) omp_pause_hard
+      integer ( omp_pause_resource_kind ) omp_pause_hard
       parameter ( omp_pause_hard = 2 )
 
       integer omp_event_handle_kind
@@ -664,6 +664,10 @@ extern void omp_control_tool(int command, int modifier, void *arg);
       integer omp_get_initial_device
       external omp_get_max_task_priority
       integer omp_get_max_task_priority
+      external omp_pause_resource
+      integer omp_pause_resource
+      external omp_pause_resource_all
+      integer omp_pause_resource_all
 
       external omp_in_final
       logical omp_in_final
@@ -702,13 +706,17 @@ extern void omp_control_tool(int command, int modifier, void *arg);
       external omp_get_wtime
       double precision omp_get_wtime
 
-      integer  omp_control_tool
-      external omp_control_tool
+      external omp_fulfill_event
 
+      external omp_init_allocator
+      integer ( omp_allocator_handle_kind ) omp_init_allocator
+      external omp_destroy_allocator
       external omp_set_default_allocator
       external omp_get_default_allocator
       integer ( omp_allocator_handle_kind ) omp_get_default_allocator
 
+      external omp_control_tool
+      integer omp_control_tool
 \end{ompfSyntax}}
 
 
@@ -775,9 +783,9 @@ extern void omp_control_tool(int command, int modifier, void *arg);
 
         integer, parameter :: omp_depend_kind = selected_int_kind( 10 )
 
-        integer, parameter :: omp_pause_kind = selected_int_kind( 8 )
-        integer (kind=omp_pause_kind), parameter :: omp_pause_soft = 1
-        integer (kind=omp_pause_kind), parameter :: omp_pause_hard = 2
+        integer, parameter :: omp_pause_resource_kind = selected_int_kind( 8 )
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_soft = 1
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_hard = 2
 
         integer, parameter :: omp_event_handle_kind = selected_int_kind( 8 )
 
@@ -987,7 +995,7 @@ extern void omp_control_tool(int command, int modifier, void *arg);
            integer :: omp_get_thread_limit
           end function omp_get_thread_limit
 
-          function omp_get_supported_active_levels()
+          function omp_get_supported_active_levels ()
            integer :: omp_get_supported_active_levels
           end function omp_get_supported_active_levels
 
@@ -1108,6 +1116,17 @@ extern void omp_control_tool(int command, int modifier, void *arg);
            integer :: omp_get_max_task_priority
           end function omp_get_max_task_priority
 
+          function omp_pause_resource (kind, device_num)
+           integer(kind=omp_pause_resource_kind) :: kind
+           integer :: device_num
+           integer :: omp_pause_resource
+          end function omp_pause_resource
+
+          function omp_pause_resource_all (kind)
+           integer(kind=omp_pause_resource_kind) :: kind
+           integer :: omp_pause_resource_all
+          end function omp_pause_resource_all
+
           subroutine omp_init_lock (svar)
            use omp_lib_kinds
            integer(kind=omp_lock_kind), intent(out) :: svar
@@ -1179,12 +1198,23 @@ extern void omp_control_tool(int command, int modifier, void *arg);
           function omp_get_wtime ()
            double precision :: omp_get_wtime
           end function omp_get_wtime
-          function omp_control_tool (command, modifier)
+
+          subroutine omp_fulfill_event (event)
            use omp_lib_kinds
-           integer :: omp_control_tool
-           integer(kind=omp_control_tool_kind), intent(in) :: command
-           integer(kind=omp_control_tool_kind), intent(in) :: modifier
-          end function omp_control_tool
+           integer(kind=omp_event_handle_kind) :: event
+          end subroutine omp_fulfill_event
+
+          function omp_init_allocator (memspace, ntraits, traits)
+           use omp_lib_kinds
+           integer(kind=omp_memspace_handle_kind), intent(in) :: memspace
+           integer, intent(in) :: ntraits
+           type(omp_alloctrait), intent(in) :: traits(*)
+           integer(kind=omp_allocator_handle_kind) :: omp_init_allocator
+          end function omp_init_allocator
+
+          subroutine omp_destroy_allocator (allocator)
+           integer(kind=omp_allocator_handle_kind), intent(in) :: allocator
+          end subroutine omp_destroy_allocator
 
           subroutine omp_set_default_allocator (svar)
            use omp_lib_kinds
@@ -1195,6 +1225,13 @@ extern void omp_control_tool(int command, int modifier, void *arg);
            use omp_lib_kinds
            integer(kind=omp_allocator_handle_kind) :: omp_get_default_allocator
           end function omp_get_default_allocator
+
+          function omp_control_tool (command, modifier)
+           use omp_lib_kinds
+           integer :: omp_control_tool
+           integer(kind=omp_control_tool_kind), intent(in) :: command
+           integer(kind=omp_control_tool_kind), intent(in) :: modifier
+          end function omp_control_tool
 
           end interface
 
