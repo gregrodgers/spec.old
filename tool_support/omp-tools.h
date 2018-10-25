@@ -754,3 +754,12 @@ typedef struct ompt_record_ompt_t {
 
 typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t)(
     ompt_buffer_t *buffer, ompt_buffer_cursor_t current);
+
+#define ompt_id_none 0
+#define ompt_data_none { 0 }
+#define ompt_time_none 0
+#define ompt_hwid_none 0
+#define ompt_addr_none ~0
+#define ompt_mutex_impl_none 0
+#define ompt_wait_id_none 0
+#define ompd_segment_none 0

@@ -39,6 +39,18 @@ rem_defs = [d for d in defs if d not in first_defs and d not in enum_defs and d 
 
 defs = "\n".join(enum_defs+first_defs+rem_defs+last_defs)
 
+defs += """
+#define ompt_id_none 0
+#define ompt_data_none {0}
+#define ompt_time_none 0
+#define ompt_hwid_none 0
+#define ompt_addr_none ~0
+#define ompt_mutex_impl_none 0
+#define ompt_wait_id_none 0
+
+#define ompd_segment_none 0
+"""
+
 # Remove unwanted parts and newlines
 defs = re.sub(r"\\plc{([^}]*)}", r"\1", defs)
 defs = re.sub(r"\n\n\n", "\n\n", defs)
