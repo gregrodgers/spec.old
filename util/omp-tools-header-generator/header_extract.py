@@ -25,6 +25,8 @@ for path in paths:
 
 splitted = content.split("{ccppspecific}");
 defs = [splitt for i,splitt in enumerate(splitted) if i%2 == 1 and re.search("begin{omp", splitt) != None]
+splitted = content.split("{cspecific}");
+defs += [splitt for i,splitt in enumerate(splitted) if i%2 == 1 and re.search("begin{omp", splitt) != None]
 
 # Remove unwanted parts
 for i,deff in enumerate(defs):
@@ -39,7 +41,11 @@ rem_defs = [d for d in defs if d not in first_defs and d not in enum_defs and d 
 
 defs = "\n".join(enum_defs+first_defs+rem_defs+last_defs)
 
-defs += """
+defs = """
+#ifdef  __cplusplus
+extern "C" {
+#endif
+""" + defs + """
 #define ompt_id_none 0
 #define ompt_data_none {0}
 #define ompt_time_none 0
@@ -49,6 +55,10 @@ defs += """
 #define ompt_wait_id_none 0
 
 #define ompd_segment_none 0
+
+#ifdef  __cplusplus
+} // extern "C"
+#endif
 """
 
 # Remove unwanted parts and newlines
