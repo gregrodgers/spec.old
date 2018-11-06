@@ -1,3 +1,12 @@
+! ******************************************************************
+! Copyright (c) 1997-2018 OpenMP Architecture Review Board.        *
+!                                                                  *
+! Permission to copy without fee all or part of this material is   *
+! granted, provided the OpenMP Architecture Review Board copyright *
+! notice appear. Notice is given that copying is by permission of  *
+! OpenMP Architecture Review Board.                                *
+! ******************************************************************
+
 module omp_lib_kinds
   integer, parameter :: omp_lock_kind = selected_int_kind( 10 )
   integer, parameter :: omp_nest_lock_kind = selected_int_kind( 10 )
