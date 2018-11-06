@@ -276,10 +276,8 @@ end function
 
 subroutine omp_init_nest_lock(nlock)
   ! nlock is
-  ! 0 if the nestable lock is not initialized
   ! -1 if the nestable lock is initialized but not set
-  ! 1 if the nestable lock is set
-  ! no use count is maintained
+  ! 1 and more if the nestable lock is set (nest count)
   include 'omp_lib_kinds.h'
   integer(kind=omp_nest_lock_kind) nlock
 
@@ -306,11 +304,10 @@ subroutine omp_set_nest_lock(nlock)
 
   if (nlock .eq. -1) then
     nlock = 1
-  elseif (nlock .eq. 0) then
-    print *, 'error: nested lock not initialized'
-    stop
+  else if (nlock .gt. 0) then
+    nlock = nlock + 1
   else
-    print *, 'error: deadlock using nested lock variable'
+    print *, 'error: nested lock corrupted or not initialized'
     stop
   endif
 end subroutine
@@ -321,11 +318,13 @@ subroutine omp_unset_nest_lock(nlock)
 
   if (nlock .eq. 1) then
     nlock = -1
-  elseif (nlock .eq. 0) then
-    print *, 'error: nested lock not initialized'
+  elseif (nlock .gt. 1) then
+    nlock = nlock - 1
+  elseif (nlock .eq. -1) then
+    print *, 'error: nested lock not set'
     stop
   else
-    print *, 'error: nested lock not set'
+    print *, 'error: nested lock corrupted or not initialized'
     stop
   endif
 end subroutine
@@ -334,15 +333,8 @@ integer function omp_test_nest_lock(nlock)
   include 'omp_lib_kinds.h'
   integer(kind=omp_nest_lock_kind) nlock
 
-  if (nlock .eq. -1) then
-    nlock = 1
-    omp_test_nest_lock = 1
-  elseif (nlock .eq. 1) then
-    omp_test_nest_lock = 0
-  else
-    print *, 'error: nested lock not initialized'
-    stop
-  endif
+  call omp_set_nest_lock(nlock)
+  omp_test_nest_lock = nlock
 end function
 
 double precision function omp_get_wtime()
