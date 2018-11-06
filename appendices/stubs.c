@@ -565,7 +565,10 @@ omp_allocator_handle_t omp_get_default_allocator(void)
 }
 
 #ifdef __cplusplus
-void *omp_alloc(size_t size, omp_allocator_handle_t allocator = omp_null_allocator)
+void *omp_alloc(
+  size_t size,
+  omp_allocator_handle_t allocator = omp_null_allocator
+)
 #else
 void *omp_alloc(size_t size, omp_allocator_handle_t allocator)
 #endif
@@ -574,7 +577,10 @@ void *omp_alloc(size_t size, omp_allocator_handle_t allocator)
 }
 
 #ifdef __cplusplus
-void omp_free(void *ptr, omp_allocator_handle_t allocator = omp_null_allocator)
+void omp_free(
+  void *ptr,
+  omp_allocator_handle_t allocator = omp_null_allocator
+)
 #else
 void omp_free(void *ptr, omp_allocator_handle_t allocator)
 #endif

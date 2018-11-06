@@ -211,7 +211,11 @@ extern void omp_get_partition_place_nums(int *place_nums);
 extern void omp_set_affinity_format(const char *format);
 extern size_t omp_get_affinity_format(char *buffer, size_t size);
 extern void omp_display_affinity(const char *format);
-extern size_t omp_capture_affinity(char *buffer, size_t size, const char *format);
+extern size_t omp_capture_affinity(
+  char *buffer,
+  size_t size,
+  const char *format
+);
 
 extern void omp_set_default_device(int device_num);
 extern int omp_get_default_device(void);
