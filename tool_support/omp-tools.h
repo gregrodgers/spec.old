@@ -1,3 +1,15 @@
+/********************************************************************
+ * Copyright (c) 1997-2018 OpenMP Architecture Review Board.        *
+ *                                                                  *
+ * Permission to copy without fee all or part of this material is   *
+ * granted, provided the OpenMP Architecture Review Board copyright *
+ * notice appear. Notice is given that copying is by permission of  *
+ * OpenMP Architecture Review Board.                                *
+ ********************************************************************/
+ 
+#ifndef __OMP_TOOLS_H
+#define __OMP_TOOLS_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -969,3 +981,5 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t)(
 #ifdef __cplusplus
 } // extern "C"
 #endif
+
+#endif // ! __OMP_TOOLS_H
