@@ -4,7 +4,7 @@
  * Permission to copy without fee all or part of this material is   *
  * granted, provided the OpenMP Architecture Review Board copyright *
  * notice appears. Notice is given that copying is by permission of *
- * OpenMP Architecture Review Board.                                *
+ * the OpenMP Architecture Review Board.                            *
  ********************************************************************/
 
 #ifndef __OMPD_TYPES_H
