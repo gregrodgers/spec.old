@@ -1,4 +1,4 @@
-/********************************************************************
+ /********************************************************************
  * Copyright (c) 1997-2018 OpenMP Architecture Review Board.        *
  *                                                                  *
  * Permission to copy without fee all or part of this material is   *
