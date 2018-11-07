@@ -3,7 +3,7 @@
  *                                                                  *
  * Permission to copy without fee all or part of this material is   *
  * granted, provided the OpenMP Architecture Review Board copyright *
- * notice appear. Notice is given that copying is by permission of  *
+ * notice appears. Notice is given that copying is by permission of *
  * OpenMP Architecture Review Board.                                *
  ********************************************************************/
 
