@@ -1,11 +1,11 @@
-/********************************************************************
+/*******************************************************************
 * Copyright (c) 1997-2018 OpenMP Architecture Review Board.        *
 *                                                                  *
 * Permission to copy without fee all or part of this material is   *
 * granted, provided the OpenMP Architecture Review Board copyright *
-* notice appear. Notice is given that copying is by permission of  *
-* OpenMP Architecture Review Board.                                *
-********************************************************************/
+* notice appears. Notice is given that copying is by permission of *
+* the OpenMP Architecture Review Board.                            *
+*******************************************************************/
 
 #ifndef _OMP_H_DEF
 #define _OMP_H_DEF
