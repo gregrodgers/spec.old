@@ -97,6 +97,15 @@ quick:
 debug:
 	pdflatex -shell-escape -synctex=1 -file-line-error -project=openmp $(VERSIONMACRO)
 
+context_definitions: context_definitions.pdf
+
+context_definitions.pdf: directives/context_definitions.tex openmp.sty
+	pdflatex $<
+	pdflatex $<
+	pdflatex $<
+
+all: openmp.pdf context_definitions
+
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
