@@ -7,8 +7,8 @@
  * the OpenMP Architecture Review Board.                            *
  ********************************************************************/
 
-#ifndef __OMPD_TYPES_H
-#define __OMPD_TYPES_H
+#ifndef _OMPD_TYPES_H
+#define _OMPD_TYPES_H
 
 #define OMPD_TYPES_VERSION   20180906 /* YYYYMMDD Format */
 
@@ -66,4 +66,4 @@ typedef struct ompd_cudathread_coord_t {
 /* The range of non-standard implementation defined values */
 #define OMPD_DEVICE_IMPL_LO       ((ompd_device_t)1000000)
 #define OMPD_DEVICE_IMPL_HI       ((ompd_device_t)1100000)
-#endif // ! __OMPD_TYPES_H
+#endif // ! _OMPD_TYPES_H
