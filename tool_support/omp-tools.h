@@ -7,8 +7,8 @@
  * the OpenMP Architecture Review Board.                            *
  ********************************************************************/
  
-#ifndef __OMP_TOOLS_H
-#define __OMP_TOOLS_H
+#ifndef _OMP_TOOLS_H
+#define _OMP_TOOLS_H
 
 #ifdef __cplusplus
 extern "C" {
@@ -982,4 +982,4 @@ typedef ompt_record_ompt_t *(*ompt_get_record_ompt_t)(
 } // extern "C"
 #endif
 
-#endif // ! __OMP_TOOLS_H
+#endif // ! _OMP_TOOLS_H
