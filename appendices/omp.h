@@ -7,8 +7,8 @@
 * the OpenMP Architecture Review Board.                            *
 *******************************************************************/
 
-#ifndef _OMP_H_DEF
-#define _OMP_H_DEF
+#ifndef _OMP_H
+#define _OMP_H
 
 /*
  * For size_t definition.  Implementations might handle size_t differently
@@ -347,4 +347,4 @@ namespace omp {
 }
 #endif
 
-#endif
+#endif // ! _OMP_H
