@@ -18,10 +18,10 @@ TEXFILES=openmp.tex \
          appendices/implementation_defined.tex \
          appendices/interface_declarations.tex \
          appendices/ompd_diagram.tex \
+         appendices/ompt_frames.tex \
          appendices/stubs.tex \
          appendices/stubs_ccpp.tex \
          appendices/stubs_fortran.tex \
-         appendices/ompt_frames.tex \
          directives.tex \
          directives/directives_cancellation.tex \
          directives/directives_combined.tex \
@@ -49,29 +49,29 @@ TEXFILES=openmp.tex \
          introduction/introduction_organization.tex \
          introduction/introduction_scope.tex \
          introduction/introduction_tools.tex \
+         ompd.tex \
+         ompd/ompd_activating_a_third_party_tool.tex \
+         ompd/ompd_data_types_for_third_party_tools.tex \
+         ompd/ompd_dll.tex \
+         ompd/ompd_introduction.tex \
+         ompd/ompd_runtime_entry_points.tex \
+         ompd/ompd_third_party_callback_interface.tex \
+         ompd/ompd_third_party_tool_interface_routines.tex \
+         ompt.tex \
+         ompt/ompt_callbacks.tex \
+         ompt/ompt_common.tex \
+         ompt/ompt_entrypoints.tex \
+         ompt/ompt_foundation.tex \
+         ompt/ompt_frames.tex \
+         ompt/ompt_start_tool.tex \
+         ompt/ompt_thread_states.tex \
+         ompt/ompt_wait_id.tex \
          runtime_library.tex \
          runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
          runtime_library/runtime_library_mm.tex \
          runtime_library/runtime_library_others.tex \
-         runtime_library/runtime_library_tools.tex \
-         ompd.tex \
-         ompt.tex \
-         ompt/foundation.tex \
-         ompt/frames.tex \
-         ompd/ompd_activating_a_third_party_tool.tex \
-         ompd/ompd_data_types_for_third_party_tools.tex \
-         ompd/ompd_introduction.tex \
-         ompd/ompd_runtime_entry_points.tex \
-         ompd/ompd_third_party_callback_interface.tex \
-         ompd/ompd_third_party_tool_interface_routines.tex \
-         ompd/ompd_dll.tex \
-         ompt/start_tool.tex \
-         ompt/thread_states.tex \
-         ompt/ompt_callbacks.tex \
-         ompt/ompt_common.tex \
-         ompt/ompt_entrypoints.tex \
-         ompt/wait_id.tex
+         runtime_library/runtime_library_tools.tex
 
 # check for branches names with "ticket_XXX"
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
