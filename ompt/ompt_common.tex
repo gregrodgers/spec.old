@@ -83,7 +83,68 @@ execution on the host. The tool may then also arrange to monitor computation
 that executes on target devices. This section explains how the tool and an
 OpenMP implementation interact to accomplish these tasks.
 
-\input{ompt/ompt_start_tool.tex}
+\subsection{\hcode{ompt_start_tool}}
+\label{sec:ompt_start_tool}
+
+\summary
+In order to use the OMPT interface provided by an OpenMP implementation,
+a tool must implement the \code{ompt_start_tool} function, through which 
+the OpenMP implementation initializes the tool.
+
+\format
+\begin{cspecific}
+\begin{omptOther}
+ompt_start_tool_result_t *ompt_start_tool(
+  unsigned int \plc{omp_version},
+  const char *\plc{runtime_version}
+);
+\end{omptOther}
+\end{cspecific}
+
+\descr
+For a tool to use the OMPT interface that an OpenMP implementation provides,
+the tool must define a globally-visible implementation of the
+function \code{ompt_start_tool}. The tool indicates that it will use the OMPT 
+interface that an OpenMP implementation provides by returning a non-null 
+pointer to an \code{ompt_start_tool_result_t} structure from the 
+\code{ompt_start_tool} implementation that it provides. The 
+\code{ompt_start_tool_result_t} structure contains pointers to tool 
+initialization and finalization callbacks as well as a tool data word 
+that an OpenMP implementation must pass by reference to these callbacks. 
+A tool may return \code{NULL} from \code{ompt_start_tool} to indicate 
+that it will not use the OMPT interface in a particular execution.
+
+A tool may use the \plc{omp_version} argument to determine if it is 
+compatible with the OMPT interface that the OpenMP implementation provides.
+
+\argdesc
+The argument \plc{omp_version} is the value of the \code{_OPENMP} version macro
+associated with the OpenMP API implementation. This value identifies the OpenMP 
+API version that an OpenMP implementation supports, which specifies the version 
+of the OMPT interface that it supports.
+
+The argument \plc{runtime_version} is a version string that unambiguously 
+identifies the OpenMP implementation.
+
+\constraints
+The argument \plc{runtime_version} must be an immutable string that is defined 
+for the lifetime of a program execution.
+
+\effect
+If a tool returns a non-null pointer to an \code{ompt_start_tool_result_t} 
+structure, an OpenMP implementation will call the tool initializer specified 
+by the \plc{initialize} field in this structure before beginning execution 
+of any OpenMP construct or completing execution of any environment routine 
+invocation; the OpenMP implementation will call the tool finalizer specified 
+by the \plc{finalize} field in this structure when the OpenMP implementation 
+shuts down.
+
+\begin{crossrefs}
+\item \code{ompt_start_tool_result_t}, see
+\specref{sec:ompt_start_tool_result_t}.
+\end{crossrefs}
+
+
 
 
 
@@ -1517,4 +1578,269 @@ value of \plc{hwid} is \code{ompt_hwid_none}.
 see \specref{sec:ompt_record_abstract_t}.
 \end{crossrefs}
 
-\input{ompt/ompt_foundation.tex}
+\subsubsection{\hcode{ompt_state_t}}
+\label{sec:thread-states}
+\label{sec:ompt_state_t}
+
+\summary
+If the OMPT interface is in the \plc{active} state then an OpenMP implementation
+must maintain \plc{thread state} information for each thread. The thread 
+state maintained is an approximation of the instantaneous state of a thread.
+
+\format
+\begin{ccppspecific}
+A thread state must be one of the values of the enumeration type 
+\code{ompt_state_t} or an implementation-defined state value of 512 or higher.
+
+\begin{ompcEnum}
+typedef enum ompt_state_t {
+  ompt_state_work_serial                      = 0x000,
+  ompt_state_work_parallel                    = 0x001,
+  ompt_state_work_reduction                   = 0x002,
+
+  ompt_state_wait_barrier                     = 0x010,
+  ompt_state_wait_barrier_implicit_parallel   = 0x011,
+  ompt_state_wait_barrier_implicit_workshare  = 0x012,
+  ompt_state_wait_barrier_implicit            = 0x013,
+  ompt_state_wait_barrier_explicit            = 0x014,
+
+  ompt_state_wait_taskwait                    = 0x020,
+  ompt_state_wait_taskgroup                   = 0x021,
+
+  ompt_state_wait_mutex                       = 0x040,
+  ompt_state_wait_lock                        = 0x041,
+  ompt_state_wait_critical                    = 0x042,
+  ompt_state_wait_atomic                      = 0x043,
+  ompt_state_wait_ordered                     = 0x044,
+
+  ompt_state_wait_target                      = 0x080,
+  ompt_state_wait_target_map                  = 0x081,
+  ompt_state_wait_target_update               = 0x082,
+
+  ompt_state_idle                             = 0x100,
+  ompt_state_overhead                         = 0x101,
+  ompt_state_undefined                        = 0x102
+} ompt_state_t;
+\end{ompcEnum}
+\end{ccppspecific}
+
+\descr
+A tool can query the OpenMP state of a thread at any time. If a 
+tool queries the state of a thread that is not associated with OpenMP
+then the implementation reports the state as \code{ompt_state_undefined}.
+
+The value \code{ompt_state_work_serial} indicates that the thread 
+is executing code outside all \code{parallel} regions.
+
+The value \code{ompt_state_work_parallel} indicates that the thread 
+is executing code within the scope of a \code{parallel} region.
+
+The value \code{ompt_state_work_reduction} indicates that the thread 
+is combining partial reduction results from threads in its team. An 
+OpenMP implementation may never report a thread in this state; a 
+thread that is combining partial reduction results may have its state 
+reported as \code{ompt_state_work_parallel} or \code{ompt_state_overhead}.
+
+The value \code{ompt_state_wait_barrier} indicates that the thread is 
+waiting at either an implicit or explicit barrier. An implementation 
+may never report a thread in this state; instead, a thread may have its 
+state reported as \code{ompt_state_wait_barrier_implicit}  or 
+\code{ompt_state_wait_barrier_explicit}, as appropriate.
+
+The value \code{ompt_state_wait_barrier_implicit} indicates that the 
+thread is waiting at an implicit barrier in a \code{parallel} region. An 
+OpenMP implementation may report \code{ompt_state_wait_barrier} for 
+implicit barriers.
+
+The value \code{ompt_state_wait_barrier_implicit_parallel} indicates 
+that the thread is waiting at an implicit barrier at the end of a \code{parallel} 
+region. An OpenMP implementation may report \code{ompt_state_wait_barrier} 
+or \code{ompt_state_wait_barrier_implicit} for these barriers.
+
+The value \code{ompt_state_wait_barrier_implicit_workshare}  indicates 
+that the thread is waiting at an implicit barrier at the end of a 
+worksharing construct. An OpenMP implementation may report 
+\code{ompt_state_wait_barrier} or \code{ompt_state_wait_barrier_implicit} 
+for these barriers.
+
+The value \code{ompt_state_wait_barrier_explicit} indicates that the 
+thread is waiting in a \code{barrier} region. An OpenMP implementation
+may report \code{ompt_state_wait_barrier} for these barriers.
+
+The value \code{ompt_state_wait_taskwait} indicates that the thread is 
+waiting at a \code{taskwait} construct. 
+
+The value \code{ompt_state_wait_taskgroup} indicates that the thread is 
+waiting at the end of a \code{taskgroup} construct. 
+
+The value \code{ompt_state_wait_mutex} indicates that the thread is waiting 
+for a mutex of an unspecified type. 
+
+The value \code{ompt_state_wait_lock} indicates that the thread is waiting 
+for a  lock or nestable lock. 
+
+The value \code{ompt_state_wait_critical} indicates that the thread is 
+waiting to enter a \code{critical} region. 
+
+The value \code{ompt_state_wait_atomic} indicates that the thread is 
+waiting to enter an \code{atomic} region. 
+
+The value \code{ompt_state_wait_ordered} indicates that the thread is 
+waiting to enter an \code{ordered} region. 
+
+The value \code{ompt_state_wait_target} indicates that the thread is 
+waiting for a \code{target} region to complete.
+
+The value \code{ompt_state_wait_target_map} indicates that the thread is 
+waiting for a target data mapping operation to complete. An implementation may 
+report \code{ompt_state_wait_target} for \code{target}~\code{data} constructs.
+
+The value \code{ompt_state_wait_target_update} indicates that the thread is 
+waiting for a \code{target}~\code{update} operation to complete. An implementation 
+may report \code{ompt_state_wait_target} for \code{target}~\code{update} constructs.
+
+The value \code{ompt_state_idle} indicates that the thread is idle, that  
+is, it is not part of an OpenMP team.
+
+The value \code{ompt_state_overhead} indicates that the thread is in the 
+overhead state at any point while executing within the OpenMP runtime, 
+except while waiting at a synchronization point.
+
+The value \code{ompt_state_undefined} indicates that the native thread is 
+not created by the OpenMP implementation.
+
+
+
+
+
+\subsubsection{\hcode{ompt_frame_t}}
+\index{frames}
+\label{sec:ompt_frame_t}
+\label{subsubsubsec:ompt_frame_t}
+
+\summary
+The \code{ompt_frame_t} type describes procedure frame information 
+for an OpenMP task.
+
+\format
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef struct ompt_frame_t {
+  ompt_data_t \plc{exit_frame};
+  ompt_data_t \plc{enter_frame};
+  int \plc{exit_frame_flags};
+  int \plc{enter_frame_flags};
+} ompt_frame_t;
+\end{ompSyntax}
+\end{ccppspecific}
+
+\descr
+Each \code{ompt_frame_t} object is associated with the task to which 
+the procedure frames belong. Each non-merged initial, implicit, explicit, 
+or target task with one or more frames on the stack of a native thread 
+has an associated \code{ompt_frame_t} object.
+
+The \plc{exit_frame} field of an \code{ompt_frame_t} object contains
+information to identify the first procedure frame executing the task region.
+The \plc{exit_frame} for the \code{ompt_frame_t} object associated with 
+the \emph{initial task} that is not nested inside any OpenMP construct 
+is \code{NULL}.
+
+The \plc{enter_frame} field of an \code{ompt_frame_t} object contains
+information to identify the latest still active procedure frame 
+executing the task region before entering the OpenMP runtime 
+implementation or before executing a different task. If a task with 
+frames on the stack has not been suspended, the value of \plc{enter_frame} 
+for the \code{ompt_frame_t} object associated with the task may 
+contain \code{NULL}.
+
+For \plc{exit_frame}, the \plc{exit_frame_flags} and, for \plc{enter_frame},
+the \plc{enter_frame_flags} field indicates that the provided frame information 
+points to a runtime or an application frame address. The same fields also 
+specify the kind of information that is provided to identify the frame, These 
+fields are a disjunction of values in the \code{ompt_frame_flag_t} enumeration type.
+
+The lifetime of an \code{ompt_frame_t} object begins when a task is created
+and ends when the task is destroyed. Tools should not assume that
+a frame structure remains at a constant location in memory throughout the
+lifetime of the task. A pointer to an \code{ompt_frame_t} object is passed 
+to some callbacks; a pointer to the \code{ompt_frame_t} object of a task
+can also be retrieved by a tool at any time, including in a signal
+handler, by invoking the \code{ompt_get_task_info} runtime entry point 
+(described in Section~\ref{sec:ompt_get_task_info}). A pointer to an 
+\code{ompt_frame_t} object that a tool retrieved is valid as long as 
+the tool does not pass back control to the OpenMP implementation.
+
+\begin{note}
+A monitoring tool that uses asynchronous sampling can observe values
+of \plc{exit_frame} and \plc{enter_frame} at inconvenient times.
+Tools must be prepared to handle \code{ompt_frame_t} objects observed 
+just prior to when their field values will be set or cleared.
+\end{note}
+
+
+
+\subsubsection{\hcode{ompt_frame_flag_t}}
+\label{subsubsec:ompt_frame_flag_t}
+
+\summary
+The \code{ompt_frame_flag_t} enumeration type defines valid frame 
+information flags.
+
+\format
+\begin{ccppspecific}
+\begin{ompSyntax}
+typedef enum ompt_frame_flag_t {
+  ompt_frame_runtime        = 0x00,
+  ompt_frame_application    = 0x01,
+  ompt_frame_cfa            = 0x10,
+  ompt_frame_framepointer   = 0x20,
+  ompt_frame_stackaddress   = 0x30
+} ompt_frame_flag_t; 
+\end{ompSyntax}
+\end{ccppspecific}
+
+\descr
+The value \code{ompt_frame_runtime} of the \code{ompt_frame_flag_t} type
+indicates that a frame address is a procedure frame in the OpenMP runtime 
+implementation. The value \code{ompt_frame_application} of the 
+\code{ompt_frame_flag_t} type indicates that an exit frame address is a 
+procedure frame in the OpenMP application.
+
+Higher order bits indicate the kind of provided information that is unique
+for the particular frame pointer. The value \code{ompt_frame_cfa} indicates 
+that a frame address specifies a \plc{canonical frame address}. The value 
+\code{ompt_frame_framepointer} indicates that a frame address provides the 
+value of the frame pointer register. The value \code{ompt_frame_stackaddress} 
+indicates that a frame address specifies a pointer address that is
+contained in the current stack frame.
+
+
+
+
+
+\subsubsection{\code{ompt_wait_id_t}}
+\label{sec:ompt_wait_id_t}
+\index{wait identifier}
+
+\summary
+The \code{ompt_wait_id_t} type describes wait identifiers for an OpenMP thread.
+
+\format
+\begin{ccppspecific}
+\begin{omptOther}
+typedef uint64_t ompt_wait_id_t;
+\end{omptOther}
+\end{ccppspecific}
+
+\descr
+Each thread maintains a \emph{wait identifier} of type \code{ompt_wait_id_t}. 
+When a task that a thread executes is waiting for mutual exclusion, the wait 
+identifier of the thread indicates the reason that the thread is waiting. A 
+wait identifier may represent a critical section {\em name}, a lock, a program 
+variable accessed in an atomic region, or a synchronization object that is 
+internal to an OpenMP implementation. When a thread is not in a wait state
+then the value of the wait identifier of the thread is undefined.
+
+\code{ompt_wait_id_none} is defined as an instance of type 
+\code{ompt_wait_id_t} with the value 0.

@@ -50,10 +50,7 @@ TEXFILES=openmp.tex \
          introduction/introduction_scope.tex \
          introduction/introduction_tools.tex \
          ompd.tex \
-         ompd/ompd_activating_a_third_party_tool.tex \
-         ompd/ompd_data_types_for_third_party_tools.tex \
-         ompd/ompd_dll.tex \
-         ompd/ompd_introduction.tex \
+         ompd/ompd_common.tex \
          ompd/ompd_runtime_entry_points.tex \
          ompd/ompd_third_party_callback_interface.tex \
          ompd/ompd_third_party_tool_interface_routines.tex \
@@ -61,11 +58,6 @@ TEXFILES=openmp.tex \
          ompt/ompt_callbacks.tex \
          ompt/ompt_common.tex \
          ompt/ompt_entrypoints.tex \
-         ompt/ompt_foundation.tex \
-         ompt/ompt_frames.tex \
-         ompt/ompt_start_tool.tex \
-         ompt/ompt_thread_states.tex \
-         ompt/ompt_wait_id.tex \
          runtime_library.tex \
          runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
