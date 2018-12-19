@@ -43,7 +43,6 @@ TEXFILES=openmp.tex \
          introduction/introduction_compliance.tex \
          introduction/introduction_execution_model.tex \
          introduction/introduction_glossary.tex \
-         introduction/introduction_introduction.tex \
          introduction/introduction_memory_model.tex \
          introduction/introduction_normative_refs.tex \
          introduction/introduction_organization.tex \
