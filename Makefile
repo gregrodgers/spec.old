@@ -5,9 +5,15 @@ all: openmp.pdf
 
 # shortcuts for the most common make targets in use
 include version.mk
-full: openmp.pdf 
-release: clean openmp.pdf 
+full: openmp.pdf
+
+release: clean openmp.pdf
 release: VERSIONMACRO=$(RELEASEMACRO)
+
+book: clean release
+	cp openmp.pdf openmp-book.pdf
+book: BOOK_BUILD="\\def\\bookbuild{1}"
+
 diff: openmp-diff-abridged.pdf
 
 .PHONY: clean quick all git-diff-all
@@ -78,10 +84,10 @@ DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" |
 # for release do something like:  make OMPVERSION="Version 5.0 Public Comment Draft, July 2018"
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(BOOK_BUILD)$(VERSIONMACRO)
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error $(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(BOOK_BUILD)$(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error $(BOOK_BUILD)$(VERSIONMACRO)
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 	@if grep --quiet "LaTeX Warning: Label" openmp.log; then \
 		grep "LaTeX Warning: Label" openmp.log; \
@@ -109,7 +115,7 @@ all: openmp.pdf context_definitions
 clean:
 	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
 	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
-	rm -f openmp.synctex.gz
+	rm -f openmp.synctex.gz openmp-book.pdf
 	rm -rf *.tmpdir
 	rm -f openmp-ticket_*.pdf
 	rm -f openmp-diff-abridged-ticket_*.pdf
