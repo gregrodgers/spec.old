@@ -55,21 +55,21 @@ TEXFILES=openmp.tex \
          runtime_library/runtime_library_mm.tex \
          runtime_library/runtime_library_others.tex \
          runtime_library/runtime_library_tools.tex \
+         ompd.tex \
          ompt.tex \
          ompt/foundation.tex \
          ompt/frames.tex \
-         ompt/ompd/ompd_activating_a_third_party_tool.tex \
-         ompt/ompd/ompd_data_types_for_third_party_tools.tex \
-         ompt/ompd/ompd_introduction.tex \
-         ompt/ompd/ompd_runtime_entry_points.tex \
-         ompt/ompd/ompd_third_party_callback_interface.tex \
-         ompt/ompd/ompd_third_party_tool_interface_routines.tex \
-         ompt/ompd_dll.tex \
+         ompd/ompd_activating_a_third_party_tool.tex \
+         ompd/ompd_data_types_for_third_party_tools.tex \
+         ompd/ompd_introduction.tex \
+         ompd/ompd_runtime_entry_points.tex \
+         ompd/ompd_third_party_callback_interface.tex \
+         ompd/ompd_third_party_tool_interface_routines.tex \
+         ompd/ompd_dll.tex \
          ompt/start_tool.tex \
          ompt/thread_states.tex \
          ompt/ompt_callbacks.tex \
          ompt/ompt_common.tex \
-         ompt/ompt_debug.tex \
          ompt/ompt_entrypoints.tex \
          ompt/wait_id.tex
 
