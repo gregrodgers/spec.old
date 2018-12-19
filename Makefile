@@ -5,8 +5,8 @@ all: openmp.pdf
 
 # shortcuts for the most common make targets in use
 include version.mk
-full: openmp.pdf 
-release: clean openmp.pdf 
+full: openmp.pdf
+release: clean openmp.pdf
 release: VERSIONMACRO=$(RELEASEMACRO)
 diff: openmp-diff-abridged.pdf
 
@@ -21,7 +21,7 @@ TEXFILES=openmp.tex \
          appendices/stubs.tex \
          appendices/stubs_ccpp.tex \
          appendices/stubs_fortran.tex \
-         appendices/tool_support_frames.tex \
+         appendices/ompt_frames.tex \
          directives.tex \
          directives/directives_cancellation.tex \
          directives/directives_combined.tex \
@@ -55,23 +55,23 @@ TEXFILES=openmp.tex \
          runtime_library/runtime_library_mm.tex \
          runtime_library/runtime_library_others.tex \
          runtime_library/runtime_library_tools.tex \
-         tool_support.tex \
-         tool_support/foundation.tex \
-         tool_support/frames.tex \
-         tool_support/ompd/ompd_activating_a_third_party_tool.tex \
-         tool_support/ompd/ompd_data_types_for_third_party_tools.tex \
-         tool_support/ompd/ompd_introduction.tex \
-         tool_support/ompd/ompd_runtime_entry_points.tex \
-         tool_support/ompd/ompd_third_party_callback_interface.tex \
-         tool_support/ompd/ompd_third_party_tool_interface_routines.tex \
-         tool_support/ompd_dll.tex \
-         tool_support/start_tool.tex \
-         tool_support/thread_states.tex \
-         tool_support/tool_support_callbacks.tex \
-         tool_support/tool_support_common.tex \
-         tool_support/tool_support_debug.tex \
-         tool_support/tool_support_entrypoints.tex \
-         tool_support/wait_id.tex
+         ompt.tex \
+         ompt/foundation.tex \
+         ompt/frames.tex \
+         ompt/ompd/ompd_activating_a_third_party_tool.tex \
+         ompt/ompd/ompd_data_types_for_third_party_tools.tex \
+         ompt/ompd/ompd_introduction.tex \
+         ompt/ompd/ompd_runtime_entry_points.tex \
+         ompt/ompd/ompd_third_party_callback_interface.tex \
+         ompt/ompd/ompd_third_party_tool_interface_routines.tex \
+         ompt/ompd_dll.tex \
+         ompt/start_tool.tex \
+         ompt/thread_states.tex \
+         ompt/ompt_callbacks.tex \
+         ompt/ompt_common.tex \
+         ompt/ompt_debug.tex \
+         ompt/ompt_entrypoints.tex \
+         ompt/wait_id.tex
 
 # check for branches names with "ticket_XXX"
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
@@ -162,11 +162,11 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png) $(wildcard *.aux) openmp.pdf
 	mkdir -p $@/appendices
-	mkdir -p $@/tool_support
+	mkdir -p $@/ompt
 	cp -f $^ "$@/" || true
 	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 	cp -f appendices/ompd_diagram.pdf "$@/appendices"
-	cp -f tool_support/ompt_flow_chart.pdf "$@/tool_support"
+	cp -f ompt/ompt_flow_chart.pdf "$@/ompt"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
