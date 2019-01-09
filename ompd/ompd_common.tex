@@ -1,3 +1,182 @@
+\chapter{OMPD Interface}
+\label{sec:OMPD Interface}
+\label{chap:OMPD Interface}
+\label{sec:ompd-overview}
+
+This chapter describes OMPD, which is an interface for \emph{third-party} tools.
+\emph{Third-party} tools exist in separate processes from the OpenMP program.
+To provide OMPD support, an OpenMP implementation must provide an OMPD library to
+be loaded by the \emph{third-party} tool. An OpenMP implementation does not need
+to maintain any extra information to support OMPD inquiries from \emph{third-party}
+tools \emph{unless} it is explicitly instructed to do so.
+
+OMPD allows \emph{third-party tools} such as a debuggers to inspect the 
+OpenMP state of a live program or core file in an implementation-agnostic 
+manner. That is, a tool that uses OMPD should work with any conforming 
+OpenMP implementation. An OpenMP implementor provides a library for OMPD 
+that a third-party tool can dynamically load. Using the interface exported 
+by the OMPD library, the external tool can inspect the OpenMP state of a 
+program. In order to satisfy requests from the third-party tool, the OMPD 
+library may need to read data from, or to find the addresses of symbols in 
+the OpenMP program. The OMPD library provides this functionality through a 
+callback interface that the third-party tool must instantiate for the OMPD library.
+
+To use OMPD, the third-party tool loads the OMPD library. The OMPD library exports 
+the API that is defined throughout this section and that the tool uses to 
+determine OpenMP information about the OpenMP program. The OMPD library must
+look up the symbols and read data out of the program. It does not perform
+these operations directly, but instead it uses the callback interface that the
+tool exports to cause the tool to perform them.
+
+The OMPD architecture insulates tools from the internal structure of the 
+OpenMP runtime while the OMPD library is insulated from the details of how 
+to access the OpenMP program. This decoupled design allows for flexibility in how 
+the OpenMP program and tool are deployed, so that, for example, the tool and the 
+OpenMP program are not required to execute on the same machine.
+
+Generally the tool does not interact directly with the OpenMP runtime and, 
+instead, interacts with it through the OMPD library. However, a few cases
+require the tool to access the OpenMP runtime directly. These cases fall into 
+two broad categories. The first is during initialization, where the tool must
+look up symbols and read variables in the OpenMP runtime in order to identify 
+the OMPD library that it should use, which is discussed in 
+\specref{subsubsec:ompd_dll_locations} and 
+\specref{subsubsec:ompd_dll_locations_valid}. The second category relates to 
+arranging for the tool to be notified when certain events occur during the 
+execution of the OpenMP program. For this purpose, the OpenMP implementation
+must define certain symbols in the runtime code, as is discussed in 
+\specref{subsec:runtime-entry-points-for-ompd}. Each of these symbols corresponds 
+to an event type. The runtime must ensure that control passes through the 
+appropriate named location when events occur. If the tool requires notification 
+of an event, it can plant a breakpoint at the matching location. The location 
+can, but may not, be a function. It can, for example, simply be a label. However, 
+the names of the locations must have external \code{C} linkage.
+
+\section{OMPD Interfaces Definitions}
+\index{tool interfaces definitions}
+\index{tools header files}
+\label{sec:OMPD Interfaces Definitions}
+
+\begin{ccppspecific}
+A compliant implementation must supply a set of definitions for the OMPD runtime
+entry points, OMPD tool
+callback signatures, OMPD tool interface routines, and the special data types of
+their parameters and return values. These definitions, which are listed throughout
+this chapter, and their associated declarations shall be provided in a header file
+named \code{omp-tools.h}. In addition, the set of definitions may specify other
+implementation-specific values.
+
+The \code{ompd_dll_locations} function,
+all OMPD tool interface functions, and all OMPD runtime entry points are
+external functions with \code{C} linkage.
+\end{ccppspecific}
+
+
+
+
+
+
+\section{Activating an OMPD Tool}
+\label{subsec:activating}
+
+The tool and the OpenMP program exist as separate processes. 
+Thus, coordination is required between the OpenMP runtime
+and the external tool for OMPD.
+
+\subsection{Enabling the Runtime for OMPD}
+\label{subsubsec:enabling-ompd}
+
+In order to support third-party tools, the OpenMP runtime may need to collect
+and to maintain information that it might not otherwise. The OpenMP runtime 
+collects whatever information is necessary to support OMPD if the environment 
+variable \code{OMP_DEBUG} is set to \plc{enabled}.
+
+\begin{crossrefs}
+\item Activating an OMPT Tool, \specref{sec:ompt-initialization}
+
+\item   \code{OMP_DEBUG}, \specref{sec:OMP_DEBUG}
+\end{crossrefs}
+
+\subsection{\hcode{ompd_dll_locations}}
+\label{subsubsec:ompd_dll_locations}
+\index{ompd_dll_locations@{\code{ompd_dll_locations}}}
+
+\summary
+The \code{ompd_dll_locations} global variable indicates the location
+of OMPD libraries that are compatible with the OpenMP implementation.
+
+\format
+\begin{cspecific}
+\begin{ompSyntax}
+const char **ompd_dll_locations;
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+An OpenMP runtime may have more than one OMPD library. The tool must be able 
+to locate the right library to use for the OpenMP program that it is examining.
+The OpenMP runtime system must provide a public variable \code{ompd_dll_locations},
+which is an \code{argv}-style vector of filename string pointers that provides 
+the name(s) of any compatible OMPD library. This variable must have \code{C} 
+linkage. The tool uses the name of the variable verbatim and, in particular, 
+does not apply any name mangling before performing the look up.
+
+The programming model or architecture of the tool and, thus, that of OMPD does 
+not have to match that of the OpenMP program that is being examined. The tool
+must interpret the contents of \code{ompd_dll_locations} to find a suitable OMPD 
+that matches its own architectural characteristics. On platforms that support 
+different programming models (for example, 32-bit vs 64-bit), OpenMP 
+implementations are encouraged to provide OMPD libraries for all models, and 
+that can handle OpenMP programs of any model. Thus, for example, a 32-bit 
+debugger that uses OMPD should be able to debug a 64-bit OpenMP program by 
+loading a 32-bit OMPD implementation that can manage a 64-bit OpenMP runtime.
+
+\code{ompd_dll_locations} points to a NULL-terminated vector of zero or more 
+NULL-terminated pathname strings that do not have any filename conventions. 
+This vector must be fully initialized \emph{before} \code{ompd_dll_locations} 
+is set to a non-null value, such that if a tool, such as a debugger, stops 
+execution of the OpenMP program at any point at which \code{ompd_dll_locations} 
+is non-null, then the vector of strings to which it points is valid and complete.
+
+\begin{crossrefs}
+\item   \code{ompd_dll_locations_valid}, 
+see \specref{subsubsec:ompd_dll_locations_valid}
+\end{crossrefs}
+
+
+
+\subsection{\hcode{ompd_dll_locations_valid}}
+\label{subsubsec:ompd_dll_locations_valid}
+\index{ompd_dll_locations@{\code{ompd_dll_locations_valid}}}
+
+\summary
+The OpenMP runtime notifies third-party tools that \code{ompd_dll_locations}
+is valid by allowing execution to pass through a location that the symbol 
+\code{ompd_dll_locations_valid} identifies.
+
+\format
+\begin{cspecific}
+\begin{ompSyntax}
+void ompd_dll_locations_valid(void);
+\end{ompSyntax}
+\end{cspecific}
+
+\descr
+Since \code{ompd_dll_locations} may not be a static variable, it may require
+runtime initialization. The OpenMP runtime notifies third-party tools that 
+\code{ompd_dll_locations} is valid by having execution pass through a location 
+that the symbol \code{ompd_dll_locations_valid} identifies. If 
+\code{ompd_dll_locations} is NULL, a third-party tool can place a breakpoint 
+at \code{ompd_dll_locations_valid} to be notified that \code{ompd_dll_locations} 
+is initialized. In practice, the symbol \code{ompd_dll_locations_valid} 
+may not be a function; instead, it may be a labeled machine instruction through
+which execution passes once the vector is valid.
+
+
+
+
+
+
 
 \section{OMPD Data Types}
 \label{subsec:ompd-data-types}
