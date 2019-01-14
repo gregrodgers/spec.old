@@ -1,4 +1,3 @@
-\begin{ccppspecific}
 
 \section{Device Memory Routines}
 \index{device memory routines}
@@ -17,9 +16,30 @@ environment.
 
 
 \format
+\begin{ccppspecific}
 \begin{ompcFunction}
 void* omp_target_alloc(size_t \plc{size}, int \plc{device_num});
 \end{ompcFunction}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfSubroutine}
+type(c_ptr) function omp_target_alloc(\plc{size}, \plc{device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+integer, intent(in) :: \plc{size}
+integer, intent(in) :: \plc{device_num}
+\end{ompfSubroutine}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfSubroutine}
+type(c_ptr) function omp_target_alloc(\plc{size}, \plc{device_num}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+integer(c_size_t), value :: \plc{size}
+integer(c_int), value  :: \plc{device_num}
+\end{ompfSubroutine}
+\end{fortranspecific}
+
 
 \effect
 The \code{omp_target_alloc} routine returns the device address of a storage
@@ -30,15 +50,18 @@ must be greater than or equal to zero and less than the result of
 \code{omp_get_initial_device()}. When called from within a \code{target} region
 the effect of this routine is unspecified.
 
-The \code{omp_target_alloc} routine returns \code{NULL} if it cannot dynamically
+The \code{omp_target_alloc} routine returns \code{NULL} (or,
+\code{C_NULL_PTR}, for Fortran) if it cannot dynamically
 allocate the memory in the device data environment.
 
 The device address returned by \code{omp_target_alloc} can be used in an
 \code{is_device_ptr} clause, \specref{subsec:target Construct}.
 
+\begin{ccppspecific}
 Unless \code{unified_address} clause appears on a \code{requires}
 directive in the compilation unit, pointer arithmetic is not supported
 on the device address returned by \code{omp_target_alloc}.
+\end{ccppspecific}
 
 Freeing the storage returned by \code{omp_target_alloc} with any routine
 other than \code{omp_target_free} results in unspecified behavior.
@@ -80,9 +103,29 @@ The \code{omp_target_free} routine frees the device memory allocated
 by the \code{omp_target_alloc} routine.
 
 \format
+\begin{ccppspecific}
 \begin{ompcFunction}
 void omp_target_free(void *\plc{device_ptr}, int \plc{device_num});
 \end{ompcFunction}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfSubroutine}
+subroutine omp_target_free(\plc{device_ptr}, \plc{device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+type(c_ptr) :: \plc{device_ptr}
+integer, intent(in) :: \plc{device_num}
+\end{ompfSubroutine}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfSubroutine}
+subroutine omp_target_free(\plc{device_ptr}, \plc{device_num}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+type(c_ptr) :: \plc{device_ptr}
+integer(c_int), value :: \plc{device_num}
+\end{ompfSubroutine}
+\end{fortranspecific}
 
 \constraints
 
@@ -96,7 +139,7 @@ zero and less than the result of \code{omp_get_num_devices()} or the
 
 The \code{omp_target_free} routine frees the memory in the device data
 environment associated with \plc{device_ptr}.  If \plc{device_ptr} is
-\code{NULL}, the operation is ignored.
+\code{NULL} (or \code{C_NULL_PTR}, for Fortran), the operation is ignored.
 
 Synchronization must be inserted to ensure that all accesses to
 \plc{device_ptr} are completed before the call to \code{omp_target_free}.
@@ -142,12 +185,33 @@ The \code{omp_target_is_present} routine tests whether a host pointer
 has corresponding storage on a given device.
 
 \format
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_is_present(const void *\plc{ptr}, int \plc{device_num});
 \end{ompcFunction}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_target_is_present(\plc{ptr}, \plc{device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+type(c_ptr), value :: \plc{ptr}
+integer, intent(in) :: \plc{device_num}
+\end{ompfFunction}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(c_int) function omp_target_is_present(\plc{ptr}, \plc{device_num}) &
+  bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+type(c_ptr), value :: \plc{ptr}
+integer(c_int), value :: \plc{device_num}
+\end{ompfFunction}
+\end{fortranspecific}
 
 \constraints
-The value of \plc{ptr} must be a valid host pointer or \code{NULL}.
+The value of \plc{ptr} must be a valid host pointer or \code{NULL} (or \code{C_NULL_PTR}, for Fortran).
 The \plc{device_num}
 must be greater than or equal to zero and less than the result of
 \code{omp_get_num_devices()} or the result of a call to
@@ -184,6 +248,7 @@ The \code{omp_target_memcpy} routine copies memory between any combination
 of host and device pointers.
 
 \format
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_memcpy(
   void *\plc{dst},
@@ -195,6 +260,37 @@ int omp_target_memcpy(
   int \plc{src_device_num}
 );
 \end{ompcFunction}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_target_memcpy(\plc{dst}, \plc{src}, \plc{length}, &
+  \plc{dst_offset}, \plc{src_offset}, \plc{dst_device_num}, \plc{src_device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+type(c_ptr), value :: \plc{dst}
+type(c_ptr), value :: \plc{src}
+integer, intent(in) :: \plc{length}
+integer, intent(in) :: \plc{dst_offset}
+integer, intent(in) :: \plc{src_offset}
+integer, intent(in) :: \plc{dst_device_num}
+integer, intent(in) :: \plc{src_device_num}
+\end{ompfFunction}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(c_int) function omp_target_memcpy(\plc{dst}, \plc{src}, \plc{length}, &
+  \plc{dst_offset}, \plc{src_offset}, \plc{dst_device_num}, \plc{src_device_num}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+type(c_ptr), value :: \plc{dst}
+type(c_ptr), value :: \plc{src}
+integer(c_size_t), value :: \plc{length}
+integer(c_size_t), value :: \plc{dst_offset}
+integer(c_size_t), value :: \plc{src_offset}
+integer(c_int), value :: \plc{dst_device_num}
+integer(c_int), value :: \plc{src_device_num}
+\end{ompfFunction}
+\end{fortranspecific}
 
 \constraints
 Each device must be compatible with the device pointer specified 
@@ -249,6 +345,7 @@ use any combination of host and device pointers.
 
 \format
 \begin{samepage}
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_memcpy_rect(
   void *\plc{dst},
@@ -264,7 +361,48 @@ int omp_target_memcpy_rect(
   int \plc{src_device_num}
 );
 \end{ompcFunction}
+\end{ccppspecific}
 \end{samepage}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_target_memcpy_rect(\plc{dst}, \plc{src}, \plc{element_size}, &
+  \plc{num_dims}, \plc{volume}, \plc{dst_offsets}, \plc{src_offsets}, \plc{dst_dimensions}, \plc{src_dimensions}, &
+  \plc{dst_device_num}, \plc{src_device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+type(c_ptr), value :: \plc{dst}
+type(c_ptr), value :: \plc{src}
+integer, intent(in) :: \plc{element_esize}
+integer, intent(in) :: \plc{num_dims}
+integer, intent(in) :: \plc{volume}(*)
+integer, intent(in) :: \plc{dst_offsets}(*)
+integer, intent(in) :: \plc{src_offsets}(*)
+integer, intent(in) :: \plc{dst_dimensions}(*)
+integer, intent(in) :: \plc{src_dimensions}(*)
+integer, intent(in) :: \plc{dst_device_num}
+integer, intent(in) :: \plc{src_device_num}
+\end{ompfFunction}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(c_int) function omp_target_memcpy_rect(\plc{dst},\plc{src},\plc{element_size}, &
+  \plc{num_dims}, \plc{volume}, \plc{dst_offsets}, \plc{src_offsets}, \plc{dst_dimensions}, \plc{src_dimensions}, &
+  \plc{dst_device_num}, \plc{src_device_num}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+type(c_ptr), value :: \plc{dst}
+type(c_ptr), value :: \plc{src}
+integer(c_size_t), value :: \plc{element_esize}
+integer(c_int), value :: \plc{num_dims}
+integer(c_size_t), intent(in) :: \plc{volume}(*)
+integer(c_size_t), intent(in) :: \plc{dst_offsets}(*)
+integer(c_size_t), intent(in) :: \plc{src_offsets}(*)
+integer(c_size_t), intent(in) :: \plc{dst_dimensions}(*)
+integer(c_size_t), intent(in) :: \plc{src_dimensions}(*)
+integer(c_int), value :: \plc{dst_device_num}
+integer(c_int), value :: \plc{src_device_num}
+\end{ompfFunction}
+\end{fortranspecific}
 
 \constraints
 The length of the offset and dimension arrays must be at least the
@@ -284,7 +422,7 @@ to \plc{dst}, in the device data environment of device \plc{dst_device_num}.
 The volume is specified in terms of the size of an element,
 number of dimensions, and constant arrays of length \plc{num_dims}.  The
 maximum number of dimensions supported is at least three, support for higher
-dimensionality is implementation defined. The volume array specifies the
+dimensionality is implementation defined. The \plc{volume} array specifies the
 length, in number of elements, to copy in each dimension from \plc{src}
 to \plc{dst}. The \plc{dst_offsets} (\plc{src_offsets}) parameter specifies
 number of elements from the origin of \plc{dst} (\plc{src}) in elements.
@@ -292,7 +430,8 @@ The \plc{dst_dimensions} (\plc{src_dimensions}) parameter specifies the
 length of each dimension of \plc{dst} (\plc{src})
 
 The routine returns zero if successful. If both \plc{dst} and \plc{src} are
-\code{NULL} pointers, the routine returns the number of dimensions supported
+\code{NULL} pointers (or \code{C_NULL_PTR}, for Fortran), the routine
+returns the number of dimensions supported
 by the implementation for the specified device numbers. The host device and
 host device data environment can be referenced with the device number returned
 by \code{omp_get_initial_device}.  Otherwise, it returns a non-zero value. The
@@ -335,6 +474,7 @@ be returned from \code{omp_target_alloc} or implementation-defined runtime
 routines, to a host pointer.
 
 \format
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_associate_ptr(
   const void *\plc{host_ptr},
@@ -344,6 +484,33 @@ int omp_target_associate_ptr(
   int \plc{device_num}
 );
 \end{ompcFunction}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_target_associate_ptr(\plc{host_ptr}, \plc{device_ptr}, &
+  \plc{size}, \plc{device_offset}, \plc{device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+type(c_ptr), value :: \plc{host_ptr}
+type(c_ptr), value :: \plc{device_ptr}
+integer, intent(in) :: \plc{size}
+integer, intent(in) :: \plc{device_offset}
+integer, intent(in) :: \plc{device_num}
+\end{ompfFunction}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_target_associate_ptr(\plc{host_ptr}, \plc{device_ptr}, &
+  \plc{size}, \plc{device_offset}, \plc{device_num}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_size_t, c_int
+type(c_ptr), value :: \plc{host_ptr}
+type(c_ptr), value :: \plc{device_ptr}
+integer(c_size_t), value :: \plc{size}
+integer(c_size_t), value :: \plc{device_offset}
+integer(c_int), value :: \plc{device_num}
+\end{ompfFunction}
+\end{fortranspecific}
 
 \constraints
 The value of \plc{device_ptr} value must be a valid pointer to device
@@ -411,9 +578,30 @@ The \code{omp_target_disassociate_ptr} removes the associated pointer for a
 given device from a host pointer.
 
 \format
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_disassociate_ptr(const void *\plc{ptr}, int \plc{device_num});
 \end{ompcFunction}
+\end{ccppspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer function omp_target_disassociate_ptr(\plc{ptr}, \plc{device_num})
+use, intrinsic :: iso_c_binding, only : c_ptr
+type(c_ptr), value :: \plc{ptr}
+integer, intent(in) :: \plc{device_num}
+\end{ompfFunction}
+\end{fortranspecific}
+
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(c_int) function omp_target_disassociate_ptr(\plc{ptr}, &
+  \plc{device_num}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int
+type(c_ptr), value :: \plc{ptr}
+integer(c_int), value :: \plc{device_num}
+\end{ompfFunction}
+\end{fortranspecific}
 
 \constraints
 The \plc{device_num} must be greater than or equal to zero and less 
@@ -424,7 +612,8 @@ of a call to \code{omp_get_initial_device()}.
 The \code{omp_target_disassociate_ptr} removes the associated device data
 on device \plc{device_num} from the presence table for host pointer
 \plc{ptr}. A call to this routine on a pointer that is not
-\code{NULL} and does not have associated data on the given device results
+\code{NULL} (or \code{C_NULL_PTR}, for Fortran) and does not have
+associated data on the given device results
 in unspecified behavior.  The reference count of the mapping is reduced to
 zero, regardless of its current value.
 
@@ -457,4 +646,3 @@ target task and has type signature \code{ompt_callback_target_data_op_t}.
 \specref{sec:ompt_callback_target_data_op_t}.
 \end{crossrefs}
 
-\end{ccppspecific}
