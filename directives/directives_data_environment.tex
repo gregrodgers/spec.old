@@ -2965,6 +2965,69 @@ The restrictions to the \code{map} clause are as follows:
 \specref{sec:ompt_callback_target_map_t}.
 \end{crossrefs}
 
+\begin{ccppspecific}
+\subsubsection{Pointer Translation for Device Data Environments}
+\label{subsec:pointer translation}
+
+This section describes how the value of a pointer may be translated to point
+to an object that exists in a device data environment and corresponds to a
+\emph{matching mapped list item}.
+
+All previously mapped list items that have corresponding storage in a given
+device data environment constitute the set of currently mapped list items.  If
+a currently mapped list item has a base pointer, the \emph{base address} of
+the currently mapped list item is the value of its base pointer. Otherwise,
+the base address is determined by the following steps:
+
+\begin{enumerate}
+\item Let \plc{X} refer to the currently mapped list item.
+
+\item If \plc{X} refers to an array section or array element, let \plc{X}
+    refer to its base array.
+
+\item If \plc{X} refers to a structure element, let \plc{X} refer to its
+    containing structure and return to step 2.
+
+\item The base address for the currently mapped list item is the address of \plc{X}.
+\end{enumerate}
+
+Additionally, each currently mapped list item has a \emph{starting address}
+and an \emph{ending address}. The starting address is the address of the
+first storage location associated with the list item, and the \emph{ending
+address} is the address of the storage location that immediately follows
+the last storage location associated with the list item.
+
+The \emph{mapped address range} of the currently mapped list item is the range
+of addresses that starts from the starting address and ends with the ending
+address. The \emph{extended address range} of the currently mapped list item
+is the range of addresses that starts from the minimum of the starting address
+and the base address and that ends with the maximum of the ending address and
+the base address.
+
+If the value of a given pointer is in the mapped address range of a currently
+mapped list item then that currently mapped list item is a matching mapped
+list item.  Otherwise, if the value of the pointer is in the extended address
+range of a currently mapped list item then that currently mapped list item is
+a matching mapped list item.
+
+If multiple matching mapped list items are found and they all appear as part
+of the same containing structure, the one that has the lowest starting address
+is treated as the sole matching mapped list item. Otherwise, if multiple
+matching mapped list items are found then the behavior is unspecified.
+
+%If a matching mapped list item is found, the translated value of the pointer
+%is such that an indirect reference to the matching mapped list item that uses
+%the original value of the pointer becomes an indirective reference to its
+%corresponding list item in the device data environment when the translated
+%value is instead used.
+
+If a matching mapped list item is found, the pointer is assigned a translated
+value such that the corresponding list item in the device data environment can
+be accessed through the pointer in a \code{target} region.
+
+If a matching mapped list item is not found, the translated value of the
+pointer is NULL.
+\end{ccppspecific}
 
 
 \subsubsection{\hcode{defaultmap} Clause}
