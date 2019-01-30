@@ -104,9 +104,11 @@ context_definitions.pdf: directives/context_definitions.tex openmp.sty
 all: openmp.pdf context_definitions
 
 clean:
-	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
-	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
+	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp.lof openmp.lot 
+	rm -f openmp-diff.pdf openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
 	rm -f openmp.synctex.gz openmp-book.pdf
+	rm -f context_definitions.pdf
+	rm -f context_definitions.aux context_definitions.idx context_definitions.log context_definitions.out
 	rm -rf *.tmpdir
 	rm -f openmp-ticket_*.pdf
 	rm -f openmp-diff-abridged-ticket_*.pdf
