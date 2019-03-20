@@ -37,6 +37,10 @@ build the specification within a [docker](https://www.docker.com/) container.
 Then use Makefile.docker to build your targets, for instance
 
     $ make -f Makefile.docker
+    $ make -f Makefile.docker openmp-diff-abridged.pdf
+
+If you have issues with the generation of the abrigded diff, you can try to build a minimal diff instead:
+
     $ make -f Makefile.docker openmp-diff-minimal.pdf
 
 If you would prefer to build the docker container yourself, rather than pulling
