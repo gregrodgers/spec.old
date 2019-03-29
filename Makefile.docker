@@ -1,7 +1,14 @@
-# Makefile for the OpenMP specifications document in LaTex form -itat.
-# For more inform -itation, see the master document, openmp.tex.
-UID=`id -u`
-GID=`id -g`
+ifeq '$(OS)' 'Windows_NT'
+  # On Windows, Docker and GNU make from gnuwin32, Cygwin, MSys or MSys2 in the
+  # default path is required.
+  DOCKER_CMD=docker run -v "$(shell cmd \/C cd):/spec" --rm -it openmp/spec-build
+else
+  # Makefile for the OpenMP specifications document in LaTex form -itat.
+  # For more inform -itation, see the master document, openmp.tex.
+  UID=`id -u`
+  GID=`id -g`
+  DOCKER_CMD=docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build
+endif
 
 #NOTE: set these either as environment variables or on the command line,
 #      DO NOT change these default values and check them in
@@ -24,41 +31,9 @@ all: openmp.pdf
         git-diff-fast-all git-diff-fast git-diff-fast-minimal \
         openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
 
-openmp.pdf:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build
-
-context_definitions:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make context_definitions
-
-full:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make full
-
-release: 
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make release
-
-quick:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make quick
-
-debug:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make debug
-
-clean:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make clean
-
-realclean: clean
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make realclean
-
 git-diff-fast-all: git-diff-fast git-diff-fast-minimal
 git-diff-fast: openmp-diff-full.pdf
 git-diff-fast-minimal: openmp-diff-abridged.pdf
 
-openmp-diff-full.pdf:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make ${VC_DIFF_TO} ${VC_DIFF_FROM} PATH=/spec/util/latexdiff:/bin:$(PATH) openmp-diff-full.pdf
-
-openmp-diff-abridged.pdf:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make ${VC_DIFF_TO} ${VC_DIFF_FROM} PATH=/spec/util/latexdiff:/bin:$(PATH) openmp-diff-abridged.pdf
-
-# Slow but portable diffs
-openmp-diff-minimal.pdf:
-	docker run -u "$(UID):$(GID)" -v `pwd`:/spec --rm -it openmp/spec-build make ${VC_DIFF_TO} ${VC_DIFF_FROM} PATH=/spec/util/latexdiff:/bin:$(PATH) openmp-diff-minimal.pdf
-
+openmp.pdf context_definitions full release quick debug clean realclean openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf:
+	$(DOCKER_CMD) make $(VC_DIFF_TO) $(VC_DIFF_FROM) $@
