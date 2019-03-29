@@ -32,7 +32,7 @@ Building using Docker
 If you do not wish to install the required packages on your machine you may
 build the specification within a [docker](https://www.docker.com/) container.
 
-    $ docker pull jefflarkin/openmp-spec
+    $ docker pull openmp/openmp-spec
 
 Then use Makefile.docker to build your targets, for instance
 
