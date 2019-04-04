@@ -32,11 +32,15 @@ Building using Docker
 If you do not wish to install the required packages on your machine you may
 build the specification within a [docker](https://www.docker.com/) container.
 
-    $ docker pull jefflarkin/openmp-spec
+    $ docker pull openmp/openmp-spec
 
 Then use Makefile.docker to build your targets, for instance
 
     $ make -f Makefile.docker
+    $ make -f Makefile.docker openmp-diff-abridged.pdf
+
+If you have issues with the generation of the abrigded diff, you can try to build a minimal diff instead:
+
     $ make -f Makefile.docker openmp-diff-minimal.pdf
 
 If you would prefer to build the docker container yourself, rather than pulling
