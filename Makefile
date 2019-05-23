@@ -5,9 +5,15 @@ all: openmp.pdf
 
 # shortcuts for the most common make targets in use
 include version.mk
-full: openmp.pdf 
-release: clean openmp.pdf 
+full: openmp.pdf
+
+release: clean openmp.pdf
 release: VERSIONMACRO=$(RELEASEMACRO)
+
+book: clean release
+	cp openmp.pdf openmp-book.pdf
+book: BOOK_BUILD="\\def\\bookbuild{1}"
+
 diff: openmp-diff-abridged.pdf
 
 .PHONY: clean quick all git-diff-all
@@ -18,10 +24,10 @@ TEXFILES=openmp.tex \
          appendices/implementation_defined.tex \
          appendices/interface_declarations.tex \
          appendices/ompd_diagram.tex \
+         appendices/ompt_frames.tex \
          appendices/stubs.tex \
          appendices/stubs_ccpp.tex \
          appendices/stubs_fortran.tex \
-         appendices/tool_support_frames.tex \
          directives.tex \
          directives/directives_cancellation.tex \
          directives/directives_combined.tex \
@@ -43,45 +49,36 @@ TEXFILES=openmp.tex \
          introduction/introduction_compliance.tex \
          introduction/introduction_execution_model.tex \
          introduction/introduction_glossary.tex \
-         introduction/introduction_introduction.tex \
          introduction/introduction_memory_model.tex \
          introduction/introduction_normative_refs.tex \
          introduction/introduction_organization.tex \
          introduction/introduction_scope.tex \
          introduction/introduction_tools.tex \
+         ompd.tex \
+         ompd/ompd_common.tex \
+         ompd/ompd_runtime_entry_points.tex \
+         ompd/ompd_third_party_callback_interface.tex \
+         ompd/ompd_third_party_tool_interface_routines.tex \
+         ompt.tex \
+         ompt/ompt_callbacks.tex \
+         ompt/ompt_common.tex \
+         ompt/ompt_entrypoints.tex \
          runtime_library.tex \
          runtime_library/runtime_library_device_mem.tex \
          runtime_library/runtime_library_execution.tex \
          runtime_library/runtime_library_mm.tex \
          runtime_library/runtime_library_others.tex \
-         runtime_library/runtime_library_tools.tex \
-         tool_support.tex \
-         tool_support/foundation.tex \
-         tool_support/frames.tex \
-         tool_support/ompd/ompd_activating_a_third_party_tool.tex \
-         tool_support/ompd/ompd_data_types_for_third_party_tools.tex \
-         tool_support/ompd/ompd_introduction.tex \
-         tool_support/ompd/ompd_runtime_entry_points.tex \
-         tool_support/ompd/ompd_third_party_callback_interface.tex \
-         tool_support/ompd/ompd_third_party_tool_interface_routines.tex \
-         tool_support/ompd_dll.tex \
-         tool_support/start_tool.tex \
-         tool_support/thread_states.tex \
-         tool_support/tool_support_callbacks.tex \
-         tool_support/tool_support_common.tex \
-         tool_support/tool_support_debug.tex \
-         tool_support/tool_support_entrypoints.tex \
-         tool_support/wait_id.tex
+         runtime_library/runtime_library_tools.tex
 
 # check for branches names with "ticket_XXX"
 DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
 # for release do something like:  make OMPVERSION="Version 5.0 Public Comment Draft, July 2018"
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(BOOK_BUILD)$(VERSIONMACRO)
 	-makeindex -s openmp-index.ist openmp.idx
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(VERSIONMACRO)
-	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error $(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -draftmode -file-line-error $(BOOK_BUILD)$(VERSIONMACRO)
+	-pdflatex -shell-escape -synctex=1 -interaction=batchmode -file-line-error $(BOOK_BUILD)$(VERSIONMACRO)
 	if [ "x$(DIFF_TICKET_ID)" != "x" ]; then cp $@ ${@:.pdf=-$(DIFF_TICKET_ID).pdf}; fi
 	@if grep --quiet "LaTeX Warning: Label" openmp.log; then \
 		grep "LaTeX Warning: Label" openmp.log; \
@@ -107,9 +104,11 @@ context_definitions.pdf: directives/context_definitions.tex openmp.sty
 all: openmp.pdf context_definitions
 
 clean:
-	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp-diff.pdf
-	rm -f openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
-	rm -f openmp.synctex.gz
+	rm -f openmp.pdf openmp.toc openmp.idx openmp.aux openmp.ilg openmp.ind openmp.out openmp.log openmp.lof openmp.lot 
+	rm -f openmp-diff.pdf openmp-diff-full.pdf openmp-diff-abridged.pdf openmp-diff-minimal.pdf
+	rm -f openmp.synctex.gz openmp-book.pdf
+	rm -f context_definitions.pdf
+	rm -f context_definitions.aux context_definitions.idx context_definitions.log context_definitions.out
 	rm -rf *.tmpdir
 	rm -f openmp-ticket_*.pdf
 	rm -f openmp-diff-abridged-ticket_*.pdf
@@ -162,11 +161,11 @@ git-diff-fast-minimal: openmp-diff-abridged.pdf
 
 %.tmpdir: $(wildcard *.sty) $(wildcard *.fls) $(wildcard *.png) $(wildcard *.aux) openmp.pdf
 	mkdir -p $@/appendices
-	mkdir -p $@/tool_support
+	mkdir -p $@/ompt
 	cp -f $^ "$@/" || true
 	cp -f appendices/callstack-cropped.pdf "$@/appendices"
 	cp -f appendices/ompd_diagram.pdf "$@/appendices"
-	cp -f tool_support/ompt_flow_chart.pdf "$@/tool_support"
+	cp -f ompt/ompt_flow_chart.pdf "$@/ompt"
 
 openmp-diff-full.pdf: diff-fast-complete.tmpdir openmp.pdf
 	env PATH="$(shell pwd)/util/latexdiff:$(PATH)" latexdiff-vc --fast -d $< ${VC_DIFF_OPTS} openmp.tex
