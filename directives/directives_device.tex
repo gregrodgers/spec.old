@@ -230,7 +230,7 @@ a target exit data construct, described in
       \code{omp_get_initial_device()}.
 \item At most one \code{if} clause can appear on the directive.
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, 
-      \code{tofrom} or \code{alloc}.
+      \code{tofrom} \code{alloc} or \code{is_present}.
 \item At least one \code{map}, \code{use_device_addr} or \code{use_device_ptr}
       clause must appear on the directive.
 \item A list item in a \code{use_device_ptr} clause must hold the address of
@@ -385,7 +385,7 @@ type signature \code{ompt_callback_target_t}.
       value of \code{omp_get_initial_device()}.
 \item At most one \code{if} clause can appear on the directive.
 \item A \plc{map-type} must be specified in all \code{map} clauses and must be 
-      either \code{to} or \code{alloc}.
+      either \code{to} \code{alloc} or \code{is_present}.
 \item At most one \code{nowait} clause can appear on the directive.
 \end{itemize}
 
@@ -804,7 +804,7 @@ type signature \code{ompt_callback_target_submit_t}.
       directive.
 \item At most one \code{nowait} clause can appear on the directive.
 \item A \plc{map-type} in a \code{map} clause must be \code{to}, \code{from}, 
-      \code{tofrom} or \code{alloc}.
+      \code{tofrom}, \code{alloc} or \code{is_present}.
 \item A list item that appears in an \code{is_device_ptr} clause must be a valid 
       device pointer in the device data environment.
 \item At most one \code{device} clause can appear on the directive. The \code{device} 
@@ -951,8 +951,9 @@ depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to([mapper(\plc{mapper-identifier}):]\plc{locator-list})
-from([mapper(\plc{mapper-identifier}):]\plc{locator-list})
+to([required][[,]mapper(\plc{mapper-identifier}):]\plc{locator-list})
+from([required][[,]mapper(\plc{mapper-identifier}):]\plc{locator-list})
+
 \end{indentedcodelist}
 \end{ccppspecific}
 
@@ -975,8 +976,8 @@ depend(\plc{[depend-modifier},\plc{] dependence-type }:\plc{ locator-list})
 and \plc{motion-clause} is one of the following:
 
 \begin{indentedcodelist}
-to([mapper(\plc{mapper-identifier}):]\plc{locator-list})
-from([mapper(\plc{mapper-identifier}):]\plc{locator-list})
+to([required][[,]mapper(\plc{mapper-identifier}):]\plc{locator-list})
+from([required][[,]mapper(\plc{mapper-identifier}):]\plc{locator-list})
 \end{indentedcodelist}
 \end{fortranspecific}
 
@@ -989,8 +990,11 @@ region binds to the corresponding \plc{target task} region.
 \descr
 For each list item in a \code{to} or \code{from} clause there is a corresponding 
 list item and an original list item. If the corresponding list item is not present 
-in the device data environment then no assignment occurs to or from the original 
-list item. Otherwise, each corresponding list item in the device data environment 
+in the device data environment and there is no \code{required} modifier in the clause,
+then no assignment occurs to or from the original list item.  If a \code{required} modifier
+is present in the clause and the corresponding list item is not present in the device data
+environment then an error occurs and the program termintates.
+Otherwise, each corresponding list item in the device data environment 
 has an original list item in the current task's data environment.  If a 
 \code{mapper()} modifier appears in a \code{to} clause, each list item is replaced 
 with the list items that the given mapper specifies are to be mapped
