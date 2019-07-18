@@ -71,7 +71,13 @@ TEXFILES=openmp.tex \
          runtime_library/runtime_library_tools.tex
 
 # check for branches names with "ticket_XXX"
-DIFF_TICKET_ID=$(shell git rev-parse --abbrev-ref HEAD | grep "^ticket_[0-9]*" | sed 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/')
+DIFF_TICKET_ID=$(shell \
+    git rev-parse --abbrev-ref HEAD | \
+    grep -e "^ticket_[0-9]*" \
+         -e "^issue_[0-9]*" | \
+    sed -e 's/\(ticket_[0-9]*\)_.*\|\(ticket_[0-9]*\)/\1\2/' \
+        -e 's/\(issue_[0-9]*\)_.*\|\(issue_[0-9]*\)/\1\2/' \
+)
 # for release do something like:  make OMPVERSION="Version 5.0 Public Comment Draft, July 2018"
 
 openmp.pdf: $(CHAPTERS) $(TEXFILES) openmp.sty openmp-index.ist openmp-logo.png Makefile
