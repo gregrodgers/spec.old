@@ -116,7 +116,9 @@ clean:
 	rm -f context_definitions.pdf
 	rm -f context_definitions.aux context_definitions.idx context_definitions.log context_definitions.out
 	rm -rf *.tmpdir
+	rm -f openmp-issue_*.pdf
 	rm -f openmp-ticket_*.pdf
+	rm -f openmp-diff-abridged-issue_*.pdf
 	rm -f openmp-diff-abridged-ticket_*.pdf
 	rm -f openmp-diff-full-ticket_*.pdf
 	rm -f openmp-diff-minimal-ticket_*.pdf
