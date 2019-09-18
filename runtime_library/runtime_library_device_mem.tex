@@ -398,6 +398,7 @@ has type signature \code{ompt_callback_target_data_op_t}.
 The \code{omp_target_memcpy_async} routine asynchronously performs a copy between any combination of host and device pointers.
 \format
 \begin{samepage}
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_memcpy_async(
   void *\plc{dst},
@@ -411,6 +412,22 @@ int omp_target_memcpy_async(
   omp_depend_t *\plc{depobj_list}
 );
 \end{ompcFunction}
+\end{ccppspecific}
+\end{samepage}
+
+\begin{samepage}
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(c_int) function omp_target_memcpy_async(\plc{dst}, \plc{src}, \plc{length}, &
+  \plc{dst_offset}, \plc{src_offset}, \plc{dst_device_num}, \plc{src_device_num}, &
+  \plc{depobj_count}, \plc{depobj_list}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+type(c_ptr), value :: \plc{dst}, \plc{src}
+integer(c_size_t), value :: \plc{length}, \plc{dst_offset}, \plc{src_offset}
+integer(c_int), value :: \plc{dst_device_num}, \plc{src_device_num}, \plc{depobj_count}
+integer(omp_depend_kind), optional :: \plc{depobj_list}(*)
+\end{ompfFunction}
+\end{fortranspecific}
 \end{samepage}
 
 \constraints
@@ -427,12 +444,14 @@ in the device data environment of device \plc{src_device_num} are
 copied to \plc{dst} starting at offset \plc{dst_offset} in the device data
 environment of device \plc{dst_device_num}.
 Logically the \code{omp_target_memcpy_async} routine generates a target task with an implicit nowait.
-Task dependecies are expressed with zero or more \code{omp_depend_t}
-objects. The dependencies are specified by passing the
+
+Task dependences are expressed with zero or more \code{omp_depend_t}
+objects. The dependences are specified by passing the
 number of \code{omp_depend_t} objects followed by an array of
-\code{omp_depend_t} objects.
-The generated target task is not a dependent task if the program passes in a
-count of zero and value of \code{NULL} for \plc{depobj_count} and \plc{depobj_list}, respectively.
+\code{omp_depend_t} objects.  The generated target task is not a
+dependent task if the program passes in a count of zero for
+\plc{depobj_count}.  \plc{depojb_list} is ignored if
+the value of \plc{depobj_count} is zero.
 
 The routine returns zero if successful.
 Otherwise, it returns a non-zero value. The
@@ -463,12 +482,13 @@ type signature \code{ompt_callback_target_data_op_t}.
 
 \subsection{\hcode{omp_target_memcpy_rect_async}}
 \index{omp_target_memcpy_rect_async@{\code{omp_target_memcpy_rect_async}}}
-\label{subsec:omp_target_cwmemcpy_rect_async}
+\label{subsec:omp_target_memcpy_rect_async}
 \summary
 The \code{omp_target_memcpy_rect_async} routine asynchronously performs a copy between any combination of host and device pointers.
 
 \format
 \begin{samepage}
+\begin{ccppspecific}
 \begin{ompcFunction}
 int omp_target_memcpy_rect_async(
   void *\plc{dst},
@@ -486,6 +506,26 @@ int omp_target_memcpy_rect_async(
   omp_depend_t *\plc{depobj_list}
 );
 \end{ompcFunction}
+\end{ccppspecific}
+\end{samepage}
+
+\begin{samepage}
+\begin{fortranspecific}
+\begin{ompfFunction}
+integer(c_int) function omp_target_memcpy_rect_async(\plc{dst}, \plc{src}, &
+  \plc{element_size}, \plc{num_dims}, \plc{volume}, \plc{dst_offsets}, \plc{src_offsets}, &
+  \plc{dst_dimensions}, \plc{src_dimensions}, \plc{dst_device_num}, \plc{src_device_num}, &
+  \plc{depobj_count}, \plc{depobj_list}) bind(c)
+use, intrinsic :: iso_c_binding, only : c_ptr, c_int, c_size_t
+type(c_ptr), value :: \plc{dst}, \plc{src}
+integer(c_size_t), value :: \plc{element_size}
+integer(c_int), value :: \plc{num_dims}, \plc{dst_device_num}, \plc{src_device_num}, &
+  \plc{depobj_count}
+integer(c_size_t), intent(in) :: \plc{volume}(*), \plc{dst_offsets}(*), &
+  \plc{src_offsets}(*), \plc{dst_dimensions}(*), \plc{src_dimensions}(*)
+integer(omp_depobj_kind), optional :: \plc{depobj_list}(*)
+\end{ompfFunction}
+\end{fortranspecific}
 \end{samepage}
 
 \constraints
@@ -514,12 +554,14 @@ number of elements from the origin of \plc{dst} (\plc{src}) in elements.
 The \plc{dst_dimensions} (\plc{src_dimensions}) parameter specifies the
 length of each dimension of \plc{dst} (\plc{src}).
 Logically the \code{omp_target_memcpy_rect_async} routine generates a target task with an implicit nowait.
-Task dependecies are expressed with zero or more \code{omp_depend_t}
-objects. The dependencies are specified by passing the
+
+Task dependences are expressed with zero or more \code{omp_depend_t}
+objects. The dependences are specified by passing the
 number of \code{omp_depend_t} objects followed by an array of
-\code{omp_depend_t} objects.
-The generated target task is not a dependent task if the program passes in a
-count of zero and value of \code{NULL} for \plc{depobj_count} and \plc{depobj_list}, respectively.
+\code{omp_depend_t} objects. The generated target task is not a
+dependent task if the program passes in a count of zero for
+\plc{depobj_count}.  \plc{depobj_list} is ignored if the value of
+\plc{depobj_count} is zero.
 
 The routine returns zero if successful.
 Otherwise, it returns a non-zero value. The
@@ -529,7 +571,8 @@ When called from within a \code{target} region
 the effect of this routine is unspecified.
 
 An application can determine the number of
-inclusive dimensions supported by an implementation by passing \code{NULL} pointers for both \plc{dst} and \plc{src}.
+inclusive dimensions supported by an implementation by passing
+\code{NULL} pointers (or \code{C_NULL_PTR}, for Fortran) for both \plc{dst} and \plc{src}.
 The routine returns the number of dimensions supported
 by the implementation for the specified device numbers.
 No copy operation is performed.
