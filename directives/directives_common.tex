@@ -1521,6 +1521,21 @@ The following ICVs store values that affect the operation of the OMPD tool inter
       a tool. There is one copy of this ICV for the whole program.
 \end{itemize}
 
+The following ICVs store values that may be queried by interface routines.
+
+\begin{itemize}
+\item \plc{num-procs-var} - the number of processors that are available to the device.
+      There is one copy of this ICV per device.
+\item \plc{thread-num-var} - the thread number of an implicit task within its binding
+      team. There is one copy of this ICV per data environment.
+\item \plc{final-task-var} - whether the current task is a final task. There is one copy
+      of this ICV per data environment.
+\item \plc{implicit-task-var} - whether the current task is an implicit task. There is
+      one copy of this ICV per data environment.
+\item \plc{team-size-var} - the size of the team. There is one copy of this ICV
+      per data environment.
+\end{itemize}
+
 The following ICVs store values that affect default memory allocation.
 
 \begin{itemize}
@@ -1578,6 +1593,11 @@ environment variables, and initial values.
 {\splc{tool-var}}              & {\scode{OMP_TOOL}}              & {\splc{enabled}}       \\
 {\splc{tool-libraries-var}}    & {\scode{OMP_TOOL_LIBRARIES}}    & {\splc{empty string}}  \\
 {\splc{debug-var}}             & {\scode{OMP_DEBUG}}             & {\splc{disabled}}      \\
+{\splc{num-procs-var}}         & (none)                          & Implementation defined \\
+{\splc{thread-num-var}}        & (none)                          & {\splc{zero}}          \\
+{\splc{final-task-var}}        & (none)                          & {\splc{false}}         \\
+{\splc{implicit-task-var}}     & (none)                          & {\splc{true}}          \\
+{\splc{team-size-var}}         & (none)                          & {\splc{one}}           \\
 {\splc{def-allocator-var}}     & {\scode{OMP_ALLOCATOR}}         & Implementation defined \\
 \end{supertabular}
 
@@ -1649,7 +1669,8 @@ device's ICVs is implementation defined.
 \index{modifying and retrieving ICV values}
 Table~\ref{tab:Ways to Modify and to Retrieve ICV Values} shows the method 
 for modifying and retrieving the values of ICVs through OpenMP API routines.
-
+If an ICV is not listed in this table, no OpenMP API routine modifies or 
+retrieves this ICV.
 
 {\small%
 \nolinenumbers
@@ -1679,13 +1700,7 @@ for modifying and retrieving the values of ICVs through OpenMP API routines.
 
 {\splc{run-sched-var}}         & {\scode{omp_set_schedule()}}          & {\scode{omp_get_schedule()}}          \\
 
-{\splc{def-sched-var}}         & (none)                                & (none)                                \\
-
 {\splc{bind-var}}              & (none)                                & {\scode{omp_get_proc_bind()}}         \\
-
-{\splc{stacksize-var}}         & (none)                                & (none)                                \\
-
-{\splc{wait-policy-var}}       & (none)                                & (none)                                \\
 
 {\splc{thread-limit-var}}      & {\scode{thread_limit}} clause         & {\scode{omp_get_thread_limit()}}      \\
 
@@ -1699,21 +1714,19 @@ for modifying and retrieving the values of ICVs through OpenMP API routines.
 
 {\splc{cancel-var}}            & (none)                                & {\scode{omp_get_cancellation()}}      \\
 
-{\splc{display-affinity-var}}  & (none)                                & (none)                                \\
-
 {\splc{affinity-format-var}}   & {\scode{omp_set_affinity_format()}}   & {\scode{omp_get_affinity_format()}}   \\
 
 {\splc{default-device-var}}    & {\scode{omp_set_default_device()}}    & {\scode{omp_get_default_device()}}    \\
 
-{\splc{target-offload-var}}    & (none)                                & (none)                                \\
-
 {\splc{max-task-priority-var}} & (none)                                & {\scode{omp_get_max_task_priority()}} \\
 
-{\splc{tool-var}}              & (none)                                & (none)                                \\
+{\splc{num-procs-var}}         & (none)                                & {\scode{omp_get_num_procs()}}         \\
 
-{\splc{tool-libraries-var}}    & (none)                                & (none)                                \\
+{\splc{thread-num-var}}        & (none)                                & {\scode{omp_get_thread_num()}}        \\
 
-{\splc{debug-var}}             & (none)                                & (none)                                \\
+{\splc{final-task-var}}        & (none)                                & {\scode{omp_in_final()}}              \\
+
+{\splc{team-size-var}}         & (none)                                & {\scode{omp_get_num_threads()}}       \\
 
 {\splc{def-allocator-var}}     & {\scode{omp_set_default_allocator()}} & {\scode{omp_get_default_allocator()}} \\
 
@@ -1740,7 +1753,13 @@ for modifying and retrieving the values of ICVs through OpenMP API routines.
 
 \item \code{omp_set_num_threads} routine, see \specref{subsec:omp_set_num_threads}.
 
+\item \code{omp_get_num_threads} routine, see \specref{subsec:omp_get_num_threads}.
+
 \item \code{omp_get_max_threads} routine, see \specref{subsec:omp_get_max_threads}.
+
+\item \code{omp_get_thread_num} routine, see \specref{subsec:omp_get_thread_num}.
+
+\item \code{omp_get_num_procs} routine, see \specref{subsec:omp_get_num_procs}.
 
 \item \code{omp_set_dynamic} routine, see \specref{subsec:omp_set_dynamic}.
 
@@ -1749,8 +1768,6 @@ for modifying and retrieving the values of ICVs through OpenMP API routines.
 \item \code{omp_get_cancellation} routine, see \specref{subsec:omp_get_cancellation}.
 
 \item \code{omp_set_nested} routine, see \specref{subsec:omp_set_nested}.
-
-\item \code{omp_get_nested} routine, see \specref{subsec:omp_get_nested}.
 
 \item \code{omp_set_schedule} routine, see \specref{subsec:omp_set_schedule}.
 
@@ -1767,6 +1784,8 @@ for modifying and retrieving the values of ICVs through OpenMP API routines.
 \item \code{omp_get_level} routine, see \specref{subsec:omp_get_level}.
 
 \item \code{omp_get_active_level} routine, see \specref{subsec:omp_get_active_level}.
+
+\item \code{omp_in_final} routine, see \specref{subsec:omp_in_final}.
 
 \item \code{omp_get_proc_bind} routine, see \specref{subsec:omp_get_proc_bind}.
 
@@ -1791,6 +1810,8 @@ for modifying and retrieving the values of ICVs through OpenMP API routines.
 \item \code{omp_set_default_allocator} routine, see \specref{subsec:omp_set_default_allocator}.
 
 \item \code{omp_get_default_allocator} routine, see \specref{subsec:omp_get_default_allocator}.
+
+
 \end{crossrefs}
 
 
@@ -1839,6 +1860,11 @@ Table~\ref{tab:Scopes of ICVs} shows the ICVs and their scope.
 {\splc{tool-var}}              & global\\
 {\splc{tool-libraries-var}}    & global\\
 {\splc{debug-var}}             & global \\
+{\splc{num-procs-var}}         & device \\
+{\splc{thread-num-var}}        & implicit task \\
+{\splc{final-task-var}}        & data environment \\
+{\splc{implicit-task-var}}     & data environment \\
+{\splc{team-size-var}}         & team \\
 {\splc{def-allocator-var}}     & implicit task\\
 \end{supertabular}
 
@@ -1898,7 +1924,7 @@ in their data environments. Otherwise, the behavior is unspecified.
 \label{subsec:ICV Override Relationships}
 
 Table~\ref{tab:ICV Override Relationships} shows the override relationships
-among construct clauses and ICVs.
+among construct clauses and ICVs. The table only lists ICV that can be overwritten by a clause.
 
 \nolinenumbers
 \renewcommand{\arraystretch}{1.5}
@@ -1920,27 +1946,10 @@ among construct clauses and ICVs.
 \tablelasttail{\hline}
 \tablecaption{ICV Override Relationships\label{tab:ICV Override Relationships}}
 \begin{supertabular}{ p{1.3in} p{2.0in}}
-{\splc{dyn-var}}               & (none)\\
 {\splc{nthreads-var}}          & {\scode{num_threads}}\\
 {\splc{run-sched-var}}         & {\scode{schedule}}\\
 {\splc{def-sched-var}}         & {\scode{schedule}}\\
 {\splc{bind-var}}              & {\scode{proc_bind}}\\
-{\splc{stacksize-var}}         & (none)\\
-{\splc{wait-policy-var}}       & (none)\\
-{\splc{thread-limit-var}}      & (none)\\
-{\splc{max-active-levels-var}} & (none)\\
-{\splc{active-levels-var}}     & (none)\\
-{\splc{levels-var}}            & (none)\\
-{\splc{place-partition-var}}   & (none)\\
-{\splc{cancel-var}}            & (none)\\
-{\splc{display-affinity-var}}  & (none) \\
-{\splc{affinity-format-var}}   & (none) \\
-{\splc{default-device-var}}    & (none)\\
-{\splc{target-offload-var}}    & (none)\\
-{\splc{max-task-priority-var}} & (none)\\
-{\splc{tool-var}}              & (none)\\
-{\splc{tool-libraries-var}}    & (none)\\
-{\splc{debug-var}}             & (none) \\
 {\splc{def-allocator-var}}     & {\scode{allocator}}\\
 \end{supertabular}
 
