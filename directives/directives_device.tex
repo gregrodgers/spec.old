@@ -1165,12 +1165,11 @@ directive.
 
 \syntax
 \begin{ccppspecific}
-The syntax of the \code{declare}~\code{target} directive takes either of
-the following forms:
+The syntax of the \code{declare}~\code{target} directive is as follows:
 
 \begin{ompcPragma}
 #pragma omp declare target \plc{new-line}
-\plc{declaration-definition-seq}
+    \plc{declaration-definition-seq}
 #pragma omp end declare target \plc{new-line}
 \end{ompcPragma}
 
@@ -1183,7 +1182,15 @@ or
 or
 
 \begin{ompcPragma}
-#pragma omp declare target \plc{clause[ [},\plc{] clause ... ] new-line}
+#pragma omp declare target \plc{clause[ [ [},\plc{] clause] ... ] new-line}
+\end{ompcPragma}
+
+or
+
+\begin{ompcPragma}
+#pragma omp begin declare target \plc{[clause[ [ [},\plc{] clause] ...] ] new-line}
+    \plc{declaration-definition-seq}
+#pragma omp end declare target \plc{new-line}
 \end{ompcPragma}
 
 where \plc{clause} is one of the following:
@@ -1285,17 +1292,21 @@ static storage duration that appears as a list item in a \code{to} clause on a
 or function is treated as if it had appeared in a \code{to} clause on a 
 \code{declare}~\code{target} directive.
 
-The form of the \code{declare}~\code{target} directive that has no clauses
-and requires a matching \code{end}~\code{declare}~\code{target} directive
-defines an implicit \plc{extended-list} to an implicit \code{to}
-clause. The implicit \plc{extended-list} consists of the variable names
-of any variable declarations at file or namespace scope that appear between
-the two directives and of the function names of any function declarations at
-file, namespace or class scope that appear between the two directives.
+The form, preceded by either the \code{declare}~\code{target} directive
+that has no clauses and no \plc{extended-list} or the
+ \code{begin}~\code{declare}~\code{target} directive
+and followed by a matching \code{end}~\code{declare}~\code{target} directive,
+defines an implicit \plc{extended-list}. The implicit \plc{extended-list}
+consists of the variable names of any variable declarations at file or
+namespace scope that appear between the two directives and of the function
+names of any function declarations at file, namespace or class scope that
+appear between the two directives. The implicit \plc{extended-list} is
+converted to an implicit \code{to} clause.
 
-The \plc{declaration-definition-seq} defined by a
-\code{declare}~\code{target} directive and an
-\code{end}~\code{declare}~\code{target} directive may contain
+The \plc{declaration-definition-seq} preceded by either
+\code{begin}~\code{declare}~\code{target} directive or a
+\code{declare}~\code{target} directive without any clauses or an \plc{extended-list}
+and followed by an \code{end}~\code{declare}~\code{target} directive may contain
 \code{declare}~\code{target} directives. If a \code{device_type} clause
 is present on the contained \code{declare}~\code{target} directive, then its
 argument determines which versions are made available.
@@ -1312,8 +1323,8 @@ enclosed in a \code{target} construct that specifies a \code{device} clause in w
 \code{ancestor} \plc{device-modifier} appears then the name of the referenced procedure is
 treated as if it had appeared in a \code{to} clause on a \code{declare}~\code{target} directive.
 
-If a \code{declare}~\code{target} does not have any clauses then an implicit
-\plc{extended-list} to an implicit \code{to} clause of one item is formed from
+If a \code{declare}~\code{target} does not have any clauses and does not have an
+\plc{extended-list} then an implicit \code{to} clause with one item is formed from
 the name of the enclosing subroutine subprogram, function subprogram or
 interface body to which it applies.
 
@@ -1335,10 +1346,14 @@ clause implicitly applies to internal procedures.
 \item The same list item must not explicitly appear in both a \code{to} clause on one
       \code{declare}~\code{target} directive and a \code{link} clause on
       another \code{declare}~\code{target} directive.
+\item If a \code{declare}~\code{target} directive has a clause, it must
+      contain at least one \code{to} clause or at least one \code{link} clause.
 \end{itemize}
 
 \begin{cppspecific}
 \begin{itemize}
+\item A \code{to} clause or a \code{link} clause cannot appear in a
+      \code{begin}~\code{declare}~\code{target} directive.
 \item The function names of overloaded functions or template functions
       may only be specified within an implicit \plc{extended-list}.
 \item If a \plc{lambda declaration and definition} appears between a
